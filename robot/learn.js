@@ -202,8 +202,8 @@ export function fitPlatt(rows, getP, getY) {
   for (const r of rows) { const p = getP(r), y = getY(r); if (p != null && (y === 0 || y === 1)) samples.push({ x: [logit(p)], offset: 0, y, ok: true }) }
   const fit = fitLogit(samples, { lambda: 1e-4, intercept: true, iters: 30 })
   if (!fit) return null
-  const raw = rawCoefs(fit)
-  return { a: round4(raw[0]), b: round4(fit.beta[0] - raw[0] * fit.mu[0] / (fit.sd[0] || 1)), n: fit.n }
+  const raw = rawCoefs(fit) // raw[0] = beta1/sd already; de-standardized intercept = beta0 - raw[0]·mu
+  return { a: round4(raw[0]), b: round4(fit.beta[0] - raw[0] * fit.mu[0]), n: fit.n }
 }
 
 // --- metrics ----------------------------------------------------------------
@@ -257,6 +257,158 @@ export function walkForwardReplay(rows, { market = 'ml', minTrain = 100, lambda 
   }
 }
 
+// --- combined model (Adrian classic + learned), walk-forward ensemble --------
+// p_comb = clamp(α·p_adrian + (1−α)·p_learned) with α learned per date D by
+// log-loss sweep over the OOS pairs accumulated from days STRICTLY before D
+// (mirrors backend sweep_ensemble_weights), then Platt-recalibrated on those
+// same past pairs. The scored day never informs its own α, fit or calibration.
+const EPS_P = 1e-4
+const clampP = (p) => clamp(p, EPS_P, 1 - EPS_P)
+const llOf = (p, y) => { const q = clamp(p, 1e-6, 1 - 1e-6); return -(y * Math.log(q) + (1 - y) * Math.log(1 - q)) }
+
+export function applyPlatt(platt, p) {
+  if (!platt) return p
+  return sigmoid(platt.a * logit(p) + platt.b)
+}
+
+// Grid-sweep the blend weight α (0..1, step 1/steps) minimizing mean log-loss
+// over (y, pC, pL) pairs. Pairs must all predate the day being scored.
+export function sweepAlpha(pairs, { steps = 20 } = {}) {
+  if (!pairs.length) return null
+  let best = null, bestLL = Infinity
+  for (let i = 0; i <= steps; i++) {
+    const a = i / steps
+    let ll = 0
+    for (const h of pairs) ll += llOf(clampP(a * h.pC + (1 - a) * h.pL), h.y)
+    ll /= pairs.length
+    if (ll < bestLL - 1e-12) { bestLL = ll; best = a }
+  }
+  return { alpha: round4(best), logloss: round4(bestLL) }
+}
+
+// Walk-forward replay of classic vs learned vs combined. For each date D:
+// fit on rows < D, learn α + Platt on the OOS pairs of days < D, score D.
+// Until there is α history, the blend stays at alphaDefault (no peeking).
+// The Platt map is shrunk toward the identity (k = n/(n+plattShrink)): a blend
+// of two calibrated probs is near-calibrated, so with small n raw Platt is
+// mostly variance — it only bites when miscalibration persists at scale.
+export function walkForwardEnsemble(rows, { market = 'ml', minTrain = 100, lambda = 1.0, alphaMin = 20, alphaDefault = 0.5, plattMin = 100, plattShrink = 1500 } = {}) {
+  const graded = rows.filter((r) => r.graded && r.formula_version === FORMULA_VERSION)
+  const byDate = {}
+  for (const r of graded) (byDate[r.date] = byDate[r.date] || []).push(r)
+  const dates = Object.keys(byDate).sort()
+  const sample = market === 'ml' ? mlSample : totalSample
+  const classicP = (r) => (market === 'ml' ? r.adrian_p : r.p_over)
+  const history = [] // OOS (y, pC, pL) pairs of already-scored days — sole training data for α/Platt
+  const yTrue = [], pC = [], pL = [], pB = []
+  const alphaCurve = []
+  let lastPlatt = null
+  const train = []
+  for (const D of dates) {
+    if (train.length >= minTrain) {
+      const fit = fitLogit(train.map(sample), { lambda, intercept: market !== 'ml' })
+      const swept = history.length >= alphaMin ? sweepAlpha(history) : null
+      const alpha = swept ? swept.alpha : alphaDefault
+      let platt = null
+      if (history.length >= plattMin) {
+        const raw = fitPlatt(history, (h) => clampP(alpha * h.pC + (1 - alpha) * h.pL), (h) => h.y)
+        if (raw) {
+          const k = history.length / (history.length + plattShrink)
+          platt = { a: round4(1 + (raw.a - 1) * k), b: round4(raw.b * k), n: raw.n, shrink_k: round4(k) }
+        }
+      }
+      if (platt) lastPlatt = platt
+      const dayPairs = []
+      for (const g of byDate[D]) {
+        const s = sample(g), cp = classicP(g)
+        if (!s.ok || cp == null || fit == null) continue
+        const lp = predictLogit(fit, s.x, s.offset)
+        if (lp == null) continue
+        const raw = clampP(alpha * cp + (1 - alpha) * lp)
+        const comb = platt ? clampP(applyPlatt(platt, raw)) : raw
+        yTrue.push(s.y); pC.push(cp); pL.push(lp); pB.push(comb)
+        dayPairs.push({ y: s.y, pC: cp, pL: lp })
+      }
+      if (dayPairs.length) alphaCurve.push({ date: D, alpha: round4(alpha), n_pairs: history.length, platt: !!platt })
+      history.push(...dayPairs) // D's own results only become visible to LATER dates
+    }
+    for (const g of byDate[D]) train.push(g)
+  }
+  const n = yTrue.length
+  const cM = probMetrics(yTrue, pC), lM = probMetrics(yTrue, pL), bM = probMetrics(yTrue, pB)
+  return {
+    n, first_date: dates[0] || null, last_date: dates[dates.length - 1] || null,
+    classic: cM, learned: lM, combined: bM,
+    delta: n ? { acc: round4(bM.acc - cM.acc), logloss: round4(bM.logloss - cM.logloss), brier: round4(bM.brier - cM.brier) } : null,
+    alpha: { final: alphaCurve.length ? alphaCurve[alphaCurve.length - 1].alpha : null, curve: alphaCurve },
+    platt_last: lastPlatt,
+    _pairs: { y: yTrue, classic: pC, learned: pL, combined: pB },
+  }
+}
+
+// Paired bootstrap (B resamples, deterministic LCG — learn.js never uses
+// Math.random) over the OOS pairs: SE + 95% CI for each model's accuracy /
+// log-loss / Brier and for Δ(combined − classic).
+export function bootstrapStability(y, ps, { B = 1000, seed = 20260705 } = {}) {
+  const n = y.length
+  if (!n) return null
+  let s = seed >>> 0
+  const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff }
+  const names = Object.keys(ps) // e.g. classic, learned, combined
+  const acc = {}, ll = {}, br = {}
+  for (const m of names) { acc[m] = []; ll[m] = []; br[m] = [] }
+  const dAcc = [], dLL = [], dBr = []
+  for (let b = 0; b < B; b++) {
+    const hit = {}, sll = {}, sbr = {}
+    for (const m of names) { hit[m] = 0; sll[m] = 0; sbr[m] = 0 }
+    for (let i = 0; i < n; i++) {
+      const k = Math.floor(rnd() * n) % n
+      const yy = y[k]
+      for (const m of names) {
+        const p = ps[m][k]
+        if ((p >= 0.5 ? 1 : 0) === yy) hit[m]++
+        sll[m] += llOf(p, yy)
+        sbr[m] += (p - yy) ** 2
+      }
+    }
+    for (const m of names) { acc[m].push(hit[m] / n); ll[m].push(sll[m] / n); br[m].push(sbr[m] / n) }
+    if (ps.combined && ps.classic) {
+      dAcc.push((hit.combined - hit.classic) / n)
+      dLL.push((sll.combined - sll.classic) / n)
+      dBr.push((sbr.combined - sbr.classic) / n)
+    }
+  }
+  const stat = (arr) => {
+    const sorted = [...arr].sort((a, b) => a - b)
+    const m = mean(arr)
+    const sd = Math.sqrt(mean(arr.map((v) => (v - m) ** 2)))
+    const q = (p) => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))]
+    return { mean: round4(m), se: round4(sd), ci: [round4(q(0.025)), round4(q(0.975))] }
+  }
+  const models = {}
+  for (const m of names) models[m] = { acc: stat(acc[m]), logloss: stat(ll[m]), brier: stat(br[m]) }
+  return { B, n, models, delta: dLL.length ? { acc: stat(dAcc), logloss: stat(dLL), brier: stat(dBr) } : null }
+}
+
+// Full ensemble report: λ sweep (best by combined OOS log-loss), bootstrap
+// stability on the winner, and the honest gate — if the 95% CI of
+// Δlog-loss(combined − classic) crosses 0, it's a statistical tie.
+export function ensembleReport(rows, { market = 'ml', lambdas = [0.3, 1, 3], minTrain = 100, B = 1000 } = {}) {
+  const runs = lambdas.map((lambda) => ({ lambda, run: walkForwardEnsemble(rows, { market, lambda, minTrain }) }))
+  const sweep = runs.map((r) => ({ lambda: r.lambda, n: r.run.n, acc: r.run.combined?.acc ?? null, logloss: r.run.combined?.logloss ?? null, brier: r.run.combined?.brier ?? null }))
+  let best = runs[0]
+  for (const r of runs) if (r.run.n > 0 && (r.run.combined.logloss ?? Infinity) < (best.run.n > 0 ? best.run.combined.logloss ?? Infinity : Infinity)) best = r
+  const { _pairs, ...pub } = best.run
+  if (!pub.n) return { ...pub, lambda_best: null, sweep, stability: null, tie: true, verdict: 'sin dato' }
+  const stability = bootstrapStability(_pairs.y, { classic: _pairs.classic, learned: _pairs.learned, combined: _pairs.combined }, { B })
+  const dll = stability?.delta?.logloss
+  const tie = pub.n < 30 || !dll || (dll.ci[0] <= 0 && dll.ci[1] >= 0)
+  return {
+    ...pub, lambda_best: best.lambda, sweep, stability, tie,
+    verdict: tie ? 'empate' : dll.ci[1] < 0 ? 'combinado mejor' : 'clásico mejor',
+  }
+}
+
 // Learned TOTAL component weights (relative emphasis, Σ|·|=1) for display.
 export function totalWeights(fit) {
   if (!fit) return null
@@ -305,11 +457,13 @@ export function buildSnapshot(rows, { now = null } = {}) {
       calibration: { ...reliability(graded, mlPickProb, mlPickWon), platt: fitPlatt(graded, mlPickProb, mlPickWon) },
       trust,
       oos: walkForwardReplay(graded, { market: 'ml' }),
+      combined: ensembleReport(graded, { market: 'ml' }),
     },
     total: {
       fit: totalFit, weights: totalWeights(totalFit),
       calibration: reliability(graded, totalPickProb, totalPickWon),
       oos: walkForwardReplay(graded, { market: 'total' }),
+      combined: ensembleReport(graded, { market: 'total' }),
     },
     misses: graded.filter((r) => r.ml_result === 'loss').slice(-15).reverse().map(missReport(trust)),
   }
