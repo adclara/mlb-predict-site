@@ -9,10 +9,12 @@
 import fs from 'fs'
 import { analyzeGame, leagueAttempts, selectPlays } from './adrian.js'
 import { eloProb, expectedRuns, simulateF5, simulateGame } from './engine.js'
+import { analysisToRow, buildSnapshot, FORMULA_VERSION } from './learn.js'
 
 const API = 'https://statsapi.mlb.com/api/v1'
 const DATA = process.env.DATA_DIR || 'data'
 const HIST = `${DATA}/history`
+const GAMES = `${HIST}/games` // per-game feature+outcome logs for Adrian Learning
 const LEAGUE_FIP = 4.2, LEAGUE_KBB = 0.13, LEAGUE_PEN_FIP = 4.05
 const j = (p) => JSON.parse(fs.readFileSync(p, 'utf8'))
 const get = (u) => fetch(u).then((r) => r.json())
@@ -118,7 +120,7 @@ function predict(g, hf, af) {
 }
 const f5For = (p) => simulateF5({ muHome: p._mu.muHome, muAway: p._mu.muAway, homeSp: p.features.home_sp_fip, homePen: p.features.home_pen_fip, awaySp: p.features.away_sp_fip, awayPen: p.features.away_pen_fip })
 
-// --- compute today's plays --------------------------------------------------
+// --- compute today's plays + per-game learning rows -------------------------
 async function computeDay(date) {
   const games = await fetchSchedule(date)
   if (!games.length) return null
@@ -127,61 +129,125 @@ async function computeDay(date) {
   const [recentByTeam, injuries] = await Promise.all([fetchAllRecent(date), fetchTransactions(isoMinus(date, 4), date)])
   await Promise.all(ids.map((id) => fetchPitcherRecent(id, season, date)))
   const lgAtt = leagueAttempts(priors.teams)
+  const rows = []
   const analyses = games.map((g) => {
     const rh = recentByTeam.get(g.home_team_id) || [], ra = recentByTeam.get(g.away_team_id) || []
     const prediction = predict(g, formFromRecent(rh, g.game_date), formFromRecent(ra, g.game_date))
     const pitcherRecent = { home: _pr.get(g.home_probable_pitcher_id) || null, away: _pr.get(g.away_probable_pitcher_id) || null }
-    return analyzeGame({ game: g, prediction, f5: f5For(prediction), forms: { recentHome: rh, recentAway: ra }, priors, weather: null, injuries, pitcherRecent, lgAttempts: lgAtt })
+    const a = analyzeGame({ game: g, prediction, f5: f5For(prediction), forms: { recentHome: rh, recentAway: ra }, priors, weather: null, injuries, pitcherRecent, lgAttempts: lgAtt })
+    // Learning row (all games, not just the 3 selected plays); Y filled on grading.
+    const f = prediction.features
+    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff })
+    return a
   })
   const { plays } = selectPlays(analyses)
-  return plays.map((p) => ({ game_pk: p.game_pk, matchup: p.matchup, market: p.market, side: p.side || null, line: p.line ?? null, pick: p.pick || null, label: p.label, prob: p.prob, confidence: p.confidence }))
+  return {
+    plays: plays.map((p) => ({ game_pk: p.game_pk, matchup: p.matchup, market: p.market, side: p.side || null, line: p.line ?? null, pick: p.pick || null, label: p.label, prob: p.prob, confidence: p.confidence })),
+    rows,
+  }
 }
 
-// --- grade a past day against final scores ----------------------------------
-async function gradeDay(rec) {
-  const games = await fetchSchedule(rec.date)
-  const byPk = new Map(games.map((g) => [g.game_pk, g]))
+// Merge-write the per-game log for a date, preserving any Y already graded.
+function upsertGames(date, rows) {
+  const fp = `${GAMES}/${date}.json`
+  const prev = {}
+  if (fs.existsSync(fp)) { try { for (const r of j(fp).games || []) prev[r.game_pk] = r } catch { /* rewrite */ } }
+  const merged = rows.map((r) => {
+    const p = prev[r.game_pk]
+    return p && p.graded ? { ...r, home_win: p.home_win, total_runs: p.total_runs, ml_result: p.ml_result, total_result: p.total_result, final: p.final, graded: true } : r
+  })
+  fs.writeFileSync(fp, JSON.stringify({ date, generated_at: new Date().toISOString(), schema: 'games_v1', formula_version: FORMULA_VERSION, games: merged }, null, 2))
+}
+
+// --- grade a past day against final scores (given a fetched schedule) --------
+const isFinal = (g) => g && g.home_score != null && /Final|Game Over|Completed/.test(g.status || '')
+
+function gradePicks(rec, byPk) {
   let done = true
   for (const play of rec.plays) {
     if (play.result) continue
     const g = byPk.get(play.game_pk)
-    if (!g || g.home_score == null || !/Final|Game Over|Completed/.test(g.status || '')) { done = false; continue }
+    if (!isFinal(g)) { done = false; continue }
     const total = g.home_score + g.away_score
     if (play.market === 'ml') play.result = ((play.pick === g.home_team_abbr) === (g.home_score > g.away_score)) ? 'win' : 'loss'
     else if (play.market === 'total') play.result = total === play.line ? 'push' : (total > play.line) === (play.side === 'over') ? 'win' : 'loss'
     play.final = `${g.away_score}-${g.home_score}`
   }
   rec.graded = done
-  return rec
+  return done
+}
+
+// Grade EVERY logged game (not just the 3 picks) for the learning dataset.
+function gradeGames(rec, byPk) {
+  let changed = false
+  for (const row of rec.games) {
+    if (row.graded) continue
+    const g = byPk.get(row.game_pk)
+    if (!isFinal(g)) continue
+    const hs = g.home_score, as = g.away_score, tot = hs + as
+    row.home_win = hs > as ? 1 : 0
+    row.total_runs = tot
+    row.final = `${as}-${hs}`
+    row.ml_result = ((row.ml_pick === g.home_team_abbr) === (hs > as)) ? 'win' : 'loss'
+    row.total_result = tot === row.line ? 'push' : (tot > row.line) === (row.side === 'over') ? 'win' : 'loss'
+    row.graded = true
+    changed = true
+  }
+  return changed
+}
+
+// --- learning snapshot ------------------------------------------------------
+function buildLearning() {
+  const files = fs.existsSync(GAMES) ? fs.readdirSync(GAMES).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort() : []
+  const rows = []
+  for (const f of files) { try { for (const r of j(`${GAMES}/${f}`).games || []) rows.push(r) } catch { /* skip */ } }
+  const snap = buildSnapshot(rows, { now: new Date().toISOString() })
+  fs.writeFileSync(`${HIST}/learning.json`, JSON.stringify(snap, null, 2))
+  return snap
 }
 
 // --- main -------------------------------------------------------------------
 async function main() {
-  fs.mkdirSync(HIST, { recursive: true })
+  fs.mkdirSync(GAMES, { recursive: true })
   const today = process.argv[2] || new Date().toISOString().slice(0, 10)
 
-  const plays = await computeDay(today)
-  if (plays) fs.writeFileSync(`${HIST}/${today}.json`, JSON.stringify({ date: today, generated_at: new Date().toISOString(), graded: false, plays }, null, 2))
-
-  // Grade any ungraded past days (up to 5 back).
-  const files = fs.existsSync(HIST) ? fs.readdirSync(HIST).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort() : []
-  for (const f of files.slice(-6)) {
-    const rec = j(`${HIST}/${f}`)
-    if (rec.graded || rec.date === today) continue
-    await gradeDay(rec)
-    fs.writeFileSync(`${HIST}/${f}`, JSON.stringify(rec, null, 2))
+  const day = await computeDay(today)
+  if (day) {
+    fs.writeFileSync(`${HIST}/${today}.json`, JSON.stringify({ date: today, generated_at: new Date().toISOString(), graded: false, plays: day.plays }, null, 2))
+    upsertGames(today, day.rows)
   }
 
-  // Rebuild index with a running record.
+  // Grade past days (picks + full game logs) over a wide window, one fetch/date.
+  const dateOf = (f) => f.replace('.json', '')
+  const pickFiles = fs.existsSync(HIST) ? fs.readdirSync(HIST).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)) : []
+  const gameFiles = fs.existsSync(GAMES) ? fs.readdirSync(GAMES).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)) : []
+  const dates = [...new Set([...pickFiles, ...gameFiles].map(dateOf))].sort().slice(-45)
+  for (const date of dates) {
+    if (date === today) continue
+    const pickRec = fs.existsSync(`${HIST}/${date}.json`) ? j(`${HIST}/${date}.json`) : null
+    const gamesRec = fs.existsSync(`${GAMES}/${date}.json`) ? j(`${GAMES}/${date}.json`) : null
+    const needPick = pickRec && !pickRec.graded
+    const needGames = gamesRec && gamesRec.games.some((r) => !r.graded)
+    if (!needPick && !needGames) continue
+    const byPk = new Map((await fetchSchedule(date)).map((g) => [g.game_pk, g]))
+    if (needPick) { gradePicks(pickRec, byPk); fs.writeFileSync(`${HIST}/${date}.json`, JSON.stringify(pickRec, null, 2)) }
+    if (needGames) { if (gradeGames(gamesRec, byPk)) fs.writeFileSync(`${GAMES}/${date}.json`, JSON.stringify(gamesRec, null, 2)) }
+  }
+
+  // Rebuild the classic picks index with a running record.
+  const idxFiles = pickFiles.sort()
   const idx = []
   let w = 0, l = 0, ps = 0
-  for (const f of files) {
+  for (const f of idxFiles) {
     const rec = j(`${HIST}/${f}`)
     const g = rec.plays.filter((p) => p.result)
     for (const p of g) { if (p.result === 'win') w++; else if (p.result === 'loss') l++; else ps++ }
     idx.push({ date: rec.date, n: rec.plays.length, graded: !!rec.graded, wins: g.filter((p) => p.result === 'win').length, losses: g.filter((p) => p.result === 'loss').length })
   }
   fs.writeFileSync(`${HIST}/index.json`, JSON.stringify({ updated_at: new Date().toISOString(), record: { wins: w, losses: l, pushes: ps, win_rate: w + l ? Math.round(w / (w + l) * 1000) / 1000 : null }, days: idx.reverse() }, null, 2))
-  console.log(`adrian_daily: ${today} -> ${plays ? plays.length : 0} plays; record ${w}-${l} (${ps} push)`)
+
+  // Rebuild the Adrian Learning snapshot from all graded game logs.
+  const snap = buildLearning()
+  console.log(`adrian_daily: ${today} -> ${day ? day.plays.length : 0} plays; record ${w}-${l} (${ps} push); learning n=${snap.n_graded}/${snap.n_total}`)
 }
 main().catch((e) => { console.error(e); process.exit(1) })

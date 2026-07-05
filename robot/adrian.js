@@ -151,7 +151,10 @@ function runEnvironment(ctx) {
   const pOver = clamp(1 - normCdf((line - adjTotal) / TOTAL_SIGMA), 0.05, 0.95)
   const side = pOver >= 0.5 ? 'over' : 'under'
   const prob = side === 'over' ? pOver : 1 - pOver
-  return { line, adjTotal: Math.round(adjTotal * 10) / 10, base: Math.round(base * 10) / 10, pOver, side, prob, reasons }
+  // components: the RAW (unrounded) pieces of adjTotal, additive for the learner
+  // (Adrian Learning re-weights these). The displayed base/adjTotal stay rounded.
+  const components = { base, adjTotal, aStart, hStart, homeContact, awayContact, wx, aFat, hFat }
+  return { line, adjTotal: Math.round(adjTotal * 10) / 10, base: Math.round(base * 10) / 10, pOver, side, prob, reasons, components }
 }
 
 // --- per-game analysis: moneyline + total, each a candidate play ------------
@@ -207,6 +210,8 @@ export function analyzeGame(ctx) {
     pick: mlAbbr, label: `Gana ${mlAbbr}`, prob: round3(mlProb),
     confScore: round2(mlConf), confidence: tier(mlConf),
     isValue: pickModelP < 0.5 && tier(mlConf) !== 'baja', reasons: mlReasons,
+    // Intermediates for Adrian Learning (additive; classic UI ignores them).
+    model_p: round3(modelP), signal: round4(signal), adrian_p: round3(adrianP), agree,
   }
   const total = {
     market: 'total', game_pk: game.game_pk, matchup: `${away} @ ${home}`,
@@ -214,6 +219,8 @@ export function analyzeGame(ctx) {
     prob: round3(re.prob), expected: re.adjTotal, base: re.base,
     confScore: round2(totalConf), confidence: tier(totalConf),
     isValue: false, reasons: totalReasons.slice(0, 3),
+    // Intermediates for Adrian Learning (additive; raw unrounded components).
+    p_over: round3(re.pOver), adj_total: re.components.adjTotal, base_raw: re.components.base, components: re.components,
   }
 
   return {
@@ -226,7 +233,7 @@ export function analyzeGame(ctx) {
     l10_home: (forms.recentHome || []).slice(0, 10).map((g) => (g.won ? 1 : 0)),
     l10_away: (forms.recentAway || []).slice(0, 10).map((g) => (g.won ? 1 : 0)),
     streak_home: streakLen(forms.recentHome), streak_away: streakLen(forms.recentAway),
-    factors: F, ml, total,
+    factors: F, news, ml, total,
     plays: [ml, total],
     bestPlay: total.confScore > ml.confScore ? total : ml,
   }
@@ -234,6 +241,7 @@ export function analyzeGame(ctx) {
 
 const round2 = (x) => Math.round(x * 100) / 100
 const round3 = (x) => Math.round(x * 1000) / 1000
+const round4 = (x) => Math.round(x * 10000) / 10000
 const tier = (c) => (c > 0.7 ? 'alta' : c > 0.45 ? 'media' : 'baja')
 const FACTOR_REASON = {
   momentum: (abbr) => ({ text: `${abbr} llega con mejor momentum (últimos 10)`, tone: 'positive' }),
