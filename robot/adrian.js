@@ -197,7 +197,10 @@ export function analyzeGame(ctx) {
 
   // Total (over/under) with pitcher-recent + contact.
   const re = runEnvironment(ctx)
-  const totalConf = Math.abs(re.prob - 0.5) * 2 + Math.min(0.35, re.reasons.filter((r) => r.over === (re.side === 'over')).length * 0.12)
+  // Only reasons that agree with the chosen side — a BAJA pick must never show a
+  // "→ sube" reason (and vice-versa). Confidence counts the same matching set.
+  const totalReasons = re.reasons.filter((r) => r.over === (re.side === 'over'))
+  const totalConf = Math.abs(re.prob - 0.5) * 2 + Math.min(0.35, totalReasons.length * 0.12)
 
   const ml = {
     market: 'ml', game_pk: game.game_pk, matchup: `${away} @ ${home}`,
@@ -210,7 +213,7 @@ export function analyzeGame(ctx) {
     side: re.side, line: re.line, label: `${re.side === 'over' ? 'ALTA' : 'BAJA'} ${re.line}`,
     prob: round3(re.prob), expected: re.adjTotal, base: re.base,
     confScore: round2(totalConf), confidence: tier(totalConf),
-    isValue: false, reasons: re.reasons.slice(0, 3),
+    isValue: false, reasons: totalReasons.slice(0, 3),
   }
 
   return {
