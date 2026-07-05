@@ -62,19 +62,32 @@ async function fetchAllRecent(beforeDate, days = 25) {
   for (const rows of byTeam.values()) rows.sort((a, b) => (a.date < b.date ? 1 : -1))
   return byTeam
 }
-const _pr = new Map()
-async function fetchPitcherRecent(id, season, n = 3) {
-  if (id == null) return null
-  if (_pr.has(id)) return _pr.get(id)
+const startF5 = (ip, er) => (ip < 5 ? 'white' : er <= 2 ? 'green' : 'red')
+const _plog = new Map()
+async function pitcherLog(id, season) {
+  if (_plog.has(id)) return _plog.get(id)
+  let starts = []
   try {
     const data = await get(`${API}/people/${id}/stats?stats=gameLog&group=pitching&season=${season}&sportId=1`)
-    const sp = []
-    for (const blk of data.stats || []) for (const s of blk.splits || []) { const st = s.stat || {}; sp.push({ gs: Number(st.gamesStarted) || 0, ip: ipToFloat(st.inningsPitched), h: +st.hits || 0, er: +st.earnedRuns || 0, hr: +st.homeRuns || 0 }) }
-    const starts = sp.filter((s) => s.gs > 0 || s.ip >= 2).slice(-n).reverse()
-    let ip = 0, er = 0, h = 0, hr = 0; for (const s of starts) { ip += s.ip; er += s.er; h += s.h; hr += s.hr }
-    const agg = ip > 0 ? { ip, era: Math.round(9 * er / ip * 100) / 100, h9: Math.round(9 * h / ip * 10) / 10, hr9: Math.round(9 * hr / ip * 10) / 10, n: starts.length } : null
-    const out = { id, starts, recent: agg }; _pr.set(id, out); return out
-  } catch { return null }
+    const rows = []
+    for (const blk of data.stats || []) for (const s of blk.splits || []) { const st = s.stat || {}; const ip = ipToFloat(st.inningsPitched); rows.push({ date: s.date, gs: Number(st.gamesStarted) || 0, ip, er: +st.earnedRuns || 0, h: +st.hits || 0, hr: +st.homeRuns || 0, pitches: Number(st.numberOfPitches ?? st.pitchesThrown) || 0 }) }
+    starts = rows.filter((s) => s.gs > 0 || s.ip >= 2).map((s) => ({ ...s, f5: startF5(s.ip, s.er) })).reverse()
+  } catch { /* empty */ }
+  _plog.set(id, starts)
+  return starts
+}
+const _pr = new Map()
+async function fetchPitcherRecent(id, season, gameDate) {
+  if (id == null) return null
+  const all = await pitcherLog(id, season)
+  const starts = gameDate ? all.filter((s) => s.date < gameDate) : all // anti-leakage
+  const last3 = starts.slice(0, 3)
+  let ip = 0, er = 0, h = 0, hr = 0; for (const s of last3) { ip += s.ip; er += s.er; h += s.h; hr += s.hr }
+  const recent = ip > 0 ? { ip, era: Math.round(9 * er / ip * 100) / 100, h9: Math.round(9 * h / ip * 10) / 10, hr9: Math.round(9 * hr / ip * 10) / 10, n: last3.length } : null
+  const av = last3.filter((s) => s.pitches).length ? Math.round(last3.reduce((a, s) => a + s.pitches, 0) / last3.filter((s) => s.pitches).length) : null
+  let fatigue = null
+  if (gameDate && starts[0]?.date) { const rest = Math.round((new Date(gameDate + 'T00:00:00') - new Date(starts[0].date + 'T00:00:00')) / 864e5); fatigue = { restDays: rest, avgPitches: av, level: rest <= 3 || (av && av >= 106) ? 'alta' : rest === 4 || (av && av >= 99) ? 'media' : 'normal' } }
+  const out = { id, starts, recent, fatigue }; _pr.set(id, out); return out
 }
 async function fetchTransactions(start, end) {
   try {
@@ -112,7 +125,7 @@ async function computeDay(date) {
   const season = priors.meta?.season || new Date(date).getFullYear()
   const ids = [...new Set(games.flatMap((g) => [g.home_probable_pitcher_id, g.away_probable_pitcher_id]).filter(Boolean))]
   const [recentByTeam, injuries] = await Promise.all([fetchAllRecent(date), fetchTransactions(isoMinus(date, 4), date)])
-  await Promise.all(ids.map((id) => fetchPitcherRecent(id, season)))
+  await Promise.all(ids.map((id) => fetchPitcherRecent(id, season, date)))
   const lgAtt = leagueAttempts(priors.teams)
   const analyses = games.map((g) => {
     const rh = recentByTeam.get(g.home_team_id) || [], ra = recentByTeam.get(g.away_team_id) || []

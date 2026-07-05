@@ -123,7 +123,11 @@ function runEnvironment(ctx) {
   const homeContact = contactAdj(hT.ops)
   const awayContact = contactAdj(aT.ops)
   const wx = weatherRuns(weather)
-  const adjTotal = base + aStart + hStart + homeContact + awayContact + wx
+  // Fatigue: a tired starter (short rest / heavy recent pitch load) gets
+  // squeezed for more runs -> the opposing offense's total goes up.
+  const fatAdj = (rec) => (rec?.fatigue?.level === 'alta' ? 0.4 : rec?.fatigue?.level === 'media' ? 0.15 : 0)
+  const aFat = fatAdj(pitcherRecent?.away), hFat = fatAdj(pitcherRecent?.home)
+  const adjTotal = base + aStart + hStart + homeContact + awayContact + wx + aFat + hFat
 
   // Reasons (only the meaningful movers).
   const sr = (rec, teamAbbr, oppAbbr, name) => {
@@ -133,6 +137,12 @@ function runEnvironment(ctx) {
   }
   sr(pitcherRecent?.away, away, home, ctx.game.away_probable_pitcher_name)
   sr(pitcherRecent?.home, home, away, ctx.game.home_probable_pitcher_name)
+  const fr = (rec, teamAbbr, name) => {
+    const fq = rec?.fatigue
+    if (fq && fq.level === 'alta') reasons.push({ text: `${name || `abridor de ${teamAbbr}`} con fatiga (${fq.restDays != null ? `${fq.restDays}d descanso` : ''}${fq.avgPitches ? `${fq.restDays != null ? ', ' : ''}~${fq.avgPitches} pitcheos` : ''}) → sube el total`, tone: 'warn', over: true })
+  }
+  fr(pitcherRecent?.away, away, ctx.game.away_probable_pitcher_name)
+  fr(pitcherRecent?.home, home, ctx.game.home_probable_pitcher_name)
   if (hT.ops && hT.ops >= 0.76) reasons.push({ text: `${home} batea mucho contacto (OPS ${hT.ops}) → sube`, tone: 'neutral', over: true })
   if (aT.ops && aT.ops >= 0.76) reasons.push({ text: `${away} batea mucho contacto (OPS ${aT.ops}) → sube`, tone: 'neutral', over: true })
   if (wx > 0.2) reasons.push({ text: 'Viento/calor a favor de carreras → sube', tone: 'neutral', over: true })
