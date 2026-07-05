@@ -1,0 +1,32 @@
+# Deployed into the PUBLIC site repo at .github/workflows/adrian-daily.yml by
+# scripts/deploy_demo.sh. Runs daily: computes the day's Adrian plays and grades
+# past days against final scores, committing the JSON history back to the repo
+# (GitHub Pages then serves it). Public repo -> free unlimited Actions minutes;
+# same-repo commit -> the default GITHUB_TOKEN suffices (no secret).
+name: adrian-daily
+on:
+  schedule:
+    - cron: '0 13 * * *' # ~9am ET: today's probables are posted, last night's games are final
+  workflow_dispatch: {}
+permissions:
+  contents: write
+concurrency:
+  group: adrian-daily
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Compute + grade
+        run: DATA_DIR="$PWD/data" node robot/daily.mjs
+      - name: Commit history
+        run: |
+          git config user.name "adrian-robot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/history
+          git diff --cached --quiet || git commit -m "Adrian robot: picks + grading ($(date -u +%F))"
+          git push
