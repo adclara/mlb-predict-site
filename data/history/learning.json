@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-05T14:46:14.074Z",
+  "updated_at": "2026-07-05T14:57:01.168Z",
   "n_graded": 1333,
   "n_total": 1368,
   "first_date": "2026-03-25",
@@ -8,13 +8,13 @@
   "ml": {
     "fit": {
       "beta": [
-        -0.06280321343177658,
-        -0.043254747644997635,
-        0.08029771102901406,
-        0.08565140984202545,
-        -0.024447100648699906,
-        0.025725969800914537,
-        0.059761448367833
+        -0.06280321343177656,
+        -0.043254747644997496,
+        0.08029771102901391,
+        0.08565140984202542,
+        -0.024447100648699916,
+        0.025725969800914506,
+        0.059761448367833016
       ],
       "mu": [
         -0.01929047261815451,
@@ -951,6 +951,20 @@
         }
       },
       "tie": false,
+      "agree_split": {
+        "agree": {
+          "n": 971,
+          "p": 0.5448,
+          "lo": 0.5134,
+          "hi": 0.5759
+        },
+        "disagree": {
+          "n": 254,
+          "p": 0.5197,
+          "lo": 0.4584,
+          "hi": 0.5804
+        }
+      },
       "verdict": "combinado mejor"
     }
   },
@@ -1826,7 +1840,155 @@
         }
       },
       "tie": false,
+      "agree_split": {
+        "agree": {
+          "n": 912,
+          "p": 0.5274,
+          "lo": 0.495,
+          "hi": 0.5596
+        },
+        "disagree": {
+          "n": 255,
+          "p": 0.5137,
+          "lo": 0.4526,
+          "hi": 0.5744
+        }
+      },
       "verdict": "combinado mejor"
+    }
+  },
+  "indicators": {
+    "ml": {
+      "baseline": {
+        "n": 1333,
+        "rate": 0.5379,
+        "lo": 0.511,
+        "hi": 0.5645
+      },
+      "min_n": 40,
+      "list": [
+        {
+          "id": "prob60",
+          "label": "Prob. del pick ≥ 60%",
+          "n": 973,
+          "rate": 0.5406,
+          "lo": 0.5092,
+          "hi": 0.5717,
+          "lift": 0.0027,
+          "active": true,
+          "strong": false
+        },
+        {
+          "id": "prob55",
+          "label": "Prob. del pick ≥ 55%",
+          "n": 1176,
+          "rate": 0.5459,
+          "lo": 0.5174,
+          "hi": 0.5742,
+          "lift": 0.008,
+          "active": true,
+          "strong": false
+        },
+        {
+          "id": "agree4",
+          "label": "4+ factores de acuerdo con el pick",
+          "n": 728,
+          "rate": 0.5591,
+          "lo": 0.5228,
+          "hi": 0.5947,
+          "lift": 0.0212,
+          "active": true,
+          "strong": false
+        },
+        {
+          "id": "agree5",
+          "label": "5+ factores de acuerdo con el pick",
+          "n": 317,
+          "rate": 0.6025,
+          "lo": 0.5477,
+          "hi": 0.6549,
+          "lift": 0.0646,
+          "active": true,
+          "strong": true
+        },
+        {
+          "id": "signal4",
+          "label": "Señal de factores ≥ 4 pts hacia el pick",
+          "n": 1192,
+          "rate": 0.5327,
+          "lo": 0.5043,
+          "hi": 0.5609,
+          "lift": -0.0052,
+          "active": true,
+          "strong": false
+        },
+        {
+          "id": "news",
+          "label": "Noticias/lesiones a favor del pick",
+          "n": 756,
+          "rate": 0.5357,
+          "lo": 0.5001,
+          "hi": 0.571,
+          "lift": -0.0022,
+          "active": true,
+          "strong": false
+        },
+        {
+          "id": "streak3",
+          "label": "El equipo del pick trae racha ≥ 3",
+          "n": 252,
+          "rate": 0.5159,
+          "lo": 0.4544,
+          "hi": 0.5769,
+          "lift": -0.022,
+          "active": false,
+          "strong": false
+        }
+      ]
+    },
+    "total": {
+      "baseline": {
+        "n": 1270,
+        "rate": 0.522,
+        "lo": 0.4945,
+        "hi": 0.5494
+      },
+      "min_n": 40,
+      "list": [
+        {
+          "id": "tprob57",
+          "label": "Prob. del lado ≥ 57%",
+          "n": 668,
+          "rate": 0.5284,
+          "lo": 0.4905,
+          "hi": 0.566,
+          "lift": 0.0064,
+          "active": false,
+          "strong": false
+        },
+        {
+          "id": "tedge05",
+          "label": "Modelo vs línea ≥ 0.5 carreras",
+          "n": 677,
+          "rate": 0.5258,
+          "lo": 0.4882,
+          "hi": 0.5632,
+          "lift": 0.0038,
+          "active": false,
+          "strong": false
+        },
+        {
+          "id": "tedge10",
+          "label": "Modelo vs línea ≥ 1.0 carrera",
+          "n": 272,
+          "rate": 0.5331,
+          "lo": 0.4737,
+          "hi": 0.5915,
+          "lift": 0.0111,
+          "active": false,
+          "strong": false
+        }
+      ]
     }
   },
   "misses": [
