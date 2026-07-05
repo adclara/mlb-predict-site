@@ -1,70 +1,119 @@
 {
-  "updated_at": "2026-07-05T14:08:29.393Z",
-  "n_graded": 0,
-  "n_total": 15,
-  "first_date": null,
-  "last_date": null,
+  "updated_at": "2026-07-05T14:32:55.236Z",
+  "n_graded": 1318,
+  "n_total": 1368,
+  "first_date": "2026-03-25",
+  "last_date": "2026-07-03",
   "formula_version": "v2",
   "ml": {
-    "fit": null,
-    "weights": null,
+    "fit": {
+      "beta": [
+        -0.06028492997911963,
+        -0.031193951275969512,
+        0.057662967232185426,
+        0.08082229505191636,
+        -0.02217745016847889,
+        0.035395910219158014,
+        0.0614902004700111
+      ],
+      "mu": [
+        -0.01917898330804246,
+        -0.0079795144157815,
+        -0.002953717754172995,
+        -0.015078755690440065,
+        0.16706532625189824,
+        0.006924430955993926,
+        0.010257966616084982
+      ],
+      "sd": [
+        0.6486380976481929,
+        0.6746733430618909,
+        0.2562724569926261,
+        0.6930654047559067,
+        0.09552799939676267,
+        0.18314073059487634,
+        0.19973980094475283
+      ],
+      "intercept": false,
+      "n": 1318,
+      "features": 7
+    },
+    "weights": {
+      "learned": {
+        "momentum": -0.0944,
+        "pitching": -0.0469,
+        "f5": 0.2284,
+        "bats": 0.1184,
+        "schedule": -0.2357,
+        "manager": 0.1962
+      },
+      "original": {
+        "momentum": 0.22,
+        "pitching": 0.24,
+        "f5": 0.16,
+        "bats": 0.16,
+        "schedule": 0.08,
+        "manager": 0.06
+      },
+      "news_coef": 0.3079
+    },
     "calibration": {
       "curve": [
         {
           "lo": 0.5,
           "hi": 0.55,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 156,
+          "conf": 0.5233,
+          "emp": 0.4808
         },
         {
           "lo": 0.55,
           "hi": 0.6,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 202,
+          "conf": 0.5749,
+          "emp": 0.5693
         },
         {
           "lo": 0.6,
           "hi": 0.65,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 287,
+          "conf": 0.6251,
+          "emp": 0.5192
         },
         {
           "lo": 0.65,
           "hi": 0.7,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 334,
+          "conf": 0.6747,
+          "emp": 0.5299
         },
         {
           "lo": 0.7,
           "hi": 0.75,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 246,
+          "conf": 0.7213,
+          "emp": 0.5528
         },
         {
           "lo": 0.75,
           "hi": 0.8,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 77,
+          "conf": 0.7705,
+          "emp": 0.6104
         },
         {
           "lo": 0.8,
           "hi": 0.85,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 15,
+          "conf": 0.8164,
+          "emp": 0.6
         },
         {
           "lo": 0.85,
           "hi": 0.9,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 1,
+          "conf": 0.858,
+          "emp": 1
         },
         {
           "lo": 0.9,
@@ -81,211 +130,926 @@
           "emp": null
         }
       ],
-      "ece": 0,
-      "n": 0,
-      "verdict": "sin dato",
-      "bias": 0,
-      "platt": null
+      "ece": 0.109,
+      "n": 1318,
+      "verdict": "sobre-confiado",
+      "bias": 0.1088,
+      "platt": {
+        "a": 0.2541,
+        "b": -0.0054,
+        "n": 1318
+      }
     },
     "trust": [
       {
         "factor": "momentum",
-        "trust": 0.5,
-        "lift": 0,
-        "n": 0,
+        "trust": 0.5211,
+        "lift": 0.0211,
+        "n": 1264,
         "band": [
-          0.3005,
-          0.6995
+          0.4981,
+          0.5441
         ]
       },
       {
         "factor": "pitching",
-        "trust": 0.5,
-        "lift": 0,
-        "n": 0,
+        "trust": 0.5317,
+        "lift": 0.0317,
+        "n": 1276,
         "band": [
-          0.3005,
-          0.6995
+          0.5089,
+          0.5546
         ]
       },
       {
         "factor": "f5",
-        "trust": 0.5,
-        "lift": 0,
-        "n": 0,
+        "trust": 0.5219,
+        "lift": 0.0219,
+        "n": 1172,
         "band": [
-          0.3005,
-          0.6995
+          0.4981,
+          0.5457
         ]
       },
       {
         "factor": "bats",
-        "trust": 0.5,
-        "lift": 0,
-        "n": 0,
+        "trust": 0.5124,
+        "lift": 0.0124,
+        "n": 1272,
         "band": [
-          0.3005,
-          0.6995
+          0.4895,
+          0.5353
         ]
       },
       {
         "factor": "schedule",
-        "trust": 0.5,
-        "lift": 0,
-        "n": 0,
+        "trust": 0.5342,
+        "lift": 0.0342,
+        "n": 1212,
         "band": [
-          0.3005,
-          0.6995
+          0.5108,
+          0.5576
         ]
       },
       {
         "factor": "manager",
-        "trust": 0.5,
-        "lift": 0,
-        "n": 0,
+        "trust": 0.5165,
+        "lift": 0.0165,
+        "n": 832,
         "band": [
-          0.3005,
-          0.6995
+          0.4883,
+          0.5447
         ]
       }
     ],
     "oos": {
-      "n": 0,
-      "first_date": null,
-      "last_date": null,
+      "n": 1210,
+      "first_date": "2026-03-25",
+      "last_date": "2026-07-03",
       "classic": {
-        "acc": null,
-        "logloss": null,
-        "brier": null,
-        "n": 0
+        "acc": 0.5397,
+        "logloss": 0.7234,
+        "brier": 0.2633,
+        "n": 1210
       },
       "learned": {
-        "acc": null,
-        "logloss": null,
-        "brier": null,
-        "n": 0
+        "acc": 0.5314,
+        "logloss": 0.6969,
+        "brier": 0.2518,
+        "n": 1210
       },
-      "delta": null,
-      "se": null,
+      "delta": {
+        "acc": -0.0083,
+        "logloss": -0.0265,
+        "brier": -0.0115
+      },
+      "se": 0.0144,
       "tie": true
     },
     "combined": {
-      "n": 0,
-      "first_date": null,
-      "last_date": null,
+      "n": 1210,
+      "first_date": "2026-03-25",
+      "last_date": "2026-07-03",
       "classic": {
-        "acc": null,
-        "logloss": null,
-        "brier": null,
-        "n": 0
+        "acc": 0.5397,
+        "logloss": 0.7234,
+        "brier": 0.2633,
+        "n": 1210
       },
       "learned": {
-        "acc": null,
-        "logloss": null,
-        "brier": null,
-        "n": 0
+        "acc": 0.5331,
+        "logloss": 0.6964,
+        "brier": 0.2515,
+        "n": 1210
       },
       "combined": {
-        "acc": null,
-        "logloss": null,
-        "brier": null,
-        "n": 0
+        "acc": 0.5322,
+        "logloss": 0.6955,
+        "brier": 0.2511,
+        "n": 1210
       },
-      "delta": null,
+      "delta": {
+        "acc": -0.0075,
+        "logloss": -0.0279,
+        "brier": -0.0122
+      },
       "alpha": {
-        "final": null,
-        "curve": []
+        "final": 0.1,
+        "curve": [
+          {
+            "date": "2026-04-04",
+            "alpha": 0.5,
+            "n_pairs": 0,
+            "platt": false
+          },
+          {
+            "date": "2026-04-05",
+            "alpha": 0.5,
+            "n_pairs": 15,
+            "platt": false
+          },
+          {
+            "date": "2026-04-06",
+            "alpha": 0,
+            "n_pairs": 31,
+            "platt": false
+          },
+          {
+            "date": "2026-04-07",
+            "alpha": 0,
+            "n_pairs": 44,
+            "platt": false
+          },
+          {
+            "date": "2026-04-08",
+            "alpha": 0,
+            "n_pairs": 59,
+            "platt": false
+          },
+          {
+            "date": "2026-04-09",
+            "alpha": 0,
+            "n_pairs": 74,
+            "platt": false
+          },
+          {
+            "date": "2026-04-10",
+            "alpha": 0,
+            "n_pairs": 80,
+            "platt": false
+          },
+          {
+            "date": "2026-04-11",
+            "alpha": 0,
+            "n_pairs": 95,
+            "platt": false
+          },
+          {
+            "date": "2026-04-12",
+            "alpha": 0,
+            "n_pairs": 110,
+            "platt": true
+          },
+          {
+            "date": "2026-04-13",
+            "alpha": 0,
+            "n_pairs": 125,
+            "platt": true
+          },
+          {
+            "date": "2026-04-14",
+            "alpha": 0,
+            "n_pairs": 135,
+            "platt": true
+          },
+          {
+            "date": "2026-04-15",
+            "alpha": 0,
+            "n_pairs": 150,
+            "platt": true
+          },
+          {
+            "date": "2026-04-16",
+            "alpha": 0,
+            "n_pairs": 165,
+            "platt": true
+          },
+          {
+            "date": "2026-04-17",
+            "alpha": 0,
+            "n_pairs": 175,
+            "platt": true
+          },
+          {
+            "date": "2026-04-18",
+            "alpha": 0,
+            "n_pairs": 190,
+            "platt": true
+          },
+          {
+            "date": "2026-04-19",
+            "alpha": 0.1,
+            "n_pairs": 205,
+            "platt": true
+          },
+          {
+            "date": "2026-04-20",
+            "alpha": 0.2,
+            "n_pairs": 220,
+            "platt": true
+          },
+          {
+            "date": "2026-04-21",
+            "alpha": 0.2,
+            "n_pairs": 230,
+            "platt": true
+          },
+          {
+            "date": "2026-04-22",
+            "alpha": 0.25,
+            "n_pairs": 245,
+            "platt": true
+          },
+          {
+            "date": "2026-04-23",
+            "alpha": 0.15,
+            "n_pairs": 260,
+            "platt": true
+          },
+          {
+            "date": "2026-04-24",
+            "alpha": 0.15,
+            "n_pairs": 269,
+            "platt": true
+          },
+          {
+            "date": "2026-04-25",
+            "alpha": 0.2,
+            "n_pairs": 283,
+            "platt": true
+          },
+          {
+            "date": "2026-04-26",
+            "alpha": 0.15,
+            "n_pairs": 297,
+            "platt": true
+          },
+          {
+            "date": "2026-04-27",
+            "alpha": 0.15,
+            "n_pairs": 313,
+            "platt": true
+          },
+          {
+            "date": "2026-04-28",
+            "alpha": 0.2,
+            "n_pairs": 321,
+            "platt": true
+          },
+          {
+            "date": "2026-04-29",
+            "alpha": 0.2,
+            "n_pairs": 336,
+            "platt": true
+          },
+          {
+            "date": "2026-04-30",
+            "alpha": 0.15,
+            "n_pairs": 349,
+            "platt": true
+          },
+          {
+            "date": "2026-05-01",
+            "alpha": 0.15,
+            "n_pairs": 360,
+            "platt": true
+          },
+          {
+            "date": "2026-05-02",
+            "alpha": 0.2,
+            "n_pairs": 375,
+            "platt": true
+          },
+          {
+            "date": "2026-05-03",
+            "alpha": 0.2,
+            "n_pairs": 390,
+            "platt": true
+          },
+          {
+            "date": "2026-05-04",
+            "alpha": 0.25,
+            "n_pairs": 405,
+            "platt": true
+          },
+          {
+            "date": "2026-05-05",
+            "alpha": 0.25,
+            "n_pairs": 417,
+            "platt": true
+          },
+          {
+            "date": "2026-05-06",
+            "alpha": 0.25,
+            "n_pairs": 430,
+            "platt": true
+          },
+          {
+            "date": "2026-05-07",
+            "alpha": 0.25,
+            "n_pairs": 445,
+            "platt": true
+          },
+          {
+            "date": "2026-05-08",
+            "alpha": 0.25,
+            "n_pairs": 455,
+            "platt": true
+          },
+          {
+            "date": "2026-05-09",
+            "alpha": 0.25,
+            "n_pairs": 470,
+            "platt": true
+          },
+          {
+            "date": "2026-05-10",
+            "alpha": 0.2,
+            "n_pairs": 484,
+            "platt": true
+          },
+          {
+            "date": "2026-05-11",
+            "alpha": 0.15,
+            "n_pairs": 499,
+            "platt": true
+          },
+          {
+            "date": "2026-05-12",
+            "alpha": 0.15,
+            "n_pairs": 505,
+            "platt": true
+          },
+          {
+            "date": "2026-05-13",
+            "alpha": 0.2,
+            "n_pairs": 520,
+            "platt": true
+          },
+          {
+            "date": "2026-05-14",
+            "alpha": 0.15,
+            "n_pairs": 535,
+            "platt": true
+          },
+          {
+            "date": "2026-05-15",
+            "alpha": 0.15,
+            "n_pairs": 546,
+            "platt": true
+          },
+          {
+            "date": "2026-05-16",
+            "alpha": 0.15,
+            "n_pairs": 561,
+            "platt": true
+          },
+          {
+            "date": "2026-05-17",
+            "alpha": 0.15,
+            "n_pairs": 576,
+            "platt": true
+          },
+          {
+            "date": "2026-05-18",
+            "alpha": 0.15,
+            "n_pairs": 591,
+            "platt": true
+          },
+          {
+            "date": "2026-05-19",
+            "alpha": 0.15,
+            "n_pairs": 605,
+            "platt": true
+          },
+          {
+            "date": "2026-05-20",
+            "alpha": 0.2,
+            "n_pairs": 620,
+            "platt": true
+          },
+          {
+            "date": "2026-05-21",
+            "alpha": 0.2,
+            "n_pairs": 635,
+            "platt": true
+          },
+          {
+            "date": "2026-05-22",
+            "alpha": 0.25,
+            "n_pairs": 642,
+            "platt": true
+          },
+          {
+            "date": "2026-05-23",
+            "alpha": 0.2,
+            "n_pairs": 656,
+            "platt": true
+          },
+          {
+            "date": "2026-05-24",
+            "alpha": 0.15,
+            "n_pairs": 670,
+            "platt": true
+          },
+          {
+            "date": "2026-05-25",
+            "alpha": 0.15,
+            "n_pairs": 685,
+            "platt": true
+          },
+          {
+            "date": "2026-05-26",
+            "alpha": 0.15,
+            "n_pairs": 698,
+            "platt": true
+          },
+          {
+            "date": "2026-05-27",
+            "alpha": 0.15,
+            "n_pairs": 713,
+            "platt": true
+          },
+          {
+            "date": "2026-05-28",
+            "alpha": 0.2,
+            "n_pairs": 728,
+            "platt": true
+          },
+          {
+            "date": "2026-05-29",
+            "alpha": 0.15,
+            "n_pairs": 734,
+            "platt": true
+          },
+          {
+            "date": "2026-05-30",
+            "alpha": 0.15,
+            "n_pairs": 749,
+            "platt": true
+          },
+          {
+            "date": "2026-05-31",
+            "alpha": 0.2,
+            "n_pairs": 764,
+            "platt": true
+          },
+          {
+            "date": "2026-06-01",
+            "alpha": 0.2,
+            "n_pairs": 779,
+            "platt": true
+          },
+          {
+            "date": "2026-06-02",
+            "alpha": 0.2,
+            "n_pairs": 788,
+            "platt": true
+          },
+          {
+            "date": "2026-06-03",
+            "alpha": 0.2,
+            "n_pairs": 803,
+            "platt": true
+          },
+          {
+            "date": "2026-06-04",
+            "alpha": 0.2,
+            "n_pairs": 818,
+            "platt": true
+          },
+          {
+            "date": "2026-06-05",
+            "alpha": 0.2,
+            "n_pairs": 827,
+            "platt": true
+          },
+          {
+            "date": "2026-06-06",
+            "alpha": 0.2,
+            "n_pairs": 842,
+            "platt": true
+          },
+          {
+            "date": "2026-06-07",
+            "alpha": 0.15,
+            "n_pairs": 856,
+            "platt": true
+          },
+          {
+            "date": "2026-06-08",
+            "alpha": 0.15,
+            "n_pairs": 871,
+            "platt": true
+          },
+          {
+            "date": "2026-06-09",
+            "alpha": 0.15,
+            "n_pairs": 879,
+            "platt": true
+          },
+          {
+            "date": "2026-06-10",
+            "alpha": 0.15,
+            "n_pairs": 894,
+            "platt": true
+          },
+          {
+            "date": "2026-06-11",
+            "alpha": 0.15,
+            "n_pairs": 909,
+            "platt": true
+          },
+          {
+            "date": "2026-06-12",
+            "alpha": 0.15,
+            "n_pairs": 916,
+            "platt": true
+          },
+          {
+            "date": "2026-06-13",
+            "alpha": 0.1,
+            "n_pairs": 931,
+            "platt": true
+          },
+          {
+            "date": "2026-06-14",
+            "alpha": 0.1,
+            "n_pairs": 946,
+            "platt": true
+          },
+          {
+            "date": "2026-06-15",
+            "alpha": 0.1,
+            "n_pairs": 960,
+            "platt": true
+          },
+          {
+            "date": "2026-06-16",
+            "alpha": 0.1,
+            "n_pairs": 970,
+            "platt": true
+          },
+          {
+            "date": "2026-06-17",
+            "alpha": 0.1,
+            "n_pairs": 985,
+            "platt": true
+          },
+          {
+            "date": "2026-06-18",
+            "alpha": 0.1,
+            "n_pairs": 1000,
+            "platt": true
+          },
+          {
+            "date": "2026-06-19",
+            "alpha": 0.1,
+            "n_pairs": 1008,
+            "platt": true
+          },
+          {
+            "date": "2026-06-20",
+            "alpha": 0.1,
+            "n_pairs": 1022,
+            "platt": true
+          },
+          {
+            "date": "2026-06-21",
+            "alpha": 0.05,
+            "n_pairs": 1036,
+            "platt": true
+          },
+          {
+            "date": "2026-06-22",
+            "alpha": 0.05,
+            "n_pairs": 1050,
+            "platt": true
+          },
+          {
+            "date": "2026-06-23",
+            "alpha": 0.05,
+            "n_pairs": 1062,
+            "platt": true
+          },
+          {
+            "date": "2026-06-24",
+            "alpha": 0.05,
+            "n_pairs": 1077,
+            "platt": true
+          },
+          {
+            "date": "2026-06-25",
+            "alpha": 0.1,
+            "n_pairs": 1093,
+            "platt": true
+          },
+          {
+            "date": "2026-06-26",
+            "alpha": 0.1,
+            "n_pairs": 1101,
+            "platt": true
+          },
+          {
+            "date": "2026-06-27",
+            "alpha": 0.1,
+            "n_pairs": 1116,
+            "platt": true
+          },
+          {
+            "date": "2026-06-28",
+            "alpha": 0.1,
+            "n_pairs": 1131,
+            "platt": true
+          },
+          {
+            "date": "2026-06-29",
+            "alpha": 0.1,
+            "n_pairs": 1146,
+            "platt": true
+          },
+          {
+            "date": "2026-06-30",
+            "alpha": 0.1,
+            "n_pairs": 1159,
+            "platt": true
+          },
+          {
+            "date": "2026-07-01",
+            "alpha": 0.15,
+            "n_pairs": 1174,
+            "platt": true
+          },
+          {
+            "date": "2026-07-02",
+            "alpha": 0.15,
+            "n_pairs": 1188,
+            "platt": true
+          },
+          {
+            "date": "2026-07-03",
+            "alpha": 0.1,
+            "n_pairs": 1197,
+            "platt": true
+          }
+        ]
       },
-      "platt_last": null,
-      "lambda_best": null,
+      "platt_last": {
+        "a": 0.704,
+        "b": 0.0194,
+        "n": 1197,
+        "shrink_k": 0.4438
+      },
+      "lambda_best": 3,
       "sweep": [
         {
           "lambda": 0.3,
-          "n": 0,
-          "acc": null,
-          "logloss": null,
-          "brier": null
+          "n": 1210,
+          "acc": 0.5289,
+          "logloss": 0.6959,
+          "brier": 0.2513
         },
         {
           "lambda": 1,
-          "n": 0,
-          "acc": null,
-          "logloss": null,
-          "brier": null
+          "n": 1210,
+          "acc": 0.5322,
+          "logloss": 0.6957,
+          "brier": 0.2511
         },
         {
           "lambda": 3,
-          "n": 0,
-          "acc": null,
-          "logloss": null,
-          "brier": null
+          "n": 1210,
+          "acc": 0.5322,
+          "logloss": 0.6955,
+          "brier": 0.2511
         }
       ],
-      "stability": null,
-      "tie": true,
-      "verdict": "sin dato"
+      "stability": {
+        "B": 1000,
+        "n": 1210,
+        "models": {
+          "classic": {
+            "acc": {
+              "mean": 0.5418,
+              "se": 0.013,
+              "ci": [
+                0.5207,
+                0.5661
+              ]
+            },
+            "logloss": {
+              "mean": 0.7226,
+              "se": 0.009,
+              "ci": [
+                0.7058,
+                0.7385
+              ]
+            },
+            "brier": {
+              "mean": 0.2629,
+              "se": 0.0042,
+              "ci": [
+                0.2551,
+                0.2704
+              ]
+            }
+          },
+          "learned": {
+            "acc": {
+              "mean": 0.5291,
+              "se": 0.0093,
+              "ci": [
+                0.5132,
+                0.5504
+              ]
+            },
+            "logloss": {
+              "mean": 0.6964,
+              "se": 0.004,
+              "ci": [
+                0.688,
+                0.7042
+              ]
+            },
+            "brier": {
+              "mean": 0.2516,
+              "se": 0.0019,
+              "ci": [
+                0.2474,
+                0.2553
+              ]
+            }
+          },
+          "combined": {
+            "acc": {
+              "mean": 0.5302,
+              "se": 0.0125,
+              "ci": [
+                0.5116,
+                0.562
+              ]
+            },
+            "logloss": {
+              "mean": 0.6954,
+              "se": 0.0039,
+              "ci": [
+                0.6877,
+                0.7026
+              ]
+            },
+            "brier": {
+              "mean": 0.251,
+              "se": 0.0019,
+              "ci": [
+                0.2472,
+                0.2545
+              ]
+            }
+          }
+        },
+        "delta": {
+          "acc": {
+            "mean": -0.0117,
+            "se": 0.0135,
+            "ci": [
+              -0.0421,
+              0.0107
+            ]
+          },
+          "logloss": {
+            "mean": -0.0272,
+            "se": 0.0055,
+            "ci": [
+              -0.0367,
+              -0.0163
+            ]
+          },
+          "brier": {
+            "mean": -0.0119,
+            "se": 0.0025,
+            "ci": [
+              -0.0163,
+              -0.0069
+            ]
+          }
+        }
+      },
+      "tie": false,
+      "verdict": "combinado mejor"
     }
   },
   "total": {
-    "fit": null,
-    "weights": null,
+    "fit": {
+      "beta": [
+        -0.08503818596823583,
+        0.12322980919073329,
+        -0.03800673174570384,
+        -0.02376162655212485,
+        0.043383992524760946,
+        -0.04557571629488273,
+        0.023414134964994116,
+        0.07654852427544226
+      ],
+      "mu": [
+        -0.033066454183266925,
+        -0.010799362549800821,
+        -0.03823266932270926,
+        -0.03440318725099611,
+        0.010039840637450212,
+        0.011235059760956187,
+        -0.007243027888446231
+      ],
+      "sd": [
+        0.5352842805632385,
+        0.5320666039842104,
+        0.15901498604001085,
+        0.15602421915187722,
+        0.04339660522430912,
+        0.052480963404049556,
+        0.14596146649847594
+      ],
+      "intercept": true,
+      "n": 1255,
+      "features": 7
+    },
+    "weights": {
+      "learned": {
+        "aStart": 0.1034,
+        "hStart": -0.0321,
+        "homeContact": -0.0671,
+        "awayContact": 0.1249,
+        "aFat": -0.4719,
+        "hFat": 0.2005
+      },
+      "base_line_coef": 0.5244
+    },
     "calibration": {
       "curve": [
         {
           "lo": 0.5,
           "hi": 0.55,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 438,
+          "conf": 0.5241,
+          "emp": 0.5205
         },
         {
           "lo": 0.55,
           "hi": 0.6,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 381,
+          "conf": 0.5738,
+          "emp": 0.5171
         },
         {
           "lo": 0.6,
           "hi": 0.65,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 241,
+          "conf": 0.6249,
+          "emp": 0.5353
         },
         {
           "lo": 0.65,
           "hi": 0.7,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 131,
+          "conf": 0.673,
+          "emp": 0.4962
         },
         {
           "lo": 0.7,
           "hi": 0.75,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 47,
+          "conf": 0.7242,
+          "emp": 0.5319
         },
         {
           "lo": 0.75,
           "hi": 0.8,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 12,
+          "conf": 0.7595,
+          "emp": 0.6667
         },
         {
           "lo": 0.8,
           "hi": 0.85,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 4,
+          "conf": 0.812,
+          "emp": 0.5
         },
         {
           "lo": 0.85,
           "hi": 0.9,
-          "n": 0,
-          "conf": null,
-          "emp": null
+          "n": 1,
+          "conf": 0.868,
+          "emp": 0
         },
         {
           "lo": 0.9,
@@ -302,87 +1066,1137 @@
           "emp": null
         }
       ],
-      "ece": 0,
-      "n": 0,
-      "verdict": "sin dato",
-      "bias": 0
+      "ece": 0.0639,
+      "n": 1255,
+      "verdict": "sobre-confiado",
+      "bias": 0.0639
     },
     "oos": {
-      "n": 0,
-      "first_date": null,
-      "last_date": null,
+      "n": 1152,
+      "first_date": "2026-03-25",
+      "last_date": "2026-07-03",
       "classic": {
-        "acc": null,
-        "logloss": null,
-        "brier": null,
-        "n": 0
+        "acc": 0.5234,
+        "logloss": 0.7086,
+        "brier": 0.257,
+        "n": 1152
       },
       "learned": {
-        "acc": null,
-        "logloss": null,
-        "brier": null,
-        "n": 0
+        "acc": 0.5026,
+        "logloss": 0.7061,
+        "brier": 0.2543,
+        "n": 1152
       },
-      "delta": null,
-      "se": null,
-      "tie": true
+      "delta": {
+        "acc": -0.0208,
+        "logloss": -0.0025,
+        "brier": -0.0027
+      },
+      "se": 0.0147,
+      "tie": false
     },
     "combined": {
-      "n": 0,
-      "first_date": null,
-      "last_date": null,
+      "n": 1152,
+      "first_date": "2026-03-25",
+      "last_date": "2026-07-03",
       "classic": {
-        "acc": null,
-        "logloss": null,
-        "brier": null,
-        "n": 0
+        "acc": 0.5234,
+        "logloss": 0.7086,
+        "brier": 0.257,
+        "n": 1152
       },
       "learned": {
-        "acc": null,
-        "logloss": null,
-        "brier": null,
-        "n": 0
+        "acc": 0.5026,
+        "logloss": 0.7061,
+        "brier": 0.2543,
+        "n": 1152
       },
       "combined": {
-        "acc": null,
-        "logloss": null,
-        "brier": null,
-        "n": 0
+        "acc": 0.5174,
+        "logloss": 0.6965,
+        "brier": 0.2515,
+        "n": 1152
       },
-      "delta": null,
+      "delta": {
+        "acc": -0.006,
+        "logloss": -0.0121,
+        "brier": -0.0055
+      },
       "alpha": {
-        "final": null,
-        "curve": []
+        "final": 0.45,
+        "curve": [
+          {
+            "date": "2026-04-04",
+            "alpha": 0.5,
+            "n_pairs": 0,
+            "platt": false
+          },
+          {
+            "date": "2026-04-05",
+            "alpha": 0.5,
+            "n_pairs": 15,
+            "platt": false
+          },
+          {
+            "date": "2026-04-06",
+            "alpha": 0.35,
+            "n_pairs": 31,
+            "platt": false
+          },
+          {
+            "date": "2026-04-07",
+            "alpha": 0.5,
+            "n_pairs": 44,
+            "platt": false
+          },
+          {
+            "date": "2026-04-08",
+            "alpha": 0.7,
+            "n_pairs": 58,
+            "platt": false
+          },
+          {
+            "date": "2026-04-09",
+            "alpha": 0.55,
+            "n_pairs": 72,
+            "platt": false
+          },
+          {
+            "date": "2026-04-10",
+            "alpha": 0.5,
+            "n_pairs": 77,
+            "platt": false
+          },
+          {
+            "date": "2026-04-11",
+            "alpha": 0.45,
+            "n_pairs": 90,
+            "platt": false
+          },
+          {
+            "date": "2026-04-12",
+            "alpha": 0.45,
+            "n_pairs": 104,
+            "platt": true
+          },
+          {
+            "date": "2026-04-13",
+            "alpha": 0.35,
+            "n_pairs": 119,
+            "platt": true
+          },
+          {
+            "date": "2026-04-14",
+            "alpha": 0.35,
+            "n_pairs": 129,
+            "platt": true
+          },
+          {
+            "date": "2026-04-15",
+            "alpha": 0.35,
+            "n_pairs": 143,
+            "platt": true
+          },
+          {
+            "date": "2026-04-16",
+            "alpha": 0.25,
+            "n_pairs": 158,
+            "platt": true
+          },
+          {
+            "date": "2026-04-17",
+            "alpha": 0.25,
+            "n_pairs": 168,
+            "platt": true
+          },
+          {
+            "date": "2026-04-18",
+            "alpha": 0.3,
+            "n_pairs": 182,
+            "platt": true
+          },
+          {
+            "date": "2026-04-19",
+            "alpha": 0.25,
+            "n_pairs": 196,
+            "platt": true
+          },
+          {
+            "date": "2026-04-20",
+            "alpha": 0.25,
+            "n_pairs": 210,
+            "platt": true
+          },
+          {
+            "date": "2026-04-21",
+            "alpha": 0.3,
+            "n_pairs": 220,
+            "platt": true
+          },
+          {
+            "date": "2026-04-22",
+            "alpha": 0.25,
+            "n_pairs": 234,
+            "platt": true
+          },
+          {
+            "date": "2026-04-23",
+            "alpha": 0.3,
+            "n_pairs": 249,
+            "platt": true
+          },
+          {
+            "date": "2026-04-24",
+            "alpha": 0.3,
+            "n_pairs": 258,
+            "platt": true
+          },
+          {
+            "date": "2026-04-25",
+            "alpha": 0.35,
+            "n_pairs": 269,
+            "platt": true
+          },
+          {
+            "date": "2026-04-26",
+            "alpha": 0.35,
+            "n_pairs": 280,
+            "platt": true
+          },
+          {
+            "date": "2026-04-27",
+            "alpha": 0.4,
+            "n_pairs": 295,
+            "platt": true
+          },
+          {
+            "date": "2026-04-28",
+            "alpha": 0.4,
+            "n_pairs": 303,
+            "platt": true
+          },
+          {
+            "date": "2026-04-29",
+            "alpha": 0.45,
+            "n_pairs": 317,
+            "platt": true
+          },
+          {
+            "date": "2026-04-30",
+            "alpha": 0.45,
+            "n_pairs": 330,
+            "platt": true
+          },
+          {
+            "date": "2026-05-01",
+            "alpha": 0.45,
+            "n_pairs": 340,
+            "platt": true
+          },
+          {
+            "date": "2026-05-02",
+            "alpha": 0.5,
+            "n_pairs": 354,
+            "platt": true
+          },
+          {
+            "date": "2026-05-03",
+            "alpha": 0.55,
+            "n_pairs": 368,
+            "platt": true
+          },
+          {
+            "date": "2026-05-04",
+            "alpha": 0.55,
+            "n_pairs": 382,
+            "platt": true
+          },
+          {
+            "date": "2026-05-05",
+            "alpha": 0.55,
+            "n_pairs": 393,
+            "platt": true
+          },
+          {
+            "date": "2026-05-06",
+            "alpha": 0.55,
+            "n_pairs": 405,
+            "platt": true
+          },
+          {
+            "date": "2026-05-07",
+            "alpha": 0.55,
+            "n_pairs": 418,
+            "platt": true
+          },
+          {
+            "date": "2026-05-08",
+            "alpha": 0.55,
+            "n_pairs": 428,
+            "platt": true
+          },
+          {
+            "date": "2026-05-09",
+            "alpha": 0.5,
+            "n_pairs": 443,
+            "platt": true
+          },
+          {
+            "date": "2026-05-10",
+            "alpha": 0.5,
+            "n_pairs": 457,
+            "platt": true
+          },
+          {
+            "date": "2026-05-11",
+            "alpha": 0.5,
+            "n_pairs": 470,
+            "platt": true
+          },
+          {
+            "date": "2026-05-12",
+            "alpha": 0.5,
+            "n_pairs": 475,
+            "platt": true
+          },
+          {
+            "date": "2026-05-13",
+            "alpha": 0.5,
+            "n_pairs": 490,
+            "platt": true
+          },
+          {
+            "date": "2026-05-14",
+            "alpha": 0.5,
+            "n_pairs": 504,
+            "platt": true
+          },
+          {
+            "date": "2026-05-15",
+            "alpha": 0.5,
+            "n_pairs": 514,
+            "platt": true
+          },
+          {
+            "date": "2026-05-16",
+            "alpha": 0.5,
+            "n_pairs": 529,
+            "platt": true
+          },
+          {
+            "date": "2026-05-17",
+            "alpha": 0.5,
+            "n_pairs": 544,
+            "platt": true
+          },
+          {
+            "date": "2026-05-18",
+            "alpha": 0.5,
+            "n_pairs": 558,
+            "platt": true
+          },
+          {
+            "date": "2026-05-19",
+            "alpha": 0.5,
+            "n_pairs": 570,
+            "platt": true
+          },
+          {
+            "date": "2026-05-20",
+            "alpha": 0.55,
+            "n_pairs": 585,
+            "platt": true
+          },
+          {
+            "date": "2026-05-21",
+            "alpha": 0.55,
+            "n_pairs": 598,
+            "platt": true
+          },
+          {
+            "date": "2026-05-22",
+            "alpha": 0.55,
+            "n_pairs": 604,
+            "platt": true
+          },
+          {
+            "date": "2026-05-23",
+            "alpha": 0.55,
+            "n_pairs": 617,
+            "platt": true
+          },
+          {
+            "date": "2026-05-24",
+            "alpha": 0.5,
+            "n_pairs": 631,
+            "platt": true
+          },
+          {
+            "date": "2026-05-25",
+            "alpha": 0.5,
+            "n_pairs": 646,
+            "platt": true
+          },
+          {
+            "date": "2026-05-26",
+            "alpha": 0.5,
+            "n_pairs": 658,
+            "platt": true
+          },
+          {
+            "date": "2026-05-27",
+            "alpha": 0.5,
+            "n_pairs": 672,
+            "platt": true
+          },
+          {
+            "date": "2026-05-28",
+            "alpha": 0.55,
+            "n_pairs": 687,
+            "platt": true
+          },
+          {
+            "date": "2026-05-29",
+            "alpha": 0.5,
+            "n_pairs": 693,
+            "platt": true
+          },
+          {
+            "date": "2026-05-30",
+            "alpha": 0.5,
+            "n_pairs": 708,
+            "platt": true
+          },
+          {
+            "date": "2026-05-31",
+            "alpha": 0.5,
+            "n_pairs": 723,
+            "platt": true
+          },
+          {
+            "date": "2026-06-01",
+            "alpha": 0.5,
+            "n_pairs": 737,
+            "platt": true
+          },
+          {
+            "date": "2026-06-02",
+            "alpha": 0.5,
+            "n_pairs": 746,
+            "platt": true
+          },
+          {
+            "date": "2026-06-03",
+            "alpha": 0.5,
+            "n_pairs": 760,
+            "platt": true
+          },
+          {
+            "date": "2026-06-04",
+            "alpha": 0.5,
+            "n_pairs": 773,
+            "platt": true
+          },
+          {
+            "date": "2026-06-05",
+            "alpha": 0.5,
+            "n_pairs": 782,
+            "platt": true
+          },
+          {
+            "date": "2026-06-06",
+            "alpha": 0.5,
+            "n_pairs": 795,
+            "platt": true
+          },
+          {
+            "date": "2026-06-07",
+            "alpha": 0.45,
+            "n_pairs": 808,
+            "platt": true
+          },
+          {
+            "date": "2026-06-08",
+            "alpha": 0.45,
+            "n_pairs": 823,
+            "platt": true
+          },
+          {
+            "date": "2026-06-09",
+            "alpha": 0.45,
+            "n_pairs": 831,
+            "platt": true
+          },
+          {
+            "date": "2026-06-10",
+            "alpha": 0.45,
+            "n_pairs": 846,
+            "platt": true
+          },
+          {
+            "date": "2026-06-11",
+            "alpha": 0.45,
+            "n_pairs": 860,
+            "platt": true
+          },
+          {
+            "date": "2026-06-12",
+            "alpha": 0.45,
+            "n_pairs": 867,
+            "platt": true
+          },
+          {
+            "date": "2026-06-13",
+            "alpha": 0.45,
+            "n_pairs": 882,
+            "platt": true
+          },
+          {
+            "date": "2026-06-14",
+            "alpha": 0.45,
+            "n_pairs": 896,
+            "platt": true
+          },
+          {
+            "date": "2026-06-15",
+            "alpha": 0.45,
+            "n_pairs": 909,
+            "platt": true
+          },
+          {
+            "date": "2026-06-16",
+            "alpha": 0.45,
+            "n_pairs": 919,
+            "platt": true
+          },
+          {
+            "date": "2026-06-17",
+            "alpha": 0.45,
+            "n_pairs": 933,
+            "platt": true
+          },
+          {
+            "date": "2026-06-18",
+            "alpha": 0.45,
+            "n_pairs": 947,
+            "platt": true
+          },
+          {
+            "date": "2026-06-19",
+            "alpha": 0.45,
+            "n_pairs": 955,
+            "platt": true
+          },
+          {
+            "date": "2026-06-20",
+            "alpha": 0.45,
+            "n_pairs": 969,
+            "platt": true
+          },
+          {
+            "date": "2026-06-21",
+            "alpha": 0.45,
+            "n_pairs": 982,
+            "platt": true
+          },
+          {
+            "date": "2026-06-22",
+            "alpha": 0.45,
+            "n_pairs": 995,
+            "platt": true
+          },
+          {
+            "date": "2026-06-23",
+            "alpha": 0.45,
+            "n_pairs": 1007,
+            "platt": true
+          },
+          {
+            "date": "2026-06-24",
+            "alpha": 0.4,
+            "n_pairs": 1022,
+            "platt": true
+          },
+          {
+            "date": "2026-06-25",
+            "alpha": 0.4,
+            "n_pairs": 1038,
+            "platt": true
+          },
+          {
+            "date": "2026-06-26",
+            "alpha": 0.4,
+            "n_pairs": 1045,
+            "platt": true
+          },
+          {
+            "date": "2026-06-27",
+            "alpha": 0.4,
+            "n_pairs": 1060,
+            "platt": true
+          },
+          {
+            "date": "2026-06-28",
+            "alpha": 0.45,
+            "n_pairs": 1074,
+            "platt": true
+          },
+          {
+            "date": "2026-06-29",
+            "alpha": 0.4,
+            "n_pairs": 1088,
+            "platt": true
+          },
+          {
+            "date": "2026-06-30",
+            "alpha": 0.45,
+            "n_pairs": 1101,
+            "platt": true
+          },
+          {
+            "date": "2026-07-01",
+            "alpha": 0.45,
+            "n_pairs": 1116,
+            "platt": true
+          },
+          {
+            "date": "2026-07-02",
+            "alpha": 0.45,
+            "n_pairs": 1130,
+            "platt": true
+          },
+          {
+            "date": "2026-07-03",
+            "alpha": 0.45,
+            "n_pairs": 1139,
+            "platt": true
+          }
+        ]
       },
-      "platt_last": null,
-      "lambda_best": null,
+      "platt_last": {
+        "a": 0.6759,
+        "b": -0.0279,
+        "n": 1139,
+        "shrink_k": 0.4316
+      },
+      "lambda_best": 1,
       "sweep": [
         {
           "lambda": 0.3,
-          "n": 0,
-          "acc": null,
-          "logloss": null,
-          "brier": null
+          "n": 1152,
+          "acc": 0.5174,
+          "logloss": 0.6967,
+          "brier": 0.2516
         },
         {
           "lambda": 1,
-          "n": 0,
-          "acc": null,
-          "logloss": null,
-          "brier": null
+          "n": 1152,
+          "acc": 0.5174,
+          "logloss": 0.6965,
+          "brier": 0.2515
         },
         {
           "lambda": 3,
-          "n": 0,
-          "acc": null,
-          "logloss": null,
-          "brier": null
+          "n": 1152,
+          "acc": 0.5165,
+          "logloss": 0.6966,
+          "brier": 0.2516
         }
       ],
-      "stability": null,
+      "stability": {
+        "B": 1000,
+        "n": 1152,
+        "models": {
+          "classic": {
+            "acc": {
+              "mean": 0.5246,
+              "se": 0.0143,
+              "ci": [
+                0.4983,
+                0.5521
+              ]
+            },
+            "logloss": {
+              "mean": 0.707,
+              "se": 0.006,
+              "ci": [
+                0.6984,
+                0.7202
+              ]
+            },
+            "brier": {
+              "mean": 0.2563,
+              "se": 0.0029,
+              "ci": [
+                0.2522,
+                0.2626
+              ]
+            }
+          },
+          "learned": {
+            "acc": {
+              "mean": 0.502,
+              "se": 0.0169,
+              "ci": [
+                0.4748,
+                0.5356
+              ]
+            },
+            "logloss": {
+              "mean": 0.7064,
+              "se": 0.0075,
+              "ci": [
+                0.6943,
+                0.7229
+              ]
+            },
+            "brier": {
+              "mean": 0.2547,
+              "se": 0.0025,
+              "ci": [
+                0.2499,
+                0.2602
+              ]
+            }
+          },
+          "combined": {
+            "acc": {
+              "mean": 0.5137,
+              "se": 0.0117,
+              "ci": [
+                0.4905,
+                0.5373
+              ]
+            },
+            "logloss": {
+              "mean": 0.6964,
+              "se": 0.0027,
+              "ci": [
+                0.6915,
+                0.7014
+              ]
+            },
+            "brier": {
+              "mean": 0.2515,
+              "se": 0.0014,
+              "ci": [
+                0.249,
+                0.254
+              ]
+            }
+          }
+        },
+        "delta": {
+          "acc": {
+            "mean": -0.0109,
+            "se": 0.0161,
+            "ci": [
+              -0.033,
+              0.0208
+            ]
+          },
+          "logloss": {
+            "mean": -0.0106,
+            "se": 0.0051,
+            "ci": [
+              -0.0207,
+              0.0003
+            ]
+          },
+          "brier": {
+            "mean": -0.0048,
+            "se": 0.0024,
+            "ci": [
+              -0.0095,
+              0.0002
+            ]
+          }
+        }
+      },
       "tie": true,
-      "verdict": "sin dato"
+      "verdict": "empate"
     }
   },
-  "misses": []
+  "misses": [
+    {
+      "date": "2026-07-03",
+      "matchup": "TOR @ SEA",
+      "final": "2-0",
+      "market": "ml",
+      "prob": 0.635,
+      "misled_factors": [
+        {
+          "factor": "momentum",
+          "lean": 0.5818,
+          "trust": 0.5211
+        },
+        {
+          "factor": "schedule",
+          "lean": 0.18,
+          "trust": 0.5342
+        },
+        {
+          "factor": "manager",
+          "lean": 0.165,
+          "trust": 0.5165
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "matchup": "SF @ COL",
+      "final": "3-15",
+      "market": "ml",
+      "prob": 0.487,
+      "misled_factors": [
+        {
+          "factor": "pitching",
+          "lean": -1.4611,
+          "trust": 0.5317
+        },
+        {
+          "factor": "f5",
+          "lean": -0.556,
+          "trust": 0.5219
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "matchup": "NYM @ ATL",
+      "final": "3-5",
+      "market": "ml",
+      "prob": 0.481,
+      "misled_factors": [
+        {
+          "factor": "pitching",
+          "lean": -0.3611,
+          "trust": 0.5317
+        },
+        {
+          "factor": "f5",
+          "lean": -0.0575,
+          "trust": 0.5219
+        },
+        {
+          "factor": "momentum",
+          "lean": -0.0364,
+          "trust": 0.5211
+        },
+        {
+          "factor": "bats",
+          "lean": -0.0306,
+          "trust": 0.5124
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "matchup": "PIT @ WSH",
+      "final": "5-9",
+      "market": "ml",
+      "prob": 0.364,
+      "misled_factors": [
+        {
+          "factor": "pitching",
+          "lean": -0.6304,
+          "trust": 0.5317
+        },
+        {
+          "factor": "bats",
+          "lean": -0.2461,
+          "trust": 0.5124
+        },
+        {
+          "factor": "f5",
+          "lean": -0.1055,
+          "trust": 0.5219
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "matchup": "STL @ CHC",
+      "final": "17-1",
+      "market": "ml",
+      "prob": 0.722,
+      "misled_factors": [
+        {
+          "factor": "bats",
+          "lean": 0.9241,
+          "trust": 0.5124
+        },
+        {
+          "factor": "momentum",
+          "lean": 0.8,
+          "trust": 0.5211
+        },
+        {
+          "factor": "pitching",
+          "lean": 0.7173,
+          "trust": 0.5317
+        },
+        {
+          "factor": "f5",
+          "lean": 0.288,
+          "trust": 0.5219
+        }
+      ]
+    },
+    {
+      "date": "2026-07-02",
+      "matchup": "LAA @ SEA",
+      "final": "0-1",
+      "market": "ml",
+      "prob": 0.443,
+      "misled_factors": [
+        {
+          "factor": "bats",
+          "lean": -0.3839,
+          "trust": 0.5124
+        },
+        {
+          "factor": "pitching",
+          "lean": -0.1944,
+          "trust": 0.5317
+        },
+        {
+          "factor": "f5",
+          "lean": -0.174,
+          "trust": 0.5219
+        }
+      ]
+    },
+    {
+      "date": "2026-07-02",
+      "matchup": "STL @ ATL",
+      "final": "11-5",
+      "market": "ml",
+      "prob": 0.71,
+      "misled_factors": [
+        {
+          "factor": "pitching",
+          "lean": 0.6344,
+          "trust": 0.5317
+        },
+        {
+          "factor": "f5",
+          "lean": 0.3535,
+          "trust": 0.5219
+        },
+        {
+          "factor": "schedule",
+          "lean": 0.1267,
+          "trust": 0.5342
+        }
+      ]
+    },
+    {
+      "date": "2026-07-02",
+      "matchup": "CWS @ CLE",
+      "final": "5-6",
+      "market": "ml",
+      "prob": 0.496,
+      "misled_factors": [
+        {
+          "factor": "bats",
+          "lean": -1.0962,
+          "trust": 0.5124
+        },
+        {
+          "factor": "momentum",
+          "lean": -0.2182,
+          "trust": 0.5211
+        }
+      ]
+    },
+    {
+      "date": "2026-07-02",
+      "matchup": "MIA @ COL",
+      "final": "4-14",
+      "market": "ml",
+      "prob": 0.465,
+      "misled_factors": [
+        {
+          "factor": "momentum",
+          "lean": -0.5091,
+          "trust": 0.5211
+        },
+        {
+          "factor": "pitching",
+          "lean": -0.2157,
+          "trust": 0.5317
+        },
+        {
+          "factor": "manager",
+          "lean": -0.1653,
+          "trust": 0.5165
+        },
+        {
+          "factor": "f5",
+          "lean": -0.083,
+          "trust": 0.5219
+        }
+      ]
+    },
+    {
+      "date": "2026-07-02",
+      "matchup": "CIN @ MIL",
+      "final": "7-2",
+      "market": "ml",
+      "prob": 0.762,
+      "misled_factors": [
+        {
+          "factor": "momentum",
+          "lean": 1.0909,
+          "trust": 0.5211
+        },
+        {
+          "factor": "bats",
+          "lean": 0.6592,
+          "trust": 0.5124
+        },
+        {
+          "factor": "manager",
+          "lean": 0.2242,
+          "trust": 0.5165
+        },
+        {
+          "factor": "schedule",
+          "lean": 0.0467,
+          "trust": 0.5342
+        }
+      ]
+    },
+    {
+      "date": "2026-07-02",
+      "matchup": "PIT @ PHI",
+      "final": "6-1",
+      "market": "ml",
+      "prob": 0.653,
+      "misled_factors": [
+        {
+          "factor": "momentum",
+          "lean": 0.6182,
+          "trust": 0.5211
+        },
+        {
+          "factor": "schedule",
+          "lean": 0.1067,
+          "trust": 0.5342
+        }
+      ]
+    },
+    {
+      "date": "2026-07-01",
+      "matchup": "LAD @ OAK",
+      "final": "1-7",
+      "market": "ml",
+      "prob": 0.263,
+      "misled_factors": [
+        {
+          "factor": "momentum",
+          "lean": -1.2727,
+          "trust": 0.5211
+        },
+        {
+          "factor": "bats",
+          "lean": -0.9678,
+          "trust": 0.5124
+        },
+        {
+          "factor": "pitching",
+          "lean": -0.4525,
+          "trust": 0.5317
+        },
+        {
+          "factor": "f5",
+          "lean": -0.1055,
+          "trust": 0.5219
+        }
+      ]
+    },
+    {
+      "date": "2026-07-01",
+      "matchup": "MIA @ COL",
+      "final": "3-6",
+      "market": "ml",
+      "prob": 0.368,
+      "misled_factors": [
+        {
+          "factor": "momentum",
+          "lean": -1.0182,
+          "trust": 0.5211
+        },
+        {
+          "factor": "bats",
+          "lean": -0.3545,
+          "trust": 0.5124
+        },
+        {
+          "factor": "manager",
+          "lean": -0.1533,
+          "trust": 0.5165
+        },
+        {
+          "factor": "pitching",
+          "lean": -0.0789,
+          "trust": 0.5317
+        }
+      ]
+    },
+    {
+      "date": "2026-07-01",
+      "matchup": "MIN @ HOU",
+      "final": "8-3",
+      "market": "ml",
+      "prob": 0.728,
+      "misled_factors": [
+        {
+          "factor": "momentum",
+          "lean": 0.4364,
+          "trust": 0.5211
+        },
+        {
+          "factor": "pitching",
+          "lean": 0.4056,
+          "trust": 0.5317
+        },
+        {
+          "factor": "f5",
+          "lean": 0.064,
+          "trust": 0.5219
+        }
+      ]
+    },
+    {
+      "date": "2026-07-01",
+      "matchup": "STL @ ATL",
+      "final": "1-5",
+      "market": "ml",
+      "prob": 0.398,
+      "misled_factors": [
+        {
+          "factor": "bats",
+          "lean": -0.6088,
+          "trust": 0.5124
+        },
+        {
+          "factor": "momentum",
+          "lean": -0.5818,
+          "trust": 0.5211
+        },
+        {
+          "factor": "pitching",
+          "lean": -0.3008,
+          "trust": 0.5317
+        },
+        {
+          "factor": "f5",
+          "lean": -0.083,
+          "trust": 0.5219
+        }
+      ]
+    }
+  ]
 }
