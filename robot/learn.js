@@ -128,7 +128,7 @@ export function fitLogit(samples, { lambda = 1.0, intercept = false, iters = 25 
 }
 
 export function predictLogit(fit, x, offset = 0) {
-  if (!fit) return null
+  if (!fit || !Array.isArray(x) || x.length !== fit.features) return null // guard: stale fit vs newer feature extraction
   let eta = offset, idx = 0
   if (fit.intercept) { eta += fit.beta[0]; idx = 1 }
   for (let j = 0; j < fit.features; j++) eta += fit.beta[idx + j] * ((x[j] - fit.mu[j]) / (fit.sd[j] || 1))
@@ -448,6 +448,9 @@ export const ML_INDICATORS = [
   { id: 'signal4', label: 'Señal de factores ≥ 4 pts hacia el pick', test: (r) => r.signal != null && Math.sign(r.signal) === mlPickDir(r) && Math.abs(r.signal) >= 0.04 },
   { id: 'news', label: 'Noticias/lesiones a favor del pick', test: (r) => (r.news_delta ?? 0) !== 0 && Math.sign(r.news_delta) === mlPickDir(r) },
   { id: 'streak3', label: 'El equipo del pick trae racha ≥ 3', test: (r) => (pickStreak(r) ?? 0) >= 3 },
+  // Pre-registered 2026-07-05 (prior: home advantage; the away legs of the
+  // formula run near coin-flip). The CI gate judges it forward like the rest.
+  { id: 'home', label: 'El pick es el equipo local', test: (r) => r.adrian_p != null && r.adrian_p >= 0.5 },
 ]
 export const TOTAL_INDICATORS = [
   { id: 'tprob57', label: 'Prob. del lado ≥ 57%', test: (r) => totalPickProb(r) >= 0.57 },
@@ -478,6 +481,33 @@ export function evalIndicators(rows, { market = 'ml', minN = 40 } = {}) {
 export function matchIndicators(row, market = 'ml') {
   const defs = market === 'ml' ? ML_INDICATORS : TOTAL_INDICATORS
   return defs.filter((d) => { try { return d.test(row) } catch { return false } }).map((d) => d.id)
+}
+
+// --- segment report: the anatomy of the classic's (mis)calibration ------------
+// For fixed, pre-declared segments of ML picks: what the formula SAYS (mean
+// stated prob of the pick) vs what HAPPENS (hit rate, with Wilson CI). This is
+// the living version of the season-study insight that overconfidence is not
+// uniform: mid-prob picks are honest, the tails inflate. Descriptive only.
+const ML_SEGMENTS = [
+  { id: 'all', label: 'Todos los picks', test: () => true },
+  { id: 'home', label: 'Pick local', test: (r) => r.adrian_p >= 0.5 },
+  { id: 'away', label: 'Pick visitante', test: (r) => r.adrian_p < 0.5 },
+  { id: 'p50', label: 'Prob 50–55%', test: (r) => mlPickProb(r) < 0.55 },
+  { id: 'p55', label: 'Prob 55–60%', test: (r) => mlPickProb(r) >= 0.55 && mlPickProb(r) < 0.60 },
+  { id: 'p60', label: 'Prob 60–65%', test: (r) => mlPickProb(r) >= 0.60 && mlPickProb(r) < 0.65 },
+  { id: 'p65', label: 'Prob ≥ 65%', test: (r) => mlPickProb(r) >= 0.65 },
+]
+export function segmentReport(rows) {
+  const graded = rows.filter((r) => r.graded && r.formula_version === FORMULA_VERSION)
+  const scored = graded.map((r) => ({ r, y: mlPickWon(r) })).filter((x) => (x.y === 0 || x.y === 1) && x.r.adrian_p != null)
+  return ML_SEGMENTS.map((s) => {
+    const sub = scored.filter((x) => { try { return s.test(x.r) } catch { return false } })
+    const n = sub.length
+    if (!n) return { id: s.id, label: s.label, n: 0, says: null, hits: null, lo: null, hi: null, gap: null }
+    const says = sub.reduce((acc, x) => acc + mlPickProb(x.r), 0) / n
+    const w = wilson(sub.filter((x) => x.y === 1).length, n)
+    return { id: s.id, label: s.label, n, says: round4(says), hits: w.p, lo: w.lo, hi: w.hi, gap: round4(says - w.p) }
+  })
 }
 
 // --- today's Aprende opinion for a live analysis ------------------------------
@@ -581,6 +611,8 @@ export function buildSnapshot(rows, { now = null } = {}) {
       ml: evalIndicators(graded, { market: 'ml' }),
       total: evalIndicators(graded, { market: 'total' }),
     },
+    segments: segmentReport(graded),
+    n_backfilled: graded.filter((r) => r.backfilled).length,
     misses: graded.filter((r) => r.ml_result === 'loss').slice(-15).reverse().map(missReport(trust)),
   }
 }
