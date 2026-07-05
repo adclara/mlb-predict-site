@@ -403,10 +403,122 @@ export function ensembleReport(rows, { market = 'ml', lambdas = [0.3, 1, 3], min
   const stability = bootstrapStability(_pairs.y, { classic: _pairs.classic, learned: _pairs.learned, combined: _pairs.combined }, { B })
   const dll = stability?.delta?.logloss
   const tie = pub.n < 30 || !dll || (dll.ci[0] <= 0 && dll.ci[1] >= 0)
+  // Walk-forward "does the classic pick hit more when the combined agrees?"
+  // (y is home_win/over; the classic pick side is pC vs 0.5, its hit = side match)
+  let agA = 0, agN = 0, dgA = 0, dgN = 0
+  for (let i = 0; i < _pairs.y.length; i++) {
+    const sideC = _pairs.classic[i] >= 0.5, hit = (sideC === (_pairs.y[i] === 1)) ? 1 : 0
+    if ((_pairs.combined[i] >= 0.5) === sideC) { agN++; agA += hit } else { dgN++; dgA += hit }
+  }
+  const agree_split = {
+    agree: { n: agN, ...wilson(agA, agN) },
+    disagree: { n: dgN, ...wilson(dgA, dgN) },
+  }
   return {
-    ...pub, lambda_best: best.lambda, sweep, stability, tie,
+    ...pub, lambda_best: best.lambda, sweep, stability, tie, agree_split,
     verdict: tie ? 'empate' : dll.ci[1] < 0 ? 'combinado mejor' : 'clásico mejor',
   }
+}
+
+// --- pick indicators ("cuándo jugarlo") --------------------------------------
+// A FIXED, pre-registered list of simple pre-game conditions (no rule mining:
+// the candidate set is small and declared in code, each reported with its
+// Wilson CI and sample size). active = 95% CI above 50%; strong = above the
+// −110 break-even (52.38%). Descriptive, never a guarantee.
+export const BREAK_EVEN_110 = 0.5238
+
+export function wilson(k, n, z = 1.96) {
+  if (!n) return { p: null, lo: null, hi: null }
+  const p = k / n, z2 = z * z
+  const den = 1 + z2 / n
+  const center = (p + z2 / (2 * n)) / den
+  const half = (z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / den
+  return { p: round4(p), lo: round4(Math.max(0, center - half)), hi: round4(Math.min(1, center + half)) }
+}
+
+// Direction of the logged ML pick: +1 home, −1 away (from adrian_p).
+const mlPickDir = (r) => (r.adrian_p >= 0.5 ? 1 : -1)
+const pickStreak = (r) => (mlPickDir(r) > 0 ? r.streak_home : r.streak_away)
+
+export const ML_INDICATORS = [
+  { id: 'prob60', label: 'Prob. del pick ≥ 60%', test: (r) => mlPickProb(r) >= 0.60 },
+  { id: 'prob55', label: 'Prob. del pick ≥ 55%', test: (r) => mlPickProb(r) >= 0.55 },
+  { id: 'agree4', label: '4+ factores de acuerdo con el pick', test: (r) => (r.agree ?? 0) >= 4 },
+  { id: 'agree5', label: '5+ factores de acuerdo con el pick', test: (r) => (r.agree ?? 0) >= 5 },
+  { id: 'signal4', label: 'Señal de factores ≥ 4 pts hacia el pick', test: (r) => r.signal != null && Math.sign(r.signal) === mlPickDir(r) && Math.abs(r.signal) >= 0.04 },
+  { id: 'news', label: 'Noticias/lesiones a favor del pick', test: (r) => (r.news_delta ?? 0) !== 0 && Math.sign(r.news_delta) === mlPickDir(r) },
+  { id: 'streak3', label: 'El equipo del pick trae racha ≥ 3', test: (r) => (pickStreak(r) ?? 0) >= 3 },
+]
+export const TOTAL_INDICATORS = [
+  { id: 'tprob57', label: 'Prob. del lado ≥ 57%', test: (r) => totalPickProb(r) >= 0.57 },
+  { id: 'tedge05', label: 'Modelo vs línea ≥ 0.5 carreras', test: (r) => r.adj_total != null && r.line != null && Math.abs(r.adj_total - r.line) >= 0.5 },
+  { id: 'tedge10', label: 'Modelo vs línea ≥ 1.0 carrera', test: (r) => r.adj_total != null && r.line != null && Math.abs(r.adj_total - r.line) >= 1.0 },
+]
+
+export function evalIndicators(rows, { market = 'ml', minN = 40 } = {}) {
+  const graded = rows.filter((r) => r.graded && r.formula_version === FORMULA_VERSION)
+  const defs = market === 'ml' ? ML_INDICATORS : TOTAL_INDICATORS
+  const won = market === 'ml' ? mlPickWon : totalPickWon
+  const scored = graded.map((r) => ({ r, y: won(r) })).filter((x) => x.y === 0 || x.y === 1)
+  const base = wilson(scored.filter((x) => x.y === 1).length, scored.length)
+  const list = defs.map((d) => {
+    const sub = scored.filter((x) => { try { return d.test(x.r) } catch { return false } })
+    const w = wilson(sub.filter((x) => x.y === 1).length, sub.length)
+    return {
+      id: d.id, label: d.label, n: sub.length, rate: w.p, lo: w.lo, hi: w.hi,
+      lift: w.p != null && base.p != null ? round4(w.p - base.p) : null,
+      active: sub.length >= minN && w.lo != null && w.lo > 0.5,
+      strong: sub.length >= minN && w.lo != null && w.lo > BREAK_EVEN_110,
+    }
+  })
+  return { baseline: { n: scored.length, rate: base.p, lo: base.lo, hi: base.hi }, min_n: minN, list }
+}
+
+// Which indicator ids does a single (ungraded) row satisfy today?
+export function matchIndicators(row, market = 'ml') {
+  const defs = market === 'ml' ? ML_INDICATORS : TOTAL_INDICATORS
+  return defs.filter((d) => { try { return d.test(row) } catch { return false } }).map((d) => d.id)
+}
+
+// --- today's Aprende opinion for a live analysis ------------------------------
+// Projects the walk-forward-validated combined model onto TODAY's game (all
+// inputs are pre-game; the fit/α/Platt come from the robot's snapshot, trained
+// only on past graded games). Returns null when there's no usable snapshot.
+export function aprendeOpinion(analysis, snapshot, { minGraded = 150 } = {}) {
+  if (!snapshot || snapshot.formula_version !== FORMULA_VERSION || (snapshot.n_graded ?? 0) < minGraded) return null
+  const row = analysisToRow(analysis)
+  const out = { ml: null, total: null }
+  const mlC = snapshot.ml?.combined
+  if (snapshot.ml?.fit && mlC?.n) {
+    const s = mlSample(row)
+    const pL = predictLogit(snapshot.ml.fit, s.x, s.offset)
+    if (pL != null && row.adrian_p != null) {
+      const alpha = mlC.alpha?.final ?? 1
+      let p = clampP(alpha * row.adrian_p + (1 - alpha) * pL)
+      if (mlC.platt_last) p = clampP(applyPlatt(mlC.platt_last, p))
+      out.ml = {
+        p_comb: round4(p), p_classic: row.adrian_p,
+        favors: (p >= 0.5) === (row.adrian_p >= 0.5),
+        indicators: matchIndicators(row, 'ml'),
+      }
+    }
+  }
+  const tC = snapshot.total?.combined
+  if (snapshot.total?.fit && tC?.n) {
+    const s = totalSample(row)
+    const pL = predictLogit(snapshot.total.fit, s.x, s.offset)
+    if (pL != null && row.p_over != null) {
+      const alpha = tC.alpha?.final ?? 1
+      let p = clampP(alpha * row.p_over + (1 - alpha) * pL)
+      if (tC.platt_last) p = clampP(applyPlatt(tC.platt_last, p))
+      out.total = {
+        p_comb: round4(p), p_classic: row.p_over,
+        favors: (p >= 0.5) === (row.p_over >= 0.5),
+        indicators: matchIndicators(row, 'total'),
+      }
+    }
+  }
+  return out.ml || out.total ? out : null
 }
 
 // Learned TOTAL component weights (relative emphasis, Σ|·|=1) for display.
@@ -464,6 +576,10 @@ export function buildSnapshot(rows, { now = null } = {}) {
       calibration: reliability(graded, totalPickProb, totalPickWon),
       oos: walkForwardReplay(graded, { market: 'total' }),
       combined: ensembleReport(graded, { market: 'total' }),
+    },
+    indicators: {
+      ml: evalIndicators(graded, { market: 'ml' }),
+      total: evalIndicators(graded, { market: 'total' }),
     },
     misses: graded.filter((r) => r.ml_result === 'loss').slice(-15).reverse().map(missReport(trust)),
   }
