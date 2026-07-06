@@ -675,6 +675,71 @@ export function trailedEarlyReport(rows, { throughInn = 3, minN = 30 } = {}) {
   }
 }
 
+// --- signal audit: which factors actually detect winners, honestly -----------
+// Each signal is a PRE-DECLARED oriented hypothesis (the direction is a prior, not
+// fit from outcomes → no leakage). We compare favorable-vs-unfavorable ML picks
+// with a bootstrap CI on the gap AND a both-halves robustness gate. A signal is
+// only 'robusto' if the gap CI excludes 0 AND it stays positive in BOTH halves of
+// the season — a signal that only works in one half is the classic false positive
+// (this is exactly what killed the pitcher-ERA signal in the 2026-07-06 blind sim).
+// Verdicts self-expire as forward data accrues. Descriptive only — never an input.
+const pickEraAdv = (r) => {
+  const pr = r.pitcher_recent; if (!pr) return null
+  const home = mlPickDir(r) > 0, pk = home ? pr.home : pr.away, op = home ? pr.away : pr.home
+  if (pk?.era == null || op?.era == null) return null
+  return op.era - pk.era // > 0 → the pick's starter has better recent ERA
+}
+const pickIsMktFav = (r) => { const o = r.odds; if (!o || !o.fav_side) return null; return o.fav_side === (mlPickDir(r) > 0 ? 'home' : 'away') }
+const newsFavorsPick = (r) => (r.news_delta ?? 0) !== 0 && Math.sign(r.news_delta) === mlPickDir(r)
+const AUDIT_SIGNALS = [
+  { id: 'market', label: 'Coincide con el favorito del mercado', req: (r) => r.odds?.fav_side != null, fav: (r) => pickIsMktFav(r) },
+  { id: 'agree5', label: '5+ factores de acuerdo con el pick', req: () => true, fav: (r) => (r.agree ?? 0) >= 5 },
+  { id: 'prob60', label: 'Prob. del pick ≥ 60%', req: () => true, fav: (r) => mlPickProb(r) >= 0.60 },
+  { id: 'pitcher', label: 'Mejor ERA reciente del abridor', req: (r) => pickEraAdv(r) != null, fav: (r) => pickEraAdv(r) > 0 },
+  { id: 'streak3', label: 'Racha del equipo del pick ≥ 3', req: () => true, fav: (r) => (pickStreak(r) ?? 0) >= 3 },
+  { id: 'news', label: 'Noticias/lesiones a favor del pick', req: () => true, fav: (r) => newsFavorsPick(r) },
+]
+// deterministic seeded bootstrap CI of mean(a) − mean(b) over 0/1 arrays.
+function bootGap(a, b, B = 1000, seed = 20260706) {
+  if (!a.length || !b.length) return null
+  let s = seed >>> 0; const rnd = () => (s = (1664525 * s + 1013904223) >>> 0) / 4294967296
+  const ds = []
+  for (let t = 0; t < B; t++) { let sa = 0; for (let i = 0; i < a.length; i++) sa += a[(rnd() * a.length) | 0]; let sb = 0; for (let i = 0; i < b.length; i++) sb += b[(rnd() * b.length) | 0]; ds.push(sa / a.length - sb / b.length) }
+  ds.sort((x, y) => x - y)
+  return { lo: round4(ds[Math.floor(0.025 * B)]), hi: round4(ds[Math.floor(0.975 * B)]) }
+}
+export function signalAudit(rows, { minN = 60 } = {}) {
+  const graded = rows.filter((r) => r.graded && r.formula_version === FORMULA_VERSION)
+  const scored = graded.map((r) => ({ r, y: mlPickWon(r), date: r.date })).filter((x) => x.y === 0 || x.y === 1)
+  scored.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+  const mid = scored.length ? scored[Math.floor(scored.length / 2)].date : null
+  const base = wilson(scored.filter((x) => x.y === 1).length, scored.length)
+  const rateOf = (arr) => (arr.length ? arr.filter((x) => x.y === 1).length / arr.length : null)
+  const list = AUDIT_SIGNALS.map((s) => {
+    const usable = scored.filter((x) => { try { return s.req(x.r) } catch { return false } })
+    const favG = [], unfG = []
+    for (const x of usable) { let f; try { f = s.fav(x.r) } catch { f = null }; if (f === true) favG.push(x); else if (f === false) unfG.push(x) }
+    const wf = wilson(favG.filter((x) => x.y === 1).length, favG.length), wu = wilson(unfG.filter((x) => x.y === 1).length, unfG.length)
+    const gap = (wf.p != null && wu.p != null) ? round4(wf.p - wu.p) : null
+    const ci = bootGap(favG.map((x) => x.y), unfG.map((x) => x.y))
+    const hg = (which) => { const f = favG.filter((x) => which === 1 ? x.date < mid : x.date >= mid), u = unfG.filter((x) => which === 1 ? x.date < mid : x.date >= mid); const a = rateOf(f), b = rateOf(u); return (a == null || b == null) ? null : round4(a - b) }
+    const g1 = hg(1), g2 = hg(2)
+    let verdict = 'sin dato'
+    if (favG.length >= minN && unfG.length >= minN && ci) {
+      const sig = ci.lo > 0
+      // Both halves must show a MEANINGFULLY positive gap (>= +2 pts each), not just
+      // >0 — a half that is ~flat (e.g. +0.2) means the effect lives in one half only,
+      // the classic false-positive signature. Such a signal is 'frágil', not robust.
+      const bothHalves = g1 != null && g2 != null && g1 >= 0.02 && g2 >= 0.02
+      verdict = !sig ? 'ruido' : bothHalves ? 'robusto' : 'frágil'
+    }
+    return { id: s.id, label: s.label, n_fav: favG.length, n_unf: unfG.length, fav_rate: wf.p, fav_lo: wf.lo, fav_hi: wf.hi, unf_rate: wu.p, gap, gap_lo: ci?.lo ?? null, gap_hi: ci?.hi ?? null, half1: g1, half2: g2, verdict }
+  })
+  const rank = { robusto: 0, 'frágil': 1, ruido: 2, 'sin dato': 3 }
+  list.sort((a, b) => (rank[a.verdict] - rank[b.verdict]) || ((b.gap ?? -9) - (a.gap ?? -9)))
+  return { baseline: { n: scored.length, rate: base.p, lo: base.lo, hi: base.hi }, min_n: minN, list }
+}
+
 // --- the canonical snapshot the robot writes and the app reads ---------------
 // `rows` = every logged games_v1 row (graded + ungraded). Everything is fit on
 // the graded subset of the CURRENT formula version. `now` is passed in (learn.js
@@ -707,6 +772,7 @@ export function buildSnapshot(rows, { now = null } = {}) {
       total: evalIndicators(graded, { market: 'total' }),
     },
     segments: segmentReport(graded),
+    signal_audit: signalAudit(graded),
     n_backfilled: graded.filter((r) => r.backfilled).length,
     odds: {
       n_with_line: graded.filter((r) => r.odds?.p_home_mkt != null).length,
