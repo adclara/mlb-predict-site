@@ -170,6 +170,31 @@ async function attachOdds(rows, games, date, stage) {
   return added
 }
 
+// Capture game-time weather onto now-final games (best-effort, in place). MLB only
+// populates gameData.weather near first pitch, so we grab it at GRADING time. It is
+// stored as an ADDITIVE, DESCRIPTIVE fact (stage:'observed', like the win-prob curve)
+// and is NEVER read by any prediction path (computeDay analyzes with weather:null and
+// mlSample/totalSample don't use it) — logging it now just accrues data so a future
+// study can CI-gate whether weather predicts totals (and only a FORECAST, not this
+// observed value, could ever feed a pre-game pick). Any fetch failure is swallowed.
+async function attachWeather(rows, byPk) {
+  let added = false
+  for (const r of rows) {
+    if (r.weather || !r.graded) continue
+    const g = byPk.get(r.game_pk)
+    if (!isFinal(g)) continue
+    try {
+      const data = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${r.game_pk}/feed/live`).then((x) => x.json())
+      const w = data?.gameData?.weather
+      if (w && w.temp != null) {
+        r.weather = { condition: w.condition || null, temp: Number(w.temp) || null, wind: w.wind || null, source: 'mlb', stage: 'observed', captured_at: new Date().toISOString() }
+        added = true
+      }
+    } catch { /* best-effort — never break the daily run over weather */ }
+  }
+  return added
+}
+
 // Merge-write the per-game log for a date, preserving any Y already graded AND
 // any previously-captured odds block (so the morning opening line survives the
 // evening re-run).
@@ -262,7 +287,8 @@ async function main() {
       // Closing line + win-prob curve for now-final games (win-prob is a fixed
       // historical fact → used only for PAST-game studies, never today's pick).
       const oddsAdded = await attachOdds(gamesRec.games, [...byPk.values()], date, 'final')
-      if (changed || oddsAdded) fs.writeFileSync(`${GAMES}/${date}.json`, JSON.stringify(gamesRec, null, 2))
+      const wxAdded = await attachWeather(gamesRec.games, byPk)
+      if (changed || oddsAdded || wxAdded) fs.writeFileSync(`${GAMES}/${date}.json`, JSON.stringify(gamesRec, null, 2))
     }
   }
 

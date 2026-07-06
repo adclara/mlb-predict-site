@@ -425,6 +425,44 @@ export function ensembleReport(rows, { market = 'ml', lambdas = [0.3, 1, 3], min
 // the candidate set is small and declared in code, each reported with its
 // Wilson CI and sample size). active = 95% CI above 50%; strong = above the
 // −110 break-even (52.38%). Descriptive, never a guarantee.
+// --- market anchor: blend Adrian's prob toward the de-vig line ---------------
+// Walk-forward α sweep (blend = α·adrian + (1−α)·market), α learned ONLY from days
+// < D (reuses sweepAlpha with pC=adrian_p, pL=market_p). The 2026-07-06 study
+// confirmed this is a strict calibration win over Adrian-alone (log-loss ~0.72 →
+// ~0.69). HONEST FRAMING: the blended number is partly the market's opinion — it is
+// a market-CALIBRATED probability, NOT an edge over the vig. Descriptive overlay.
+export function marketAnchorReport(rows, { minTrain = 100, steps = 20 } = {}) {
+  const graded = rows.filter((r) => r.graded && r.formula_version === FORMULA_VERSION && r.odds?.p_home_mkt != null && (r.home_win === 0 || r.home_win === 1) && r.adrian_p != null)
+  const byDate = {}
+  for (const r of graded) (byDate[r.date] = byDate[r.date] || []).push(r)
+  const dates = Object.keys(byDate).sort()
+  const yTrue = [], pModel = [], pMarket = [], pBlend = []
+  const past = []
+  for (const D of dates) {
+    const sw = past.length >= minTrain ? sweepAlpha(past, { steps }) : null
+    for (const g of byDate[D]) {
+      if (sw == null) continue
+      yTrue.push(g.home_win); pModel.push(g.adrian_p); pMarket.push(g.odds.p_home_mkt)
+      pBlend.push(clampP(sw.alpha * g.adrian_p + (1 - sw.alpha) * g.odds.p_home_mkt))
+    }
+    for (const g of byDate[D]) past.push({ y: g.home_win, pC: g.adrian_p, pL: g.odds.p_home_mkt })
+  }
+  const final = past.length ? sweepAlpha(past, { steps }) : null // α to apply to today's games
+  const mModel = probMetrics(yTrue, pModel), mMarket = probMetrics(yTrue, pMarket), mBlend = probMetrics(yTrue, pBlend)
+  return {
+    n: yTrue.length, alpha: final?.alpha ?? null,
+    logloss: { model: mModel.logloss, market: mMarket.logloss, blend: mBlend.logloss },
+    brier: { model: mModel.brier, market: mMarket.brier, blend: mBlend.brier },
+    improves: mModel.logloss != null && mBlend.logloss != null && mBlend.logloss < mModel.logloss,
+  }
+}
+
+// Blend a HOME win-prob toward the market's HOME de-vig prob (both home-oriented).
+export function marketBlend(homeProb, marketHomeProb, alpha) {
+  if (homeProb == null || marketHomeProb == null || alpha == null) return null
+  return round4(clampP(alpha * homeProb + (1 - alpha) * marketHomeProb))
+}
+
 export const BREAK_EVEN_110 = 0.5238
 
 export function wilson(k, n, z = 1.96) {
@@ -760,6 +798,7 @@ export function buildSnapshot(rows, { now = null } = {}) {
       trust,
       oos: walkForwardReplay(graded, { market: 'ml' }),
       combined: ensembleReport(graded, { market: 'ml' }),
+      market_anchor: marketAnchorReport(graded),
     },
     total: {
       fit: totalFit, weights: totalWeights(totalFit),
