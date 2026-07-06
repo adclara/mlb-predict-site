@@ -133,3 +133,20 @@ export function curveFeatures(odds, homeWon, throughInn = 3) {
   }
   return { fav_trailed_early: favTrailed, min_wp_winner: Math.round(minWp * 1e4) / 1e4 }
 }
+
+// --- Adrian play × market: the honest "consensus" tier ----------------------
+// Season study (n=1333, holds in both halves): a moneyline pick that AGREES with
+// the market wins ~57.5% vs ~45.6% when it fights the market; agree>=5 AND the
+// market-favorite hits ~63.5%. This maps a play + its live odds to a tier so the
+// UI can flag the higher-probability picks (never a profit promise — CI-honest).
+// ML plays only (totals have no moneyline consensus). `play.matchup` is "AWAY @ HOME".
+export function marketConsensus(play, odds) {
+  if (!play || play.market !== 'ml' || !odds || !odds.fav_side) return { level: 'neutral', pickIsFav: null }
+  const home = String(play.matchup || '').split('@')[1]?.trim()
+  if (!home) return { level: 'neutral', pickIsFav: null }
+  const pickIsHome = play.pick === home
+  const pickIsFav = odds.fav_side === (pickIsHome ? 'home' : 'away')
+  if (!pickIsFav) return { level: 'against', pickIsFav: false }
+  if ((play.agree ?? 0) >= 5) return { level: 'strong', pickIsFav: true }
+  return { level: 'market', pickIsFav: true }
+}
