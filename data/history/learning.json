@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-05T15:16:03.217Z",
+  "updated_at": "2026-07-06T03:07:09.209Z",
   "n_graded": 1333,
   "n_total": 1368,
   "first_date": "2026-03-25",
@@ -2075,6 +2075,114 @@
     }
   ],
   "n_backfilled": 1333,
+  "odds": {
+    "n_with_line": 1315,
+    "n_with_curve": 1315,
+    "indicators": {
+      "baseline": {
+        "n": 1315,
+        "rate": 0.565,
+        "lo": 0.5381,
+        "hi": 0.5916
+      },
+      "min_n": 40,
+      "list": [
+        {
+          "id": "pickem_fav",
+          "label": "Favorito en juego parejo (línea ≥ −145)",
+          "n": 803,
+          "rate": 0.5517,
+          "lo": 0.5171,
+          "hi": 0.5858,
+          "lift": -0.0133,
+          "active": true,
+          "strong": false
+        },
+        {
+          "id": "heavy_fav",
+          "label": "Favorito grande (línea ≤ −190)",
+          "n": 145,
+          "rate": 0.6828,
+          "lo": 0.6031,
+          "hi": 0.753,
+          "lift": 0.1178,
+          "active": true,
+          "strong": true
+        },
+        {
+          "id": "market_agrees",
+          "label": "Mercado y Adrian coinciden en el favorito",
+          "n": 882,
+          "rate": 0.576,
+          "lo": 0.5431,
+          "hi": 0.6082,
+          "lift": 0.011,
+          "active": true,
+          "strong": true
+        }
+      ]
+    },
+    "market_vs_model": {
+      "n": 1315,
+      "market": {
+        "acc": 0.565,
+        "logloss": 0.6847,
+        "brier": 0.2458,
+        "n": 1315
+      },
+      "model": {
+        "acc": 0.5369,
+        "logloss": 0.7216,
+        "brier": 0.2625,
+        "n": 1315
+      },
+      "delta": {
+        "mean": 0.0374,
+        "se": 0.0066,
+        "ci": [
+          0.0249,
+          0.0498
+        ]
+      },
+      "tie": false,
+      "verdict": "mercado mejor",
+      "disagree": {
+        "n": 433,
+        "market_win_rate": 0.5427,
+        "lo": 0.4956,
+        "hi": 0.5891
+      }
+    },
+    "trailed_early": {
+      "through_inn": 3,
+      "any_trailer": {
+        "n": 993,
+        "rate": 0.2608,
+        "lo": 0.2345,
+        "hi": 0.289
+      },
+      "fav_trailer": {
+        "n": 443,
+        "rate": 0.307,
+        "lo": 0.2659,
+        "hi": 0.3515
+      },
+      "pickem": {
+        "n": 275,
+        "p": 0.2945,
+        "lo": 0.2438,
+        "hi": 0.351
+      },
+      "heavy": {
+        "n": 33,
+        "p": 0.3333,
+        "lo": 0.1975,
+        "hi": 0.5039
+      },
+      "tie": true,
+      "verdict": "empate"
+    }
+  },
   "misses": [
     {
       "date": "2026-07-04",
