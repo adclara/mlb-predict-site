@@ -580,6 +580,101 @@ function missReport(trust) {
   }
 }
 
+// --- market ("logros") studies ----------------------------------------------
+// HONEST FRAMING: we never claim a book cheats. We measure whether the market's
+// de-vigged pregame price (from ESPN's free pickcenter) forecasts the winner
+// better than adrian_p, and test the thesis that a slight ("-110") favorite wins
+// MORE than a big favorite. The pregame line is known before first pitch → safe
+// as a predictor; the win-prob curve is never used here (past-game studies only,
+// Phase 3). Every claim is Wilson/bootstrap CI-gated → "empate" when it crosses.
+const sideWon = (side, homeWin) => ((homeWin === 0 || homeWin === 1) ? (side === 'home' ? homeWin : 1 - homeWin) : null)
+const favML = (o) => (o?.ml_home != null && o?.ml_away != null ? Math.min(o.ml_home, o.ml_away) : null)
+
+export const ODDS_INDICATORS = [
+  { id: 'pickem_fav', label: 'Favorito en juego parejo (línea ≥ −145)', test: (r) => { const f = favML(r.odds); return f != null && f >= -145 }, pick: (r) => r.odds.fav_side },
+  { id: 'heavy_fav', label: 'Favorito grande (línea ≤ −190)', test: (r) => { const f = favML(r.odds); return f != null && f <= -190 }, pick: (r) => r.odds.fav_side },
+  { id: 'market_agrees', label: 'Mercado y Adrian coinciden en el favorito', test: (r) => r.adrian_p != null && r.odds?.p_home_mkt != null && (r.adrian_p >= 0.5) === (r.odds.p_home_mkt >= 0.5), pick: (r) => r.odds.fav_side },
+]
+
+// Win rate (Wilson CI) of the market-favorite side for each pre-registered
+// condition, vs the baseline market-favorite win rate. Tests the dad's "-110
+// wins more than a big favorite" thesis honestly (likely "empate" at first).
+export function evalOddsIndicators(rows, { minN = 40 } = {}) {
+  const graded = rows.filter((r) => r.graded && r.formula_version === FORMULA_VERSION && r.odds?.p_home_mkt != null && (r.home_win === 0 || r.home_win === 1))
+  const baseWon = graded.map((r) => sideWon(r.odds.fav_side, r.home_win)).filter((v) => v === 0 || v === 1)
+  const base = wilson(baseWon.filter((v) => v === 1).length, baseWon.length)
+  const list = ODDS_INDICATORS.map((d) => {
+    const won = graded.filter((r) => { try { return d.test(r) } catch { return false } })
+      .map((r) => sideWon(d.pick(r), r.home_win)).filter((v) => v === 0 || v === 1)
+    const w = wilson(won.filter((v) => v === 1).length, won.length)
+    return {
+      id: d.id, label: d.label, n: won.length, rate: w.p, lo: w.lo, hi: w.hi,
+      lift: w.p != null && base.p != null ? round4(w.p - base.p) : null,
+      active: won.length >= minN && w.lo != null && w.lo > 0.5,
+      strong: won.length >= minN && w.lo != null && w.lo > BREAK_EVEN_110,
+    }
+  })
+  return { baseline: { n: baseWon.length, rate: base.p, lo: base.lo, hi: base.hi }, min_n: minN, list }
+}
+
+// Is the de-vigged pregame market prob a better winner-forecaster than adrian_p?
+// Paired bootstrap on Δlog-loss(model − market) with the same "empate" gate.
+export function oddsReport(rows, { B = 1000, minN = 40 } = {}) {
+  const graded = rows.filter((r) => r.graded && r.formula_version === FORMULA_VERSION && r.odds?.p_home_mkt != null && r.adrian_p != null && (r.home_win === 0 || r.home_win === 1))
+  const n = graded.length
+  if (n < minN) return { n, market: null, model: null, delta: null, tie: true, verdict: 'sin dato', disagree: null }
+  const y = graded.map((r) => r.home_win)
+  const pMarket = graded.map((r) => clamp(r.odds.p_home_mkt, 1e-4, 1 - 1e-4))
+  const pModel = graded.map((r) => clamp(r.adrian_p, 1e-4, 1 - 1e-4))
+  const market = probMetrics(y, pMarket), model = probMetrics(y, pModel)
+  const boot = bootstrapStability(y, { classic: pMarket, combined: pModel }, { B }) // delta = model − market
+  const dll = boot?.delta?.logloss
+  const tie = !dll || (dll.ci[0] <= 0 && dll.ci[1] >= 0)
+  const dis = graded.filter((r) => (r.adrian_p >= 0.5) !== (r.odds.p_home_mkt >= 0.5))
+  const mktWon = dis.map((r) => sideWon(r.odds.fav_side, r.home_win)).filter((v) => v === 0 || v === 1)
+  const disW = wilson(mktWon.filter((v) => v === 1).length, mktWon.length)
+  return {
+    n, market, model, delta: dll,
+    tie, verdict: tie ? 'empate' : dll.ci[1] < 0 ? 'modelo mejor' : 'mercado mejor',
+    disagree: { n: mktWon.length, market_win_rate: disW.p, lo: disW.lo, hi: disW.hi },
+  }
+}
+
+// The dad's "stubborn favorite" thesis, honestly: when the pregame favorite is
+// LOSING early, does it come back and win MORE than a generic team trailing at
+// the same point? Uses only the post-game win-prob curve of PAST graded games
+// (a completed-game fact) → never an input to today's pick. Non-overlapping
+// Wilson CIs → "el favorito remonta más"; overlap → empate.
+export function trailedEarlyReport(rows, { throughInn = 3, minN = 30 } = {}) {
+  const graded = rows.filter((r) => r.graded && r.formula_version === FORMULA_VERSION && r.odds?.wp_curve && r.odds?.fav_side && (r.home_win === 0 || r.home_win === 1))
+  let trailerN = 0, trailerWins = 0, favN = 0, favWins = 0
+  const bucket = { pickem: [0, 0], heavy: [0, 0] } // [wins, n] for fav-trailed
+  for (const r of graded) {
+    let sh = null, sa = null // score at the end of `throughInn`
+    for (const p of r.odds.wp_curve) { if (p.inn > throughInn) break; if (p.home_score != null) { sh = p.home_score; sa = p.away_score } }
+    if (sh == null || sh === sa) continue // no score / tied → no clear early trailer
+    const trailingSide = sh < sa ? 'home' : 'away'
+    const trailingWon = (trailingSide === 'home' ? r.home_win === 1 : r.home_win === 0) ? 1 : 0
+    trailerN++; trailerWins += trailingWon
+    if (r.odds.fav_side === trailingSide) {
+      favN++; favWins += trailingWon
+      const f = favML(r.odds)
+      if (f != null && f >= -145) { bucket.pickem[1]++; bucket.pickem[0] += trailingWon }
+      else if (f != null && f <= -190) { bucket.heavy[1]++; bucket.heavy[0] += trailingWon }
+    }
+  }
+  const any = wilson(trailerWins, trailerN), fav = wilson(favWins, favN)
+  const tie = favN < minN || trailerN < minN || fav.lo == null || any.hi == null || fav.lo <= any.hi
+  return {
+    through_inn: throughInn,
+    any_trailer: { n: trailerN, rate: any.p, lo: any.lo, hi: any.hi },
+    fav_trailer: { n: favN, rate: fav.p, lo: fav.lo, hi: fav.hi },
+    pickem: { n: bucket.pickem[1], ...wilson(bucket.pickem[0], bucket.pickem[1]) },
+    heavy: { n: bucket.heavy[1], ...wilson(bucket.heavy[0], bucket.heavy[1]) },
+    tie, verdict: tie ? 'empate' : 'el favorito remonta más',
+  }
+}
+
 // --- the canonical snapshot the robot writes and the app reads ---------------
 // `rows` = every logged games_v1 row (graded + ungraded). Everything is fit on
 // the graded subset of the CURRENT formula version. `now` is passed in (learn.js
@@ -613,6 +708,13 @@ export function buildSnapshot(rows, { now = null } = {}) {
     },
     segments: segmentReport(graded),
     n_backfilled: graded.filter((r) => r.backfilled).length,
+    odds: {
+      n_with_line: graded.filter((r) => r.odds?.p_home_mkt != null).length,
+      n_with_curve: graded.filter((r) => r.odds?.wp_curve).length,
+      indicators: evalOddsIndicators(graded),
+      market_vs_model: oddsReport(graded),
+      trailed_early: trailedEarlyReport(graded),
+    },
     misses: graded.filter((r) => r.ml_result === 'loss').slice(-15).reverse().map(missReport(trust)),
   }
 }

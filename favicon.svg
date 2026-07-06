@@ -1,48 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <linearGradient id="gem" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7EAAFF"/>
-      <stop offset=".45" stop-color="#4F8CFF"/>
-      <stop offset=".8" stop-color="#8B6CFF"/>
+    <radialGradient id="bg" cx=".68" cy=".26" r=".7">
+      <stop offset="0" stop-color="#F5C451" stop-opacity=".26"/>
+      <stop offset="1" stop-color="#F5C451" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="arc" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#4F8CFF"/>
+      <stop offset=".5" stop-color="#8B6CFF"/>
       <stop offset="1" stop-color="#F5C451"/>
     </linearGradient>
-    <linearGradient id="gemHi" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#DCE8FF"/>
-      <stop offset="1" stop-color="#7EAAFF"/>
-    </linearGradient>
-    <radialGradient id="glow" cx=".5" cy=".42" r=".65">
-      <stop offset="0" stop-color="#4F8CFF" stop-opacity=".55"/>
-      <stop offset="1" stop-color="#4F8CFF" stop-opacity="0"/>
+    <radialGradient id="ball" cx=".38" cy=".32" r=".85">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#C4D2EA"/>
     </radialGradient>
   </defs>
-  <!-- carbon rounded tile -->
-  <rect width="64" height="64" rx="14" fill="#080D18"/>
-  <rect width="64" height="64" rx="14" fill="url(#glow)"/>
-  <!-- circuit traces -->
-  <g stroke="#31466F" stroke-width="1.6" fill="none" stroke-linecap="round">
-    <path d="M8 20 H16 L20 24"/>
-    <path d="M8 44 H14 L19 39"/>
-    <path d="M56 20 H48 L44 24"/>
-    <path d="M56 44 H50 L45 39"/>
-  </g>
-  <g fill="#4F8CFF">
-    <circle cx="8" cy="20" r="1.8"/>
-    <circle cx="8" cy="44" r="1.8"/>
-    <circle cx="56" cy="20" r="1.8"/>
-    <circle cx="56" cy="44" r="1.8"/>
-  </g>
-  <!-- faceted tech gem -->
-  <g>
-    <path d="M32 8 L50 26 L32 56 L14 26 Z" fill="url(#gem)"/>
-    <path d="M32 8 L50 26 H14 Z" fill="url(#gemHi)" opacity=".85"/>
-    <path d="M32 8 L38 26 L32 56 L26 26 Z" fill="#FFFFFF" opacity=".18"/>
-    <path d="M14 26 H50 L32 56 Z" fill="#0A1428" opacity=".28"/>
-    <!-- baseball seams etched into the gem -->
-    <path d="M23 22 q9 7 0 16" stroke="#EAF0FB" stroke-width="1.7" fill="none" stroke-linecap="round" opacity=".9"/>
-    <path d="M41 22 q-9 7 0 16" stroke="#EAF0FB" stroke-width="1.7" fill="none" stroke-linecap="round" opacity=".9"/>
-    <g stroke="#EAF0FB" stroke-width="1.2" stroke-linecap="round" opacity=".75">
-      <path d="M24.2 25 l2.4 1"/><path d="M24.9 30 l2.6 0"/><path d="M24.2 35 l2.4 -1"/>
-      <path d="M39.8 25 l-2.4 1"/><path d="M39.1 30 l-2.6 0"/><path d="M39.8 35 l-2.4 -1"/>
-    </g>
+  <!-- carbon rounded tile with warm corner glow -->
+  <rect width="64" height="64" rx="14" fill="#0A1428"/>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <!-- predicted trajectory arc -->
+  <path d="M18 46 Q33 6 50 22" fill="none" stroke="url(#arc)" stroke-width="3.4" stroke-linecap="round"/>
+  <!-- forecast star at the landing point -->
+  <path d="M50 15 L51.3 20.7 L57 22 L51.3 23.3 L50 29 L48.7 23.3 L43 22 L48.7 20.7 Z" fill="#FFE9A8"/>
+  <!-- baseball -->
+  <circle cx="18" cy="46" r="8.5" fill="url(#ball)"/>
+  <g stroke="#E8443B" stroke-width="1.3" fill="none" stroke-linecap="round" opacity=".85">
+    <path d="M12.5 42 q5 4 1.5 9"/>
+    <path d="M23.5 42 q-5 4 -1.5 9"/>
   </g>
 </svg>

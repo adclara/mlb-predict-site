@@ -10,6 +10,7 @@ import fs from 'fs'
 import { analyzeGame, leagueAttempts, selectPlays } from './adrian.js'
 import { eloProb, expectedRuns, simulateF5, simulateGame } from './engine.js'
 import { analysisToRow, buildSnapshot, FORMULA_VERSION } from './learn.js'
+import { buildOddsForDate } from './espn_odds.mjs'
 
 const API = 'https://statsapi.mlb.com/api/v1'
 const DATA = process.env.DATA_DIR || 'data'
@@ -33,7 +34,7 @@ const eloOf = (a) => priors.elo[a] ?? 1500
 function parseGame(g) {
   const t = g.teams || {}, home = t.home || {}, away = t.away || {}, hp = home.probablePitcher || {}, ap = away.probablePitcher || {}
   return {
-    game_pk: g.gamePk, game_date: g.officialDate || (g.gameDate || '').slice(0, 10), day_night: g.dayNight || null,
+    game_pk: g.gamePk, game_date: g.officialDate || (g.gameDate || '').slice(0, 10), game_datetime: g.gameDate || null, day_night: g.dayNight || null,
     status: (g.status || {}).detailedState || (g.status || {}).abstractGameState,
     home_team_id: (home.team || {}).id, away_team_id: (away.team || {}).id,
     home_team_name: (home.team || {}).name, away_team_name: (away.team || {}).name,
@@ -137,9 +138,12 @@ async function computeDay(date) {
     const a = analyzeGame({ game: g, prediction, f5: f5For(prediction), forms: { recentHome: rh, recentAway: ra }, priors, weather: null, injuries, pitcherRecent, lgAttempts: lgAtt })
     // Learning row (all games, not just the 3 selected plays); Y filled on grading.
     const f = prediction.features
-    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff })
+    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff, odds: null })
     return a
   })
+  // Opening market line (ESPN, free) — additive, best-effort. Captured pre-game
+  // so it's anti-leakage safe. FORMULA_VERSION is NOT bumped (odds is metadata).
+  await attachOdds(rows, games, date, 'open')
   const { plays } = selectPlays(analyses)
   return {
     plays: plays.map((p) => ({ game_pk: p.game_pk, matchup: p.matchup, market: p.market, side: p.side || null, line: p.line ?? null, pick: p.pick || null, label: p.label, prob: p.prob, confidence: p.confidence })),
@@ -147,14 +151,36 @@ async function computeDay(date) {
   }
 }
 
-// Merge-write the per-game log for a date, preserving any Y already graded.
+// Attach ESPN market odds to rows in place (additive, best-effort). `stage`:
+// 'open' (pre-game line) or 'final' (adds the win-prob curve). Merges over any
+// previously-captured block, keeping earlier non-null fields.
+async function attachOdds(rows, games, date, stage) {
+  let m
+  try { m = await buildOddsForDate(date, games) } catch { return false }
+  if (!m || !m.size) return false
+  let added = false
+  for (const r of rows) {
+    const o = m.get(r.game_pk)
+    if (!o) continue
+    const hadCurve = !!r.odds?.wp_curve, hadLine = r.odds?.ml_home != null
+    const fresh = Object.fromEntries(Object.entries(o).filter(([, v]) => v != null))
+    r.odds = { ...(r.odds || {}), ...fresh, stage, captured_at: new Date().toISOString() }
+    if ((!hadCurve && r.odds.wp_curve) || (!hadLine && r.odds.ml_home != null)) added = true
+  }
+  return added
+}
+
+// Merge-write the per-game log for a date, preserving any Y already graded AND
+// any previously-captured odds block (so the morning opening line survives the
+// evening re-run).
 function upsertGames(date, rows) {
   const fp = `${GAMES}/${date}.json`
   const prev = {}
   if (fs.existsSync(fp)) { try { for (const r of j(fp).games || []) prev[r.game_pk] = r } catch { /* rewrite */ } }
   const merged = rows.map((r) => {
     const p = prev[r.game_pk]
-    return p && p.graded ? { ...r, home_win: p.home_win, total_runs: p.total_runs, ml_result: p.ml_result, total_result: p.total_result, final: p.final, graded: true } : r
+    const withOdds = { ...r, odds: r.odds ?? p?.odds ?? null }
+    return p && p.graded ? { ...withOdds, home_win: p.home_win, total_runs: p.total_runs, ml_result: p.ml_result, total_result: p.total_result, final: p.final, graded: true } : withOdds
   })
   fs.writeFileSync(fp, JSON.stringify({ date, generated_at: new Date().toISOString(), schema: 'games_v1', formula_version: FORMULA_VERSION, games: merged }, null, 2))
 }
@@ -231,7 +257,13 @@ async function main() {
     if (!needPick && !needGames) continue
     const byPk = new Map((await fetchSchedule(date)).map((g) => [g.game_pk, g]))
     if (needPick) { gradePicks(pickRec, byPk); fs.writeFileSync(`${HIST}/${date}.json`, JSON.stringify(pickRec, null, 2)) }
-    if (needGames) { if (gradeGames(gamesRec, byPk)) fs.writeFileSync(`${GAMES}/${date}.json`, JSON.stringify(gamesRec, null, 2)) }
+    if (needGames) {
+      const changed = gradeGames(gamesRec, byPk)
+      // Closing line + win-prob curve for now-final games (win-prob is a fixed
+      // historical fact → used only for PAST-game studies, never today's pick).
+      const oddsAdded = await attachOdds(gamesRec.games, [...byPk.values()], date, 'final')
+      if (changed || oddsAdded) fs.writeFileSync(`${GAMES}/${date}.json`, JSON.stringify(gamesRec, null, 2))
+    }
   }
 
   // Rebuild the classic picks index with a running record.
