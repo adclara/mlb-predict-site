@@ -20,8 +20,18 @@ export function fetchSummary(espnId) {
   return getJSON(`${ESPN}/summary?event=${espnId}`)
 }
 // Multi-provider odds from the core API (pickcenter often carries ONE book).
-export function fetchCoreOdds(espnId) {
-  return getJSON(`${CORE}/events/${espnId}/competitions/${espnId}/odds?limit=20`)
+// The list endpoint returns items as $ref POINTERS (verified in production) —
+// dereference up to 8 providers with a small pool before parsing.
+export async function fetchCoreOddsItems(espnId) {
+  const list = await getJSON(`${CORE}/events/${espnId}/competitions/${espnId}/odds?limit=20`)
+  const items = list?.items || []
+  const inline = items.filter((it) => it.provider || it.homeTeamOdds)
+  const refs = items.filter((it) => !it.provider && it.$ref).slice(0, 8)
+  const fetched = []
+  await Promise.all(refs.map(async (it) => {
+    try { fetched.push(await getJSON(String(it.$ref).replace(/^http:/, 'https:'))) } catch { /* skip provider */ }
+  }))
+  return [...inline, ...fetched]
 }
 
 // Pick the ESPN event for an MLB game from candidates sharing the same matchup.
@@ -66,7 +76,7 @@ export async function buildOddsForDate(dateISO, mlbGames) {
     await Promise.all(ids.slice(i, i + POOL).map(async (id) => {
       try {
         let odds = { ...parseSummaryOdds(await fetchSummary(id)), espn_id: id }
-        try { odds = mergeExtraBooks(odds, parseCoreOdds(await fetchCoreOdds(id))) } catch { /* core is a bonus */ }
+        try { odds = mergeExtraBooks(odds, parseCoreOdds({ items: await fetchCoreOddsItems(id) })) } catch { /* core is a bonus */ }
         for (const pk of idToPks.get(id)) out.set(pk, odds)
       } catch { /* leave those games with no odds */ }
     }))

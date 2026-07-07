@@ -619,7 +619,8 @@ async function main() {
   // One-time: historical seasons (2023-25) + multi-season context study — 10×
   // the statistical power for the pre-registered signals. Skipped once done.
   const SEASONS = `${HIST}/seasons`
-  if (!fs.existsSync(SEASONS)) {
+  const seasonsMissing = [2023, 2024, 2025].some((y) => !fs.existsSync(`${SEASONS}/${y}.json`))
+  if (seasonsMissing) {
     try {
       const sum = await backfillSeasons(SEASONS)
       const study = buildHistoryStudy(SEASONS, `${HIST}/history_study.json`)
