@@ -72,6 +72,27 @@ p_final ≥65% (walk-forward): n=67, gana **68.7%** [56.8–78.5], mitades 65/72
 exacta (dice 68.5% → acierta 68.7%). ROI ≈ −3% (el vig): la gema maximiza acierto, el ROI
 vive en los fijos ORO.
 
+## 2026-07-07 · Estudio multi-temporada (2023–2025, n=7,303 juegos)
+
+Backfill histórico vía statsapi + señales de contexto evaluadas sobre el equipo LOCAL,
+direcciones pre-registradas antes de mirar los datos (data/history/history_study.json):
+
+| Señal | Gap | CI 95% | n | Veredicto |
+|---|---|---|---|---|
+| **Pitagórico L20** | **+10.0 pts** | [+7.5, +12.7] | 2815/2799 | **ROBUSTO multi-temporada** |
+| **Forma casa/ruta** | **+7.7 pts** | [+4.7, +10.9] | 2496/1445 | **ROBUSTO multi-temporada** |
+| Descanso ≥1 día | −3.0 pts | [−12.3, +5.5] | 298/217 | ruido |
+| Calendario fresco | −1.7 pts | [−5.5, +1.9] | 1471/1446 | ruido |
+| Rival viajó al este | −1.2 pts | [−7.5, +5.4] | 249/6647 | ruido |
+
+**Lecciones:**
+1. El descanso (+17.5 pts en la muestra 2026) **era espejismo de muestra chica** — a escala
+   es ruido. El backfill evitó adoptar una señal falsa: exactamente para esto existe.
+2. Pitagórico y forma casa/ruta son efectos REALES y robustos… pero el aux-stack ya demostró
+   que **el mercado los tiene en el precio** (empate OOS vs p_final) y como desempate de
+   fijos empeoraron. Conclusión: reales como fenómeno, sin valor incremental sobre el
+   consenso de las casas — quedan medidos y documentados, no ponderados.
+
 ## Fuentes
 - Woodland & Woodland (1994), *Journal of Finance*: sesgo favorito-longshot invertido en MLB.
 - Song, Severini & Allada (2017), *PNAS*: jet lag y rendimiento MLB (n=46,535).
