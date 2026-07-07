@@ -21,5 +21,20 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Fijos chip (additive, outside #root; reads robot data only — safe to remove) -->
+    <script type="module">
+      (async () => { try {
+        const d = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date())
+        const r = await fetch(`/mlb-predict-site/data/history/${d}.json?t=${Date.now()}`)
+        if (!r.ok) return
+        const j = await r.json()
+        const n = (j.locks || []).length
+        const a = document.createElement('a')
+        a.href = '/mlb-predict-site/live.html'
+        a.textContent = n ? `⭐ ${n} fijo${n > 1 ? 's' : ''} hoy · logros en vivo` : '📡 Logros en vivo'
+        a.style.cssText = 'position:fixed;bottom:14px;right:14px;z-index:9999;background:#0D9488;color:#04110F;font:600 13px "Plus Jakarta Sans",system-ui,sans-serif;padding:10px 14px;border-radius:999px;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.5)'
+        document.body.appendChild(a)
+      } catch { /* never break the app */ } })()
+    </script>
   </body>
 </html>
