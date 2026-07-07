@@ -17,24 +17,33 @@ const fix = (a) => ABBR_FIX[a] || a
 export async function backfillSeasons(dir, years = [2023, 2024, 2025]) {
   fs.mkdirSync(dir, { recursive: true })
   const summary = []
+  // Month-by-month chunks (lighter payloads; a failing chunk names itself in the
+  // log). The summary is ALSO persisted to backfill_log.json so a production
+  // failure is diagnosable from the repo, not just the Actions console.
+  const CHUNKS = [['03-15', '04-30'], ['05-01', '05-31'], ['06-01', '06-30'], ['07-01', '07-31'], ['08-01', '08-31'], ['09-01', '10-05']]
   for (const y of years) {
     const fp = `${dir}/${y}.json`
     if (fs.existsSync(fp)) { summary.push(`${y}: ya existe`); continue }
-    try {
-      const data = await get(`${API}/schedule?sportId=1&startDate=${y}-03-15&endDate=${y}-10-05&gameType=R&hydrate=team`)
-      const games = []
-      for (const d of data.dates || []) for (const g of d.games || []) {
-        if (g.status?.abstractGameState !== 'Final') continue
-        const h = fix(g.teams?.home?.team?.abbreviation), a = fix(g.teams?.away?.team?.abbreviation)
-        const hs = g.teams?.home?.score, as = g.teams?.away?.score
-        if (!h || !a || hs == null || as == null || hs === as) continue
-        games.push([d.date, h, a, as, hs])
-      }
-      if (games.length < 1000) { summary.push(`${y}: incompleto (${games.length}) — no guardado`); continue }
-      fs.writeFileSync(fp, JSON.stringify({ season: y, n: games.length, games }))
-      summary.push(`${y}: ${games.length} juegos`)
-    } catch (e) { summary.push(`${y}: error ${e.message}`) }
+    const games = []
+    const errs = []
+    for (const [a, b] of CHUNKS) {
+      try {
+        const data = await get(`${API}/schedule?sportId=1&startDate=${y}-${a}&endDate=${y}-${b}&gameType=R&hydrate=team`)
+        for (const d of data.dates || []) for (const g of d.games || []) {
+          if (g.status?.abstractGameState !== 'Final') continue
+          const h = fix(g.teams?.home?.team?.abbreviation), aa = fix(g.teams?.away?.team?.abbreviation)
+          const hs = g.teams?.home?.score, as = g.teams?.away?.score
+          if (!h || !aa || hs == null || as == null || hs === as) continue
+          games.push([d.date, h, aa, as, hs])
+        }
+      } catch (e) { errs.push(`${a}..${b}: ${e.message}`) }
+    }
+    if (games.length < 1000) { summary.push(`${y}: incompleto (${games.length})${errs.length ? ` [${errs.join(' | ')}]` : ''} — no guardado`); continue }
+    games.sort((x, z) => (x[0] < z[0] ? -1 : 1))
+    fs.writeFileSync(fp, JSON.stringify({ season: y, n: games.length, games }))
+    summary.push(`${y}: ${games.length} juegos${errs.length ? ` (chunks con error: ${errs.length})` : ''}`)
   }
+  try { fs.writeFileSync(`${dir}/backfill_log.json`, JSON.stringify({ at: new Date().toISOString(), summary }, null, 2)) } catch { /* log best-effort */ }
   return summary
 }
 
