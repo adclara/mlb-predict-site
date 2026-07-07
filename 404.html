@@ -29,9 +29,10 @@
         if (!r.ok) return
         const j = await r.json()
         const n = (j.locks || []).length
+        const ng = (j.gems || []).length
         const a = document.createElement('a')
         a.href = '/mlb-predict-site/live.html'
-        a.textContent = n ? `⭐ ${n} fijo${n > 1 ? 's' : ''} hoy · logros en vivo` : '📡 Logros en vivo'
+        a.textContent = n ? `⭐ ${n} fijo${n > 1 ? 's' : ''}${ng ? ` · 💎 ${ng}` : ''} hoy · en vivo` : ng ? `💎 ${ng} gema${ng > 1 ? 's' : ''} hoy · en vivo` : '📡 Logros en vivo'
         a.style.cssText = 'position:fixed;bottom:14px;right:14px;z-index:9999;background:#0D9488;color:#04110F;font:600 13px "Plus Jakarta Sans",system-ui,sans-serif;padding:10px 14px;border-radius:999px;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.5)'
         document.body.appendChild(a)
       } catch { /* never break the app */ } })()
