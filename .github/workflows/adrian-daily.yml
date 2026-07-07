@@ -1,12 +1,23 @@
 # Deployed into the PUBLIC site repo at .github/workflows/adrian-daily.yml by
-# scripts/deploy_demo.sh. Runs daily: computes the day's Adrian plays and grades
-# past days against final scores, committing the JSON history back to the repo
-# (GitHub Pages then serves it). Public repo -> free unlimited Actions minutes;
-# same-repo commit -> the default GITHUB_TOKEN suffices (no secret).
+# scripts/deploy_demo.sh. Runs SEVERAL TIMES A DAY (a "living" model): the morning
+# run posts the day's plays + fijos and the opening lines; the intraday runs refresh
+# the market (multi-book consensus, disagreement, open->close line movement) and
+# grade finished games; the late run captures the closing lines + win-prob curves.
+# The morning plays/fijos are FROZEN by daily.mjs (a posted fijo never changes);
+# only the live odds/feature logs and the learning snapshot update on later runs.
+# Public repo -> free unlimited Actions minutes; same-repo commit -> the default
+# GITHUB_TOKEN suffices (no secret). The concurrency group below serializes runs.
 name: adrian-daily
 on:
   schedule:
-    - cron: '0 13 * * *' # ~9am ET: today's probables are posted, last night's games are final
+    - cron: '0 13 * * *'  # ~9am ET  — morning plays + fijos + opening lines
+    - cron: '0 17 * * *'  # ~1pm ET  — pre-slate market refresh
+    - cron: '0 20 * * *'  # ~4pm ET  — live market refresh
+    - cron: '0 23 * * *'  # ~7pm ET  — live market refresh + early finals
+    - cron: '0 3 * * *'   # ~11pm ET — closing lines
+    - cron: '30 6 * * *'  # ~2:30am ET — grade finals + earliest opening capture
+                          # (daily.mjs uses the ET date and never POSTS plays/fijos
+                          # before 8am ET, so night runs can't freeze a bad slate)
   workflow_dispatch: {}
 permissions:
   contents: write
@@ -28,5 +39,13 @@ jobs:
           git config user.name "adrian-robot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/history
-          git diff --cached --quiet || git commit -m "Adrian robot: picks + grading ($(date -u +%F))"
-          git push
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "Adrian robot: picks + grading ($(date -u +%FT%TZ))"
+            # A deploy may have pushed to the branch since checkout; rebase our
+            # data-only commit on top before pushing (retry a couple of times).
+            for i in 1 2 3; do
+              git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push && break || sleep 5
+            done
+          fi

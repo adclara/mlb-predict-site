@@ -7,9 +7,10 @@
 //   robot/daily.mjs (this) + adrian.js + engine.js + venues.js
 //   ../data/*.json (priors) and ../data/history/ (output)
 import fs from 'fs'
-import { analyzeGame, leagueAttempts, selectPlays } from './adrian.js'
+import { analyzeGame, leagueAttempts, selectLocks, selectPlays } from './adrian.js'
 import { eloProb, expectedRuns, simulateF5, simulateGame } from './engine.js'
 import { analysisToRow, buildSnapshot, FORMULA_VERSION } from './learn.js'
+import { mergeOddsBlocks, riskScore, valueEdge } from './odds.js'
 import { buildOddsForDate } from './espn_odds.mjs'
 
 const API = 'https://statsapi.mlb.com/api/v1'
@@ -144,9 +145,19 @@ async function computeDay(date) {
   // Opening market line (ESPN, free) — additive, best-effort. Captured pre-game
   // so it's anti-leakage safe. FORMULA_VERSION is NOT bumped (odds is metadata).
   await attachOdds(rows, games, date, 'open')
+  // Value (model vs de-vig consensus) + risk per game — additive, descriptive.
+  for (const r of rows) {
+    r.value = valueEdge(r.adrian_p, r.odds)
+    r.edge = r.value?.best_edge ?? null
+    r.value_side = r.value?.best_side ?? null
+    r.risk = riskScore({ odds: r.odds, adrian_p: r.adrian_p, pitcher_recent: r.pitcher_recent, news_delta: r.news_delta, ml_pick: r.ml_pick, home: r.home })
+  }
   const { plays } = selectPlays(analyses)
+  const oddsByPk = new Map(rows.map((r) => [r.game_pk, r.odds]))
+  const locks = selectLocks(analyses, oddsByPk)
   return {
     plays: plays.map((p) => ({ game_pk: p.game_pk, matchup: p.matchup, market: p.market, side: p.side || null, line: p.line ?? null, pick: p.pick || null, label: p.label, prob: p.prob, confidence: p.confidence })),
+    locks,
     rows,
   }
 }
@@ -163,8 +174,8 @@ async function attachOdds(rows, games, date, stage) {
     const o = m.get(r.game_pk)
     if (!o) continue
     const hadCurve = !!r.odds?.wp_curve, hadLine = r.odds?.ml_home != null
-    const fresh = Object.fromEntries(Object.entries(o).filter(([, v]) => v != null))
-    r.odds = { ...(r.odds || {}), ...fresh, stage, captured_at: new Date().toISOString() }
+    const fresh = { ...Object.fromEntries(Object.entries(o).filter(([, v]) => v != null)), stage, captured_at: new Date().toISOString() }
+    r.odds = mergeOddsBlocks(r.odds, fresh) // preserves the opening price + derives line_move
     if ((!hadCurve && r.odds.wp_curve) || (!hadLine && r.odds.ml_home != null)) added = true
   }
   return added
@@ -204,7 +215,9 @@ function upsertGames(date, rows) {
   if (fs.existsSync(fp)) { try { for (const r of j(fp).games || []) prev[r.game_pk] = r } catch { /* rewrite */ } }
   const merged = rows.map((r) => {
     const p = prev[r.game_pk]
-    const withOdds = { ...r, odds: r.odds ?? p?.odds ?? null }
+    // Merge the fresh capture over the stored block so the morning OPENING price
+    // (p_home_open) and any win-prob curve survive the intraday/closing re-runs.
+    const withOdds = { ...r, odds: mergeOddsBlocks(p?.odds, r.odds) }
     return p && p.graded ? { ...withOdds, home_win: p.home_win, total_runs: p.total_runs, ml_result: p.ml_result, total_result: p.total_result, final: p.final, graded: true } : withOdds
   })
   fs.writeFileSync(fp, JSON.stringify({ date, generated_at: new Date().toISOString(), schema: 'games_v1', formula_version: FORMULA_VERSION, games: merged }, null, 2))
@@ -213,9 +226,9 @@ function upsertGames(date, rows) {
 // --- grade a past day against final scores (given a fetched schedule) --------
 const isFinal = (g) => g && g.home_score != null && /Final|Game Over|Completed/.test(g.status || '')
 
-function gradePicks(rec, byPk) {
+function gradeList(list, byPk) {
   let done = true
-  for (const play of rec.plays) {
+  for (const play of list || []) {
     if (play.result) continue
     const g = byPk.get(play.game_pk)
     if (!isFinal(g)) { done = false; continue }
@@ -224,8 +237,13 @@ function gradePicks(rec, byPk) {
     else if (play.market === 'total') play.result = total === play.line ? 'push' : (total > play.line) === (play.side === 'over') ? 'win' : 'loss'
     play.final = `${g.away_score}-${g.home_score}`
   }
-  rec.graded = done
   return done
+}
+function gradePicks(rec, byPk) {
+  const playsDone = gradeList(rec.plays, byPk)
+  const locksDone = gradeList(rec.locks, byPk) // fijos share the ml grading logic
+  rec.graded = playsDone && locksDone
+  return rec.graded
 }
 
 // Grade EVERY logged game (not just the 3 picks) for the learning dataset.
@@ -258,13 +276,39 @@ function buildLearning() {
 }
 
 // --- main -------------------------------------------------------------------
+// MLB's officialDate is Eastern — so is the robot's "today". Running on the UTC
+// date would make the late-night crons (03:00/06:30 UTC = 11pm/2:30am ET) roll
+// over to TOMORROW and freeze half-baked picks; ET keeps every run on the right
+// slate. Before 8am ET a run is grading/odds-capture only (never posts plays).
+const ET = 'America/New_York'
+function etNow() {
+  const d = new Date()
+  const date = new Intl.DateTimeFormat('en-CA', { timeZone: ET }).format(d) // YYYY-MM-DD
+  const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: ET, hour: 'numeric', hour12: false }).format(d)) % 24
+  return { date, hour }
+}
 async function main() {
   fs.mkdirSync(GAMES, { recursive: true })
-  const today = process.argv[2] || new Date().toISOString().slice(0, 10)
+  const et = etNow()
+  const today = process.argv[2] || et.date
+  const posting = !!process.argv[2] || et.hour >= 8 // manual runs always post
 
+  const existingToday = fs.existsSync(`${HIST}/${today}.json`) ? j(`${HIST}/${today}.json`) : null
   const day = await computeDay(today)
   if (day) {
-    fs.writeFileSync(`${HIST}/${today}.json`, JSON.stringify({ date: today, generated_at: new Date().toISOString(), graded: false, plays: day.plays }, null, 2))
+    if (posting || existingToday) {
+      // Freeze the FIRST-generated plays + fijos of the day (a posted "fijo" must not
+      // silently change on an intraday re-run); the per-game logs still refresh live
+      // with the latest odds/consensus/line movement below via upsertGames.
+      // `?? day.locks`: a pre-upgrade day file has plays but no locks field — backfill
+      // the fijos once from the fresh compute, then they freeze like everything else.
+      const frozen = existingToday && existingToday.plays?.length
+      const plays = frozen ? existingToday.plays : day.plays
+      const locks = frozen ? (existingToday.locks ?? day.locks) : day.locks
+      const generated_at = frozen ? existingToday.generated_at : new Date().toISOString()
+      fs.writeFileSync(`${HIST}/${today}.json`, JSON.stringify({ date: today, generated_at, graded: false, plays, locks }, null, 2))
+    }
+    // Always log the games (pre-8am ET this captures the EARLIEST opening line).
     upsertGames(today, day.rows)
   }
 
@@ -295,14 +339,26 @@ async function main() {
   // Rebuild the classic picks index with a running record.
   const idxFiles = pickFiles.sort()
   const idx = []
-  let w = 0, l = 0, ps = 0
+  let w = 0, l = 0, ps = 0, lw = 0, ll = 0, lps = 0
   for (const f of idxFiles) {
     const rec = j(`${HIST}/${f}`)
     const g = rec.plays.filter((p) => p.result)
     for (const p of g) { if (p.result === 'win') w++; else if (p.result === 'loss') l++; else ps++ }
-    idx.push({ date: rec.date, n: rec.plays.length, graded: !!rec.graded, wins: g.filter((p) => p.result === 'win').length, losses: g.filter((p) => p.result === 'loss').length })
+    const gl = (rec.locks || []).filter((p) => p.result)
+    for (const p of gl) { if (p.result === 'win') lw++; else if (p.result === 'loss') ll++; else lps++ }
+    idx.push({
+      date: rec.date, n: rec.plays.length, graded: !!rec.graded,
+      wins: g.filter((p) => p.result === 'win').length, losses: g.filter((p) => p.result === 'loss').length,
+      locks_n: (rec.locks || []).length, locks_wins: gl.filter((p) => p.result === 'win').length, locks_losses: gl.filter((p) => p.result === 'loss').length,
+    })
   }
-  fs.writeFileSync(`${HIST}/index.json`, JSON.stringify({ updated_at: new Date().toISOString(), record: { wins: w, losses: l, pushes: ps, win_rate: w + l ? Math.round(w / (w + l) * 1000) / 1000 : null }, days: idx.reverse() }, null, 2))
+  const rate = (a, b) => (a + b ? Math.round(a / (a + b) * 1000) / 1000 : null)
+  fs.writeFileSync(`${HIST}/index.json`, JSON.stringify({
+    updated_at: new Date().toISOString(),
+    record: { wins: w, losses: l, pushes: ps, win_rate: rate(w, l) },
+    locks_record: { wins: lw, losses: ll, pushes: lps, win_rate: rate(lw, ll) },
+    days: idx.reverse(),
+  }, null, 2))
 
   // Rebuild the Adrian Learning snapshot from all graded game logs.
   const snap = buildLearning()
