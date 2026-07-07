@@ -451,12 +451,17 @@ async function main() {
   const idxFiles = pickFiles.sort()
   const idx = []
   let w = 0, l = 0, ps = 0, lw = 0, ll = 0, lps = 0
+  const tierRec = { oro: { wins: 0, losses: 0 }, plata: { wins: 0, losses: 0 } }
   for (const f of idxFiles) {
     const rec = j(`${HIST}/${f}`)
     const g = rec.plays.filter((p) => p.result)
     for (const p of g) { if (p.result === 'win') w++; else if (p.result === 'loss') l++; else ps++ }
     const gl = (rec.locks || []).filter((p) => p.result)
-    for (const p of gl) { if (p.result === 'win') lw++; else if (p.result === 'loss') ll++; else lps++ }
+    for (const p of gl) {
+      if (p.result === 'win') lw++; else if (p.result === 'loss') ll++; else lps++
+      const t = p.tier === 'plata' ? tierRec.plata : tierRec.oro // pre-tier locks count as oro
+      if (p.result === 'win') t.wins++; else if (p.result === 'loss') t.losses++
+    }
     idx.push({
       date: rec.date, n: rec.plays.length, graded: !!rec.graded,
       wins: g.filter((p) => p.result === 'win').length, losses: g.filter((p) => p.result === 'loss').length,
@@ -467,7 +472,11 @@ async function main() {
   fs.writeFileSync(`${HIST}/index.json`, JSON.stringify({
     updated_at: new Date().toISOString(),
     record: { wins: w, losses: l, pushes: ps, win_rate: rate(w, l) },
-    locks_record: { wins: lw, losses: ll, pushes: lps, win_rate: rate(lw, ll) },
+    locks_record: {
+      wins: lw, losses: ll, pushes: lps, win_rate: rate(lw, ll),
+      oro: { ...tierRec.oro, win_rate: rate(tierRec.oro.wins, tierRec.oro.losses) },
+      plata: { ...tierRec.plata, win_rate: rate(tierRec.plata.wins, tierRec.plata.losses) },
+    },
     days: idx.reverse(),
   }, null, 2))
 

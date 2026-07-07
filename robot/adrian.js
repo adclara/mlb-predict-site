@@ -288,9 +288,13 @@ export function selectPlays(analyses, { max = 3, minConf = 0.45 } = {}) {
 // Higher-probability tier, never a guarantee. `oddsByPk` is a Map or object
 // keyed by game_pk holding the merged odds block.
 const MAX_LOCK_DISAGREE = 0.06 // books apart by >6 pts → too much market doubt
+// Above this implied break-even, even the gold pool's historical win rate can't
+// beat the price (structural math, not a fitted threshold): the fijo still shows
+// (max win probability is the mandate) but carries a "línea cara" warning.
+const PRICE_WARN_BREAKEVEN = 0.68
 export function selectLocks(analyses, oddsByPk, { max = 2 } = {}) {
   const getOdds = (pk) => (oddsByPk?.get ? oddsByPk.get(pk) : oddsByPk?.[pk]) || null
-  const cands = []
+  const gold = [], silverPool = []
   for (const a of analyses) {
     const ml = a.ml
     if (!ml || ml.confidence !== 'alta') continue
@@ -298,23 +302,36 @@ export function selectLocks(analyses, oddsByPk, { max = 2 } = {}) {
     const odds = getOdds(a.game_pk)
     if (!odds || !odds.fav_side) continue
     const mc = marketConsensus(ml, odds) // 'strong' = market fav + agree>=5 (both robust signals)
-    if (mc.level !== 'strong') continue
+    if (mc.level !== 'strong' && mc.level !== 'market') continue
     const disagree = odds.book_disagreement ?? 0
     if (disagree > MAX_LOCK_DISAGREE) continue
     const consHome = odds.consensus?.p_home ?? odds.p_home_mkt
     const consForPick = consHome == null ? ml.prob : (ml.pick === a.home ? consHome : 1 - consHome)
+    const mlPrice = ml.pick === a.home ? odds.ml_home : odds.ml_away
+    const breakeven = mlPrice == null ? consForPick : (mlPrice < 0 ? Math.abs(mlPrice) / (Math.abs(mlPrice) + 100) : 100 / (mlPrice + 100))
     // Safety = mostly the model's own prob, backed by the market consensus and a
     // strong (5+ factor) market agreement, penalized by book disagreement.
     const safety = round3(0.5 * ml.prob + 0.4 * consForPick + (mc.level === 'strong' ? 0.1 : 0) - disagree)
-    cands.push({
+    const lock = {
       market: 'ml', game_pk: a.game_pk, matchup: a.matchup, pick: ml.pick, label: ml.label,
       prob: ml.prob, confidence: ml.confidence, reasons: ml.reasons,
       market_consensus: mc.level, consensus_prob: round3(consForPick),
       book_disagreement: round3(disagree), n_books: odds.consensus?.n_books ?? (odds.books?.length ?? 1),
       engine: ml.engine ?? 'classic', prob_v2: ml.prob_v2 ?? null,
+      price_warning: breakeven > PRICE_WARN_BREAKEVEN, // ROI honesty flag, not a filter
       safety,
-    })
+    }
+    if (mc.level === 'strong') gold.push({ ...lock, tier: 'oro' })
+    else silverPool.push({ ...lock, tier: 'plata' })
   }
-  cands.sort((x, y) => y.safety - x.safety)
-  return cands.slice(0, max)
+  // ORO (market fav + agree>=5): the walk-forward tournament pick — 67.7%
+  // [60.1–74.5], +7.9% ROI, stable in both halves. PLATA fills the day up to
+  // `max` when gold is short: simulated at ~55-63% with NEGATIVE ROI and
+  // half-to-half instability → shown as the "second favorite", explicitly
+  // informational, with its own graded record. Never sold as gold.
+  gold.sort((x, y) => y.safety - x.safety)
+  silverPool.sort((x, y) => y.safety - x.safety)
+  const out = gold.slice(0, max)
+  if (out.length < max) out.push(...silverPool.slice(0, max - out.length))
+  return out
 }
