@@ -178,10 +178,14 @@ async function render(){
     }).join('')}
   </table>` : `<div class="empty">Sin juegos en progreso ahora mismo.</div>`
 
-  // market table
-  const rows = games?.games || []
+  // market table — sorted by the pick's win probability, highest first
+  const probOf = (g) => {
+    const home = g.ml_pick === g.home
+    return g.p_final != null ? (home ? g.p_final : 1 - g.p_final) : Math.max(g.adrian_p ?? 0.5, 1 - (g.adrian_p ?? 0.5))
+  }
+  const rows = (games?.games || []).slice().sort((a, b) => probOf(b) - probOf(a))
   $('market').innerHTML = rows.length ? `<table>
-    <tr><th>Juego</th><th>Pick</th><th>Prob v2</th><th>Mercado</th><th>Movimiento</th><th>Casas</th><th>Riesgo</th></tr>
+    <tr><th>Juego</th><th>Pick</th><th>Prob ▾</th><th>Mercado</th><th>Movimiento</th><th>Casas</th><th>Riesgo</th></tr>
     ${rows.map(g=>{
       const pF = g.p_final, home = g.ml_pick === g.home
       const pick = g.ml_pick
