@@ -791,6 +791,19 @@ const pickEraAdv = (r) => {
 }
 const pickIsMktFav = (r) => { const o = r.odds; if (!o || !o.fav_side) return null; return o.fav_side === (mlPickDir(r) > 0 ? 'home' : 'away') }
 const newsFavorsPick = (r) => (r.news_delta ?? 0) !== 0 && Math.sign(r.news_delta) === mlPickDir(r)
+// Oriented accessors for the reconstructed context (aux) + fetched raw material
+// (aux2). Directions PRE-REGISTERED 2026-07-07 (priors: venue form +, Pythag +,
+// rest advantage +, fresher schedule +, opponent traveled east + [PNAS 2017],
+// platoon edge +). First backtest at n≈1341: rest showed +17.8 pts consistent in
+// both halves but under the n>=60 gate; the rest were ruido/sin dato — none is
+// weighted anywhere until its verdict here says 'robusto'.
+const pickIsHome = (r) => mlPickDir(r) > 0
+const auxRestDiff = (r) => { const a = r.aux; if (!a || a.rest_h == null || a.rest_a == null) return null; const d = Math.min(a.rest_h, 5) - Math.min(a.rest_a, 5); return pickIsHome(r) ? d : -d }
+const auxDensDiff = (r) => { const a = r.aux; if (!a || a.dens_h == null || a.dens_a == null) return null; const d = a.dens_a - a.dens_h; return pickIsHome(r) ? d : -d }
+const auxHaf = (r) => { const a = r.aux; if (!a || a.haf == null) return null; return pickIsHome(r) ? a.haf : -a.haf }
+const auxPyth = (r) => { const a = r.aux; if (!a || a.pyth == null) return null; return pickIsHome(r) ? a.pyth : -a.pyth }
+const auxTzeOpp = (r) => { const a = r.aux; if (!a || a.tze_h == null || a.tze_a == null) return null; const opp = pickIsHome(r) ? a.tze_a : a.tze_h; return opp }
+const platoonEdge = (r) => { const a = r.aux2; if (!a || a.platoon_h == null || a.platoon_a == null) return null; const d = a.platoon_h - a.platoon_a; return pickIsHome(r) ? d : -d }
 const AUDIT_SIGNALS = [
   { id: 'market', label: 'Coincide con el favorito del mercado', req: (r) => r.odds?.fav_side != null, fav: (r) => pickIsMktFav(r) },
   { id: 'agree5', label: '5+ factores de acuerdo con el pick', req: () => true, fav: (r) => (r.agree ?? 0) >= 5 },
@@ -798,6 +811,13 @@ const AUDIT_SIGNALS = [
   { id: 'pitcher', label: 'Mejor ERA reciente del abridor', req: (r) => pickEraAdv(r) != null, fav: (r) => pickEraAdv(r) > 0 },
   { id: 'streak3', label: 'Racha del equipo del pick ≥ 3', req: () => true, fav: (r) => (pickStreak(r) ?? 0) >= 3 },
   { id: 'news', label: 'Noticias/lesiones a favor del pick', req: () => true, fav: (r) => newsFavorsPick(r) },
+  // context signals (aux/aux2) — fav true/false only past the pre-set threshold
+  { id: 'aux_rest', label: 'Ventaja de descanso real del pick (≥1 día)', req: (r) => auxRestDiff(r) != null, fav: (r) => { const v = auxRestDiff(r); return v >= 1 ? true : v <= -1 ? false : null } },
+  { id: 'aux_dens', label: 'Calendario más fresco (juegos últimos 7d)', req: (r) => auxDensDiff(r) != null, fav: (r) => { const v = auxDensDiff(r); return v >= 1 ? true : v <= -1 ? false : null } },
+  { id: 'aux_haf', label: 'Mejor forma casa/ruta específica', req: (r) => auxHaf(r) != null, fav: (r) => { const v = auxHaf(r); return v >= 0.15 ? true : v <= -0.15 ? false : null } },
+  { id: 'aux_pyth', label: 'Mejor pitagórico L20', req: (r) => auxPyth(r) != null, fav: (r) => { const v = auxPyth(r); return v >= 0.05 ? true : v <= -0.05 ? false : null } },
+  { id: 'aux_tze', label: 'Rival viajó al ESTE ≥2 husos (PNAS)', req: (r) => auxTzeOpp(r) != null, fav: (r) => { const v = auxTzeOpp(r); return v >= 2 ? true : null } },
+  { id: 'platoon', label: 'Ventaja de platoon (bates vs mano del abridor)', req: (r) => platoonEdge(r) != null, fav: (r) => { const v = platoonEdge(r); return v >= 0.03 ? true : v <= -0.03 ? false : null } },
 ]
 // deterministic seeded bootstrap CI of mean(a) − mean(b) over 0/1 arrays.
 function bootGap(a, b, B = 1000, seed = 20260706) {
@@ -874,6 +894,13 @@ export function buildSnapshot(rows, { now = null } = {}) {
     },
     segments: segmentReport(graded),
     signal_audit: signalAudit(graded),
+    // coverage of the reconstructed/fetched context blocks (the audit's aux_*
+    // and platoon verdicts mature as these counts grow)
+    context: {
+      n_with_aux: rows.filter((r) => r.aux).length,
+      n_with_platoon: rows.filter((r) => r.aux2?.platoon_h != null && r.aux2?.platoon_a != null).length,
+      aux_stack: 'probado 2026-07-07: empate OOS vs p_final (Δlogloss CI cruza 0) — no adoptado',
+    },
     n_backfilled: graded.filter((r) => r.backfilled).length,
     odds: {
       n_with_line: graded.filter((r) => r.odds?.p_home_mkt != null).length,
