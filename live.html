@@ -49,6 +49,17 @@
   .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:6px;animation:pu 1.6s infinite}
   @keyframes pu{0%,100%{opacity:.35}50%{opacity:1}}
   .wrap{overflow-x:auto}
+  .livechip{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:12.5px;margin-top:8px}
+  .hist{display:flex;flex-wrap:wrap;gap:8px}
+  .hday{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;min-width:118px}
+  .hday b{font-family:"Space Grotesk",sans-serif}
+  @media (max-width:560px){
+    body{padding:14px 8px 50px}
+    h1{font-size:19px}
+    td,th{padding:6px 5px;font-size:12px}
+    .card{padding:12px}
+    .lock .pick{font-size:17px}
+  }
 </style>
 </head>
 <body data-palette="#0D9488,#D97706,#DC2626,#0284C7">
@@ -57,6 +68,9 @@
 <p class="sub" id="sub">Cargando…</p>
 
 <div id="locks" class="grid"></div>
+
+<h2>Historial de fijos</h2>
+<div id="lockHist" class="hist"></div>
 
 <h2><span class="pulse"></span>Logros en vivo (durante los juegos)</h2>
 <p class="tiny" id="liveMeta"></p>
@@ -120,6 +134,11 @@ async function render(){
   const gmap = new Map((games?.games||[]).map(g=>[g.game_pk,g]))
   $('locks').innerHTML = locks.length ? locks.map(l=>{
     const g = gmap.get(l.game_pk)
+    // live status of the fijo's own game (score/inning/WP from the watcher)
+    const lv = live?.games?.[String(l.game_pk)]
+    const s = lv?.snapshots?.[lv.snapshots.length-1]
+    const pickHome = lv && l.pick === lv.home
+    const liveChip = (s && !l.result) ? `<div class="livechip"><span class="pulse"></span>${s.as??'—'}-${s.hs??'—'} · ${s.half??''}${s.inn??''}${s.wp!=null?` · gana ${pct(pickHome ? s.wp : 1-s.wp)}`:''}</div>` : ''
     return `<div class="card lock">
       <div class="row"><span class="pick">⭐ ${esc(l.label)}</span>${resBadge(l.result)}</div>
       <div class="muted">${esc(l.matchup)}${l.final?` · final ${esc(l.final)}`:''}</div>
@@ -128,8 +147,16 @@ async function render(){
         <span class="tiny">consenso casas ${pct(l.consensus_prob)} · ${l.n_books||1} casa${(l.n_books||1)>1?'s':''}</span>
       </div>
       <div style="margin-top:8px">${riskBadge(g?.risk)} <span class="tiny">${l.prob_v2!=null?`calibrada v2 · clásica ${pct(l.prob)}`:'fórmula clásica'}</span></div>
+      ${liveChip}
     </div>`
   }).join('') : `<div class="empty">Hoy no hay fijo que cumpla TODOS los filtros de máxima seguridad (modelo alta + favorito del mercado + casas de acuerdo). No forzamos jugadas.</div>`
+
+  // fijos history (per-day locks record from the index)
+  const histDays = (idx?.days||[]).filter(d=>(d.locks_n??0)>0)
+  $('lockHist').innerHTML = histDays.length ? histDays.slice(0,21).map(d=>{
+    const done = (d.locks_wins+d.locks_losses)>0
+    return `<div class="hday"><div class="tiny">${esc(d.date)}</div><b>${done?`${d.locks_wins}-${d.locks_losses}`:`${d.locks_n} fijo${d.locks_n>1?'s':''}`}</b> ${done?(d.locks_wins>=d.locks_losses?'<span class="badge b-win">✓</span>':'<span class="badge b-loss">✗</span>'):'<span class="tiny">pendiente</span>'}</div>`
+  }).join('') : `<div class="empty">Los fijos empiezan a acumular historial desde hoy — cada día quedará graduado aquí con su récord real.</div>`
 
   // live board
   const lg = live?.games ? Object.entries(live.games) : []
