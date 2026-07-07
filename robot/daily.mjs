@@ -14,6 +14,7 @@ import { mergeOddsBlocks, riskScore, valueEdge } from './odds.js'
 import { buildOddsForDate } from './espn_odds.mjs'
 import { applyEloUpdates, loadEloState } from './elo_live.mjs'
 import { fetchForecasts } from './weather.mjs'
+import { auxForGame, buildTeamContext } from './context.mjs'
 
 const API = 'https://statsapi.mlb.com/api/v1'
 const DATA = process.env.DATA_DIR || 'data'
@@ -52,6 +53,8 @@ function parseGame(g) {
   const t = g.teams || {}, home = t.home || {}, away = t.away || {}, hp = home.probablePitcher || {}, ap = away.probablePitcher || {}
   return {
     game_pk: g.gamePk, game_date: g.officialDate || (g.gameDate || '').slice(0, 10), game_datetime: g.gameDate || null, day_night: g.dayNight || null,
+    series_game: g.seriesGameNumber ?? null, series_len: g.gamesInSeries ?? null, // series context (was fetched & dropped)
+    home_sp_hand: hp.pitchHand?.code ?? null, away_sp_hand: ap.pitchHand?.code ?? null, // platoon raw material
     status: (g.status || {}).detailedState || (g.status || {}).abstractGameState,
     home_team_id: (home.team || {}).id, away_team_id: (away.team || {}).id,
     home_team_name: (home.team || {}).name, away_team_name: (away.team || {}).name,
@@ -120,6 +123,29 @@ async function fetchSeasonFip(id, season) {
     const hr = +st.homeRuns || 0, bb = +st.baseOnBalls || 0, hbp = +st.hitByPitch || 0, k = +st.strikeOuts || 0
     _freshFip.set(id, { fip: Math.round(((13 * hr + 3 * (bb + hbp) - 2 * k) / ip + 3.1) * 100) / 100, ip })
   } catch { /* prior alone */ }
+}
+// Team hitting splits vs LHP/RHP (statsapi statSplits, sitCodes vl/vr) — the raw
+// material for the platoon refinement of Adrian's "bats" factor. Best-effort,
+// one cached call per team per run; failures leave the split null ("sin dato").
+const _splits = new Map()
+async function fetchTeamSplits(teamId, season) {
+  if (teamId == null || _splits.has(teamId)) return _splits.get(teamId) ?? null
+  let out = null
+  try {
+    const d = await get(`${API}/teams/${teamId}/stats?stats=statSplits&group=hitting&sitCodes=vl,vr&season=${season}`)
+    for (const blk of d.stats || []) for (const s of blk.splits || []) {
+      const code = s.split?.code || s.split?.description
+      const ops = Number(s.stat?.ops)
+      if (!isFinite(ops)) continue
+      out = out || {}
+      if (String(code).toLowerCase().includes('l') && !String(code).toLowerCase().includes('r')) out.vsL = ops
+      if (String(code).toLowerCase().includes('r') && !String(code).toLowerCase().includes('l')) out.vsR = ops
+      if (code === 'vl') out.vsL = ops
+      if (code === 'vr') out.vsR = ops
+    }
+  } catch { /* sin dato */ }
+  _splits.set(teamId, out)
+  return out
 }
 async function fetchTransactions(start, end) {
   try {
@@ -237,6 +263,13 @@ async function computeDay(date) {
     fetchForecasts(games).catch(() => new Map()), // forecast weather (Open-Meteo, free)
   ])
   await Promise.all(ids.map((id) => Promise.all([fetchPitcherRecent(id, season, date), fetchSeasonFip(id, season)])))
+  await Promise.all([...new Set(games.flatMap((g) => [g.home_team_id, g.away_team_id]).filter(Boolean))].map((tid) => fetchTeamSplits(tid, season)))
+  // Reconstructed team context from OUR OWN logs (venue form, Pythag, real rest,
+  // tz travel) — walk-forward safe (strictly earlier dates), zero extra fetches.
+  // Simulated 2026-07-07: none of these beat p_final/the lock rule yet (the
+  // market prices them), so they are LOGGED + pre-registered in signalAudit and
+  // shown as context — never weighted until a CI verdict says 'robusto'.
+  const auxCtx = buildTeamContext(readAllGameRows())
   const lgAtt = leagueAttempts(priors.teams)
   const rows = []
   const analyses = games.map((g) => {
@@ -247,7 +280,19 @@ async function computeDay(date) {
     const a = analyzeGame({ game: g, prediction, f5: f5For(prediction), forms: { recentHome: rh, recentAway: ra }, priors, weather, injuries, pitcherRecent, lgAttempts: lgAtt })
     // Learning row (all games, not just the 3 selected plays); Y filled on grading.
     const f = prediction.features
-    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff, weather_forecast: weather, wx_runs: a.total.components?.wx ?? 0, odds: null })
+    // Additive context blocks (aux = reconstructed; aux2 = fetched raw material).
+    const aux = auxForGame(auxCtx, { date: g.game_date, home: g.home_team_abbr, away: g.away_team_abbr })
+    const hSplit = _splits.get(g.home_team_id) || null, aSplit = _splits.get(g.away_team_id) || null
+    const LG_OPS = 0.72
+    const platoonOf = (split, oppHand) => (split && oppHand ? (oppHand === 'L' ? split.vsL : split.vsR) : null)
+    const pH = platoonOf(hSplit, g.away_sp_hand), pA = platoonOf(aSplit, g.home_sp_hand)
+    const aux2 = {
+      day_night: g.day_night ?? null, series_game: g.series_game ?? null, series_len: g.series_len ?? null,
+      home_sp_hand: g.home_sp_hand ?? null, away_sp_hand: g.away_sp_hand ?? null,
+      platoon_h: pH != null ? Math.round((pH - LG_OPS) * 1000) / 1000 : null, // home bats vs away starter's hand, vs league
+      platoon_a: pA != null ? Math.round((pA - LG_OPS) * 1000) / 1000 : null,
+    }
+    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff, weather_forecast: weather, wx_runs: a.total.components?.wx ?? 0, aux, aux2, odds: null })
     return a
   })
   // Opening market line (ESPN, free) — additive, best-effort. Captured pre-game

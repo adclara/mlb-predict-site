@@ -162,6 +162,16 @@ async function render(){
         <span class="tiny">consenso casas ${pct(l.consensus_prob)} · ${l.n_books||1} casa${(l.n_books||1)>1?'s':''}</span>
       </div>
       <div style="margin-top:8px">${tierBadge}${priceWarn} ${riskBadge(g?.risk)}</div>
+      ${(()=>{ // contexto reconstruido (descanso real / viaje al este del rival) — informativo
+        const aux = g?.aux; if(!aux) return ''
+        const ph = l.pick === g.home
+        const bits = []
+        const rp = ph?aux.rest_h:aux.rest_a, ro = ph?aux.rest_a:aux.rest_h
+        if(rp!=null&&ro!=null&&rp!==ro) bits.push(`descanso ${rp}d vs rival ${ro}d`)
+        const oppTz = ph?aux.tze_a:aux.tze_h
+        if(oppTz>=2) bits.push(`rival viajó al este ${oppTz} husos`)
+        return bits.length?`<div class="tiny" style="margin-top:6px">Contexto: ${bits.join(' · ')}</div>`:''
+      })()}
       ${oro ? '' : '<div class="tiny" style="margin-top:6px">Segundo favorito del día: cumple casi todo pero con menos factores de acuerdo — menor confianza, se registra su récord aparte.</div>'}
       ${l.price_warning ? '<div class="tiny" style="margin-top:6px">La línea exige ganar >68% solo para empatar la apuesta: probable que gane, pero paga poco.</div>' : ''}
       ${liveChip}
