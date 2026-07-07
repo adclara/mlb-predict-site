@@ -18,8 +18,24 @@ export function pickHour(hourly, gameIsoUtc) {
   return {
     temp: hourly.temperature_2m?.[idx] ?? null,
     wind_mph: hourly.wind_speed_10m?.[idx] ?? null,
+    wind_from_deg: hourly.wind_direction_10m?.[idx] ?? null,
     precip_pct: hourly.precipitation_probability?.[idx] ?? null,
   }
+}
+
+// Classify forecast wind relative to the park's HP→CF bearing: blowing OUT (to
+// CF ±45°), IN (from CF ±45°), or cross. Meteorological direction = where the
+// wind comes FROM, so blowing-to = from + 180. Returns a wind string in the
+// exact shape adrian.js parseWind already understands ("X mph, Out To CF").
+export function windLabel(mph, fromDeg, bearing, roof) {
+  if (mph == null) return null
+  const base = `${Math.round(mph)} mph`
+  if (roof || fromDeg == null || bearing == null) return base // dome/unknown → cross (0 effect)
+  const to = (fromDeg + 180) % 360
+  const diff = Math.abs(((to - bearing + 540) % 360) - 180) // 0 = straight out
+  if (diff <= 45) return `${base}, Out To CF`
+  if (diff >= 135) return `${base}, In From CF`
+  return base
 }
 
 // games: parsed schedule rows ({game_pk, home_team_abbr, game_datetime}).
@@ -34,16 +50,16 @@ export async function fetchForecasts(games) {
     ;(byPark.get(abbr) || byPark.set(abbr, []).get(abbr)).push(g)
   }
   await Promise.all([...byPark.entries()].map(async ([abbr, parkGames]) => {
-    const { lat, lon } = PARKS[abbr]
+    const { lat, lon, bearing, roof } = PARKS[abbr]
     try {
-      const url = `${OM}?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,wind_speed_10m,precipitation_probability&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=UTC&forecast_days=2`
+      const url = `${OM}?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation_probability&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=UTC&forecast_days=2`
       const data = await fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       for (const g of parkGames) {
         const h = pickHour(data.hourly, g.game_datetime)
         if (!h || h.temp == null) continue
         out.set(g.game_pk, {
           temp: Math.round(h.temp),
-          wind: h.wind_mph != null ? `${Math.round(h.wind_mph)} mph` : null,
+          wind: windLabel(h.wind_mph, h.wind_from_deg, bearing, roof), // out/in/cross vs the park
           precip_pct: h.precip_pct ?? null,
           source: 'open-meteo', stage: 'forecast',
         })
