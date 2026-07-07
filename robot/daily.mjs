@@ -199,6 +199,33 @@ function applyBrainV2(a, r) {
   return { ...a, ml, total, plays: [ml, total], bestPlay: total.confScore > ml.confScore ? total : ml }
 }
 
+// --- 💎 Gemas: the calibrated brain's high-probability tier -------------------
+// A gem = a game whose walk-forward p_final gives one side >= 65%. This tier is
+// EXACTLY calibrated on the season replay (says 68.5% -> hits 68.7%, n=67,
+// halves 65%/72%) and rare (~0.6/day). Honest framing: gems maximize WIN
+// probability at market prices (ROI ~ -3%, the vig) — the ROI edge lives in the
+// ORO fijos; the page says so.
+const GEM_MIN_P = 0.65
+function selectGems(rows, { max = 3 } = {}) {
+  const gems = []
+  for (const r of rows) {
+    if (r.p_final == null) continue
+    const home = r.p_final >= 0.5
+    const prob = home ? r.p_final : 1 - r.p_final
+    if (prob < GEM_MIN_P) continue
+    const pick = home ? r.home : r.away
+    const cons = r.odds?.consensus?.p_home ?? r.odds?.p_home_mkt
+    gems.push({
+      market: 'ml', game_pk: r.game_pk, matchup: r.matchup, pick, label: `Gana ${pick}`,
+      prob: Math.round(prob * 1000) / 1000,
+      consensus_prob: cons == null ? null : Math.round((home ? cons : 1 - cons) * 1000) / 1000,
+      engine: 'v2', source: 'p_final',
+    })
+  }
+  gems.sort((a, b) => b.prob - a.prob)
+  return gems.slice(0, max)
+}
+
 // --- compute today's plays + per-game learning rows -------------------------
 async function computeDay(date) {
   const games = await fetchSchedule(date)
@@ -239,9 +266,11 @@ async function computeDay(date) {
   const { plays } = selectPlays(analysesV2)
   const oddsByPk = new Map(rows.map((r) => [r.game_pk, r.odds]))
   const locks = selectLocks(analysesV2, oddsByPk)
+  const gems = selectGems(rows)
   return {
     plays: plays.map((p) => ({ game_pk: p.game_pk, matchup: p.matchup, market: p.market, side: p.side || null, line: p.line ?? null, pick: p.pick || null, label: p.label, prob: p.prob, prob_v2: p.prob_v2 ?? null, confidence: p.confidence, engine: p.engine ?? 'classic' })),
     locks,
+    gems,
     rows,
   }
 }
@@ -326,7 +355,8 @@ function gradeList(list, byPk) {
 function gradePicks(rec, byPk) {
   const playsDone = gradeList(rec.plays, byPk)
   const locksDone = gradeList(rec.locks, byPk) // fijos share the ml grading logic
-  rec.graded = playsDone && locksDone
+  const gemsDone = gradeList(rec.gems, byPk)   // 💎 gemas too
+  rec.graded = playsDone && locksDone && gemsDone
   return rec.graded
 }
 
@@ -412,8 +442,9 @@ async function main() {
       const frozen = existingToday && existingToday.plays?.length
       const plays = frozen ? existingToday.plays : day.plays
       const locks = frozen ? (existingToday.locks ?? day.locks) : day.locks
+      const gems = frozen ? (existingToday.gems ?? day.gems) : day.gems
       const generated_at = frozen ? existingToday.generated_at : new Date().toISOString()
-      fs.writeFileSync(`${HIST}/${today}.json`, JSON.stringify({ date: today, generated_at, graded: false, plays, locks }, null, 2))
+      fs.writeFileSync(`${HIST}/${today}.json`, JSON.stringify({ date: today, generated_at, graded: false, plays, locks, gems }, null, 2))
     }
     // Always log the games (pre-8am ET this captures the EARLIEST opening line).
     upsertGames(today, day.rows)
@@ -450,7 +481,7 @@ async function main() {
   // Rebuild the classic picks index with a running record.
   const idxFiles = pickFiles.sort()
   const idx = []
-  let w = 0, l = 0, ps = 0, lw = 0, ll = 0, lps = 0
+  let w = 0, l = 0, ps = 0, lw = 0, ll = 0, lps = 0, gw = 0, gloss = 0
   const tierRec = { oro: { wins: 0, losses: 0 }, plata: { wins: 0, losses: 0 } }
   for (const f of idxFiles) {
     const rec = j(`${HIST}/${f}`)
@@ -462,10 +493,13 @@ async function main() {
       const t = p.tier === 'plata' ? tierRec.plata : tierRec.oro // pre-tier locks count as oro
       if (p.result === 'win') t.wins++; else if (p.result === 'loss') t.losses++
     }
+    for (const p of (rec.gems || []).filter((x) => x.result)) { if (p.result === 'win') gw++; else if (p.result === 'loss') gloss++ }
+    const gg = (rec.gems || []).filter((p) => p.result)
     idx.push({
       date: rec.date, n: rec.plays.length, graded: !!rec.graded,
       wins: g.filter((p) => p.result === 'win').length, losses: g.filter((p) => p.result === 'loss').length,
       locks_n: (rec.locks || []).length, locks_wins: gl.filter((p) => p.result === 'win').length, locks_losses: gl.filter((p) => p.result === 'loss').length,
+      gems_n: (rec.gems || []).length, gems_wins: gg.filter((p) => p.result === 'win').length, gems_losses: gg.filter((p) => p.result === 'loss').length,
     })
   }
   const rate = (a, b) => (a + b ? Math.round(a / (a + b) * 1000) / 1000 : null)
@@ -477,6 +511,7 @@ async function main() {
       oro: { ...tierRec.oro, win_rate: rate(tierRec.oro.wins, tierRec.oro.losses) },
       plata: { ...tierRec.plata, win_rate: rate(tierRec.plata.wins, tierRec.plata.losses) },
     },
+    gems_record: { wins: gw, losses: gloss, win_rate: rate(gw, gloss) },
     days: idx.reverse(),
   }, null, 2))
 

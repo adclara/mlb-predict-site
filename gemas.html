@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#060A13" />
+<title>💎 Gemas del algoritmo — Predict Baseball</title>
+<link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#060A13; --card:#0C1322; --card2:#101a2e; --line:#1B2740;
+    --ink:#E7ECF5; --ink2:#97A3B8; --ink3:#5E6B82;
+    --gem:#0284C7; --gem2:#38BDF8; --accent:#0D9488; --warn:#D97706; --bad:#DC2626;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:15px/1.5 "Plus Jakarta Sans",system-ui,sans-serif;padding:20px 14px 60px;max-width:840px;margin:0 auto}
+  h1,h2{font-family:"Space Grotesk",sans-serif}
+  h1{font-size:22px;margin-bottom:2px}
+  h2{font-size:16px;margin:26px 0 10px;color:var(--ink2);text-transform:uppercase;letter-spacing:.08em}
+  .sub{color:var(--ink2);font-size:13px;margin-bottom:18px}
+  .sub b{color:var(--ink)}
+  nav{display:flex;gap:10px;margin-bottom:14px;font-size:13px}
+  nav a{color:var(--gem2);text-decoration:none}
+  nav a.dim{color:var(--ink3)}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .card{background:linear-gradient(180deg,rgba(2,132,199,.10),rgba(2,132,199,0) 55%),var(--card);border:1px solid rgba(2,132,199,.4);border-radius:14px;padding:14px 16px}
+  .pick{font-family:"Space Grotesk",sans-serif;font-size:20px;font-weight:700}
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .muted{color:var(--ink2);font-size:12.5px}
+  .tiny{color:var(--ink3);font-size:11.5px}
+  .prob{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:22px;color:var(--gem2)}
+  .badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;border-radius:999px;padding:2px 9px}
+  .b-win{background:rgba(13,148,136,.2);color:#2DD4BF}
+  .b-loss{background:rgba(220,38,38,.18);color:#F87171}
+  .b-risk-bajo{background:rgba(13,148,136,.16);color:#2DD4BF;border:1px solid rgba(13,148,136,.5)}
+  .b-risk-medio{background:rgba(217,119,6,.14);color:#FBBF24;border:1px solid rgba(217,119,6,.5)}
+  .b-risk-alto{background:rgba(220,38,38,.14);color:#F87171;border:1px solid rgba(220,38,38,.5)}
+  .empty{color:var(--ink3);font-size:13px;padding:18px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+  .hist{display:flex;flex-wrap:wrap;gap:8px}
+  .hday{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;min-width:110px}
+  .foot{margin-top:34px;color:var(--ink3);font-size:11.5px;line-height:1.6}
+  .livechip{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:12.5px;margin-top:8px}
+  .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gem2);margin-right:2px;animation:pu 1.6s infinite}
+  @keyframes pu{0%,100%{opacity:.35}50%{opacity:1}}
+  @media (max-width:560px){body{padding:14px 8px 50px}h1{font-size:19px}.card{padding:12px}.pick{font-size:17px}}
+</style>
+</head>
+<body>
+<nav><a class="dim" href="./">← App</a><a class="dim" href="./live.html">⭐ Fijos + logros en vivo</a><a href="./gemas.html">💎 Gemas</a></nav>
+<h1>💎 Gemas del algoritmo</h1>
+<p class="sub" id="sub">Cargando…</p>
+
+<div id="gems" class="grid"></div>
+
+<h2>¿Qué es una gema?</h2>
+<p class="muted" style="max-width:660px">
+  Una <b>gema</b> aparece cuando la probabilidad <b>calibrada</b> del algoritmo (aprendizaje
+  walk-forward + ancla al mercado, entrenada solo con días anteriores) le da a un equipo
+  <b>65% o más</b> de ganar. Es un nivel escaso (~1 cada 1–2 días) y <b>exactamente calibrado</b>
+  en la temporada: cuando dijo 68.5%, acertó 68.7% de las veces. La gema maximiza la
+  probabilidad de acierto; para ROI a precio de casa, mira los <a href="./live.html" style="color:var(--gem2)">⭐⭐ fijos ORO</a>.
+</p>
+
+<h2>Historial de gemas</h2>
+<div id="gemHist" class="hist"></div>
+
+<p class="foot">
+  Probabilidades calibradas fuera de muestra (n=67 en la repetición de temporada; IC 95%
+  56.8–78.5). Nunca una garantía: hasta una gema del 68% pierde 1 de cada 3 veces.
+  Datos: MLB StatsAPI + ESPN (públicos). Juego responsable.
+</p>
+
+<script>
+const ET = new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'})
+const today = ET.format(new Date())
+const $ = (id) => document.getElementById(id)
+const pct = (p) => p==null?'—':(p*100).toFixed(1)+'%'
+const esc = (s) => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
+const jget = async (u) => { const r = await fetch(u+'?t='+Date.now()); if(!r.ok) throw 0; return r.json() }
+
+async function render(){
+  let day=null, idx=null, games=null, live=null
+  try{ idx = await jget('./data/history/index.json') }catch{}
+  try{ day = await jget(`./data/history/${today}.json`) }catch{}
+  try{ games = await jget(`./data/history/games/${today}.json`) }catch{}
+  try{ live = await jget(`./data/history/live/${today}.json`) }catch{}
+
+  const grec = idx?.gems_record
+  $('sub').innerHTML = `<b>${today}</b> · récord de gemas: <b>${grec&&(grec.wins+grec.losses)>0?`${grec.wins}-${grec.losses} (${pct(grec.win_rate)})`:'acumulando desde hoy'}</b> · nivel calibrado: dice ~68% → acierta ~68%`
+
+  const gems = day?.gems || []
+  const gmap = new Map((games?.games||[]).map(g=>[g.game_pk,g]))
+  $('gems').innerHTML = gems.length ? gems.map(x=>{
+    const g = gmap.get(x.game_pk)
+    const lv = live?.games?.[String(x.game_pk)]
+    const s = lv?.snapshots?.[lv.snapshots.length-1]
+    const pickHome = lv && x.pick === lv.home
+    const liveChip = (s && !x.result) ? `<div class="livechip"><span class="pulse"></span>${s.as??'—'}-${s.hs??'—'} · ${s.half??''}${s.inn??''}${s.wp!=null?` · gana ${pct(pickHome ? s.wp : 1-s.wp)}`:''}</div>` : ''
+    const risk = g?.risk ? `<span class="badge b-risk-${esc(g.risk.level)}">riesgo ${esc(g.risk.level)}</span>` : ''
+    const res = x.result ? `<span class="badge ${x.result==='win'?'b-win':'b-loss'}">${x.result==='win'?'✓ GANÓ':'✗ PERDIÓ'}</span>` : ''
+    return `<div class="card">
+      <div class="row"><span class="pick">💎 ${esc(x.label)}</span>${res}</div>
+      <div class="muted">${esc(x.matchup)}${x.final?` · final ${esc(x.final)}`:''}</div>
+      <div class="row" style="margin-top:8px"><span class="prob">${pct(x.prob)}</span><span class="tiny">consenso casas ${pct(x.consensus_prob)}</span></div>
+      <div style="margin-top:8px">${risk} <span class="tiny">probabilidad calibrada (walk-forward)</span></div>
+      ${liveChip}
+    </div>`
+  }).join('') : `<div class="empty">Hoy el algoritmo no encontró ninguna gema (ningún equipo llega al 65% calibrado). Es un nivel escaso a propósito — cuando aparece, es de verdad.</div>`
+
+  const histDays = (idx?.days||[]).filter(d=>(d.gems_n??0)>0)
+  $('gemHist').innerHTML = histDays.length ? histDays.slice(0,21).map(d=>{
+    const done=(d.gems_wins+d.gems_losses)>0
+    return `<div class="hday"><div class="tiny">${esc(d.date)}</div><b>${done?`${d.gems_wins}-${d.gems_losses}`:`${d.gems_n} 💎`}</b></div>`
+  }).join('') : `<div class="empty" style="width:100%">El historial de gemas empieza a acumularse desde hoy.</div>`
+}
+render()
+setInterval(render, 60000)
+</script>
+</body>
+</html>
