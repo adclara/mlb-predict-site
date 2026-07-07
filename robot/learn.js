@@ -755,7 +755,24 @@ export function marketMicrostructureReport(rows, { minN = 30 } = {}) {
   // real study needs a fixed pre-game reference point and is deferred until the
   // data (row.live) accrues. Counting coverage keeps the pipeline honest+visible.
   const live = { n_with_live: g.filter((r) => r.live?.n >= 2).length }
-  return { min_n: minN, n_with_books: g.filter((r) => r.odds?.consensus?.n_books > 1).length, value, disagreement, line_move, live }
+  // CLV (closing line value) — the professional gold standard: if the market
+  // CLOSES closer to our pick's side than it OPENED, our morning selection was
+  // ahead of the market. mean > 0 sustained ⇒ real forecasting edge; ≈ 0 ⇒ the
+  // record is selection+variance. Accrues only on rows that captured both an
+  // opening and a closing price (p_home_open is new — fills forward).
+  const withClv = g.filter((r) => r.odds?.p_home_open != null && r.odds?.p_home_mkt != null && r.ml_pick)
+  const clvVals = withClv.map((r) => {
+    const home = r.ml_pick === r.home
+    const open = home ? r.odds.p_home_open : 1 - r.odds.p_home_open
+    const close = home ? r.odds.p_home_mkt : 1 - r.odds.p_home_mkt
+    return close - open
+  })
+  const clvMean = clvVals.length ? clvVals.reduce((a, b) => a + b, 0) / clvVals.length : null
+  const clv = {
+    n: clvVals.length, mean: clvMean != null ? round4(clvMean) : null,
+    verdict: clvVals.length < minN ? 'sin dato' : clvMean > 0.005 ? 'el pick le gana al cierre' : clvMean < -0.005 ? 'el cierre nos corrige' : 'neutral',
+  }
+  return { min_n: minN, n_with_books: g.filter((r) => r.odds?.consensus?.n_books > 1).length, value, disagreement, line_move, live, clv }
 }
 
 // --- signal audit: which factors actually detect winners, honestly -----------
