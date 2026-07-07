@@ -278,12 +278,15 @@ export function selectPlays(analyses, { max = 3, minConf = 0.45 } = {}) {
 
 // --- "Fijos del día": the 1-2 highest-SAFETY moneyline picks ------------------
 // Adrian's ask: máxima seguridad. A game only qualifies as a fijo when EVERYTHING
-// lines up: the model's confidence is `alta`, the pick IS the market favorite
-// (marketConsensus season study: agreeing with the market wins ~63% vs ~46%
-// fighting it), and the books themselves AGREE (low `book_disagreement` = the
-// market is sure). Some days nothing qualifies → we return [] rather than force a
-// pick. This is a higher-probability tier, never a guarantee. `oddsByPk` is a Map
-// or object keyed by game_pk holding the merged odds block.
+// lines up: the model's confidence is `alta`, the pick is a STRONG market
+// consensus (market favorite AND 5+ factors agreeing — the only two signals the
+// audit rates 'robusto'), and the books themselves AGREE (low `book_disagreement`).
+// Walk-forward tournament (2026-07-07, 104 days, both-halves stable): this rule
+// hits 67.7% [60.1–74.5] at +7.9% ROI vs 66.3%/+4.5% without the agree>=5 filter;
+// pure-market variants LOSE (-10% ROI) — the model's factor screen adds real value.
+// Some days nothing qualifies (88% coverage) → return [] rather than force a pick.
+// Higher-probability tier, never a guarantee. `oddsByPk` is a Map or object
+// keyed by game_pk holding the merged odds block.
 const MAX_LOCK_DISAGREE = 0.06 // books apart by >6 pts → too much market doubt
 export function selectLocks(analyses, oddsByPk, { max = 2 } = {}) {
   const getOdds = (pk) => (oddsByPk?.get ? oddsByPk.get(pk) : oddsByPk?.[pk]) || null
@@ -294,8 +297,8 @@ export function selectLocks(analyses, oddsByPk, { max = 2 } = {}) {
     if (ml.aligned === false) continue // v2 honesty gate: never post a fijo the calibrated brain says loses
     const odds = getOdds(a.game_pk)
     if (!odds || !odds.fav_side) continue
-    const mc = marketConsensus(ml, odds) // 'strong' | 'market' => pick is the market fav
-    if (mc.level !== 'strong' && mc.level !== 'market') continue
+    const mc = marketConsensus(ml, odds) // 'strong' = market fav + agree>=5 (both robust signals)
+    if (mc.level !== 'strong') continue
     const disagree = odds.book_disagreement ?? 0
     if (disagree > MAX_LOCK_DISAGREE) continue
     const consHome = odds.consensus?.p_home ?? odds.p_home_mkt
