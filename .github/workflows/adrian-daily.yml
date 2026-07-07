@@ -15,7 +15,9 @@ on:
     - cron: '0 20 * * *'  # ~4pm ET  — live market refresh
     - cron: '0 23 * * *'  # ~7pm ET  — live market refresh + early finals
     - cron: '0 3 * * *'   # ~11pm ET — closing lines
-    - cron: '30 6 * * *'  # ~2:30am ET — grade the night's finals + curves
+    - cron: '30 6 * * *'  # ~2:30am ET — grade finals + earliest opening capture
+                          # (daily.mjs uses the ET date and never POSTS plays/fijos
+                          # before 8am ET, so night runs can't freeze a bad slate)
   workflow_dispatch: {}
 permissions:
   contents: write

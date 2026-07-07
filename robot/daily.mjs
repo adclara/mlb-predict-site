@@ -276,21 +276,39 @@ function buildLearning() {
 }
 
 // --- main -------------------------------------------------------------------
+// MLB's officialDate is Eastern — so is the robot's "today". Running on the UTC
+// date would make the late-night crons (03:00/06:30 UTC = 11pm/2:30am ET) roll
+// over to TOMORROW and freeze half-baked picks; ET keeps every run on the right
+// slate. Before 8am ET a run is grading/odds-capture only (never posts plays).
+const ET = 'America/New_York'
+function etNow() {
+  const d = new Date()
+  const date = new Intl.DateTimeFormat('en-CA', { timeZone: ET }).format(d) // YYYY-MM-DD
+  const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: ET, hour: 'numeric', hour12: false }).format(d)) % 24
+  return { date, hour }
+}
 async function main() {
   fs.mkdirSync(GAMES, { recursive: true })
-  const today = process.argv[2] || new Date().toISOString().slice(0, 10)
+  const et = etNow()
+  const today = process.argv[2] || et.date
+  const posting = !!process.argv[2] || et.hour >= 8 // manual runs always post
 
   const existingToday = fs.existsSync(`${HIST}/${today}.json`) ? j(`${HIST}/${today}.json`) : null
   const day = await computeDay(today)
   if (day) {
-    // Freeze the FIRST-generated plays + fijos of the day (a posted "fijo" must not
-    // silently change on an intraday re-run); the per-game logs still refresh live
-    // with the latest odds/consensus/line movement below via upsertGames.
-    const frozen = existingToday && existingToday.plays?.length
-    const plays = frozen ? existingToday.plays : day.plays
-    const locks = frozen ? (existingToday.locks ?? []) : day.locks
-    const generated_at = frozen ? existingToday.generated_at : new Date().toISOString()
-    fs.writeFileSync(`${HIST}/${today}.json`, JSON.stringify({ date: today, generated_at, graded: false, plays, locks }, null, 2))
+    if (posting || existingToday) {
+      // Freeze the FIRST-generated plays + fijos of the day (a posted "fijo" must not
+      // silently change on an intraday re-run); the per-game logs still refresh live
+      // with the latest odds/consensus/line movement below via upsertGames.
+      // `?? day.locks`: a pre-upgrade day file has plays but no locks field — backfill
+      // the fijos once from the fresh compute, then they freeze like everything else.
+      const frozen = existingToday && existingToday.plays?.length
+      const plays = frozen ? existingToday.plays : day.plays
+      const locks = frozen ? (existingToday.locks ?? day.locks) : day.locks
+      const generated_at = frozen ? existingToday.generated_at : new Date().toISOString()
+      fs.writeFileSync(`${HIST}/${today}.json`, JSON.stringify({ date: today, generated_at, graded: false, plays, locks }, null, 2))
+    }
+    // Always log the games (pre-8am ET this captures the EARLIEST opening line).
     upsertGames(today, day.rows)
   }
 
