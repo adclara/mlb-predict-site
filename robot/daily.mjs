@@ -15,6 +15,7 @@ import { buildOddsForDate } from './espn_odds.mjs'
 import { applyEloUpdates, loadEloState } from './elo_live.mjs'
 import { fetchForecasts } from './weather.mjs'
 import { auxForGame, buildTeamContext } from './context.mjs'
+import { backfillSeasons, buildHistoryStudy } from './backfill_history.mjs'
 
 const API = 'https://statsapi.mlb.com/api/v1'
 const DATA = process.env.DATA_DIR || 'data'
@@ -328,12 +329,41 @@ async function computeDay(date) {
   const oddsByPk = new Map(rows.map((r) => [r.game_pk, r.odds]))
   const locks = selectLocks(analysesV2, oddsByPk)
   const gems = selectGems(rows)
+  // Probable pitchers at compute time — the scratch validator compares later
+  // runs against the pair frozen with the picks (a changed starter invalidates
+  // the analysis a fijo was built on; we FLAG it, never silently swap picks).
+  const pitcherMap = {}
+  for (const g of games) pitcherMap[g.game_pk] = { h: g.home_probable_pitcher_id ?? null, a: g.away_probable_pitcher_id ?? null, hn: g.home_probable_pitcher_name ?? null, an: g.away_probable_pitcher_name ?? null }
   return {
     plays: plays.map((p) => ({ game_pk: p.game_pk, matchup: p.matchup, market: p.market, side: p.side || null, line: p.line ?? null, pick: p.pick || null, label: p.label, prob: p.prob, prob_v2: p.prob_v2 ?? null, confidence: p.confidence, engine: p.engine ?? 'classic' })),
     locks,
     gems,
+    pitcherMap,
     rows,
   }
+}
+
+// Flag frozen picks whose game's PROBABLE STARTER changed since posting.
+function validateFrozenPitchers(rec, pitcherMap) {
+  const st = rec.pitchers || {}
+  let changed = false
+  for (const [pk, cur] of Object.entries(pitcherMap || {})) {
+    const old = st[pk]
+    if (!old) continue
+    const notes = []
+    if (old.h && cur.h && old.h !== cur.h) notes.push(`local: ${old.hn || old.h} → ${cur.hn || cur.h}`)
+    if (old.a && cur.a && old.a !== cur.a) notes.push(`visita: ${old.an || old.a} → ${cur.an || cur.a}`)
+    if (!notes.length) continue
+    for (const list of [rec.plays, rec.locks, rec.gems]) {
+      for (const p of list || []) {
+        if (String(p.game_pk) !== String(pk) || p.result || p.scratch_warning) continue
+        p.scratch_warning = true
+        p.scratch_note = `Abridor cambió (${notes.join(' · ')}) — el análisis original ya no aplica`
+        changed = true
+      }
+    }
+  }
+  return changed
 }
 
 // Attach ESPN market odds to rows in place (additive, best-effort). `stage`:
@@ -504,8 +534,11 @@ async function main() {
       const plays = frozen ? existingToday.plays : day.plays
       const locks = frozen ? (existingToday.locks ?? day.locks) : day.locks
       const gems = frozen ? (existingToday.gems ?? day.gems) : day.gems
+      const pitchers = frozen ? (existingToday.pitchers ?? day.pitcherMap) : day.pitcherMap
       const generated_at = frozen ? existingToday.generated_at : new Date().toISOString()
-      fs.writeFileSync(`${HIST}/${today}.json`, JSON.stringify({ date: today, generated_at, graded: false, plays, locks, gems }, null, 2))
+      const rec = { date: today, generated_at, graded: false, plays, locks, gems, pitchers }
+      if (frozen) validateFrozenPitchers(rec, day.pitcherMap) // scratch flags on later runs
+      fs.writeFileSync(`${HIST}/${today}.json`, JSON.stringify(rec, null, 2))
     }
     // Always log the games (pre-8am ET this captures the EARLIEST opening line).
     upsertGames(today, day.rows)
@@ -542,7 +575,7 @@ async function main() {
   // Rebuild the classic picks index with a running record.
   const idxFiles = pickFiles.sort()
   const idx = []
-  let w = 0, l = 0, ps = 0, lw = 0, ll = 0, lps = 0, gw = 0, gloss = 0
+  let w = 0, l = 0, ps = 0, lw = 0, ll = 0, lps = 0, gw = 0, gloss = 0, units = 0
   const tierRec = { oro: { wins: 0, losses: 0 }, plata: { wins: 0, losses: 0 } }
   for (const f of idxFiles) {
     const rec = j(`${HIST}/${f}`)
@@ -553,6 +586,12 @@ async function main() {
       if (p.result === 'win') lw++; else if (p.result === 'loss') ll++; else lps++
       const t = p.tier === 'plata' ? tierRec.plata : tierRec.oro // pre-tier locks count as oro
       if (p.result === 'win') t.wins++; else if (p.result === 'loss') t.losses++
+      // Public units ledger: flat 1u per fijo at the captured price (-110 when
+      // the price wasn't stored — pre-ledger locks only).
+      if (p.result === 'win' || p.result === 'loss') {
+        const ml = p.price ?? -110
+        units += p.result === 'win' ? (ml > 0 ? ml / 100 : 100 / Math.abs(ml)) : -1
+      }
     }
     for (const p of (rec.gems || []).filter((x) => x.result)) { if (p.result === 'win') gw++; else if (p.result === 'loss') gloss++ }
     const gg = (rec.gems || []).filter((p) => p.result)
@@ -569,12 +608,24 @@ async function main() {
     record: { wins: w, losses: l, pushes: ps, win_rate: rate(w, l) },
     locks_record: {
       wins: lw, losses: ll, pushes: lps, win_rate: rate(lw, ll),
+      units: Math.round(units * 100) / 100, // 1u plana por fijo, al precio capturado
       oro: { ...tierRec.oro, win_rate: rate(tierRec.oro.wins, tierRec.oro.losses) },
       plata: { ...tierRec.plata, win_rate: rate(tierRec.plata.wins, tierRec.plata.losses) },
     },
     gems_record: { wins: gw, losses: gloss, win_rate: rate(gw, gloss) },
     days: idx.reverse(),
   }, null, 2))
+
+  // One-time: historical seasons (2023-25) + multi-season context study — 10×
+  // the statistical power for the pre-registered signals. Skipped once done.
+  const SEASONS = `${HIST}/seasons`
+  if (!fs.existsSync(SEASONS)) {
+    try {
+      const sum = await backfillSeasons(SEASONS)
+      const study = buildHistoryStudy(SEASONS, `${HIST}/history_study.json`)
+      console.log(`backfill histórico: ${sum.join(' | ')}${study ? ` | estudio pooled: ${Object.entries(study.pooled).map(([k, v]) => `${k}:${v.verdict}`).join(', ')}` : ''}`)
+    } catch (e) { console.error('backfill histórico falló (no fatal):', e.message) }
+  }
 
   // Live Elo: apply newly-graded finals so ratings never go stale (idempotent).
   const allRows = readAllGameRows()

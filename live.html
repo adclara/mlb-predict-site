@@ -138,8 +138,9 @@ async function render(){
   const rec = idx?.record, lrec = idx?.locks_record
   const tierTxt = lrec?.oro && (lrec.oro.wins+lrec.oro.losses)>0
     ? ` · ⭐⭐ oro ${lrec.oro.wins}-${lrec.oro.losses}${lrec.plata&&(lrec.plata.wins+lrec.plata.losses)>0?` · ⭐ plata ${lrec.plata.wins}-${lrec.plata.losses}`:''}` : ''
+  const unitsTxt = lrec?.units != null && (lrec.wins+lrec.losses)>0 ? ` · <b style="color:${lrec.units>=0?'#2DD4BF':'#F87171'}">${lrec.units>=0?'+':''}${lrec.units.toFixed(1)}u</b> (1u/fijo)` : ''
   $('sub').innerHTML = `<b>${today}</b> · récord picks: <b>${rec?`${rec.wins}-${rec.losses}`:'—'}</b>`+
-    (lrec && (lrec.wins+lrec.losses)>0 ? ` · récord fijos: <b>${lrec.wins}-${lrec.losses} (${pct(lrec.win_rate)})</b>${tierTxt}` : ' · récord fijos: acumulando')
+    (lrec && (lrec.wins+lrec.losses)>0 ? ` · récord fijos: <b>${lrec.wins}-${lrec.losses} (${pct(lrec.win_rate)})</b>${tierTxt}${unitsTxt}` : ' · récord fijos: acumulando')
 
   const locks = day?.locks || []
   const gmap = new Map((games?.games||[]).map(g=>[g.game_pk,g]))
@@ -161,7 +162,8 @@ async function render(){
         <span class="prob">${pct(l.prob_v2 ?? l.prob)}</span>
         <span class="tiny">consenso casas ${pct(l.consensus_prob)} · ${l.n_books||1} casa${(l.n_books||1)>1?'s':''}</span>
       </div>
-      <div style="margin-top:8px">${tierBadge}${priceWarn} ${riskBadge(g?.risk)}</div>
+      <div style="margin-top:8px">${tierBadge}${priceWarn}${l.scratch_warning?' <span class="badge b-alto">⚠ abridor cambió</span>':''} ${riskBadge(g?.risk)}</div>
+      ${l.scratch_warning?`<div class="tiny" style="margin-top:6px;color:#F87171">${esc(l.scratch_note||'El abridor con el que se calculó este fijo ya no lanza.')}</div>`:''}
       ${(()=>{ // contexto reconstruido (descanso real / viaje al este del rival) — informativo
         const aux = g?.aux; if(!aux) return ''
         const ph = l.pick === g.home

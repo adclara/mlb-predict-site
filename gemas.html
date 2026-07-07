@@ -105,7 +105,8 @@ async function render(){
       <div class="row"><span class="pick">💎 ${esc(x.label)}</span>${res}</div>
       <div class="muted">${esc(x.matchup)}${x.final?` · final ${esc(x.final)}`:''}</div>
       <div class="row" style="margin-top:8px"><span class="prob">${pct(x.prob)}</span><span class="tiny">consenso casas ${pct(x.consensus_prob)}</span></div>
-      <div style="margin-top:8px">${risk} <span class="tiny">probabilidad calibrada (walk-forward)</span></div>
+      <div style="margin-top:8px">${risk}${x.scratch_warning?' <span class="badge b-loss">⚠ abridor cambió</span>':''} <span class="tiny">probabilidad calibrada (walk-forward)</span></div>
+      ${x.scratch_warning?`<div class="tiny" style="margin-top:6px;color:#F87171">${esc(x.scratch_note||'')}</div>`:''}
       ${liveChip}
     </div>`
   }).join('') : `<div class="empty">Hoy el algoritmo no encontró ninguna gema (ningún equipo llega al 65% calibrado). Es un nivel escaso a propósito — cuando aparece, es de verdad.</div>`

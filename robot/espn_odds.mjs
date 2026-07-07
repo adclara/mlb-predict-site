@@ -6,9 +6,10 @@
 // Import path note: in the deployed/scratchpad robot dir everything is FLAT, so
 // this imports './odds.js' (deploy_demo.sh copies odds.js next to it). It is run
 // from that flat dir, never from scripts/ directly (same as daily.mjs/learn.js).
-import { parseScoreboard, parseSummaryOdds } from './odds.js'
+import { mergeExtraBooks, parseCoreOdds, parseScoreboard, parseSummaryOdds } from './odds.js'
 
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb'
+const CORE = 'https://sports.core.api.espn.com/v2/sports/baseball/leagues/mlb'
 const getJSON = (u) => fetch(u).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
 const matchupKey = (away, home) => `${away}@${home}`
 
@@ -17,6 +18,10 @@ export function fetchScoreboard(dateISO) {
 }
 export function fetchSummary(espnId) {
   return getJSON(`${ESPN}/summary?event=${espnId}`)
+}
+// Multi-provider odds from the core API (pickcenter often carries ONE book).
+export function fetchCoreOdds(espnId) {
+  return getJSON(`${CORE}/events/${espnId}/competitions/${espnId}/odds?limit=20`)
 }
 
 // Pick the ESPN event for an MLB game from candidates sharing the same matchup.
@@ -54,13 +59,14 @@ export async function buildOddsForDate(dateISO, mlbGames) {
     wanted.set(g.game_pk, ev.espn_id)
     ;(idToPks.get(ev.espn_id) || idToPks.set(ev.espn_id, []).get(ev.espn_id)).push(g.game_pk)
   }
-  // fetch summaries with a small concurrency pool
+  // fetch summaries (+ core multi-provider odds) with a small concurrency pool
   const ids = [...idToPks.keys()]
   const POOL = 6
   for (let i = 0; i < ids.length; i += POOL) {
     await Promise.all(ids.slice(i, i + POOL).map(async (id) => {
       try {
-        const odds = { ...parseSummaryOdds(await fetchSummary(id)), espn_id: id }
+        let odds = { ...parseSummaryOdds(await fetchSummary(id)), espn_id: id }
+        try { odds = mergeExtraBooks(odds, parseCoreOdds(await fetchCoreOdds(id))) } catch { /* core is a bonus */ }
         for (const pk of idToPks.get(id)) out.set(pk, odds)
       } catch { /* leave those games with no odds */ }
     }))

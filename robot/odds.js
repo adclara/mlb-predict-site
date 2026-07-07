@@ -147,6 +147,65 @@ export function parseSummaryOdds(json) {
   }
 }
 
+// --- ESPN CORE odds endpoint → extra books ----------------------------------
+// Production showed pickcenter usually carries ONE priced book, which starves
+// the consensus/disagreement signal. The core endpoint
+// (/events/{id}/competitions/{id}/odds) lists several providers. Shapes vary by
+// era, so parse defensively: moneyLine may be a number, or nested under
+// current/close/open as {american: "-150"|"EVEN"}.
+const amOdds = (v) => {
+  if (v == null) return null
+  if (typeof v === 'number') return v === 0 ? null : v
+  const s = String(v).trim().toUpperCase()
+  if (s === 'EVEN' || s === 'EV') return 100
+  const n = Number(s.replace('+', ''))
+  return isFinite(n) && n !== 0 ? n : null
+}
+const sideML = (o) => {
+  if (!o) return null
+  return amOdds(o.moneyLine) ?? amOdds(o.current?.moneyLine?.american ?? o.current?.moneyLine)
+    ?? amOdds(o.close?.moneyLine?.american ?? o.close?.moneyLine)
+    ?? amOdds(o.open?.moneyLine?.american ?? o.open?.moneyLine)
+}
+export function parseCoreOdds(json) {
+  const books = []
+  for (const it of json?.items || []) {
+    const ml_home = sideML(it.homeTeamOdds)
+    const ml_away = sideML(it.awayTeamOdds)
+    const [ph, pa] = devigMoneyline(ml_home, ml_away)
+    if (ph == null) continue
+    books.push({ provider: it.provider?.name ?? null, ml_home, ml_away, over_under: it.overUnder ?? null, spread: it.spread ?? null, p_home_mkt: round4(ph), p_away_mkt: round4(pa) })
+  }
+  return books
+}
+
+// Merge extra (core) books into a parsed odds block, deduped by provider, and
+// recompute the consensus + between-book disagreement over the union.
+export function mergeExtraBooks(odds, extraBooks) {
+  if (!odds || !extraBooks?.length) return odds
+  const seen = new Set((odds.books || []).map((b) => String(b.provider || '').toLowerCase()))
+  const merged = [...(odds.books || [])]
+  for (const b of extraBooks) {
+    const k = String(b.provider || '').toLowerCase()
+    if (k && seen.has(k)) continue
+    seen.add(k)
+    merged.push(b)
+  }
+  if (!merged.length) return odds
+  const cons = consensusOf(merged)
+  return {
+    ...odds,
+    books: merged,
+    consensus: cons.n_books ? { p_home: cons.p_home, p_away: cons.p_away, n_books: cons.n_books } : odds.consensus,
+    book_disagreement: cons.disagreement ?? odds.book_disagreement,
+    p_home_mkt: cons.p_home ?? odds.p_home_mkt,
+    p_away_mkt: cons.p_away ?? odds.p_away_mkt,
+    fav_side: cons.p_home != null ? (cons.p_home >= 0.5 ? 'home' : 'away') : odds.fav_side,
+    ml_home: odds.ml_home ?? merged[0]?.ml_home ?? null,
+    ml_away: odds.ml_away ?? merged[0]?.ml_away ?? null,
+  }
+}
+
 // Merge a freshly-captured odds block over a stored one, PRESERVING the earliest
 // opening price (`p_home_open`) and any win-prob curve, and (re)deriving the
 // open→close `line_move`. Used both for the live intraday refresh and the

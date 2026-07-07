@@ -318,6 +318,7 @@ export function selectLocks(analyses, oddsByPk, { max = 2 } = {}) {
       market_consensus: mc.level, consensus_prob: round3(consForPick),
       book_disagreement: round3(disagree), n_books: odds.consensus?.n_books ?? (odds.books?.length ?? 1),
       engine: ml.engine ?? 'classic', prob_v2: ml.prob_v2 ?? null,
+      price: mlPrice ?? null, // American price at capture — feeds the public units ledger
       price_warning: breakeven > PRICE_WARN_BREAKEVEN, // ROI honesty flag, not a filter
       safety,
     }
