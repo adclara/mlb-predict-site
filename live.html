@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#060A13" />
+<title>Fijos del día + Logros en vivo — Predict Baseball</title>
+<link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#060A13; --card:#0C1322; --card2:#101a2e; --line:#1B2740;
+    --ink:#E7ECF5; --ink2:#97A3B8; --ink3:#5E6B82;
+    --accent:#0D9488; --accent2:#0284C7; --warn:#D97706; --bad:#DC2626;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:15px/1.5 "Plus Jakarta Sans",system-ui,sans-serif;padding:20px 14px 60px;max-width:980px;margin:0 auto}
+  h1,h2{font-family:"Space Grotesk",sans-serif}
+  h1{font-size:22px;margin-bottom:2px}
+  h2{font-size:16px;margin:26px 0 10px;color:var(--ink2);text-transform:uppercase;letter-spacing:.08em}
+  .sub{color:var(--ink2);font-size:13px;margin-bottom:18px}
+  .sub b{color:var(--ink)}
+  a.back{color:var(--accent2);text-decoration:none;font-size:13px}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .lock .pick{font-family:"Space Grotesk",sans-serif;font-size:20px;font-weight:700}
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .muted{color:var(--ink2);font-size:12.5px}
+  .tiny{color:var(--ink3);font-size:11.5px}
+  .badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;border-radius:999px;padding:2px 9px;vertical-align:middle}
+  .b-bajo{background:rgba(13,148,136,.16);color:#2DD4BF;border:1px solid rgba(13,148,136,.5)}
+  .b-medio{background:rgba(217,119,6,.14);color:#FBBF24;border:1px solid rgba(217,119,6,.5)}
+  .b-alto{background:rgba(220,38,38,.14);color:#F87171;border:1px solid rgba(220,38,38,.5)}
+  .b-win{background:rgba(13,148,136,.2);color:#2DD4BF}
+  .b-loss{background:rgba(220,38,38,.18);color:#F87171}
+  .prob{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:17px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{color:var(--ink3);font-size:11px;text-transform:uppercase;letter-spacing:.06em;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+  td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  .books{display:flex;flex-wrap:wrap;gap:4px}
+  .book{background:var(--card2);border:1px solid var(--line);border-radius:6px;font-size:11px;padding:1px 6px;color:var(--ink2)}
+  .book b{color:var(--ink)}
+  .spark{display:block}
+  .empty{color:var(--ink3);font-size:13px;padding:18px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+  .foot{margin-top:34px;color:var(--ink3);font-size:11.5px;line-height:1.6}
+  .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:6px;animation:pu 1.6s infinite}
+  @keyframes pu{0%,100%{opacity:.35}50%{opacity:1}}
+  .wrap{overflow-x:auto}
+</style>
+</head>
+<body data-palette="#0D9488,#D97706,#DC2626,#0284C7">
+<a class="back" href="./">← Volver a la app</a>
+<h1>⭐ Fijos del día</h1>
+<p class="sub" id="sub">Cargando…</p>
+
+<div id="locks" class="grid"></div>
+
+<h2><span class="pulse"></span>Logros en vivo (durante los juegos)</h2>
+<p class="tiny" id="liveMeta"></p>
+<div id="live" class="wrap"></div>
+
+<h2>Mercado del día — casas, consenso y riesgo</h2>
+<div id="market" class="wrap"></div>
+
+<p class="foot">
+  Los logros son informativos y cambian constantemente; el "fijo" es la jugada de mayor
+  probabilidad según modelo + mercado, <b>nunca una garantía</b>. Probabilidades calibradas
+  fuera de muestra; el riesgo resume discrepancia entre casas, movimiento de línea, fatiga
+  y lesiones. Datos: MLB StatsAPI + ESPN (públicos). Juego responsable.
+</p>
+
+<script>
+const ET = new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'})
+const today = ET.format(new Date())
+const $ = (id) => document.getElementById(id)
+const pct = (p) => p==null?'—':(p*100).toFixed(1)+'%'
+const esc = (s) => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
+const jget = async (u) => { const r = await fetch(u+'?t='+Date.now()); if(!r.ok) throw 0; return r.json() }
+
+function riskBadge(r){
+  if(!r) return ''
+  const cls = r.level==='alto'?'b-alto':r.level==='medio'?'b-medio':'b-bajo'
+  return `<span class="badge ${cls}">riesgo ${esc(r.level)} · ${r.score}</span>`
+}
+function resBadge(res){
+  return res ? `<span class="badge ${res==='win'?'b-win':'b-loss'}">${res==='win'?'✓ GANÓ':'✗ PERDIÓ'}</span>` : ''
+}
+
+// --- sparkline: one series (consensus over time), 2px line, direct last label --
+function spark(vals, w=110, h=30){
+  const v = vals.filter(x=>x!=null)
+  if(v.length<2) return '<span class="tiny">sin curva aún</span>'
+  const min=Math.min(...v), max=Math.max(...v), span=(max-min)||0.01
+  const x=(i)=>2+(w-24)*(i/(v.length-1)), y=(p)=>h-4-((p-min)/span)*(h-8)
+  const pts=v.map((p,i)=>`${x(i).toFixed(1)},${y(p).toFixed(1)}`).join(' ')
+  const last=v[v.length-1]
+  return `<svg class="spark" width="${w}" height="${h}" role="img" aria-label="consenso ${pct(v[0])} a ${pct(last)}">
+    <polyline points="${pts}" fill="none" stroke="#0D9488" stroke-width="2" stroke-linecap="round"><title>apertura ${pct(v[0])} → ahora ${pct(last)}</title></polyline>
+    <circle cx="${x(v.length-1).toFixed(1)}" cy="${y(last).toFixed(1)}" r="3" fill="#0D9488"><title>${pct(last)}</title></circle>
+    <text x="${w-2}" y="${(y(last)+4).toFixed(1)}" text-anchor="end" fill="#97A3B8" font-size="9">${(last*100).toFixed(0)}</text>
+  </svg>`
+}
+
+async function render(){
+  // header + fijos (frozen by the robot each morning)
+  let day=null, idx=null, games=null, live=null
+  try{ idx = await jget('./data/history/index.json') }catch{}
+  try{ day = await jget(`./data/history/${today}.json`) }catch{}
+  try{ games = await jget(`./data/history/games/${today}.json`) }catch{}
+  try{ live = await jget(`./data/history/live/${today}.json`) }catch{}
+
+  const rec = idx?.record, lrec = idx?.locks_record
+  $('sub').innerHTML = `<b>${today}</b> · récord picks: <b>${rec?`${rec.wins}-${rec.losses}`:'—'}</b>`+
+    (lrec && (lrec.wins+lrec.losses)>0 ? ` · récord fijos: <b>${lrec.wins}-${lrec.losses} (${pct(lrec.win_rate)})</b>` : ' · récord fijos: acumulando')
+
+  const locks = day?.locks || []
+  const gmap = new Map((games?.games||[]).map(g=>[g.game_pk,g]))
+  $('locks').innerHTML = locks.length ? locks.map(l=>{
+    const g = gmap.get(l.game_pk)
+    return `<div class="card lock">
+      <div class="row"><span class="pick">⭐ ${esc(l.label)}</span>${resBadge(l.result)}</div>
+      <div class="muted">${esc(l.matchup)}${l.final?` · final ${esc(l.final)}`:''}</div>
+      <div class="row" style="margin-top:8px">
+        <span class="prob">${pct(l.prob_v2 ?? l.prob)}</span>
+        <span class="tiny">consenso casas ${pct(l.consensus_prob)} · ${l.n_books||1} casa${(l.n_books||1)>1?'s':''}</span>
+      </div>
+      <div style="margin-top:8px">${riskBadge(g?.risk)} <span class="tiny">${l.prob_v2!=null?`calibrada v2 · clásica ${pct(l.prob)}`:'fórmula clásica'}</span></div>
+    </div>`
+  }).join('') : `<div class="empty">Hoy no hay fijo que cumpla TODOS los filtros de máxima seguridad (modelo alta + favorito del mercado + casas de acuerdo). No forzamos jugadas.</div>`
+
+  // live board
+  const lg = live?.games ? Object.entries(live.games) : []
+  $('liveMeta').textContent = live?.updated_at ? `actualizado ${new Date(live.updated_at).toLocaleTimeString('es-US',{timeZone:'America/New_York'})} ET · se refresca solo cada 60s` : 'sin juegos en vivo todavía — el tablero se enciende cuando arranca la jornada'
+  $('live').innerHTML = lg.length ? `<table>
+    <tr><th>Juego</th><th>Marcador</th><th>Inning</th><th>Casas (ML local)</th><th>Consenso local</th><th>Curva</th><th>WP en vivo</th></tr>
+    ${lg.map(([pk,g])=>{
+      const s=g.snapshots[g.snapshots.length-1]||{}
+      const books=(s.books||[]).map(b=>`<span class="book">${esc(b.p||'?')} <b>${b.h>0?'+':''}${b.h??'—'}</b></span>`).join('')
+      return `<tr>
+        <td><b>${esc(g.matchup)}</b></td>
+        <td>${s.as??'—'}-${s.hs??'—'}</td>
+        <td>${s.half??''}${s.inn??'—'}</td>
+        <td><div class="books">${books||'—'}</div></td>
+        <td>${pct(s.cons)}${s.dis>=0.04?` <span class="badge b-medio">discrepan</span>`:''}</td>
+        <td>${spark(g.snapshots.map(x=>x.cons))}</td>
+        <td>${pct(s.wp)}</td>
+      </tr>`
+    }).join('')}
+  </table>` : `<div class="empty">Sin juegos en progreso ahora mismo.</div>`
+
+  // market table
+  const rows = games?.games || []
+  $('market').innerHTML = rows.length ? `<table>
+    <tr><th>Juego</th><th>Pick</th><th>Prob v2</th><th>Mercado</th><th>Movimiento</th><th>Casas</th><th>Riesgo</th></tr>
+    ${rows.map(g=>{
+      const pF = g.p_final, home = g.ml_pick === g.home
+      const pick = g.ml_pick
+      const prob = pF!=null ? (home?pF:1-pF) : Math.max(g.adrian_p,1-g.adrian_p)
+      const aligned = pF==null || prob>=0.5
+      const cons = g.odds?.consensus?.p_home ?? g.odds?.p_home_mkt
+      const consPick = cons==null?null:(home?cons:1-cons)
+      const lm = g.odds?.line_move
+      return `<tr>
+        <td><b>${esc(g.matchup)}</b>${g.final?`<div class="tiny">final ${esc(g.final)}</div>`:''}</td>
+        <td><b>${esc(pick)}</b>${aligned?'':' <span class="badge b-medio">v2 en contra</span>'}</td>
+        <td>${pct(prob)}</td>
+        <td>${pct(consPick)}</td>
+        <td>${lm==null?'—':(lm>0?'⬆ local ':'⬇ local ')+(Math.abs(lm)*100).toFixed(1)+' pts'}</td>
+        <td>${g.odds?.consensus?.n_books ?? (g.odds?.ml_home!=null?1:0)}</td>
+        <td>${riskBadge(g.risk)}</td>
+      </tr>`
+    }).join('')}
+  </table>` : `<div class="empty">El robot todavía no publica los juegos de hoy.</div>`
+}
+render()
+setInterval(render, 60000)
+</script>
+</body>
+</html>

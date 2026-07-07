@@ -1,23 +1,17 @@
-# Deployed into the PUBLIC site repo at .github/workflows/adrian-daily.yml by
-# scripts/deploy_demo.sh. Runs SEVERAL TIMES A DAY (a "living" model): the morning
-# run posts the day's plays + fijos and the opening lines; the intraday runs refresh
-# the market (multi-book consensus, disagreement, open->close line movement) and
-# grade finished games; the late run captures the closing lines + win-prob curves.
-# The morning plays/fijos are FROZEN by daily.mjs (a posted fijo never changes);
-# only the live odds/feature logs and the learning snapshot update on later runs.
+# Runs EVERY HOUR (a living model). daily.mjs is safe at any hour: it uses the
+# EASTERN date, posts the day's plays + fijos only after 8am ET (earlier runs
+# grade finals and capture the earliest opening lines), freezes posted picks,
+# refreshes multi-book odds/consensus/line movement, and rebuilds the learning
+# snapshot. After it, live_odds.mjs watches IN-PROGRESS games for up to ~45 min,
+# snapshotting the live books ("logros") every ~5 min and pushing every ~10 min
+# so GitHub Pages serves near-live market data during games.
 # Public repo -> free unlimited Actions minutes; same-repo commit -> the default
-# GITHUB_TOKEN suffices (no secret). The concurrency group below serializes runs.
+# GITHUB_TOKEN suffices (no secret). The concurrency group serializes runs (a
+# queued hourly run simply starts when the watcher of the previous one ends).
 name: adrian-daily
 on:
   schedule:
-    - cron: '0 13 * * *'  # ~9am ET  — morning plays + fijos + opening lines
-    - cron: '0 17 * * *'  # ~1pm ET  — pre-slate market refresh
-    - cron: '0 20 * * *'  # ~4pm ET  — live market refresh
-    - cron: '0 23 * * *'  # ~7pm ET  — live market refresh + early finals
-    - cron: '0 3 * * *'   # ~11pm ET — closing lines
-    - cron: '30 6 * * *'  # ~2:30am ET — grade finals + earliest opening capture
-                          # (daily.mjs uses the ET date and never POSTS plays/fijos
-                          # before 8am ET, so night runs can't freeze a bad slate)
+    - cron: '7 * * * *' # hourly (offset :07 to dodge the top-of-hour Actions rush)
   workflow_dispatch: {}
 permissions:
   contents: write
@@ -27,24 +21,39 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Compute + grade
-        run: DATA_DIR="$PWD/data" node robot/daily.mjs
-      - name: Commit history
+      - name: Git identity (robot)
         run: |
           git config user.name "adrian-robot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/history
+      - name: Compute + grade + learn
+        run: DATA_DIR="$PWD/data" node robot/daily.mjs
+      - name: Commit picks/history
+        run: |
+          git add data/history data/elo.json data/elo_state.json 2>/dev/null || git add data/history
           if git diff --cached --quiet; then
             echo "no changes"
           else
             git commit -m "Adrian robot: picks + grading ($(date -u +%FT%TZ))"
-            # A deploy may have pushed to the branch since checkout; rebase our
-            # data-only commit on top before pushing (retry a couple of times).
+            for i in 1 2 3; do
+              git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push && break || sleep 5
+            done
+          fi
+      - name: Live odds watcher (logros en vivo)
+        run: DATA_DIR="$PWD/data" node robot/live_odds.mjs
+      - name: Commit any remaining live data
+        if: always()
+        run: |
+          git add data/history
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "live odds: final flush ($(date -u +%FT%TZ))"
             for i in 1 2 3; do
               git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push && break || sleep 5
             done

@@ -291,6 +291,7 @@ export function selectLocks(analyses, oddsByPk, { max = 2 } = {}) {
   for (const a of analyses) {
     const ml = a.ml
     if (!ml || ml.confidence !== 'alta') continue
+    if (ml.aligned === false) continue // v2 honesty gate: never post a fijo the calibrated brain says loses
     const odds = getOdds(a.game_pk)
     if (!odds || !odds.fav_side) continue
     const mc = marketConsensus(ml, odds) // 'strong' | 'market' => pick is the market fav
@@ -307,6 +308,7 @@ export function selectLocks(analyses, oddsByPk, { max = 2 } = {}) {
       prob: ml.prob, confidence: ml.confidence, reasons: ml.reasons,
       market_consensus: mc.level, consensus_prob: round3(consForPick),
       book_disagreement: round3(disagree), n_books: odds.consensus?.n_books ?? (odds.books?.length ?? 1),
+      engine: ml.engine ?? 'classic', prob_v2: ml.prob_v2 ?? null,
       safety,
     })
   }

@@ -9,9 +9,11 @@
 import fs from 'fs'
 import { analyzeGame, leagueAttempts, selectLocks, selectPlays } from './adrian.js'
 import { eloProb, expectedRuns, simulateF5, simulateGame } from './engine.js'
-import { analysisToRow, buildSnapshot, FORMULA_VERSION } from './learn.js'
+import { analysisToRow, aprendeOpinion, buildSnapshot, FORMULA_VERSION, marketBlend } from './learn.js'
 import { mergeOddsBlocks, riskScore, valueEdge } from './odds.js'
 import { buildOddsForDate } from './espn_odds.mjs'
+import { applyEloUpdates, loadEloState } from './elo_live.mjs'
+import { fetchForecasts } from './weather.mjs'
 
 const API = 'https://statsapi.mlb.com/api/v1'
 const DATA = process.env.DATA_DIR || 'data'
@@ -27,7 +29,21 @@ const ipToFloat = (ip) => { const s = parseFloat(ip); if (!isFinite(s)) return 0
 const priors = { elo: j(`${DATA}/elo.json`), pitchers: j(`${DATA}/pitchers.json`), teams: j(`${DATA}/teams.json`), meta: j(`${DATA}/meta.json`) }
 const ABBR_FIX = { ATH: 'OAK' }
 const fixAbbr = (a) => ABBR_FIX[a] || a
-const pitcherPrior = (id) => { const p = id != null ? priors.pitchers[String(id)] : null; return p ? { fip: p[0], kbb: p[1] } : { fip: LEAGUE_FIP, kbb: LEAGUE_KBB } }
+// Yesterday's learning snapshot (walk-forward safe for TODAY: trained only on
+// already-graded past games). Missing/stale -> the classic formula runs alone.
+const prevSnap = (() => { try { return j(`${HIST}/learning.json`) } catch { return null } })()
+// Season-to-date FIP per probable pitcher (fetched fresh each run) blended with
+// the deployed prior by innings reliability — priors no longer go stale between
+// manual deploys. _freshFip: id -> {fip, ip}.
+const _freshFip = new Map()
+const pitcherPrior = (id) => {
+  const p = id != null ? priors.pitchers[String(id)] : null
+  const base = p ? { fip: p[0], kbb: p[1] } : { fip: LEAGUE_FIP, kbb: LEAGUE_KBB }
+  const fresh = id != null ? _freshFip.get(id) : null
+  if (!fresh) return base
+  const w = fresh.ip / (fresh.ip + 40)
+  return { ...base, fip: Math.round((w * fresh.fip + (1 - w) * base.fip) * 100) / 100 }
+}
 const teamPrior = (a) => priors.teams[a] || { pen_fip: LEAGUE_PEN_FIP, park: 1.0 }
 const eloOf = (a) => priors.elo[a] ?? 1500
 
@@ -93,6 +109,18 @@ async function fetchPitcherRecent(id, season, gameDate) {
   if (gameDate && starts[0]?.date) { const rest = Math.round((new Date(gameDate + 'T00:00:00') - new Date(starts[0].date + 'T00:00:00')) / 864e5); fatigue = { restDays: rest, avgPitches: av, level: rest <= 3 || (av && av >= 106) ? 'alta' : rest === 4 || (av && av >= 99) ? 'media' : 'normal' } }
   const out = { id, starts, recent, fatigue }; _pr.set(id, out); return out
 }
+async function fetchSeasonFip(id, season) {
+  if (id == null || _freshFip.has(id)) return
+  try {
+    const d = await get(`${API}/people/${id}/stats?stats=season&group=pitching&season=${season}`)
+    const st = d.stats?.[0]?.splits?.[0]?.stat
+    if (!st) return
+    const ip = ipToFloat(st.inningsPitched)
+    if (!ip || ip < 5) return // too few innings to say anything
+    const hr = +st.homeRuns || 0, bb = +st.baseOnBalls || 0, hbp = +st.hitByPitch || 0, k = +st.strikeOuts || 0
+    _freshFip.set(id, { fip: Math.round(((13 * hr + 3 * (bb + hbp) - 2 * k) / ip + 3.1) * 100) / 100, ip })
+  } catch { /* prior alone */ }
+}
 async function fetchTransactions(start, end) {
   try {
     const data = await get(`${API}/transactions?startDate=${start}&endDate=${end}`)
@@ -122,41 +150,97 @@ function predict(g, hf, af) {
 }
 const f5For = (p) => simulateF5({ muHome: p._mu.muHome, muAway: p._mu.muAway, homeSp: p.features.home_sp_fip, homePen: p.features.home_pen_fip, awaySp: p.features.away_sp_fip, awayPen: p.features.away_pen_fip })
 
+// --- cerebro v2: walk-forward ensemble + market anchor -----------------------
+// The snapshot itself validated (CI-gated) that the combined model beats the
+// classic ("combinado mejor") and that anchoring to the market improves log-loss
+// ("mercado mejor" / market_anchor.improves). aprendeOpinion gives the ensemble+
+// Platt prob from YESTERDAY's snapshot; marketBlend anchors it to the de-vig
+// consensus with the walk-forward alpha. adrian_p is stored untouched, so the
+// games_v1 training rows stay valid (no FORMULA_VERSION bump).
+const round2d = (x) => Math.round(x * 100) / 100
+const round3d = (x) => Math.round(x * 1000) / 1000
+// Walk-forward-backtested split of roles (2026-07-07, n=1248 OOS):
+//   · SELECTION keeps the phase-1 rules on the CLASSIC confidence scale — the
+//     fijos criteria backtested 66.3% / ROI +4.5%; re-gating on the calibrated
+//     scale collapsed them to 0.33/day at −15.6% ROI (calibrated probs rarely
+//     clear a threshold designed for the overconfident classic scale).
+//   · p_final (ensemble+Platt anchored to the market) is the best FORECASTER
+//     (acc 55.5% vs 53.9%, logloss 0.687 vs 0.724) → it is what we DISPLAY and
+//     what gates honesty: a pick that p_final says loses (<50%) is demoted out
+//     of selection rather than posted with a made-up probability.
+function applyBrainV2(a, r) {
+  const op = aprendeOpinion(a, prevSnap)
+  const anch = prevSnap?.ml?.market_anchor
+  const alpha = anch?.improves && anch.alpha != null ? anch.alpha : null
+  const mkt = r.odds?.consensus?.p_home ?? r.odds?.p_home_mkt ?? null
+  let pF = op?.ml?.p_comb ?? null
+  if (alpha != null && mkt != null) pF = marketBlend(pF ?? r.adrian_p, mkt, alpha)
+  r.p_learn = op?.ml?.p_comb ?? null
+  r.p_final = pF != null ? r4(pF) : null
+  r.p_over_learn = op?.total?.p_comb ?? null
+  const pO = r.p_over_learn
+  if (pF == null && pO == null) return a // no snapshot and no line -> pure classic
+  const ml = { ...a.ml }
+  if (pF != null) {
+    const pickHome = a.ml.pick === a.home
+    ml.prob_v2 = round3d(pickHome ? pF : 1 - pF) // calibrated prob OF THE PICK side
+    ml.engine = 'v2'
+    ml.aligned = ml.prob_v2 >= 0.5
+    // Honesty gate: market+learning say the pick loses -> demote below minConf.
+    if (!ml.aligned) ml.confScore = round2d(Math.max(0, ml.confScore - 0.35))
+  }
+  const total = { ...a.total }
+  if (pO != null) {
+    total.prob_v2 = round3d(a.total.side === 'over' ? pO : 1 - pO)
+    total.engine = 'v2'
+    total.aligned = total.prob_v2 >= 0.5
+    if (!total.aligned) total.confScore = round2d(Math.max(0, total.confScore - 0.35))
+  }
+  return { ...a, ml, total, plays: [ml, total], bestPlay: total.confScore > ml.confScore ? total : ml }
+}
+
 // --- compute today's plays + per-game learning rows -------------------------
 async function computeDay(date) {
   const games = await fetchSchedule(date)
   if (!games.length) return null
   const season = priors.meta?.season || new Date(date).getFullYear()
   const ids = [...new Set(games.flatMap((g) => [g.home_probable_pitcher_id, g.away_probable_pitcher_id]).filter(Boolean))]
-  const [recentByTeam, injuries] = await Promise.all([fetchAllRecent(date), fetchTransactions(isoMinus(date, 4), date)])
-  await Promise.all(ids.map((id) => fetchPitcherRecent(id, season, date)))
+  const [recentByTeam, injuries, wxByPk] = await Promise.all([
+    fetchAllRecent(date), fetchTransactions(isoMinus(date, 4), date),
+    fetchForecasts(games).catch(() => new Map()), // forecast weather (Open-Meteo, free)
+  ])
+  await Promise.all(ids.map((id) => Promise.all([fetchPitcherRecent(id, season, date), fetchSeasonFip(id, season)])))
   const lgAtt = leagueAttempts(priors.teams)
   const rows = []
   const analyses = games.map((g) => {
     const rh = recentByTeam.get(g.home_team_id) || [], ra = recentByTeam.get(g.away_team_id) || []
     const prediction = predict(g, formFromRecent(rh, g.game_date), formFromRecent(ra, g.game_date))
     const pitcherRecent = { home: _pr.get(g.home_probable_pitcher_id) || null, away: _pr.get(g.away_probable_pitcher_id) || null }
-    const a = analyzeGame({ game: g, prediction, f5: f5For(prediction), forms: { recentHome: rh, recentAway: ra }, priors, weather: null, injuries, pitcherRecent, lgAttempts: lgAtt })
+    const weather = wxByPk.get(g.game_pk) || null // revives the (previously null) weather factor
+    const a = analyzeGame({ game: g, prediction, f5: f5For(prediction), forms: { recentHome: rh, recentAway: ra }, priors, weather, injuries, pitcherRecent, lgAttempts: lgAtt })
     // Learning row (all games, not just the 3 selected plays); Y filled on grading.
     const f = prediction.features
-    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff, odds: null })
+    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff, weather_forecast: weather, wx_runs: a.total.components?.wx ?? 0, odds: null })
     return a
   })
   // Opening market line (ESPN, free) — additive, best-effort. Captured pre-game
   // so it's anti-leakage safe. FORMULA_VERSION is NOT bumped (odds is metadata).
   await attachOdds(rows, games, date, 'open')
   // Value (model vs de-vig consensus) + risk per game — additive, descriptive.
-  for (const r of rows) {
+  // Then the v2 brain (needs the odds consensus, so it runs after attachOdds).
+  const analysesV2 = analyses.map((a, i) => {
+    const r = rows[i]
     r.value = valueEdge(r.adrian_p, r.odds)
     r.edge = r.value?.best_edge ?? null
     r.value_side = r.value?.best_side ?? null
     r.risk = riskScore({ odds: r.odds, adrian_p: r.adrian_p, pitcher_recent: r.pitcher_recent, news_delta: r.news_delta, ml_pick: r.ml_pick, home: r.home })
-  }
-  const { plays } = selectPlays(analyses)
+    return applyBrainV2(a, r)
+  })
+  const { plays } = selectPlays(analysesV2)
   const oddsByPk = new Map(rows.map((r) => [r.game_pk, r.odds]))
-  const locks = selectLocks(analyses, oddsByPk)
+  const locks = selectLocks(analysesV2, oddsByPk)
   return {
-    plays: plays.map((p) => ({ game_pk: p.game_pk, matchup: p.matchup, market: p.market, side: p.side || null, line: p.line ?? null, pick: p.pick || null, label: p.label, prob: p.prob, confidence: p.confidence })),
+    plays: plays.map((p) => ({ game_pk: p.game_pk, matchup: p.matchup, market: p.market, side: p.side || null, line: p.line ?? null, pick: p.pick || null, label: p.label, prob: p.prob, prob_v2: p.prob_v2 ?? null, confidence: p.confidence, engine: p.engine ?? 'classic' })),
     locks,
     rows,
   }
@@ -265,11 +349,34 @@ function gradeGames(rec, byPk) {
   return changed
 }
 
+// Attach a compact LIVE summary from the watcher's snapshots onto now-graded rows
+// (descriptive accrual for a future pre-registered steam study — never an input).
+function attachLiveSummary(rows, liveStore) {
+  let changed = false
+  for (const r of rows) {
+    if (!r.graded || r.live || (r.home_win !== 0 && r.home_win !== 1)) continue
+    const g = liveStore?.games?.[String(r.game_pk)]
+    const snaps = (g?.snapshots || []).filter((s) => s.cons != null)
+    if (snaps.length < 2) continue
+    const wps = (g.snapshots || []).map((s) => (r.home_win === 1 ? s.wp : s.wp == null ? null : 1 - s.wp)).filter((v) => v != null)
+    r.live = {
+      n: g.snapshots.length,
+      steam: Math.round((snaps[snaps.length - 1].cons - snaps[0].cons) * 1e4) / 1e4,
+      min_wp_winner: wps.length ? Math.round(Math.min(...wps) * 1e4) / 1e4 : null,
+    }
+    changed = true
+  }
+  return changed
+}
+
 // --- learning snapshot ------------------------------------------------------
-function buildLearning() {
+function readAllGameRows() {
   const files = fs.existsSync(GAMES) ? fs.readdirSync(GAMES).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort() : []
   const rows = []
   for (const f of files) { try { for (const r of j(`${GAMES}/${f}`).games || []) rows.push(r) } catch { /* skip */ } }
+  return rows
+}
+function buildLearning(rows) {
   const snap = buildSnapshot(rows, { now: new Date().toISOString() })
   fs.writeFileSync(`${HIST}/learning.json`, JSON.stringify(snap, null, 2))
   return snap
@@ -332,7 +439,11 @@ async function main() {
       // historical fact → used only for PAST-game studies, never today's pick).
       const oddsAdded = await attachOdds(gamesRec.games, [...byPk.values()], date, 'final')
       const wxAdded = await attachWeather(gamesRec.games, byPk)
-      if (changed || oddsAdded || wxAdded) fs.writeFileSync(`${GAMES}/${date}.json`, JSON.stringify(gamesRec, null, 2))
+      // In-game watcher summary (steam / comeback depth) for the graded rows.
+      let liveAdded = false
+      const liveFp = `${HIST}/live/${date}.json`
+      if (fs.existsSync(liveFp)) { try { liveAdded = attachLiveSummary(gamesRec.games, j(liveFp)) } catch { /* best-effort */ } }
+      if (changed || oddsAdded || wxAdded || liveAdded) fs.writeFileSync(`${GAMES}/${date}.json`, JSON.stringify(gamesRec, null, 2))
     }
   }
 
@@ -360,8 +471,15 @@ async function main() {
     days: idx.reverse(),
   }, null, 2))
 
+  // Live Elo: apply newly-graded finals so ratings never go stale (idempotent).
+  const allRows = readAllGameRows()
+  const eloState = loadEloState(`${DATA}/elo_state.json`, today)
+  const eloApplied = applyEloUpdates(priors.elo, eloState, allRows, { today })
+  if (eloApplied > 0) fs.writeFileSync(`${DATA}/elo.json`, JSON.stringify(priors.elo))
+  fs.writeFileSync(`${DATA}/elo_state.json`, JSON.stringify(eloState))
+
   // Rebuild the Adrian Learning snapshot from all graded game logs.
-  const snap = buildLearning()
-  console.log(`adrian_daily: ${today} -> ${day ? day.plays.length : 0} plays; record ${w}-${l} (${ps} push); learning n=${snap.n_graded}/${snap.n_total}`)
+  const snap = buildLearning(allRows)
+  console.log(`adrian_daily: ${today} -> ${day ? day.plays.length : 0} plays; record ${w}-${l} (${ps} push); elo+${eloApplied}; learning n=${snap.n_graded}/${snap.n_total}`)
 }
 main().catch((e) => { console.error(e); process.exit(1) })

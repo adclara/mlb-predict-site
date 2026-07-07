@@ -750,7 +750,12 @@ export function marketMicrostructureReport(rows, { minN = 30 } = {}) {
     n: towardWon.length, rate: mW.p, lo: mW.lo, hi: mW.hi,
     verdict: towardWon.length < minN ? 'sin dato' : (mW.lo != null && mW.lo > 0.5) ? 'seguir el movimiento' : 'empate',
   }
-  return { min_n: minN, n_with_books: g.filter((r) => r.odds?.consensus?.n_books > 1).length, value, disagreement, line_move }
+  // Live-watcher accrual: coverage only. In-game odds FOLLOW the score, so any
+  // "live steam predicts the winner" claim would be leakage by construction; a
+  // real study needs a fixed pre-game reference point and is deferred until the
+  // data (row.live) accrues. Counting coverage keeps the pipeline honest+visible.
+  const live = { n_with_live: g.filter((r) => r.live?.n >= 2).length }
+  return { min_n: minN, n_with_books: g.filter((r) => r.odds?.consensus?.n_books > 1).length, value, disagreement, line_move, live }
 }
 
 // --- signal audit: which factors actually detect winners, honestly -----------
