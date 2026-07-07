@@ -713,6 +713,46 @@ export function trailedEarlyReport(rows, { throughInn = 3, minN = 30 } = {}) {
   }
 }
 
+// --- market microstructure: multi-book consensus, disagreement, line movement -
+// Three PRE-REGISTERED, CI-gated questions on the enriched market block (books[],
+// consensus, book_disagreement, line_move) captured by odds.js. Every field is
+// additive metadata (no FORMULA_VERSION bump) and only appears on rows captured
+// after this feature shipped, so verdicts read "sin dato" until data accrues —
+// exactly the honest posture the rest of the file keeps.
+//   1) value  — when the model's price beats the consensus by >=3 pts, does that
+//               side clear the -110 break-even? (the honest Yankees/Tampa test)
+//   2) disagreement — is the market favorite weaker when the books disagree?
+//   3) line_move — does the side the line moved TOWARD win more than a coin flip?
+export function marketMicrostructureReport(rows, { minN = 30 } = {}) {
+  const g = rows.filter((r) => r.graded && r.formula_version === FORMULA_VERSION && (r.home_win === 0 || r.home_win === 1))
+  // 1) value edge
+  const val = g.filter((r) => r.value?.best_side && (r.value.best_edge ?? 0) >= 0.03)
+  const valWon = val.map((r) => (r.value.best_side === 'home' ? r.home_win : 1 - r.home_win)).filter((v) => v === 0 || v === 1)
+  const vW = wilson(valWon.filter((v) => v === 1).length, valWon.length)
+  const value = {
+    n: valWon.length, rate: vW.p, lo: vW.lo, hi: vW.hi,
+    verdict: valWon.length < minN ? 'sin dato' : (vW.lo != null && vW.lo > BREAK_EVEN_110) ? 'valor real' : (vW.hi != null && vW.hi < 0.5) ? 'trampa' : 'empate',
+  }
+  // 2) between-book disagreement
+  const withDis = g.filter((r) => r.odds?.book_disagreement != null && r.odds?.fav_side)
+  const favWin = (arr) => { const won = arr.map((r) => sideWon(r.odds.fav_side, r.home_win)).filter((v) => v === 0 || v === 1); return { n: won.length, ...wilson(won.filter((v) => v === 1).length, won.length) } }
+  const disHi = favWin(withDis.filter((r) => r.odds.book_disagreement >= 0.04))
+  const disLo = favWin(withDis.filter((r) => r.odds.book_disagreement < 0.04))
+  const disagreement = {
+    high: disHi, low: disLo,
+    verdict: (disHi.n < minN || disLo.n < minN || disHi.hi == null || disLo.lo == null) ? 'sin dato' : disHi.hi < disLo.lo ? 'discrepancia = más riesgo' : 'empate',
+  }
+  // 3) line movement (open -> close)
+  const moved = g.filter((r) => r.odds?.line_move != null && Math.abs(r.odds.line_move) >= 0.03)
+  const towardWon = moved.map((r) => sideWon(r.odds.line_move > 0 ? 'home' : 'away', r.home_win)).filter((v) => v === 0 || v === 1)
+  const mW = wilson(towardWon.filter((v) => v === 1).length, towardWon.length)
+  const line_move = {
+    n: towardWon.length, rate: mW.p, lo: mW.lo, hi: mW.hi,
+    verdict: towardWon.length < minN ? 'sin dato' : (mW.lo != null && mW.lo > 0.5) ? 'seguir el movimiento' : 'empate',
+  }
+  return { min_n: minN, n_with_books: g.filter((r) => r.odds?.consensus?.n_books > 1).length, value, disagreement, line_move }
+}
+
 // --- signal audit: which factors actually detect winners, honestly -----------
 // Each signal is a PRE-DECLARED oriented hypothesis (the direction is a prior, not
 // fit from outcomes → no leakage). We compare favorable-vs-unfavorable ML picks
@@ -819,6 +859,7 @@ export function buildSnapshot(rows, { now = null } = {}) {
       indicators: evalOddsIndicators(graded),
       market_vs_model: oddsReport(graded),
       trailed_early: trailedEarlyReport(graded),
+      microstructure: marketMicrostructureReport(graded),
     },
     misses: graded.filter((r) => r.ml_result === 'loss').slice(-15).reverse().map(missReport(trust)),
   }

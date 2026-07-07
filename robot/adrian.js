@@ -6,6 +6,7 @@
 // profile, on top of the model's base run expectation. Runs client-side.
 
 import { park } from './venues.js'
+import { marketConsensus } from './odds.js'
 
 // League reference points (approx recent MLB).
 const LG_STAFF_FIP = 4.15
@@ -273,4 +274,42 @@ export function selectPlays(analyses, { max = 3, minConf = 0.45 } = {}) {
     fair_decimal: jointP > 0 ? Math.round((1 / jointP) * 100) / 100 : null,
   } : null
   return { plays, combo, ranked: analyses.sort((x, y) => y.bestPlay.confScore - x.bestPlay.confScore) }
+}
+
+// --- "Fijos del día": the 1-2 highest-SAFETY moneyline picks ------------------
+// Adrian's ask: máxima seguridad. A game only qualifies as a fijo when EVERYTHING
+// lines up: the model's confidence is `alta`, the pick IS the market favorite
+// (marketConsensus season study: agreeing with the market wins ~63% vs ~46%
+// fighting it), and the books themselves AGREE (low `book_disagreement` = the
+// market is sure). Some days nothing qualifies → we return [] rather than force a
+// pick. This is a higher-probability tier, never a guarantee. `oddsByPk` is a Map
+// or object keyed by game_pk holding the merged odds block.
+const MAX_LOCK_DISAGREE = 0.06 // books apart by >6 pts → too much market doubt
+export function selectLocks(analyses, oddsByPk, { max = 2 } = {}) {
+  const getOdds = (pk) => (oddsByPk?.get ? oddsByPk.get(pk) : oddsByPk?.[pk]) || null
+  const cands = []
+  for (const a of analyses) {
+    const ml = a.ml
+    if (!ml || ml.confidence !== 'alta') continue
+    const odds = getOdds(a.game_pk)
+    if (!odds || !odds.fav_side) continue
+    const mc = marketConsensus(ml, odds) // 'strong' | 'market' => pick is the market fav
+    if (mc.level !== 'strong' && mc.level !== 'market') continue
+    const disagree = odds.book_disagreement ?? 0
+    if (disagree > MAX_LOCK_DISAGREE) continue
+    const consHome = odds.consensus?.p_home ?? odds.p_home_mkt
+    const consForPick = consHome == null ? ml.prob : (ml.pick === a.home ? consHome : 1 - consHome)
+    // Safety = mostly the model's own prob, backed by the market consensus and a
+    // strong (5+ factor) market agreement, penalized by book disagreement.
+    const safety = round3(0.5 * ml.prob + 0.4 * consForPick + (mc.level === 'strong' ? 0.1 : 0) - disagree)
+    cands.push({
+      market: 'ml', game_pk: a.game_pk, matchup: a.matchup, pick: ml.pick, label: ml.label,
+      prob: ml.prob, confidence: ml.confidence, reasons: ml.reasons,
+      market_consensus: mc.level, consensus_prob: round3(consForPick),
+      book_disagreement: round3(disagree), n_books: odds.consensus?.n_books ?? (odds.books?.length ?? 1),
+      safety,
+    })
+  }
+  cands.sort((x, y) => y.safety - x.safety)
+  return cands.slice(0, max)
 }
