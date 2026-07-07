@@ -124,6 +124,20 @@ async function fetchSeasonFip(id, season) {
     _freshFip.set(id, { fip: Math.round(((13 * hr + 3 * (bb + hbp) - 2 * k) / ip + 3.1) * 100) / 100, ip })
   } catch { /* prior alone */ }
 }
+// Pitcher throwing hand — the schedule's probablePitcher hydrate does NOT carry
+// pitchHand in production, so fall back to a cached person lookup (≤30/day).
+const _hand = new Map()
+async function fetchPitcherHand(id) {
+  if (id == null || _hand.has(id)) return _hand.get(id) ?? null
+  let hand = null
+  try {
+    const d = await get(`${API}/people/${id}`)
+    hand = d.people?.[0]?.pitchHand?.code ?? null
+  } catch { /* sin dato */ }
+  _hand.set(id, hand)
+  return hand
+}
+
 // Team hitting splits vs LHP/RHP (statsapi statSplits, sitCodes vl/vr) — the raw
 // material for the platoon refinement of Adrian's "bats" factor. Best-effort,
 // one cached call per team per run; failures leave the split null ("sin dato").
@@ -262,7 +276,7 @@ async function computeDay(date) {
     fetchAllRecent(date), fetchTransactions(isoMinus(date, 4), date),
     fetchForecasts(games).catch(() => new Map()), // forecast weather (Open-Meteo, free)
   ])
-  await Promise.all(ids.map((id) => Promise.all([fetchPitcherRecent(id, season, date), fetchSeasonFip(id, season)])))
+  await Promise.all(ids.map((id) => Promise.all([fetchPitcherRecent(id, season, date), fetchSeasonFip(id, season), fetchPitcherHand(id)])))
   await Promise.all([...new Set(games.flatMap((g) => [g.home_team_id, g.away_team_id]).filter(Boolean))].map((tid) => fetchTeamSplits(tid, season)))
   // Reconstructed team context from OUR OWN logs (venue form, Pythag, real rest,
   // tz travel) — walk-forward safe (strictly earlier dates), zero extra fetches.
@@ -284,11 +298,13 @@ async function computeDay(date) {
     const aux = auxForGame(auxCtx, { date: g.game_date, home: g.home_team_abbr, away: g.away_team_abbr })
     const hSplit = _splits.get(g.home_team_id) || null, aSplit = _splits.get(g.away_team_id) || null
     const LG_OPS = 0.72
+    const homeHand = g.home_sp_hand ?? _hand.get(g.home_probable_pitcher_id) ?? null
+    const awayHand = g.away_sp_hand ?? _hand.get(g.away_probable_pitcher_id) ?? null
     const platoonOf = (split, oppHand) => (split && oppHand ? (oppHand === 'L' ? split.vsL : split.vsR) : null)
-    const pH = platoonOf(hSplit, g.away_sp_hand), pA = platoonOf(aSplit, g.home_sp_hand)
+    const pH = platoonOf(hSplit, awayHand), pA = platoonOf(aSplit, homeHand)
     const aux2 = {
       day_night: g.day_night ?? null, series_game: g.series_game ?? null, series_len: g.series_len ?? null,
-      home_sp_hand: g.home_sp_hand ?? null, away_sp_hand: g.away_sp_hand ?? null,
+      home_sp_hand: homeHand, away_sp_hand: awayHand,
       platoon_h: pH != null ? Math.round((pH - LG_OPS) * 1000) / 1000 : null, // home bats vs away starter's hand, vs league
       platoon_a: pA != null ? Math.round((pA - LG_OPS) * 1000) / 1000 : null,
     }
