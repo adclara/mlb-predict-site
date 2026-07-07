@@ -13,6 +13,12 @@ on:
   schedule:
     - cron: '7 * * * *' # hourly (offset :07 to dodge the top-of-hour Actions rush)
   workflow_dispatch: {}
+  # Manual "poke": committing any change to .github/poke to main fires a run
+  # immediately (the GitHub App token can't call workflow_dispatch, and a brand
+  # new cron can take a while to register — this is the no-permissions lever).
+  push:
+    branches: [main]
+    paths: ['.github/poke']
 permissions:
   contents: write
 concurrency:
