@@ -162,6 +162,61 @@ async function fetchTeamSplits(teamId, season) {
   _splits.set(teamId, out)
   return out
 }
+// Top hitters per team (best-effort, cached, 1 call/team) — the roster with
+// season hitting hydrated, so the brief can answer "quiénes son los mejores
+// bateadores". Parses defensively across statsapi shapes; any failure → [].
+const _hitters = new Map()
+async function fetchTeamHitters(teamId, season) {
+  if (teamId == null) return []
+  if (_hitters.has(teamId)) return _hitters.get(teamId)
+  let top = []
+  try {
+    const d = await get(`${API}/teams/${teamId}/roster?rosterType=active&hydrate=person(stats(type=season,group=hitting,season=${season}))`)
+    const players = []
+    for (const m of d.roster || []) {
+      const p = m.person || {}
+      let st = null
+      for (const blk of p.stats || []) for (const s of blk.splits || []) { if (s.stat && (s.stat.ops != null || s.stat.atBats != null)) st = s.stat }
+      if (!st) continue
+      const ab = Number(st.atBats) || 0, ops = Number(st.ops)
+      if (ab < 40 || !isFinite(ops)) continue
+      players.push({ name: p.fullName || p.lastName || '?', ops: Math.round(ops * 1000) / 1000, hr: Number(st.homeRuns) || 0, avg: st.avg ?? null })
+    }
+    players.sort((a, b) => b.ops - a.ops)
+    top = players.slice(0, 3)
+  } catch { /* sin dato */ }
+  _hitters.set(teamId, top)
+  return top
+}
+
+// Compact human-facing brief for one game — the "por qué" behind the play:
+// Adrián's own reasons (already generated, previously dropped), the pitcher
+// matchup (season FIP + recent ERA + fatigue + hand), bullpen edge, team
+// offense, top hitters, and the first-5-innings (F5) win split. Descriptive
+// only; never an input to any pick.
+function buildBrief(a, prediction, f5, priors, g, homeHand, awayHand, hitters) {
+  const f = prediction.features || {}
+  const rr = (x) => (x == null ? null : Math.round(x * 100) / 100)
+  const reasons = []
+  for (const r of [...(a.ml?.reasons || []), ...(a.total?.reasons || [])]) { if (r?.text && !reasons.includes(r.text)) reasons.push(r.text) }
+  const hOff = priors.teams[g.home_team_abbr] || {}, aOff = priors.teams[g.away_team_abbr] || {}
+  const pr = a.pitcher_recent || {}
+  return {
+    reasons: reasons.slice(0, 5),
+    pitchers: {
+      home: { name: g.home_probable_pitcher_name || null, fip: rr(f.home_sp_fip), hand: homeHand, era: pr.home?.recent?.era ?? null, n: pr.home?.recent?.n ?? null, fatigue: pr.home?.fatigue?.level ?? null },
+      away: { name: g.away_probable_pitcher_name || null, fip: rr(f.away_sp_fip), hand: awayHand, era: pr.away?.recent?.era ?? null, n: pr.away?.recent?.n ?? null, fatigue: pr.away?.fatigue?.level ?? null },
+    },
+    bullpen: { home_fip: rr(f.home_pen_fip), away_fip: rr(f.away_pen_fip) },
+    offense: {
+      home: { ops: hOff.ops ?? null, runs: hOff.runs_pg ?? null },
+      away: { ops: aOff.ops ?? null, runs: aOff.runs_pg ?? null },
+    },
+    hitters: { home: hitters?.home || [], away: hitters?.away || [] },
+    f5: f5?.f5_moneyline ? { home_lead: round3d(f5.f5_moneyline.home_lead), away_lead: round3d(f5.f5_moneyline.away_lead), nrfi: f5.nrfi != null ? round3d(f5.nrfi) : null } : null,
+  }
+}
+
 async function fetchTransactions(start, end) {
   try {
     const data = await get(`${API}/transactions?startDate=${start}&endDate=${end}`)
@@ -278,7 +333,8 @@ async function computeDay(date) {
     fetchForecasts(games).catch(() => new Map()), // forecast weather (Open-Meteo, free)
   ])
   await Promise.all(ids.map((id) => Promise.all([fetchPitcherRecent(id, season, date), fetchSeasonFip(id, season), fetchPitcherHand(id)])))
-  await Promise.all([...new Set(games.flatMap((g) => [g.home_team_id, g.away_team_id]).filter(Boolean))].map((tid) => fetchTeamSplits(tid, season)))
+  const teamIds = [...new Set(games.flatMap((g) => [g.home_team_id, g.away_team_id]).filter(Boolean))]
+  await Promise.all(teamIds.map((tid) => Promise.all([fetchTeamSplits(tid, season), fetchTeamHitters(tid, season)])))
   // Reconstructed team context from OUR OWN logs (venue form, Pythag, real rest,
   // tz travel) — walk-forward safe (strictly earlier dates), zero extra fetches.
   // Simulated 2026-07-07: none of these beat p_final/the lock rule yet (the
@@ -292,7 +348,8 @@ async function computeDay(date) {
     const prediction = predict(g, formFromRecent(rh, g.game_date), formFromRecent(ra, g.game_date))
     const pitcherRecent = { home: _pr.get(g.home_probable_pitcher_id) || null, away: _pr.get(g.away_probable_pitcher_id) || null }
     const weather = wxByPk.get(g.game_pk) || null // revives the (previously null) weather factor
-    const a = analyzeGame({ game: g, prediction, f5: f5For(prediction), forms: { recentHome: rh, recentAway: ra }, priors, weather, injuries, pitcherRecent, lgAttempts: lgAtt })
+    const f5 = f5For(prediction)
+    const a = analyzeGame({ game: g, prediction, f5, forms: { recentHome: rh, recentAway: ra }, priors, weather, injuries, pitcherRecent, lgAttempts: lgAtt })
     // Learning row (all games, not just the 3 selected plays); Y filled on grading.
     const f = prediction.features
     // Additive context blocks (aux = reconstructed; aux2 = fetched raw material).
@@ -309,7 +366,8 @@ async function computeDay(date) {
       platoon_h: pH != null ? Math.round((pH - LG_OPS) * 1000) / 1000 : null, // home bats vs away starter's hand, vs league
       platoon_a: pA != null ? Math.round((pA - LG_OPS) * 1000) / 1000 : null,
     }
-    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff, weather_forecast: weather, wx_runs: a.total.components?.wx ?? 0, aux, aux2, odds: null })
+    const brief = buildBrief(a, prediction, f5, priors, g, homeHand, awayHand, { home: _hitters.get(g.home_team_id) || [], away: _hitters.get(g.away_team_id) || [] })
+    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff, weather_forecast: weather, wx_runs: a.total.components?.wx ?? 0, aux, aux2, brief, odds: null })
     return a
   })
   // Opening market line (ESPN, free) — additive, best-effort. Captured pre-game
