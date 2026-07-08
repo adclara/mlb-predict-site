@@ -49,6 +49,17 @@
   .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:6px;animation:pu 1.6s infinite}
   @keyframes pu{0%,100%{opacity:.35}50%{opacity:1}}
   .wrap{overflow-x:auto}
+  tr.game{cursor:pointer}
+  tr.game:hover td{background:rgba(2,132,199,.06)}
+  tr.detail>td{background:var(--card2);padding:0;border-bottom:2px solid var(--line)}
+  .triple{display:grid;gap:0;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .op{padding:12px 14px;border-right:1px solid var(--line)}
+  .op:last-child{border-right:none}
+  .op h3{font:600 11px "Space Grotesk",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin-bottom:8px}
+  .op .big{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:16px}
+  .fx{display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);padding:2px 0}
+  .fx b{color:var(--ink)}
+  .fx .pos{color:#2DD4BF}.fx .neg{color:#F87171}
   .livechip{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:12.5px;margin-top:8px}
   .hist{display:flex;flex-wrap:wrap;gap:8px}
   .hday{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;min-width:118px}
@@ -80,7 +91,7 @@
 <p class="tiny" id="liveMeta"></p>
 <div id="live" class="wrap"></div>
 
-<h2>Mercado del día — casas, consenso y riesgo</h2>
+<h2>Hoy — toca un juego para ver las 3 opiniones (Adrián · logros · cerebro)</h2>
 <div id="market" class="wrap"></div>
 
 <p class="foot">
@@ -111,6 +122,59 @@ function riskBadge(r){
 function resBadge(res){
   return res ? `<span class="badge ${res==='win'?'b-win':'b-loss'}">${res==='win'?'✓ GANÓ':'✗ PERDIÓ'}</span>` : ''
 }
+
+// --- panel triple: Adrián · logros · cerebro (se abre al tocar un juego) ------
+const FACTOR_LABEL = { momentum:'Momentum (últimos 10)', pitching:'Picheo (abridor+bullpen)', f5:'Primeras 5 entradas', bats:'Bates (contacto+robos)', schedule:'Descanso/viaje', manager:'Manager agresivo' }
+const openGames = new Set() // sobrevive los refresh de 60s
+function tripleHTML(g, day, live){
+  const pickHome = g.ml_pick === g.home
+  // 1) ADRIÁN — el método clásico
+  const probC = Math.max(g.adrian_p??0.5, 1-(g.adrian_p??0.5))
+  const leans = Object.entries(g.factor_leans||{}).map(([k,v])=>({k,v: pickHome?v:-v})).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v))
+  const fxRows = leans.map(o=>`<div class="fx"><span>${esc(FACTOR_LABEL[o.k]||o.k)}</span><b class="${o.v>=0.02?'pos':o.v<=-0.02?'neg':''}">${o.v>0?'+':''}${(o.v*100).toFixed(0)}</b></div>`).join('')
+  const pr = g.pitcher_recent||{}
+  const eraTxt = (pr.home?.era!=null||pr.away?.era!=null) ? `<div class="fx"><span>ERA reciente abridores</span><b>${pr.away?.era??'—'} visita · ${pr.home?.era??'—'} local</b></div>` : ''
+  const totalTxt = g.side ? `<div class="fx"><span>Total</span><b>${g.side==='over'?'ALTA':'BAJA'} ${g.line} (esp. ${g.adj_total})</b></div>` : ''
+  const adrian = `<div class="op"><h3>⚡ Adrián (método)</h3>
+    <div class="big">${esc(g.ml_pick)} · ${pct(probC)}</div>
+    <div class="tiny">${g.agree??0}/6 factores de acuerdo</div>
+    <div style="margin-top:6px">${fxRows}${eraTxt}${totalTxt}</div></div>`
+  // 2) LOGROS — el mercado
+  const o = g.odds||{}
+  const books = (o.books||[]).map(b=>`<span class="book">${esc(b.provider||'?')} <b>${b.ml_home>0?'+':''}${b.ml_home??'—'} / ${b.ml_away>0?'+':''}${b.ml_away??'—'}</b></span>`).join('')
+  const consH = o.consensus?.p_home ?? o.p_home_mkt
+  const lm = o.line_move
+  const lv = live?.games?.[String(g.game_pk)]
+  const lastS = lv?.snapshots?.[lv.snapshots.length-1]
+  const logros = `<div class="op"><h3>🏦 Logros (mercado)</h3>
+    <div class="big">${o.fav_side ? (o.fav_side==='home'?esc(g.home):esc(g.away))+' favorito · '+pct(o.fav_side==='home'?consH:1-consH) : 'sin línea'}</div>
+    <div class="tiny">${o.consensus?.n_books??(o.ml_home!=null?1:0)} casa(s)${(o.book_disagreement??0)>=0.04?' · <b style="color:#FBBF24">discrepan</b>':''}</div>
+    <div class="books" style="margin-top:6px">${books||'—'}</div>
+    <div style="margin-top:6px" class="fx"><span>Movimiento apertura→ahora</span><b>${lm==null?'—':(lm>0?'⬆ local +':'⬇ local ')+(lm*100).toFixed(1)+' pts'}</b></div>
+    ${lastS?`<div class="fx"><span>En vivo</span><b>${lastS.as??'—'}-${lastS.hs??'—'} ${lastS.half??''}${lastS.inn??''} · WP local ${pct(lastS.wp)}</b></div><div style="margin-top:4px">${spark(lv.snapshots.map(x=>x.cons))}</div>`:''}</div>`
+  // 3) CEREBRO — probabilidad calibrada + riesgo + contexto
+  const pF = g.p_final
+  const pickV2 = pF==null?null:(pF>=0.5?g.home:g.away)
+  const aligned = pF==null || ((pF>=0.5)===pickHome)
+  const aux = g.aux||{}
+  const ctxRows = [
+    aux.rest_h!=null?`<div class="fx"><span>Descanso</span><b>${aux.rest_h}d local · ${aux.rest_a}d visita</b></div>`:'',
+    aux.pyth!=null?`<div class="fx"><span>Pitagórico L20</span><b class="${aux.pyth>0?'pos':'neg'}">${aux.pyth>0?'+':''}${(aux.pyth*100).toFixed(0)} local</b></div>`:'',
+    aux.haf!=null?`<div class="fx"><span>Forma casa/ruta</span><b class="${aux.haf>0?'pos':'neg'}">${aux.haf>0?'+':''}${(aux.haf*100).toFixed(0)} local</b></div>`:'',
+  ].join('')
+  const lockOf = (day?.locks||[]).find(l=>l.game_pk===g.game_pk)
+  const gemOf = (day?.gems||[]).find(x=>x.game_pk===g.game_pk)
+  const cerebro = `<div class="op"><h3>🧠 Cerebro (calibrado)</h3>
+    <div class="big">${pickV2?`${esc(pickV2)} · ${pct(pF>=0.5?pF:1-pF)}`:'sin cálculo'}</div>
+    <div class="tiny">${aligned?'de acuerdo con Adrián':'⚠ contradice a Adrián'}${lockOf?` · ${lockOf.tier==='plata'?'⭐':'⭐⭐'} FIJO`:''}${gemOf?' · 💎 GEMA':''}</div>
+    <div style="margin-top:6px">${g.risk?`<div class="fx"><span>Riesgo</span><b>${riskBadge(g.risk)}</b></div>${(g.risk.reasons||[]).map(r=>`<div class="tiny">· ${esc(r)}</div>`).join('')}`:''}${ctxRows}</div></div>`
+  return `<div class="triple">${adrian}${logros}${cerebro}</div>`
+}
+function toggleGame(pk){
+  if (openGames.has(pk)) openGames.delete(pk); else openGames.add(pk)
+  render()
+}
+window.toggleGame = toggleGame
 
 // --- sparkline: one series (consensus over time), 2px line, direct last label --
 function spark(vals, w=110, h=30){
@@ -214,7 +278,7 @@ async function render(){
   }
   const rows = (games?.games || []).slice().sort((a, b) => probOf(b) - probOf(a))
   $('market').innerHTML = rows.length ? `<table>
-    <tr><th>Juego</th><th>Pick</th><th>Prob ▾</th><th>Mercado</th><th>Movimiento</th><th>Casas</th><th>Riesgo</th></tr>
+    <tr><th></th><th>Juego</th><th>Pick</th><th>Prob ▾</th><th>Mercado</th><th>Movimiento</th><th>Casas</th><th>Riesgo</th></tr>
     ${rows.map(g=>{
       const pF = g.p_final, home = g.ml_pick === g.home
       const pick = g.ml_pick
@@ -223,7 +287,9 @@ async function render(){
       const cons = g.odds?.consensus?.p_home ?? g.odds?.p_home_mkt
       const consPick = cons==null?null:(home?cons:1-cons)
       const lm = g.odds?.line_move
-      return `<tr>
+      const open = openGames.has(g.game_pk)
+      return `<tr class="game" onclick="toggleGame(${Number(g.game_pk)})" title="Toca para ver Adrián · logros · cerebro">
+        <td>${open?'▾':'▸'}</td>
         <td><b>${esc(g.matchup)}</b>${g.final?`<div class="tiny">final ${esc(g.final)}</div>`:''}</td>
         <td><b>${esc(pick)}</b>${aligned?'':' <span class="badge b-medio">v2 en contra</span>'}</td>
         <td>${pct(prob)}</td>
@@ -231,7 +297,7 @@ async function render(){
         <td>${lm==null?'—':(lm>0?'⬆ local ':'⬇ local ')+(Math.abs(lm)*100).toFixed(1)+' pts'}</td>
         <td>${g.odds?.consensus?.n_books ?? (g.odds?.ml_home!=null?1:0)}</td>
         <td>${riskBadge(g.risk)}</td>
-      </tr>`
+      </tr>${open?`<tr class="detail"><td colspan="8">${tripleHTML(g, day, live)}</td></tr>`:''}`
     }).join('')}
   </table>` : `<div class="empty">El robot todavía no publica los juegos de hoy.</div>`
 }
