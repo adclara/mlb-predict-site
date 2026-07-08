@@ -60,6 +60,32 @@
   .fx{display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);padding:2px 0}
   .fx b{color:var(--ink)}
   .fx .pos{color:#2DD4BF}.fx .neg{color:#F87171}
+  /* Top 3 hero */
+  .top3{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-bottom:6px}
+  .t3{position:relative;background:linear-gradient(160deg,rgba(2,132,199,.12),rgba(12,19,34,0) 60%),var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;cursor:pointer}
+  .t3:hover{border-color:rgba(2,132,199,.5)}
+  .t3 .rank{position:absolute;top:12px;right:14px;font:700 12px "Space Grotesk";color:var(--ink3)}
+  .t3 .pk{font-family:"Space Grotesk";font-weight:700;font-size:21px}
+  .t3 .pb{font-family:"Space Grotesk";font-weight:700;font-size:15px;color:var(--gem2)}
+  .chips{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+  .chip{font-size:10.5px;font-weight:600;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--ink2);background:var(--card2);display:inline-flex;gap:4px;align-items:center}
+  .chip.agree{border-color:rgba(13,148,136,.55);color:#2DD4BF}
+  .t3 .why{color:var(--ink2);font-size:12px;margin-top:8px;line-height:1.4}
+  /* quick indicators */
+  .qgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:14px 0 4px}
+  .qtile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .qtile .lab{font:600 10.5px "Space Grotesk";text-transform:uppercase;letter-spacing:.07em;color:var(--ink3)}
+  .qtile .val{font-family:"Space Grotesk";font-weight:700;font-size:17px;margin-top:2px}
+  /* game brief (news / why) */
+  .brief{border-top:1px solid var(--line);margin-top:2px;padding:12px 14px}
+  .brief h4{font:600 11px "Space Grotesk";text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin:0 0 6px}
+  .bgrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+  .pcard{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:12.5px}
+  .pcard .nm{font-weight:700}
+  .tag{font-size:10px;font-weight:700;border-radius:6px;padding:1px 6px;margin-left:5px}
+  .tag.good{background:rgba(13,148,136,.16);color:#2DD4BF}.tag.bad{background:rgba(220,38,38,.16);color:#F87171}.tag.warn{background:rgba(217,119,6,.16);color:#FBBF24}
+  .whylist{margin:4px 0 0;padding-left:16px;color:var(--ink2);font-size:12px}
+  .whylist li{margin:2px 0}
   .livechip{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:12.5px;margin-top:8px}
   .hist{display:flex;flex-wrap:wrap;gap:8px}
   .hday{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;min-width:118px}
@@ -82,17 +108,22 @@
 <h1>⭐ Fijos del día</h1>
 <p class="sub" id="sub">Cargando…</p>
 
-<div id="locks" class="grid"></div>
+<h2>🏆 Top 3 del día</h2>
+<div id="top3" class="top3"></div>
+<div id="quickInd" class="qgrid"></div>
 
-<h2>Historial de fijos</h2>
-<div id="lockHist" class="hist"></div>
+<h2>⭐ Fijos del día (máxima seguridad)</h2>
+<div id="locks" class="grid"></div>
 
 <h2><span class="pulse"></span>Logros en vivo (durante los juegos)</h2>
 <p class="tiny" id="liveMeta"></p>
 <div id="live" class="wrap"></div>
 
-<h2>Hoy — toca un juego para ver las 3 opiniones (Adrián · logros · cerebro)</h2>
+<h2>Todos los juegos — toca uno para ver las 3 opiniones + el análisis completo</h2>
 <div id="market" class="wrap"></div>
+
+<h2>Historial de fijos</h2>
+<div id="lockHist" class="hist"></div>
 
 <p class="foot">
   Los logros son informativos y cambian constantemente; el "fijo" es la jugada de mayor
@@ -176,6 +207,105 @@ function toggleGame(pk){
 }
 window.toggleGame = toggleGame
 
+// --- Top 3 del día: fijos + gemas + mejores prob, deduplicado por juego -------
+function buildTop3(day, gmap){
+  const byPk = new Map()
+  const push = (pk, pick, prob, kind) => {
+    const ex = byPk.get(pk)
+    if (!ex) byPk.set(pk, { pk, pick, prob, kinds: [kind] })
+    else { ex.kinds.push(kind); if (prob > ex.prob) { ex.prob = prob; ex.pick = pick } }
+  }
+  for (const l of (day?.locks||[])) push(l.game_pk, l.pick, l.prob_v2 ?? l.prob, l.tier==='plata'?'⭐ Plata':'⭐⭐ Fijo')
+  for (const g of (day?.gems||[])) push(g.game_pk, g.pick, g.prob, '💎 Gema')
+  let list = [...byPk.values()]
+  if (list.length < 3 && gmap) {
+    const extra = [...gmap.values()].map(g=>{
+      const home=g.ml_pick===g.home, pf=g.p_final
+      const prob=pf!=null?(home?pf:1-pf):Math.max(g.adrian_p??0.5,1-(g.adrian_p??0.5))
+      return { pk:g.game_pk, pick:g.ml_pick, prob, kinds:['pick del día'] }
+    }).filter(x=>!byPk.has(x.pk)).sort((a,b)=>b.prob-a.prob)
+    for (const x of extra){ if(list.length>=3) break; list.push(x) }
+  }
+  return list.sort((a,b)=>b.prob-a.prob).slice(0,3)
+}
+function chip(icon, pick, prob, featured){
+  if(!pick) return ''
+  return `<span class="chip${pick===featured?' agree':''}">${icon} ${esc(pick)}${prob!=null?' '+Math.round(prob*100)+'%':''}</span>`
+}
+function chipsFor(g, featured){
+  const o=g.odds||{}
+  const mFav=o.fav_side?(o.fav_side==='home'?g.home:g.away):null
+  const cons=o.consensus?.p_home??o.p_home_mkt
+  const mPr=cons!=null?(o.fav_side==='home'?cons:1-cons):null
+  const pf=g.p_final
+  const cPick=pf!=null?(pf>=0.5?g.home:g.away):null
+  const cPr=pf!=null?(pf>=0.5?pf:1-pf):null
+  return `<div class="chips">${chip('⚡',g.ml_pick,Math.max(g.adrian_p??0.5,1-(g.adrian_p??0.5)),featured)}${chip('🏦',mFav,mPr,featured)}${chip('🧠',cPick,cPr,featured)}</div>`
+}
+function top3HTML(day, gmap){
+  const list = buildTop3(day, gmap)
+  if(!list.length) return `<div class="empty" style="grid-column:1/-1">El robot aún no publica los juegos de hoy.</div>`
+  return list.map((c,i)=>{
+    const g = gmap.get(c.pk) || {}
+    const why = g.brief?.reasons?.[0] || (c.kinds.includes('💎 Gema')?'Alta probabilidad calibrada por el algoritmo.':'')
+    return `<div class="t3" onclick="toggleGame(${Number(c.pk)});document.getElementById('market').scrollIntoView({behavior:'smooth'})">
+      <span class="rank">#${i+1}</span>
+      <div class="pk">${esc(c.pick)} <span class="pb">${pct(c.prob)}</span></div>
+      <div class="tiny">${esc(g.matchup||'')} · ${[...new Set(c.kinds)].join(' · ')}</div>
+      ${chipsFor(g, c.pick)}
+      ${why?`<div class="why">“${esc(why)}”</div>`:''}
+    </div>`
+  }).join('')
+}
+function quickIndHTML(idx, day, gmap){
+  const lr=idx?.locks_record, gr=idx?.gems_record
+  // consenso total: juegos donde Adrián = favorito de mercado = cerebro
+  let consenso=0
+  for(const g of (gmap?gmap.values():[])){
+    const o=g.odds||{}, pf=g.p_final
+    if(o.fav_side==null||pf==null) continue
+    const mFav=o.fav_side==='home'?g.home:g.away
+    const cPick=pf>=0.5?g.home:g.away
+    if(g.ml_pick===mFav && g.ml_pick===cPick) consenso++
+  }
+  const tile=(lab,val,sub)=>`<div class="qtile"><div class="lab">${lab}</div><div class="val">${val}</div><div class="tiny">${sub}</div></div>`
+  const orO=lr?.oro, uTxt=lr?.units!=null?`${lr.units>=0?'+':''}${lr.units.toFixed(1)}u`:'—'
+  return tile('⭐⭐ Fijos ORO', orO&&(orO.wins+orO.losses)>0?`${orO.wins}-${orO.losses}`:'nuevo', orO&&(orO.wins+orO.losses)>0?`${pct(orO.win_rate)} · ${uTxt}`:'acumulando récord')
+    + tile('💎 Gemas', gr&&(gr.wins+gr.losses)>0?`${gr.wins}-${gr.losses}`:'nuevo', gr&&(gr.wins+gr.losses)>0?pct(gr.win_rate):'acumulando récord')
+    + tile('🤝 Consenso hoy', consenso, 'juegos donde Adrián, mercado y cerebro coinciden')
+}
+// Análisis completo del juego (el "por qué"): pitchers, bullpen, bates, F5
+function briefHTML(g){
+  const b=g.brief; if(!b) return ''
+  const fipTag=(fip)=>fip==null?'':fip<=3.6?'<span class="tag good">élite</span>':fip>=4.8?'<span class="tag bad">golpeable</span>':'<span class="tag warn">promedio</span>'
+  const eraTxt=(p)=>p.era!=null&&p.n?` · ${p.era} ERA últimas ${p.n}`:''
+  const fatTxt=(p)=>p.fatigue==='alta'?' <span class="tag bad">fatiga</span>':p.fatigue==='media'?' <span class="tag warn">carga media</span>':''
+  const pcard=(side,p,label)=>`<div class="pcard"><div class="lab" style="color:var(--ink3);font-size:10px">${label}</div>
+    <div class="nm">${esc(p.name||'por confirmar')}${p.hand?` (${p.hand})`:''}</div>
+    <div class="tiny">FIP ${p.fip??'—'} ${fipTag(p.fip)}${eraTxt(p)}${fatTxt(p)}</div></div>`
+  const bull=b.bullpen||{}
+  const bullBetter = bull.home_fip!=null&&bull.away_fip!=null ? (bull.home_fip<bull.away_fip?g.home:g.away) : null
+  const hitters=(arr,team)=>arr&&arr.length?`<div class="pcard"><div class="lab" style="color:var(--ink3);font-size:10px">Bates ${esc(team)}</div>${arr.map(h=>`<div class="tiny"><b>${esc(h.name)}</b> · ${h.ops} OPS · ${h.hr} HR</div>`).join('')}</div>`:''
+  const f5=b.f5
+  const f5Txt=f5?`<div class="pcard"><div class="lab" style="color:var(--ink3);font-size:10px">Primeras 5 entradas (F5)</div>
+    <div class="tiny">${esc(g.home)} adelante ${pct(f5.home_lead)} · ${esc(g.away)} ${pct(f5.away_lead)}${f5.nrfi!=null?` · NRFI ${pct(f5.nrfi)}`:''}</div></div>`:''
+  const why=b.reasons&&b.reasons.length?`<div><h4>Por qué esta jugada</h4><ul class="whylist">${b.reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></div>`:''
+  return `<div class="brief">
+    ${why}
+    <h4>Análisis del juego</h4>
+    <div class="bgrid">
+      ${pcard('away',b.pitchers.away,'Abridor visita')}
+      ${pcard('home',b.pitchers.home,'Abridor local')}
+      <div class="pcard"><div class="lab" style="color:var(--ink3);font-size:10px">Bullpen</div>
+        <div class="tiny">Local FIP ${bull.home_fip??'—'} · Visita ${bull.away_fip??'—'}</div>
+        ${bullBetter?`<div class="tiny">Ventaja: <b>${esc(bullBetter)}</b></div>`:''}</div>
+      ${f5Txt}
+      ${hitters(b.hitters?.away,g.away)}
+      ${hitters(b.hitters?.home,g.home)}
+    </div>
+  </div>`
+}
+
 // --- sparkline: one series (consensus over time), 2px line, direct last label --
 function spark(vals, w=110, h=30){
   const v = vals.filter(x=>x!=null)
@@ -208,6 +338,8 @@ async function render(){
 
   const locks = day?.locks || []
   const gmap = new Map((games?.games||[]).map(g=>[g.game_pk,g]))
+  $('top3').innerHTML = top3HTML(day, gmap)
+  $('quickInd').innerHTML = quickIndHTML(idx, day, gmap)
   $('locks').innerHTML = locks.length ? locks.map(l=>{
     const g = gmap.get(l.game_pk)
     // live status of the fijo's own game (score/inning/WP from the watcher)
@@ -297,7 +429,7 @@ async function render(){
         <td>${lm==null?'—':(lm>0?'⬆ local ':'⬇ local ')+(Math.abs(lm)*100).toFixed(1)+' pts'}</td>
         <td>${g.odds?.consensus?.n_books ?? (g.odds?.ml_home!=null?1:0)}</td>
         <td>${riskBadge(g.risk)}</td>
-      </tr>${open?`<tr class="detail"><td colspan="8">${tripleHTML(g, day, live)}</td></tr>`:''}`
+      </tr>${open?`<tr class="detail"><td colspan="8">${tripleHTML(g, day, live)}${briefHTML(g)}</td></tr>`:''}`
     }).join('')}
   </table>` : `<div class="empty">El robot todavía no publica los juegos de hoy.</div>`
 }
