@@ -71,7 +71,18 @@ function main() {
   const dailyDoc = readJson(join(DATA, `${date}.json`));
   const indexDoc = readJson(join(DATA, 'index.json'));
 
-  const normalized = normalizeDay(date, gamesDoc, dailyDoc, indexDoc);
+  // Días anteriores (hasta 10) para computar la forma reciente de cada equipo.
+  const gdir = join(DATA, 'games');
+  const prevGamesDocs = readdirSync(gdir)
+    .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+    .map((f) => f.slice(0, 10))
+    .filter((d) => d < date)
+    .sort()
+    .slice(-10)
+    .map((d) => readJson(join(gdir, `${d}.json`)))
+    .filter(Boolean);
+
+  const normalized = normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs);
   const rows = toD1Rows(normalized);
 
   mkdirSync(DIST, { recursive: true });

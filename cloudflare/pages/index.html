@@ -161,7 +161,14 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .lempty{padding:34px 16px;text-align:center;color:var(--faint);font-size:12.5px;border-top:1px solid var(--hair)}
 
 /* ═════════ CENTER: DETAIL ═════════ */
-.detail{position:sticky;top:74px}
+.detail{
+  position:sticky;top:74px;max-height:calc(100vh - 90px);overflow-y:auto;
+  overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#2A3342 transparent;
+  border-radius:16px;
+}
+.detail::-webkit-scrollbar{width:8px}
+.detail::-webkit-scrollbar-thumb{background:#2A3342;border-radius:6px}
+.detail::-webkit-scrollbar-track{background:transparent}
 .dpane{overflow:hidden}
 .dtop{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--hair);font-size:12px;color:var(--faint)}
 .dtop .crumb b{color:var(--dim);font-weight:600}
@@ -224,6 +231,61 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .mktrow:last-child{border-bottom:0}
 .mktrow .k{color:var(--faint);width:120px;flex-shrink:0;font-size:12px}
 .mktrow b{font-weight:700}
+
+/* veredicto AA */
+.verdict{
+  display:flex;gap:12px;align-items:flex-start;background:var(--inner);
+  border:1px solid rgba(255,197,61,.25);border-radius:14px;padding:13px 15px;margin-bottom:14px;
+}
+.verdict .ic{
+  width:34px;height:34px;flex-shrink:0;border-radius:10px;display:grid;place-items:center;
+  background:linear-gradient(120deg,rgba(255,77,28,.18),rgba(255,197,61,.14));
+}
+.verdict p{font-size:13px;line-height:1.65;color:var(--text)}
+.verdict .vt{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);display:block;margin-bottom:3px}
+
+/* forma reciente */
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.formside{background:var(--inner);border:1px solid var(--hair);border-radius:12px;padding:11px 13px}
+.formside .fh{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;margin-bottom:9px}
+.formside .fh img,.formside .fh .tfall{width:20px;height:20px}
+.formside .fh .stk{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--faint)}
+.formside .fh .stk.hot{color:var(--volt)} .formside .fh .stk.cold{color:var(--red)}
+.fchips{display:flex;gap:5px}
+.fgame{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.fg{
+  width:100%;max-width:34px;aspect-ratio:1;border-radius:8px;display:grid;place-items:center;
+  font-size:11px;font-weight:800;color:#fff;
+}
+.fg.w{background:rgba(25,222,159,.22);color:var(--volt);border:1px solid rgba(25,222,159,.4)}
+.fg.l{background:rgba(255,70,85,.16);color:var(--red);border:1px solid rgba(255,70,85,.35)}
+.fgame .fo{font-size:9px;color:var(--faint);font-weight:600}
+.fgame .fs{font-size:9px;color:var(--dim);font-weight:600}
+
+/* duelo de señales */
+.duel{background:var(--inner);border:1px solid var(--hair);border-radius:12px;padding:6px 14px}
+.duelhead{display:flex;justify-content:space-between;padding:8px 0 6px;font-size:11px;font-weight:700;color:var(--dim)}
+.drow{display:grid;grid-template-columns:64px 1fr 64px;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--hair)}
+.drow .dl{font-size:11.5px;color:var(--dim);text-align:center;line-height:1.3}
+.dots{display:flex;gap:3px}
+.dots.a{justify-content:flex-start}
+.dots.h{justify-content:flex-end}
+.dots i{width:14px;height:6px;border-radius:3px;background:var(--panel-2)}
+.dots.a i.on{background:#FF7A3D}
+.dots.h i.on{background:var(--volt)}
+.deven{font-size:9.5px;color:var(--faint);text-align:center;letter-spacing:.06em;text-transform:uppercase}
+
+/* abridores */
+.spgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.spcard{background:var(--inner);border:1px solid var(--hair);border-radius:12px;padding:11px 13px}
+.spcard .who{font-size:13px;font-weight:700;margin-bottom:2px}
+.spcard .tm2{font-size:10.5px;color:var(--faint);margin-bottom:8px}
+.spcard .st{display:flex;gap:12px;font-size:11.5px;color:var(--dim)}
+.spcard .st b{color:var(--text);font-weight:700}
+.spcard .st .fat-alta{color:var(--red)} .spcard .st .fat-media{color:var(--amber)} .spcard .st .fat-normal{color:var(--volt)}
+
+/* contexto */
+.ctxgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
 .dempty{padding:80px 24px;text-align:center;color:var(--faint);font-size:13px}
 .dnote{font-size:10.5px;color:var(--faint);line-height:1.6;margin-top:16px;padding-top:12px;border-top:1px solid var(--hair)}
 .dback{display:none;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--dim);padding:12px 6px}
@@ -261,7 +323,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   .layout{display:flex;flex-direction:column;padding:12px 12px 60px}
   .search{display:none}
   .record{display:none}
-  .detail{display:none;position:fixed;inset:0;z-index:200;background:var(--page);overflow-y:auto;padding:0 10px 40px}
+  .detail{display:none;position:fixed;inset:0;z-index:200;background:var(--page);overflow-y:auto;padding:0 10px 40px;max-height:none;border-radius:0}
   .detail.open{display:block}
   .dback{display:flex}
   .colside{display:block}
@@ -586,7 +648,16 @@ function renderDetail(){
     return '';
   };
 
+  const snap = ev.snapshot || {};
+
+  const verdictBox = snap.verdict_es ? `
+    <div class="verdict">
+      <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFC53D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 8.5 22 9.3 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.3 9 8.5z"/></svg></span>
+      <p><span class="vt">Veredicto AA</span>${esc(snap.verdict_es)}</p>
+    </div>` : '';
+
   const analisis = `
+    ${verdictBox}
     ${homePct != null ? `
     <div class="whowin">
       <div class="ww-head"><span class="q">¿Quién gana?</span><span class="eng">Motor AA · ${esc(p.engine_version || 'v2')}</span></div>
@@ -606,13 +677,83 @@ function renderDetail(){
       <div class="riskbar"><i style="width:${riskPct}%;background:${riskColor}"></i></div>
       <div class="riskrow num"><span>${riskPct}/100 · ${esc(risk.level || '')}</span><span>menor es mejor</span></div>` : ''}`;
 
+  /* ── tab EQUIPOS (snapshot para decidir) ── */
+  const formSide = (side, code) => {
+    const games = (snap.form && snap.form[side]) || [];
+    const stk = snap.context ? snap.context['streak_' + side] : null;
+    const stkTxt = stk == null || stk === 0 ? '' : stk > 0 ? `racha G${stk}` : `racha P${-stk}`;
+    const chips = games.length ? [...games].reverse().map(g => `
+      <span class="fgame" title="${g.home ? 'vs' : '@'} ${esc(g.opp)} · ${esc(g.score)} · ${g.w ? 'ganó' : 'perdió'}">
+        <span class="fg ${g.w ? 'w' : 'l'}">${g.w ? 'G' : 'P'}</span>
+        <span class="fo">${g.home ? 'vs' : '@'}${esc(canon(g.opp))}</span>
+        <span class="fs num">${esc(g.score)}</span>
+      </span>`).join('') : '<span class="wempty">Sin juegos recientes medidos.</span>';
+    return `<div class="formside">
+      <div class="fh">${logoImg(code)}${esc(tNick(code))}
+        ${stkTxt ? `<span class="stk ${stk > 0 ? 'hot' : 'cold'}">${stkTxt}</span>` : ''}</div>
+      <div class="fchips">${chips}</div>
+    </div>`;
+  };
+  const dots = (side, e2) => {
+    const on = e2.favors === side ? e2.strength : 0;
+    const seq = side === 'away' ? [1,2,3] : [3,2,1];
+    return `<span class="dots ${side === 'away' ? 'a' : 'h'}">${seq.map(i => `<i class="${on >= i ? 'on' : ''}"></i>`).join('')}</span>`;
+  };
+  const duel = snap.edges?.length ? `
+    <div class="secttl">Duelo de señales AA</div>
+    <div class="duel">
+      <div class="duelhead"><span>${esc(tNick(ev.away.code))}</span><span>${esc(tNick(ev.home.code))}</span></div>
+      ${snap.edges.map(e2 => `<div class="drow">
+        ${dots('away', e2)}
+        <span class="dl">${esc(e2.factor)}${e2.favors === 'even' ? '<br><span class="deven">parejo</span>' : ''}</span>
+        ${dots('home', e2)}
+      </div>`).join('')}
+    </div>` : '';
+  const sp = (side, code) => {
+    const d2 = snap.pitchers && snap.pitchers[side];
+    if (!d2) return '';
+    return `<div class="spcard">
+      <div class="who">${esc(d2.name || 'Por confirmar')}</div>
+      <div class="tm2">Abre por ${esc(tNick(code))}</div>
+      <div class="st num">
+        ${d2.era_recent != null ? `<span>ERA reciente <b>${d2.era_recent}</b></span>` : ''}
+        ${d2.starts != null ? `<span><b>${d2.starts}</b> aperturas</span>` : ''}
+        ${d2.fatigue ? `<span>Fatiga <b class="fat-${esc(d2.fatigue)}">${esc(d2.fatigue)}</b></span>` : ''}
+      </div>
+    </div>`;
+  };
+  const ctx = snap.context || {};
+  const ctxCards = [];
+  if (ctx.elo_diff != null) ctxCards.push({lb: 'Elo (ventaja local)', vl: (ctx.elo_diff > 0 ? '+' : '') + ctx.elo_diff, cls: ctx.elo_diff > 0 ? 'pos' : ctx.elo_diff < 0 ? 'neg' : ''});
+  if (ctx.sp_fip_diff != null) ctxCards.push({lb: 'FIP abridores (dif)', vl: (ctx.sp_fip_diff > 0 ? '+' : '') + ctx.sp_fip_diff, cls: ''});
+  if (ctx.park_factor != null) ctxCards.push({lb: 'Factor del parque', vl: ctx.park_factor, cls: ctx.park_factor > 1.03 ? 'mid' : ''});
+  if (ctx.rest_home != null && ctx.rest_away != null) ctxCards.push({lb: 'Descanso (L / V)', vl: `${ctx.rest_home}d / ${ctx.rest_away}d`, cls: ''});
+  if (ctx.weather && (ctx.weather.condition || ctx.weather.temp_f != null)) ctxCards.push({lb: 'Clima', vl: `${ctx.weather.temp_f != null ? ctx.weather.temp_f + '°F ' : ''}${ctx.weather.condition || ''}`, cls: ''});
+  if (ctx.weather && ctx.weather.wind) ctxCards.push({lb: 'Viento', vl: ctx.weather.wind, cls: ''});
+  const equipos = `
+    ${snap.form ? `<div class="secttl">Forma reciente (últimos ${Math.max(snap.form.home?.length || 0, snap.form.away?.length || 0) || 5})</div>
+    <div class="formgrid">${formSide('away', ev.away.code)}${formSide('home', ev.home.code)}</div>` : ''}
+    ${duel}
+    ${snap.pitchers ? `<div class="secttl">Abridores probables</div>
+    <div class="spgrid">${sp('away', ev.away.code)}${sp('home', ev.home.code)}</div>` : ''}
+    ${ctxCards.length ? `<div class="secttl">Contexto del juego</div>
+    <div class="ctxgrid">${ctxCards.map(c => `<div class="mcard"><div class="lb">${esc(c.lb)}</div><div class="vl num ${c.cls}" style="font-size:14px">${esc(c.vl)}</div></div>`).join('')}</div>` : ''}
+    ${!snap.form && !duel && !snap.pitchers && !ctxCards.length ? '<div class="wempty">Snapshot no disponible para este juego todavía.</div>' : ''}`;
+
   const o = ev.odds || {};
+  const mkt = snap.market;
+  const tot = snap.total;
   const mercado = `
     <div class="mktrow"><span class="k">Casa</span><b>${esc(o.provider || '—')}</b>${o.n_books ? `<span style="color:var(--faint);font-size:11px">· ${o.n_books} libro${o.n_books > 1 ? 's' : ''}</span>` : ''}</div>
     <div class="mktrow num"><span class="k">ML ${esc(tNick(ev.away.code))}</span><b>${o.ml_away != null ? (o.ml_away > 0 ? '+' : '') + o.ml_away : '—'}</b></div>
     <div class="mktrow num"><span class="k">ML ${esc(tNick(ev.home.code))}</span><b>${o.ml_home != null ? (o.ml_home > 0 ? '+' : '') + o.ml_home : '—'}</b></div>
-    <div class="mktrow num"><span class="k">Over/Under</span><b>${o.over_under ?? '—'}</b></div>
-    ${(ev.metrics || []).filter(m => m.kind === 'edge').map(m => `<div class="mktrow num"><span class="k">${esc(m.label)}</span><b class="${metricCls(m) === 'pos' ? 'vl pos' : 'vl neg'}" style="font-size:13px">${esc(m.value)}</b></div>`).join('')}`;
+    <div class="mktrow num"><span class="k">Over/Under</span><b>${o.over_under ?? '—'}</b>${tot && tot.lean ? `<span style="font-size:11px;color:var(--dim)">· AA inclina <b style="color:var(--sky)">${tot.lean === 'over' ? 'Over' : 'Under'}</b>${tot.prob_pct != null ? ` (${tot.prob_pct}%)` : ''}</span>` : ''}</div>
+    ${(ev.metrics || []).filter(m => m.kind === 'edge').map(m => `<div class="mktrow num"><span class="k">${esc(m.label)}</span><b class="${metricCls(m) === 'pos' ? 'vl pos' : 'vl neg'}" style="font-size:13px">${esc(m.value)}</b></div>`).join('')}
+    ${mkt && homePct != null ? `
+    <div class="secttl" style="margin-top:18px">AA vs mercado</div>
+    <div class="mktrow num"><span class="k">${esc(tNick(ev.home.code))}</span><span style="font-size:12px;color:var(--dim)">AA <b>${homePct}%</b> · mercado <b>${mkt.p_home_pct}%</b></span></div>
+    <div class="mktrow num"><span class="k">${esc(tNick(ev.away.code))}</span><span style="font-size:12px;color:var(--dim)">AA <b>${awayPct}%</b> · mercado <b>${mkt.p_away_pct}%</b></span></div>
+    <p style="font-size:10.5px;color:var(--faint);padding-top:8px">Cuando AA ve más probabilidad que el mercado, hay valor teórico en ese lado.</p>` : ''}`;
 
   $('dcard').innerHTML = `
     <div class="dtop">
@@ -629,10 +770,11 @@ function renderDetail(){
     </div>
     <div class="dtabs">
       <button class="dtab ${dtab === 'analisis' ? 'on' : ''}" data-dt="analisis">Análisis AA</button>
+      ${ev.snapshot ? `<button class="dtab ${dtab === 'equipos' ? 'on' : ''}" data-dt="equipos">Equipos</button>` : ''}
       <button class="dtab ${dtab === 'mercado' ? 'on' : ''}" data-dt="mercado">Mercado</button>
     </div>
     <div class="dbody">
-      ${dtab === 'analisis' ? analisis : mercado}
+      ${dtab === 'analisis' ? analisis : dtab === 'equipos' ? equipos : mercado}
       <p class="dnote">Predicción informativa del algoritmo AA. No es consejo de apuestas; la decisión es tuya. Juego responsable 18/21+.</p>
     </div>`;
 }
