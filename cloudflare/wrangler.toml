@@ -1,0 +1,23 @@
+# AA Sports — configuración del Worker (API pública de solo-lectura).
+# El Worker sirve predicciones ya calculadas desde KV/D1 y hace de proxy con
+# caché para los marcadores en vivo (ESPN). NUNCA contiene el algoritmo.
+
+name = "aa-sports-api"
+main = "worker/index.js"
+compatibility_date = "2026-07-01"
+
+# KV: "lo último" por deporte (lectura caliente, milisegundos).
+[[kv_namespaces]]
+binding = "AA_LATEST"
+id = "683aa2f8846643bf8a6a8b606e5bf0b7"
+
+# D1: historial consultable (records, predicciones pasadas).
+[[d1_databases]]
+binding = "DB"
+database_name = "aa-sports"
+database_id = "ed0969d8-050a-4987-ab98-b047c30f76c9"
+
+[vars]
+# Orígenes permitidos para CORS. "*" mientras probamos en .pages.dev;
+# se restringe al dominio final cuando exista (Fase F).
+ALLOWED_ORIGIN = "*"
