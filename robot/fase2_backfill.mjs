@@ -79,9 +79,25 @@ async function pullSoccer() {
         rows.push({
           season: ss, date: r.Date || null,
           home: r.HomeTeam, away: r.AwayTeam,
+          // resultado (final + medio tiempo)
           hg: num(r.FTHG), ag: num(r.FTAG), res: r.FTR || null,       // H/D/A
           hg_ht: num(r.HTHG), ag_ht: num(r.HTAG),
+          // señales de juego (calidad de ataque/presión — el "picheo/bates" del soccer)
+          shots_h: num(r.HS), shots_a: num(r.AS),
+          sot_h: num(r.HST), sot_a: num(r.AST),
+          corners_h: num(r.HC), corners_a: num(r.AC),
+          fouls_h: num(r.HF), fouls_a: num(r.AF),
+          yellow_h: num(r.HY), yellow_a: num(r.AY),
+          red_h: num(r.HR), red_a: num(r.AR),
+          // mercado 1X2: B365 + promedio de todas las casas (Avg o BbAv según temporada)
           odds_h: num(r.B365H) ?? num(r.PSH), odds_d: num(r.B365D) ?? num(r.PSD), odds_a: num(r.B365A) ?? num(r.PSA),
+          avg_h: num(r.AvgH) ?? num(r.BbAvH), avg_d: num(r.AvgD) ?? num(r.BbAvD), avg_a: num(r.AvgA) ?? num(r.BbAvA),
+          // total 2.5 y hándicap asiático (línea + precios)
+          ou25_o: num(r['B365>2.5']) ?? num(r['Avg>2.5']) ?? num(r['BbAv>2.5']),
+          ou25_u: num(r['B365<2.5']) ?? num(r['Avg<2.5']) ?? num(r['BbAv<2.5']),
+          ah_line: num(r.AHh) ?? num(r.BbAHh),
+          ah_h: num(r.B365AHH) ?? num(r.AvgAHH) ?? num(r.BbAvAHH),
+          ah_a: num(r.B365AHA) ?? num(r.AvgAHA) ?? num(r.BbAvAHA),
         });
       }
       await sleep(200);
@@ -102,17 +118,32 @@ async function pullTennis() {
   for (const tour of ['atp', 'wta']) {
     const rows = [];
     for (const y of TENNIS_YEARS) {
-      const txt = await get(`https://raw.githubusercontent.com/JeffSackmann/tennis_${tour}/master/${tour}_matches_${y}.csv`);
-      if (!txt) continue;
+      // el repo puede tener la rama por defecto en master o main: probamos ambas
+      let txt = null;
+      for (const branch of ['master', 'main', 'refs/heads/master']) {
+        txt = await get(`https://raw.githubusercontent.com/JeffSackmann/tennis_${tour}/${branch}/${tour}_matches_${y}.csv`);
+        if (txt) break;
+      }
+      if (!txt) { console.warn(`  ✗ ${tour} ${y}: no encontrado en master/main`); continue; }
       for (const r of parseCsv(txt)) {
         if (!r.winner_name || !r.loser_name) continue;
         rows.push({
           date: r.tourney_date || null, tourney: r.tourney_name || null,
           surface: r.surface || null, level: r.tourney_level || null, round: r.round || null,
-          best_of: num(r.best_of),
-          w: r.winner_name, w_rank: num(r.winner_rank),
-          l: r.loser_name, l_rank: num(r.loser_rank),
+          best_of: num(r.best_of), minutes: num(r.minutes),           // fatiga
           score: r.score || null,
+          w: r.winner_name, w_rank: num(r.winner_rank), w_age: num(r.winner_age),
+          w_hand: r.winner_hand || null, w_ht: num(r.winner_ht),
+          l: r.loser_name, l_rank: num(r.loser_rank), l_age: num(r.loser_age),
+          l_hand: r.loser_hand || null, l_ht: num(r.loser_ht),
+          // servicio del ganador: aces, dobles faltas, % 1er saque, puntos con 1º/2º, break points
+          w_ace: num(r.w_ace), w_df: num(r.w_df), w_svpt: num(r.w_svpt),
+          w_1stIn: num(r.w_1stIn), w_1stWon: num(r.w_1stWon), w_2ndWon: num(r.w_2ndWon),
+          w_bpSaved: num(r.w_bpSaved), w_bpFaced: num(r.w_bpFaced),
+          // y del perdedor
+          l_ace: num(r.l_ace), l_df: num(r.l_df), l_svpt: num(r.l_svpt),
+          l_1stIn: num(r.l_1stIn), l_1stWon: num(r.l_1stWon), l_2ndWon: num(r.l_2ndWon),
+          l_bpSaved: num(r.l_bpSaved), l_bpFaced: num(r.l_bpFaced),
         });
       }
       await sleep(200);
@@ -156,11 +187,21 @@ async function pullNba() {
           const away = comp.find((x) => x.homeAway === 'away') || {};
           const st = (c.status && c.status.type) || {};
           if (!String(st.name || '').toUpperCase().includes('FINAL')) return null;
+          const qtrs = (t) => Array.isArray(t.linescores) ? t.linescores.map((l) => num(l.value)).filter((v) => v != null) : null;
+          const rec = (t) => (Array.isArray(t.records) && t.records[0] && t.records[0].summary) || null;
+          const o = Array.isArray(c.odds) && c.odds[0] ? c.odds[0] : null;
           return {
             date: day,
             type: (ev.season && ev.season.type) || null, // 2 regular, 3 playoffs
+            neutral: !!c.neutralSite,
             home: home.team && home.team.abbreviation, hs: num(home.score),
             away: away.team && away.team.abbreviation, as: num(away.score),
+            // momentum/pace: marcador por cuartos (incluye prórrogas)
+            hq: qtrs(home), aq: qtrs(away),
+            // récord de cada equipo AL MOMENTO del juego
+            hrec: rec(home), arec: rec(away),
+            // mercado histórico de ESPN cuando existe (spread + total)
+            odds: o ? { details: o.details || null, spread: num(o.spread), ou: num(o.overUnder) } : null,
           };
         }).filter(Boolean);
       }));
