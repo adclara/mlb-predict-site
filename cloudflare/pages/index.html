@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AA Sports — Los datos deciden</title>
+<meta name="description" content="Predicciones deportivas con IA. Datos en vivo, métricas honestas y análisis del algoritmo AA. Tú decides.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23FF4D1C'/%3E%3Cstop offset='.55' stop-color='%23FFC53D'/%3E%3Cstop offset='1' stop-color='%2315E39F'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23080B12'/%3E%3Cg transform='skewX(-9)' fill='url(%23g)'%3E%3Cpath d='M22 46 L32 18 L38 18 L28 46 Z'/%3E%3Cpath d='M36 46 L46 18 L52 18 L42 46 Z'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+:root{
+  --ink:#080B12; --panel:#0E1420; --panel2:#131B2B; --line:#1E2A40;
+  --text:#EAF0FA; --dim:#8CA0BF; --faint:#5A6C8C;
+  --blaze:#FF4D1C; --volt:#15E39F; --amber:#FFC53D; --sky:#3AA7FF; --live:#FF3B47;
+  --disp:-apple-system-ui-serif, ui-sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--ink); color:var(--text);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  min-height:100vh;
+}
+.disp{font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.02em}
+.num{font-variant-numeric:tabular-nums}
+
+/* ── header ─────────────────────────────── */
+header{
+  position:sticky;top:0;z-index:50;background:rgba(8,11,18,.92);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.hwrap{max-width:860px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px}
+.logo{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--text)}
+.logo svg{display:block}
+.wordmark{font-size:19px}
+.wordmark .aa{background:linear-gradient(100deg,var(--blaze),var(--amber) 55%,var(--volt));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tagline{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-top:-2px}
+.spacer{flex:1}
+.record{
+  font-size:12px;color:var(--dim);background:var(--panel);border:1px solid var(--line);
+  padding:5px 11px;border-radius:99px;white-space:nowrap;
+}
+.record b{color:var(--volt);font-style:normal}
+
+/* ── sport tabs ─────────────────────────── */
+nav{border-bottom:1px solid var(--line);background:var(--ink)}
+.tabs{max-width:860px;margin:0 auto;padding:0 12px;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  padding:11px 15px 9px;font-size:13px;font-weight:800;font-style:italic;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--dim);border:0;border-bottom:2px solid transparent;
+  background:none;cursor:pointer;white-space:nowrap;
+}
+.tab.on{color:var(--text);border-bottom-color:var(--blaze)}
+.tab .soon{font-size:9px;color:var(--faint);font-style:normal;font-weight:600;letter-spacing:.08em;margin-left:5px;vertical-align:2px}
+
+/* ── main ───────────────────────────────── */
+main{max-width:860px;margin:0 auto;padding:14px 12px 60px}
+.bar{display:flex;align-items:baseline;gap:10px;padding:4px 4px 12px;flex-wrap:wrap}
+.bar h1{font-size:15px}
+.upd{font-size:11.5px;color:var(--faint)}
+.upd .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--volt);margin-right:5px;vertical-align:1px}
+
+.msg{color:var(--dim);text-align:center;padding:48px 16px;font-size:14px}
+
+/* ── card ───────────────────────────────── */
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  margin-bottom:10px;overflow:hidden;
+}
+.card.gem{border-color:rgba(255,197,61,.45)}
+.card.fijo{border-color:rgba(21,227,159,.4)}
+.chead{
+  display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px 14px;
+  cursor:pointer;user-select:none;-webkit-user-select:none;
+}
+.chead:hover{background:var(--panel2)}
+.teams{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mu{font-size:16px;font-weight:800}
+.badge{
+  font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+  padding:3px 8px;border-radius:5px;font-style:italic;
+}
+.badge.live{background:var(--live);color:#fff;animation:pulse 1.6s ease-in-out infinite}
+.badge.final{background:var(--line);color:var(--dim)}
+.badge.gema{background:rgba(255,197,61,.16);color:var(--amber);border:1px solid rgba(255,197,61,.4)}
+.badge.fijo{background:rgba(21,227,159,.14);color:var(--volt);border:1px solid rgba(21,227,159,.4)}
+.badge.oro{background:rgba(255,197,61,.16);color:var(--amber)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.badge.live{animation:none}}
+.score{font-size:15px;font-weight:800;color:var(--text)}
+.score .sd{font-size:11px;font-weight:600;color:var(--live);margin-left:7px;font-style:italic}
+.score.final .sd{color:var(--faint)}
+.pred{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:2px}
+.pick{
+  font-weight:900;font-style:italic;text-transform:uppercase;font-size:14px;
+  background:linear-gradient(100deg,var(--blaze),var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.prob{
+  font-size:14px;font-weight:800;color:var(--volt);
+  background:rgba(21,227,159,.1);padding:2px 9px;border-radius:6px;
+}
+.conf{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.probbar{grid-column:1/-1;height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:6px}
+.probbar i{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,var(--blaze),var(--amber) 60%,var(--volt))}
+
+/* ── detail ─────────────────────────────── */
+.detail{display:none;border-top:1px solid var(--line);padding:14px;background:var(--panel2)}
+.card.open .detail{display:block}
+.dtitle{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:14px}
+.metric{background:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+.metric .lb{font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em}
+.metric .vl{font-size:16px;font-weight:800;margin-top:2px}
+.metric .vl.risk-bajo{color:var(--volt)} .metric .vl.risk-medio{color:var(--amber)} .metric .vl.risk-alto{color:var(--live)}
+.metric .vl.edge-pos{color:var(--volt)} .metric .vl.edge-neg{color:var(--live)}
+.summary{font-size:13.5px;color:var(--text);line-height:1.65;margin-bottom:14px;border-left:3px solid var(--blaze);padding-left:12px}
+.odds{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--dim)}
+.odds b{color:var(--text)}
+
+/* ── footer ─────────────────────────────── */
+footer{border-top:1px solid var(--line);margin-top:30px}
+.fwrap{max-width:860px;margin:0 auto;padding:20px 16px 34px;font-size:11.5px;color:var(--faint);line-height:1.7}
+.fwrap b{color:var(--dim)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <a class="logo" href="#" aria-label="AA Sports">
+      <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true">
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#FF4D1C"/><stop offset=".55" stop-color="#FFC53D"/><stop offset="1" stop-color="#15E39F"/>
+        </linearGradient></defs>
+        <rect width="64" height="64" rx="14" fill="#0E1420"/>
+        <g transform="skewX(-9)" fill="url(#lg)">
+          <path d="M22 46 L32 18 L38 18 L28 46 Z"/><path d="M36 46 L46 18 L52 18 L42 46 Z"/>
+        </g>
+      </svg>
+      <span>
+        <span class="disp wordmark"><span class="aa">AA</span> Sports</span>
+        <span class="tagline" style="display:block">Los datos deciden</span>
+      </span>
+    </a>
+    <span class="spacer"></span>
+    <span class="record num" id="record" hidden></span>
+  </div>
+</header>
+
+<nav>
+  <div class="tabs" role="tablist">
+    <button class="tab on" role="tab" aria-selected="true">MLB</button>
+    <button class="tab" role="tab" aria-selected="false" disabled>NBA<span class="soon">PRONTO</span></button>
+    <button class="tab" role="tab" aria-selected="false" disabled>Soccer<span class="soon">PRONTO</span></button>
+    <button class="tab" role="tab" aria-selected="false" disabled>Tenis<span class="soon">PRONTO</span></button>
+  </div>
+</nav>
+
+<main>
+  <div class="bar">
+    <h1 class="disp">Juegos de hoy</h1>
+    <span class="upd num" id="upd"></span>
+  </div>
+  <div id="list"><div class="msg">Cargando predicciones…</div></div>
+</main>
+
+<footer>
+  <div class="fwrap">
+    <b>AA Sports informa, no facilita apuestas.</b> Mostramos datos, métricas y la lectura de
+    nuestro algoritmo para que tú decidas. Los datos no garantizan resultados. Si decides jugar,
+    hazlo en tu casa de apuestas, con responsabilidad y solo si eres mayor de edad (18/21+ según
+    tu jurisdicción). Juego responsable.
+  </div>
+</footer>
+
+<script>
+const API = 'https://aa-sports-api.opsmira9.workers.dev';
+const $list = document.getElementById('list');
+const $upd  = document.getElementById('upd');
+const $rec  = document.getElementById('record');
+
+let events = [];           // eventos AA (predicciones del día)
+let liveByKey = new Map(); // "AWAY@HOME" -> live game
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const key = (away, home) => `${away}@${home}`;
+
+function fmtTime(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleTimeString('es', {hour:'2-digit', minute:'2-digit'});
+}
+
+function statusBadge(ev, lv){
+  const st = lv ? lv.status : ev.status;
+  if (st === 'live')  return '<span class="badge live">LIVE</span>';
+  if (st === 'final') return '<span class="badge final">FINAL</span>';
+  return '';
+}
+
+function scoreHtml(ev, lv){
+  if (!lv || (lv.status === 'pre')) return '';
+  const cls = lv.status === 'final' ? 'score final' : 'score';
+  const det = lv.status_detail ? `<span class="sd">${esc(lv.status_detail)}</span>` : '';
+  return `<span class="${cls} num">${esc(ev.away.code)} ${lv.away.score ?? '-'} — ${lv.home.score ?? '-'} ${esc(ev.home.code)}${det}</span>`;
+}
+
+function metricHtml(m){
+  let cls = '';
+  if (m.kind === 'risk') cls = 'risk-' + String(m.value).toLowerCase();
+  if (m.kind === 'edge') cls = String(m.value).startsWith('+') ? 'edge-pos' : 'edge-neg';
+  return `<div class="metric"><div class="lb">${esc(m.label)}</div><div class="vl num ${cls}">${esc(m.value)}</div></div>`;
+}
+
+function cardHtml(ev){
+  const lv = liveByKey.get(key(ev.away.code, ev.home.code)) || null;
+  const badges = (ev.badges || []).map(b => `<span class="badge ${esc(b)}">${b === 'gema' ? '💎 GEMA' : esc(b)}</span>`).join('');
+  const cls = ['card', ev.badges?.includes('gema') ? 'gem' : '', ev.badges?.includes('fijo') ? 'fijo' : ''].join(' ').trim();
+  const p = ev.prediction || {};
+  const probPct = p.prob_pct != null ? p.prob_pct : (p.prob != null ? Math.round(p.prob * 1000) / 10 : null);
+  const oddsRow = ev.odds ? `
+    <div class="dtitle">Mercado</div>
+    <div class="odds num">
+      ${ev.odds.provider ? `<span>Casa: <b>${esc(ev.odds.provider)}</b></span>` : ''}
+      ${ev.odds.ml_home != null ? `<span>ML ${esc(ev.home.code)}: <b>${ev.odds.ml_home > 0 ? '+' : ''}${ev.odds.ml_home}</b></span>` : ''}
+      ${ev.odds.ml_away != null ? `<span>ML ${esc(ev.away.code)}: <b>${ev.odds.ml_away > 0 ? '+' : ''}${ev.odds.ml_away}</b></span>` : ''}
+      ${ev.odds.over_under != null ? `<span>O/U: <b>${ev.odds.over_under}</b></span>` : ''}
+    </div>` : '';
+
+  return `<article class="${cls}" data-id="${esc(ev.event_id)}">
+    <div class="chead" role="button" tabindex="0" aria-expanded="false">
+      <div class="teams">
+        <span class="mu disp">${esc(ev.matchup)}</span>
+        ${statusBadge(ev, lv)}${badges}
+      </div>
+      <div>${scoreHtml(ev, lv)}</div>
+      <div class="pred">
+        ${p.pick ? `<span class="pick">Gana ${esc(p.pick)}</span>` : '<span class="conf">sin pick</span>'}
+        ${probPct != null ? `<span class="prob num">${probPct}%</span>` : ''}
+        ${p.confidence ? `<span class="conf">conf. ${esc(p.confidence)}</span>` : ''}
+      </div>
+      ${probPct != null ? `<div class="probbar"><i style="width:${Math.min(100, probPct)}%"></i></div>` : ''}
+    </div>
+    <div class="detail">
+      ${ev.metrics?.length ? `<div class="dtitle">AA Analysis</div><div class="metrics">${ev.metrics.map(metricHtml).join('')}</div>` : ''}
+      ${ev.summary_es ? `<div class="dtitle">En base a los datos</div><p class="summary">${esc(ev.summary_es)}</p>` : ''}
+      ${oddsRow}
+    </div>
+  </article>`;
+}
+
+function render(){
+  if (!events.length){
+    $list.innerHTML = '<div class="msg">No hay predicciones publicadas todavía. El robot actualiza cada ~30 minutos.</div>';
+    return;
+  }
+  const open = new Set([...$list.querySelectorAll('.card.open')].map(c => c.dataset.id));
+  $list.innerHTML = events.map(cardHtml).join('');
+  for (const id of open){
+    const c = $list.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
+    if (c){ c.classList.add('open'); c.querySelector('.chead').setAttribute('aria-expanded', 'true'); }
+  }
+}
+
+$list.addEventListener('click', (e) => {
+  const head = e.target.closest('.chead'); if (!head) return;
+  const card = head.closest('.card');
+  card.classList.toggle('open');
+  head.setAttribute('aria-expanded', card.classList.contains('open') ? 'true' : 'false');
+});
+$list.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const head = e.target.closest('.chead'); if (!head) return;
+  e.preventDefault(); head.click();
+});
+
+async function loadToday(){
+  try{
+    const r = await fetch(API + '/v1/mlb/today');
+    const d = await r.json();
+    events = d.events || [];
+    if (d.record && d.record.wins != null){
+      $rec.hidden = false;
+      $rec.innerHTML = `Récord <b>${d.record.wins}-${d.record.losses}</b>` +
+        (d.record.win_rate != null ? ` · <b>${Math.round(d.record.win_rate * 100)}%</b>` : '');
+    }
+    $upd.innerHTML = `<span class="dot"></span>Predicciones: ${esc(d.date || '')} ${fmtTime(d.updated_at)}`;
+    render();
+  }catch(err){
+    $list.innerHTML = '<div class="msg">No pude cargar las predicciones. Reintento en 60s…</div>';
+  }
+}
+
+async function loadLive(){
+  try{
+    const r = await fetch(API + '/v1/mlb/live');
+    const d = await r.json();
+    liveByKey = new Map();
+    for (const g of (d.games || [])){
+      if (g.home?.code && g.away?.code) liveByKey.set(key(g.away.code, g.home.code), g);
+    }
+    render();
+  }catch(err){ /* silencioso: el live es best-effort */ }
+}
+
+loadToday(); loadLive();
+setInterval(loadToday, 5 * 60 * 1000);  // predicciones: cada 5 min
+setInterval(loadLive, 45 * 1000);       // marcadores: cada 45 s
+</script>
+</body>
+</html>
