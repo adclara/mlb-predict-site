@@ -11,8 +11,9 @@
 :root{
   --page:#0A0C11;
   --panel:rgba(255,255,255,.045); --panel-2:rgba(255,255,255,.085); --inner:rgba(7,9,14,.5);
-  --hair:rgba(255,255,255,.08); --hair-2:rgba(255,255,255,.16);
-  --text:#F2F4F8; --dim:#9AA4B5; --faint:#657185;
+  --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.18);
+  /* jerarquía Apple-style: texto secundario por opacidad sobre blanco */
+  --text:#F2F4F8; --dim:rgba(242,244,248,.62); --faint:rgba(242,244,248,.40);
   --blaze:#FF4D1C; --volt:#19DE9F; --amber:#FFC53D; --sky:#4DA8FF; --red:#FF4655;
   --grad:linear-gradient(100deg,#FF4D1C,#FFC53D 55%,#19DE9F);
   --glass:blur(22px) saturate(150%);
@@ -28,6 +29,8 @@ body{
 /* ambiente de color detrás del vidrio (liquid glass) */
 body::before{
   content:""; position:fixed; inset:-10%; z-index:-1; pointer-events:none;
+  transform:translate3d(0, calc(var(--refract, 0px) * -1), 0);
+  will-change:transform;
   background:
     radial-gradient(42% 34% at 82% 4%,  rgba(255,77,28,.14), transparent 70%),
     radial-gradient(38% 30% at 8% 12%,  rgba(77,168,255,.11), transparent 70%),
@@ -138,11 +141,15 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 
 /* ═════════ LAYOUT ═════════ */
 .layout{max-width:1380px;margin:0 auto;padding:16px 20px 80px;display:grid;grid-template-columns:400px minmax(0,1fr) 308px;gap:16px;align-items:start}
-.pane{
-  background:linear-gradient(165deg,rgba(255,255,255,.075),rgba(255,255,255,.028) 40%,rgba(255,255,255,.045));
+/* ═════ GLASS ENGINE 2.0 — clases reutilizables ═════ */
+.glass,.pane{
+  background:linear-gradient(165deg,rgba(255,255,255,.095),rgba(255,255,255,.03) 40%,rgba(255,255,255,.055));
   backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
-  border:1px solid var(--hair);border-radius:18px;box-shadow:var(--shadow);
+  border:1px solid rgba(255,255,255,.14);border-radius:18px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 .5px rgba(255,255,255,.04),
+             0 1px 2px rgba(0,0,0,.35), 0 18px 44px -20px rgba(0,0,0,.65);
 }
+.glass-inset{background:var(--inner);border:1px solid var(--hair);border-radius:12px}
 
 /* ═════════ LEFT: LIST ═════════ */
 .listpane{overflow:hidden}
@@ -386,9 +393,11 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 
 /* ═════════ RIGHT: WIDGETS ═════════ */
 .widget{
-  background:linear-gradient(165deg,rgba(255,255,255,.075),rgba(255,255,255,.028) 40%,rgba(255,255,255,.045));
+  background:linear-gradient(165deg,rgba(255,255,255,.095),rgba(255,255,255,.03) 40%,rgba(255,255,255,.055));
   backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
-  border:1px solid var(--hair);border-radius:18px;padding:15px 16px;margin-bottom:14px;box-shadow:var(--shadow);
+  border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:16px 18px;margin-bottom:14px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 .5px rgba(255,255,255,.04),
+             0 1px 2px rgba(0,0,0,.35), 0 18px 44px -20px rgba(0,0,0,.65);
 }
 .widget h3{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:12px;display:flex;align-items:center;gap:7px}
 .recwrap{display:flex;align-items:center;gap:16px}
@@ -460,6 +469,8 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 </style>
 </head>
 <body>
+
+<script src="vendor/lottie_light.min.js" defer></script>
 
 <header>
   <div class="hwrap">
@@ -593,6 +604,8 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     </div>
   </aside>
 </div>
+
+<div id="lotToast" style="position:fixed;right:18px;bottom:18px;width:72px;height:72px;z-index:300;pointer-events:none;display:none"></div>
 
 <footer>
   <div class="fwrap">
@@ -1116,9 +1129,11 @@ document.addEventListener('click', e => {
   if (star){
     e.stopPropagation();
     const id = star.dataset.star;
-    favs.has(id) ? favs.delete(id) : favs.add(id);
+    const adding = !favs.has(id);
+    adding ? favs.add(id) : favs.delete(id);
     localStorage.setItem('aa_favs', JSON.stringify([...favs]));
     renderList();
+    if (adding) favCelebrate();
     return;
   }
   const dt = e.target.closest('.dtab');
@@ -1178,6 +1193,7 @@ async function loadToday(){
     }
     if (firstLoad && events.length){
       firstLoad = false;
+      killBootAnim();
       setTimeout(() => $('listpane').classList.remove('boot'), 1400);
       const pick = events.find(e => e.badges?.includes('gema')) || events.find(e => e.badges?.includes('fijo')) || events[0];
       selectedId = pick.event_id;
@@ -1341,6 +1357,60 @@ async function loadLive(){
     if (events.length) renderAll();
   }catch(err){ /* best-effort */ }
 }
+/* ── Glass Engine 2.0: refracción con el scroll + Lottie ─────────────── */
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (!reduceMotion){
+  let raf = null;
+  addEventListener('scroll', () => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      document.documentElement.style.setProperty('--refract', (window.scrollY * 0.05).toFixed(1) + 'px');
+      raf = null;
+    });
+  }, { passive: true });
+}
+// Lottie (vendor/lottie_light.min.js). Los JSON viven en assets/animations/ —
+// se pueden reemplazar por cualquier animación gratis de lottiefiles.com con
+// el mismo nombre de archivo. Si falta el archivo o la lib, no pasa nada.
+const lottieCache = {};
+async function lottiePlay(el, name, { loop = true } = {}){
+  try{
+    if (reduceMotion || !window.lottie) return null;
+    if (!lottieCache[name]){
+      const r = await fetch(`assets/animations/${name}.json`);
+      if (!r.ok) return null;
+      lottieCache[name] = await r.json();
+    }
+    return window.lottie.loadAnimation({ container: el, renderer: 'svg', loop, autoplay: true, animationData: lottieCache[name] });
+  }catch(e){ return null; }
+}
+// loader fluido sobre el skeleton inicial (se destruye al llegar datos)
+let bootAnim = null;
+addEventListener('load', () => {
+  if (firstLoad && $('list')){
+    const holder = document.createElement('div');
+    holder.id = 'lotBoot';
+    holder.style.cssText = 'display:flex;justify-content:center;padding:10px 0;height:70px';
+    $('list').before(holder);
+    lottiePlay(holder, 'loading').then(a => {
+      bootAnim = a;
+      if (!firstLoad && a){ a.destroy(); holder.remove(); }
+    });
+  }
+});
+function killBootAnim(){
+  if (bootAnim){ try{ bootAnim.destroy(); }catch(e){} bootAnim = null; }
+  const h = document.getElementById('lotBoot'); if (h) h.remove();
+}
+// celebración al AGREGAR un favorito
+function favCelebrate(){
+  const t = $('lotToast');
+  t.style.display = 'block'; t.innerHTML = '';
+  lottiePlay(t, 'success', { loop: false }).then(a => {
+    setTimeout(() => { if (a){ try{ a.destroy(); }catch(e){} } t.style.display = 'none'; }, 1300);
+  });
+}
+
 loadToday(); loadLive();
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
 setInterval(() => { sport === 'mlb' ? loadLive() : loadOther(); }, 45 * 1000);
