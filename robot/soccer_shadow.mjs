@@ -49,18 +49,41 @@ async function d1(sql, params = []) {
 const day = (d) => d.toISOString().slice(0, 10);
 const num = (x) => { const n = parseFloat(x); return Number.isFinite(n) ? n : null; };
 
-// odds de ESPN soccer → prob des-vigadas H/D/A (moneyline americano o decimal)
+// odds de ESPN soccer → prob des-vigadas H/D/A.
+// ESPN publica el 3-vías en formas distintas según liga/época; probamos todas:
+//   a) o.homeTeamOdds/awayTeamOdds/drawOdds con .moneyLine (americano)
+//   b) o.moneyline = { home, away, draw } donde cada lado trae el precio en
+//      close/current/open (.odds como "+150"/"EVEN") o campos sueltos
+function toDecimal(raw) {
+  if (raw == null) return null;
+  let s = String(raw).trim();
+  if (/^even$/i.test(s)) s = '+100';
+  const n = num(s.replace(/^\+/, ''));
+  if (n == null) return null;
+  if (Math.abs(n) < 20) return n > 1 ? n : null;            // ya decimal
+  return n > 0 ? 1 + n / 100 : 1 + 100 / Math.abs(n);       // americano → decimal
+}
+function priceFrom(side) {
+  if (side == null) return null;
+  if (typeof side === 'number' || typeof side === 'string') return toDecimal(side);
+  for (const k of ['close', 'current', 'open']) {
+    const lvl = side[k];
+    if (lvl && typeof lvl === 'object') {
+      const d = toDecimal(lvl.odds ?? lvl.american ?? lvl.moneyLine ?? lvl.value ?? lvl.decimal);
+      if (d) return d;
+    }
+  }
+  return toDecimal(side.moneyLine ?? side.moneyline ?? side.odds ?? side.american ?? side.value ?? side.decimal);
+}
 function probsFromOdds(o) {
   if (!o) return null;
-  const dec = (side) => {
-    const ml = side && (side.moneyLine ?? side.moneyline ?? side.value);
-    const n = num(ml);
-    if (n == null) return null;
-    if (Math.abs(n) < 20) return n > 1 ? n : null;            // ya decimal
-    return n > 0 ? 1 + n / 100 : 1 + 100 / Math.abs(n);       // americano → decimal
-  };
-  const dh = dec(o.homeTeamOdds), da = dec(o.awayTeamOdds);
-  const dd = dec(o.drawOdds) ?? (o.drawOdds ? null : num(o.draw));
+  let dh = priceFrom(o.homeTeamOdds), da = priceFrom(o.awayTeamOdds), dd = priceFrom(o.drawOdds);
+  const ml = o.moneyline;
+  if ((!dh || !da || !dd) && ml && typeof ml === 'object') {
+    dh = dh || priceFrom(ml.home);
+    da = da || priceFrom(ml.away);
+    dd = dd || priceFrom(ml.draw);
+  }
   if (!dh || !da || !dd) return null;
   const ih = 1 / dh, id = 1 / dd, ia = 1 / da, s = ih + id + ia;
   return { pH: ih / s, pD: id / s, pA: ia / s };
@@ -122,9 +145,12 @@ async function main() {
         if (String(st.state || '').toLowerCase() !== 'pre') continue; // solo por jugar
         nPre++;
         const o = Array.isArray(c.odds) && c.odds[0] ? c.odds[0] : null;
-        if (o && nOdds === 0 && nPre === 1) console.log(`  [debug ${lg}] odds[0]: ${JSON.stringify(o).slice(0, 700)}`);
         const pr = probsFromOdds(o);
-        if (!pr) continue;
+        if (!pr) {
+          // solo si el parser no pudo: volcar el objeto para cerrar el formato
+          if (o && nOdds === 0 && nPre === 1) console.log(`  [debug ${lg}] odds[0]: ${JSON.stringify(o).slice(0, 900)}`);
+          continue;
+        }
         nOdds++;
         const home = (c.competitors || []).find((x) => x.homeAway === 'home') || {};
         const away = (c.competitors || []).find((x) => x.homeAway === 'away') || {};
