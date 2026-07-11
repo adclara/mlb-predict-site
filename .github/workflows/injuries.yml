@@ -1,0 +1,26 @@
+# AA Sports — palanca independiente para publicar las bajas YA, sin esperar
+# la cola serializada de adrian-daily (que también las publica cada hora).
+name: injuries
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['.github/poke-injuries']
+permissions:
+  contents: read
+concurrency:
+  group: injuries
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Bajas (lesionados y suspendidos)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/injuries.mjs
