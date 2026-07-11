@@ -314,6 +314,19 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 
 /* forma reciente */
 .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* cuenta opcional (Fase 5) */
+#authbox{position:relative;display:flex;align-items:center}
+.authbtn{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.03em;color:var(--text);background:var(--inner);border:1px solid var(--hair-2);border-radius:999px;padding:7px 14px;cursor:pointer;transition:border-color .15s,background .15s}
+.authbtn:hover{border-color:rgba(255,255,255,.3)}
+.authbtn img{width:20px;height:20px;border-radius:50%}
+.authbtn .afall{width:20px;height:20px;border-radius:50%;background:var(--grad);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#0B0E14}
+.authmenu{position:absolute;top:calc(100% + 8px);right:0;min-width:230px;background:var(--panel,#12161f);border:1px solid var(--hair-2);border-radius:12px;padding:10px;z-index:300;box-shadow:0 16px 40px rgba(0,0,0,.5)}
+.authmenu .am-name{font-size:12.5px;font-weight:800}
+.authmenu .am-mail{font-size:10.5px;color:var(--faint);margin-bottom:8px;word-break:break-all}
+.authmenu .am-note{font-size:9.5px;color:var(--faint);line-height:1.5;border-top:1px solid var(--hair);padding-top:8px;margin-top:8px}
+.authmenu button{display:block;width:100%;text-align:left;font-size:11.5px;font-weight:700;color:var(--dim);background:none;border:0;padding:7px 6px;border-radius:8px;cursor:pointer}
+.authmenu button:hover{background:var(--inner);color:var(--text)}
+.authmenu button.danger{color:var(--live)}
 .formside{background:var(--inner);border:1px solid var(--hair);border-radius:12px;padding:11px 13px}
 /* bajas por lesión/suspensión */
 .injrow{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;padding:5px 0;border-bottom:1px solid var(--hair);font-size:11.5px;min-width:0}
@@ -510,6 +523,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     </div>
     <span class="hspacer"></span>
     <span class="record num" id="record" hidden></span>
+    <span id="authbox"></span>
   </div>
 </header>
 
@@ -692,6 +706,79 @@ async function loadInjuries(){
     if (d && (d.mlb || d.nba)){ injuriesDoc = d; renderDetail(); }
   }catch(err){ /* sin bajas no pasa nada: la sección simplemente no aparece */ }
 }
+
+/* ── cuenta OPCIONAL (Fase 5): login Google + favoritos sincronizados ── */
+let me2 = null;           // {name,email,pic} o null
+let authOn = false;       // el Worker tiene el login configurado
+let favPushTimer = null;
+async function loadMe(){
+  try{
+    const r = await fetch(API + '/v1/me', { credentials: 'include' });
+    const d = await r.json();
+    authOn = !!d.enabled;
+    me2 = d.user || null;
+    renderAuth();
+    if (me2) await syncFavs();
+  }catch(err){ renderAuth(); }
+}
+function renderAuth(){
+  const box = $('authbox');
+  if (!authOn){ box.innerHTML = ''; return; }
+  if (!me2){
+    box.innerHTML = `<button class="authbtn" id="loginbtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></svg>
+      Entrar</button>`;
+    $('loginbtn').onclick = () => { location.href = API + '/v1/auth/google'; };
+    return;
+  }
+  const ini = (me2.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
+  box.innerHTML = `<button class="authbtn" id="userbtn">
+      ${me2.pic ? `<img src="${esc(me2.pic)}" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML='<span class=&quot;afall&quot;>${esc(ini)}</span>'">` : `<span class="afall">${esc(ini)}</span>`}
+      <span class="anm">${esc((me2.name || 'Mi cuenta').split(' ')[0])}</span></button>
+    <div class="authmenu" id="authmenu" hidden>
+      <div class="am-name">${esc(me2.name || '')}</div>
+      <div class="am-mail">${esc(me2.email || '')}</div>
+      <button id="alogout">Salir</button>
+      <button id="adelete" class="danger">Borrar mi cuenta</button>
+      <div class="am-note">Solo guardamos tu nombre, email y foto de Google, y tus favoritos. Borra tu cuenta cuando quieras — se elimina todo.</div>
+    </div>`;
+  $('userbtn').onclick = () => { $('authmenu').hidden = !$('authmenu').hidden; };
+  $('alogout').onclick = async () => {
+    try{ await fetch(API + '/v1/auth/logout', { credentials: 'include' }); }catch(e){}
+    me2 = null; renderAuth();
+  };
+  $('adelete').onclick = async () => {
+    if (!confirm('¿Borrar tu cuenta y tus favoritos sincronizados? Esto no se puede deshacer.')) return;
+    try{ await fetch(API + '/v1/me/delete', { method: 'POST', credentials: 'include' }); }catch(e){}
+    me2 = null; renderAuth();
+  };
+}
+// fusiona favoritos locales + servidor (unión) y sube el resultado
+async function syncFavs(){
+  try{
+    const r = await fetch(API + '/v1/me/favs', { credentials: 'include' });
+    const d = await r.json();
+    for (const f of d.favs || []) if (f && f.code) favs.add(f.code);
+    localStorage.setItem('aa_favs', JSON.stringify([...favs]));
+    pushFavs();
+    renderList();
+  }catch(err){ /* sin red no rompemos nada */ }
+}
+function pushFavs(){
+  if (!me2) return;
+  clearTimeout(favPushTimer);
+  favPushTimer = setTimeout(() => {
+    fetch(API + '/v1/me/favs', {
+      method: 'PUT', credentials: 'include',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ favs: [...favs].map(code => ({ sport: 'mlb', code })) }),
+    }).catch(() => {});
+  }, 800);
+}
+document.addEventListener('click', (e) => {
+  const m = $('authmenu');
+  if (m && !m.hidden && !e.target.closest('#authbox')) m.hidden = true;
+});
 let selectedId = null, filter = 'all', listTab = 'all', query = '', dtab = 'analisis';
 let firstLoad = true, lastAnimKey = null;
 let favs = new Set(JSON.parse(localStorage.getItem('aa_favs') || '[]'));
@@ -1197,6 +1284,7 @@ document.addEventListener('click', e => {
     const adding = !favs.has(id);
     adding ? favs.add(id) : favs.delete(id);
     localStorage.setItem('aa_favs', JSON.stringify([...favs]));
+    pushFavs();
     renderList();
     if (adding) favCelebrate();
     return;
@@ -1549,7 +1637,7 @@ function favCelebrate(){
   });
 }
 
-loadToday(); loadLive(); loadInjuries();
+loadToday(); loadLive(); loadInjuries(); loadMe();
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
 setInterval(() => { sport === 'mlb' ? loadLive() : loadOther(); }, 45 * 1000);
 setInterval(loadInjuries, 30 * 60 * 1000);

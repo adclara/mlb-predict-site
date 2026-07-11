@@ -29,14 +29,15 @@ export default {
     const url = new URL(request.url);
     const origin = (env && env.ALLOWED_ORIGIN) || '*';
 
+    const path = url.pathname.replace(/\/+$/, '') || '/';
+    const isAccount = path.startsWith('/v1/auth') || path.startsWith('/v1/me');
+
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: cors(origin) });
+      return new Response(null, { status: 204, headers: isAccount ? credCors(request, env) : cors(origin) });
     }
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
+    if (request.method !== 'GET' && request.method !== 'HEAD' && !isAccount) {
       return json({ error: 'method_not_allowed' }, 405, origin);
     }
-
-    const path = url.pathname.replace(/\/+$/, '') || '/';
 
     try {
       if (path === '/' || path === '/v1' || path === '/v1/health') {
@@ -60,6 +61,14 @@ export default {
       }
       if (path === '/v1/soccer/leagues') return json({ leagues: SOCCER_LEAGUES }, 200, origin, 3600);
       if (path === '/v1/injuries') return await injuries(env, origin);
+
+      // ── cuentas opcionales (Fase 5) ──
+      if (path === '/v1/auth/google') return authStart(url, env);
+      if (path === '/v1/auth/callback') return await authCallback(url, request, env);
+      if (path === '/v1/auth/logout') return authLogout(request, env);
+      if (path === '/v1/me') return await me(request, env);
+      if (path === '/v1/me/favs') return await meFavs(request, env);
+      if (path === '/v1/me/delete') return await meDelete(request, env);
 
       const ev = path.match(/^\/v1\/mlb\/event\/([^/]+)$/);
       if (ev) return await event(decodeURIComponent(ev[1]), env, origin);
@@ -323,4 +332,202 @@ function json(obj, status, origin, maxAge) {
   const headers = { ...cors(origin), 'content-type': 'application/json; charset=utf-8' };
   if (maxAge) headers['cache-control'] = `public, max-age=${maxAge}`;
   return new Response(JSON.stringify(obj), { status, headers });
+}
+
+/* ══ Fase 5 — cuentas OPCIONALES (login con Google, favoritos sync) ═══════
+   Principios: opt-in total, datos mínimos (nombre/email/foto de Google),
+   el usuario puede borrar su cuenta, y NADA del sitio requiere login.
+   Sesión: cookie HttpOnly firmada con HMAC-SHA256 (AUTH_SECRET), 30 días.
+   Config (si falta, /v1/me responde enabled:false y la app oculta el botón):
+     - var SITE_ORIGIN (wrangler.toml) — a dónde volver tras el login
+     - secrets GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, AUTH_SECRET          */
+
+const SESSION_DAYS = 30;
+
+function authEnabled(env) {
+  return !!(env && env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.AUTH_SECRET);
+}
+function siteOrigin(env) { return (env && env.SITE_ORIGIN) || 'https://aa-sports-5ap.pages.dev'; }
+
+// CORS con credenciales: exige origen EXACTO de la app (o previews del proyecto)
+function allowedOrigin(request, env) {
+  const o = request.headers.get('origin') || '';
+  if (!o) return null;
+  if (o === siteOrigin(env)) return o;
+  try {
+    const host = new URL(o).host;
+    const siteHost = new URL(siteOrigin(env)).host;
+    if (host.endsWith('.' + siteHost)) return o;           // previews *.aa-sports-5ap.pages.dev
+    if (host === 'localhost' || host.startsWith('localhost:')) return o; // dev local
+  } catch (e) { /* origen inválido */ }
+  return null;
+}
+function credCors(request, env) {
+  const o = allowedOrigin(request, env);
+  return {
+    'access-control-allow-origin': o || siteOrigin(env),
+    'access-control-allow-methods': 'GET, POST, PUT, OPTIONS',
+    'access-control-allow-headers': 'content-type',
+    'access-control-allow-credentials': 'true',
+    'access-control-max-age': '86400',
+    'vary': 'origin',
+  };
+}
+function credJson(obj, status, request, env, extraHeaders = {}) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { ...credCors(request, env), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...extraHeaders },
+  });
+}
+
+// — firma HMAC (Web Crypto) —
+const te = new TextEncoder();
+function b64url(bytes) {
+  let s = '';
+  for (const b of new Uint8Array(bytes)) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64urlToStr(s) {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  return atob(s);
+}
+async function hmac(secret, msg) {
+  const key = await crypto.subtle.importKey('raw', te.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return b64url(await crypto.subtle.sign('HMAC', key, te.encode(msg)));
+}
+async function makeToken(env, payload) {
+  const body = b64url(te.encode(JSON.stringify(payload)));
+  return `${body}.${await hmac(env.AUTH_SECRET, body)}`;
+}
+async function readToken(env, token) {
+  if (!token || !token.includes('.')) return null;
+  const [body, sig] = token.split('.');
+  if (sig !== await hmac(env.AUTH_SECRET, body)) return null;
+  try {
+    const p = JSON.parse(b64urlToStr(body));
+    if (!p.exp || p.exp < Date.now() / 1000) return null;
+    return p;
+  } catch (e) { return null; }
+}
+function getCookie(request, name) {
+  const raw = request.headers.get('cookie') || '';
+  for (const part of raw.split(';')) {
+    const [k, ...v] = part.trim().split('=');
+    if (k === name) return v.join('=');
+  }
+  return null;
+}
+function sessionCookie(value, maxAge) {
+  return `aa_sess=${value}; Max-Age=${maxAge}; Path=/; Secure; HttpOnly; SameSite=None`;
+}
+async function sessionUser(request, env) {
+  if (!authEnabled(env)) return null;
+  return await readToken(env, getCookie(request, 'aa_sess'));
+}
+
+// — flujo OAuth de Google —
+function authStart(url, env) {
+  if (!authEnabled(env)) return new Response('auth no configurado', { status: 503 });
+  const redirect = `${url.origin}/v1/auth/callback`;
+  const state = crypto.randomUUID();
+  const auth = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  auth.searchParams.set('client_id', env.GOOGLE_CLIENT_ID);
+  auth.searchParams.set('redirect_uri', redirect);
+  auth.searchParams.set('response_type', 'code');
+  auth.searchParams.set('scope', 'openid email profile');
+  auth.searchParams.set('state', state);
+  auth.searchParams.set('prompt', 'select_account');
+  return new Response(null, {
+    status: 302,
+    headers: {
+      location: auth.toString(),
+      // cookie corta anti-CSRF para validar el state al volver
+      'set-cookie': `aa_state=${state}; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=None`,
+    },
+  });
+}
+
+async function authCallback(url, request, env) {
+  if (!authEnabled(env)) return new Response('auth no configurado', { status: 503 });
+  const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state');
+  if (!code || !state || state !== getCookie(request, 'aa_state')) {
+    return new Response('login inválido (state)', { status: 400 });
+  }
+  const tokRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: `${url.origin}/v1/auth/callback`, grant_type: 'authorization_code',
+    }),
+  });
+  const tok = await tokRes.json().catch(() => ({}));
+  if (!tokRes.ok || !tok.id_token) return new Response('login falló (token)', { status: 502 });
+  // id_token llega directo de Google por TLS en el canal servidor-a-servidor
+  let claims;
+  try { claims = JSON.parse(b64urlToStr(tok.id_token.split('.')[1])); }
+  catch (e) { return new Response('login falló (claims)', { status: 502 }); }
+  if (!claims.sub) return new Response('login falló (sub)', { status: 502 });
+
+  await env.DB.prepare(
+    `INSERT INTO users (provider, provider_id, email, name, picture, created_at)
+     VALUES ('google', ?, ?, ?, ?, ?)
+     ON CONFLICT (provider, provider_id) DO UPDATE SET email = excluded.email, name = excluded.name, picture = excluded.picture`,
+  ).bind(claims.sub, claims.email || null, claims.name || null, claims.picture || null, new Date().toISOString()).run();
+  const row = await env.DB.prepare("SELECT id FROM users WHERE provider = 'google' AND provider_id = ?").bind(claims.sub).first();
+
+  const token = await makeToken(env, {
+    uid: row.id, name: claims.name || null, pic: claims.picture || null, email: claims.email || null,
+    exp: Math.floor(Date.now() / 1000) + SESSION_DAYS * 86400,
+  });
+  const headers = new Headers({ location: siteOrigin(env) });
+  headers.append('set-cookie', sessionCookie(token, SESSION_DAYS * 86400));
+  headers.append('set-cookie', 'aa_state=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=None');
+  return new Response(null, { status: 302, headers });
+}
+
+function authLogout(request, env) {
+  return credJson({ ok: true }, 200, request, env, { 'set-cookie': sessionCookie('', 0) });
+}
+
+async function me(request, env) {
+  if (!authEnabled(env)) return credJson({ enabled: false, user: null }, 200, request, env);
+  const s = await sessionUser(request, env);
+  return credJson({ enabled: true, user: s ? { name: s.name, email: s.email, pic: s.pic } : null }, 200, request, env);
+}
+
+async function meFavs(request, env) {
+  const s = await sessionUser(request, env);
+  if (!s) return credJson({ error: 'no_session' }, 401, request, env);
+  if (request.method === 'GET') {
+    const { results } = await env.DB.prepare('SELECT sport, code FROM user_favs WHERE user_id = ?').bind(s.uid).all();
+    return credJson({ favs: results || [] }, 200, request, env);
+  }
+  if (request.method === 'PUT') {
+    let body;
+    try { body = await request.json(); } catch (e) { return credJson({ error: 'bad_json' }, 400, request, env); }
+    const favs = Array.isArray(body && body.favs) ? body.favs.slice(0, 500) : [];
+    const stmts = [env.DB.prepare('DELETE FROM user_favs WHERE user_id = ?').bind(s.uid)];
+    for (const f of favs) {
+      if (!f || typeof f.code !== 'string' || typeof f.sport !== 'string') continue;
+      stmts.push(env.DB.prepare('INSERT OR IGNORE INTO user_favs (user_id, sport, code) VALUES (?, ?, ?)')
+        .bind(s.uid, f.sport.slice(0, 16), f.code.slice(0, 40)));
+    }
+    await env.DB.batch(stmts);
+    return credJson({ ok: true, n: favs.length }, 200, request, env);
+  }
+  return credJson({ error: 'method_not_allowed' }, 405, request, env);
+}
+
+async function meDelete(request, env) {
+  if (request.method !== 'POST') return credJson({ error: 'method_not_allowed' }, 405, request, env);
+  const s = await sessionUser(request, env);
+  if (!s) return credJson({ error: 'no_session' }, 401, request, env);
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM user_favs WHERE user_id = ?').bind(s.uid),
+    env.DB.prepare('DELETE FROM users WHERE id = ?').bind(s.uid),
+  ]);
+  return credJson({ ok: true, deleted: true }, 200, request, env, { 'set-cookie': sessionCookie('', 0) });
 }
