@@ -167,8 +167,8 @@ async function pullTennis() {
       console.log(`  ${tour}: Sackmann no disponible → tennis-data.co.uk`);
       for (const y of TENNIS_YEARS) {
         const path = tour === 'atp' ? `${y}/${y}.csv` : `${y}w/${y}.csv`;
-        let txt = await get(`http://www.tennis-data.co.uk/${path}`);
-        if (!txt) txt = await get(`https://www.tennis-data.co.uk/${path}`);
+        let txt = await get(`http://www.tennis-data.co.uk/${path}`, true, 1);
+        if (!txt) txt = await get(`https://www.tennis-data.co.uk/${path}`, true, 1);
         if (!txt) { console.warn(`  ✗ tennis-data ${tour} ${y}: no disponible`); continue; }
         let n0 = rows.length;
         for (const r of parseCsv(txt)) {
@@ -188,6 +188,44 @@ async function pullTennis() {
         }
         console.log(`  ${tour} ${y}: +${rows.length - n0}`);
         await sleep(200);
+      }
+    }
+    // Último fallback: ESPN por fecha (mismo patrón confiable que la NBA).
+    // Trae jugadores, sets y torneo; superficie/odds se enriquecen después.
+    if (!rows.length) {
+      console.log(`  ${tour}: tennis-data inaccesible → ESPN por fecha (2022→hoy)`);
+      const dates = [...dateRange('2022-01-01', '2026-07-10')];
+      for (let i = 0; i < dates.length; i += 10) {
+        const batch = dates.slice(i, i + 10);
+        const results = await Promise.all(batch.map(async (day) => {
+          const d = await get(`https://site.api.espn.com/apis/site/v2/sports/tennis/${tour}/scoreboard?dates=${day.replaceAll('-', '')}`, false, 2);
+          if (!d || !Array.isArray(d.events)) return [];
+          const out = [];
+          for (const ev of d.events) {
+            const comps = ev.competitions || (ev.groupings || []).flatMap((g2) => g2.competitions || []);
+            for (const c of comps) {
+              const ps = c.competitors || [];
+              if (ps.length < 2) continue;
+              const st = (c.status && c.status.type) || {};
+              if (!String(st.name || '').toUpperCase().includes('FINAL')) continue;
+              const wSide = ps.find((x) => x.winner), lSide = ps.find((x) => !x.winner);
+              if (!wSide || !lSide) continue;
+              const nm = (x) => (x.athlete && (x.athlete.displayName || x.athlete.shortName)) || null;
+              const sets2 = (x) => Array.isArray(x.linescores) ? x.linescores.map((l2) => num(l2.value)).filter((v) => v != null) : null;
+              if (!nm(wSide) || !nm(lSide)) continue;
+              out.push({
+                date: day, tourney: ev.name || ev.shortName || null,
+                round: (c.round && (c.round.displayName || c.round.name)) || null,
+                w: nm(wSide), l: nm(lSide),
+                w_sets: sets2(wSide), l_sets: sets2(lSide),
+              });
+            }
+          }
+          return out;
+        }));
+        rows.push(...results.flat());
+        if (i % 200 === 0) console.log(`  ${tour} ${dates[i]}… ${rows.length} partidos`);
+        await sleep(120);
       }
     }
     writeFileSync(join(dir, `${tour}.json`), JSON.stringify({ tour, matches: rows }));
