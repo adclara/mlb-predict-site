@@ -15,6 +15,8 @@
 // Requiere CLOUDFLARE_API_TOKEN (mismo secret del robot MLB).
 // Uso: node robot/soccer_shadow.mjs
 
+import { probs3way } from './lib/espn_odds.mjs';
+
 const ACCOUNT_ID = 'f02574feb7272a1da2818e35e0ff4342';
 const D1_DATABASE_ID = 'ed0969d8-050a-4987-ab98-b047c30f76c9';
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
@@ -49,51 +51,21 @@ async function d1(sql, params = []) {
 const day = (d) => d.toISOString().slice(0, 10);
 const num = (x) => { const n = parseFloat(x); return Number.isFinite(n) ? n : null; };
 
-// odds de ESPN soccer → prob des-vigadas H/D/A.
-// ESPN publica el 3-vías en formas distintas según liga/época; probamos todas:
-//   a) o.homeTeamOdds/awayTeamOdds/drawOdds con .moneyLine (americano)
-//   b) o.moneyline = { home, away, draw } donde cada lado trae el precio en
-//      close/current/open (.odds como "+150"/"EVEN") o campos sueltos
-function toDecimal(raw) {
-  if (raw == null) return null;
-  let s = String(raw).trim();
-  if (/^even$/i.test(s)) s = '+100';
-  const n = num(s.replace(/^\+/, ''));
-  if (n == null) return null;
-  if (Math.abs(n) < 20) return n > 1 ? n : null;            // ya decimal
-  return n > 0 ? 1 + n / 100 : 1 + 100 / Math.abs(n);       // americano → decimal
-}
-function priceFrom(side) {
-  if (side == null) return null;
-  if (typeof side === 'number' || typeof side === 'string') return toDecimal(side);
-  for (const k of ['close', 'current', 'open']) {
-    const lvl = side[k];
-    if (lvl && typeof lvl === 'object') {
-      const d = toDecimal(lvl.odds ?? lvl.american ?? lvl.moneyLine ?? lvl.value ?? lvl.decimal);
-      if (d) return d;
-    }
-  }
-  return toDecimal(side.moneyLine ?? side.moneyline ?? side.odds ?? side.american ?? side.value ?? side.decimal);
-}
-function probsFromOdds(o) {
-  if (!o) return null;
-  let dh = priceFrom(o.homeTeamOdds), da = priceFrom(o.awayTeamOdds), dd = priceFrom(o.drawOdds);
-  const ml = o.moneyline;
-  if ((!dh || !da || !dd) && ml && typeof ml === 'object') {
-    dh = dh || priceFrom(ml.home);
-    da = da || priceFrom(ml.away);
-    dd = dd || priceFrom(ml.draw);
-  }
-  if (!dh || !da || !dd) return null;
-  const ih = 1 / dh, id = 1 / dd, ia = 1 / da, s = ih + id + ia;
-  return { pH: ih / s, pD: id / s, pA: ia / s };
-}
+// odds de ESPN soccer → prob des-vigadas H/D/A (parser compartido en lib/espn_odds.mjs)
+const probsFromOdds = probs3way;
 
 function tierOf(p) { return p >= 0.7 ? 't70' : p >= 0.65 ? 't65' : p >= 0.6 ? 't60' : p >= 0.55 ? 't55' : 'open'; }
+
+// columna para comparar modelo vs mercado al gradear (idempotente)
+async function ensureMarketProb() {
+  try { await d1('ALTER TABLE predictions ADD COLUMN market_prob REAL'); console.log('D1: columna market_prob creada'); }
+  catch (e) { /* ya existe */ }
+}
 
 async function main() {
   const today = new Date();
   const dates = [day(today), day(new Date(today.getTime() + 86400000))];
+  await ensureMarketProb();
 
   /* ── 1) gradear pendientes (hasta 5 días atrás) ── */
   const pending = await d1(
@@ -162,9 +134,9 @@ async function main() {
         const tier = tierOf(side.p);
         await d1(
           `INSERT OR REPLACE INTO predictions
-           (sport, date, event_id, league, start_time, status, home, away, pick, prob, confidence, engine_version, result, updated_at)
-           VALUES ('soccer', ?, ?, ?, ?, 'pre', ?, ?, ?, ?, ?, ?, NULL, ?)`,
-          [d, String(ev.id), lg, ev.date || d, hc, ac, side.code, Math.round(side.p * 1000) / 1000, tier, ENGINE, new Date().toISOString()],
+           (sport, date, event_id, league, start_time, status, home, away, pick, prob, confidence, engine_version, result, market_prob, updated_at)
+           VALUES ('soccer', ?, ?, ?, ?, 'pre', ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+          [d, String(ev.id), lg, ev.date || d, hc, ac, side.code, Math.round(side.p * 1000) / 1000, tier, ENGINE, Math.round(side.p * 1000) / 1000, new Date().toISOString()],
         );
         logged++;
       }

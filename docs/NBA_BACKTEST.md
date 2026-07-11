@@ -42,8 +42,10 @@ sobreconfianza en 0.4-0.6). Publicable como probabilidad honesta con tiers.
 
 - ✅ Supera con claridad al baseline y es estable 8 temporadas (incluye COVID).
 - ✅ Calibración: PASA (predicho ≈ real por tier).
-- ⛔ Gate de mercado: **pendiente** — se decide en modo sombra con odds vivas
-  (arranque de temporada, octubre 2026) + revisión de Adrian antes de publicar.
+- 🔶 Gate de mercado: **modo sombra DESPLEGADO** (`robot/nba_shadow.mjs`, cada 6h) —
+  guarda prob del modelo + prob del mercado (odds vivas devigadas, `market_prob` en D1)
+  por pick. Fuera de temporada no registra nada; los picks reales arrancan solos con la
+  2026-27 en octubre. Revisión de Adrian antes de publicar.
 
 Reproducir: `node robot/nba_model.mjs backtest` (usa data/fase2/nba; ~10s).
 Salida completa: `data/fase2/nba/nba_backtest.json`.
