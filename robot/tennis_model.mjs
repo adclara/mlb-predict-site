@@ -85,6 +85,23 @@ function run(matches, tour, wS, evalFrom, evalTo = '9999') {
   return out;
 }
 
+/* ── corrección de calibración (shrink en log-odds) ──────────────────────── */
+// El backtest crudo mostró sobreconfianza de 2-4 pts en todos los tiers.
+// Corrección estándar: p' = σ(a·logit(p)) con a<1 encogiendo hacia 0.5.
+// `a` se ajusta SOLO en el burn-in y queda congelado para la evaluación.
+export const shrinkP = (p, a) => {
+  const q = Math.min(1 - 1e-9, Math.max(1e-9, p));
+  return 1 / (1 + Math.exp(-a * Math.log(q / (1 - q))));
+};
+function fitShrink(rows) {
+  let best = { a: 1, brier: Infinity };
+  for (let a = 0.5; a <= 1.001; a += 0.05) {
+    const b = rows.reduce((s, r) => s + (shrinkP(r.p, a) - r.y) ** 2, 0) / rows.length;
+    if (b < best.brier) best = { a: +a.toFixed(2), brier: b };
+  }
+  return best;
+}
+
 /* ── métricas (mismas formas que nba_model) ──────────────────────────────── */
 const brier = (rows) => rows.reduce((s, r) => s + (r.p - r.y) ** 2, 0) / rows.length;
 const logloss = (rows) => rows.reduce((s, r) => s - Math.log(Math.max(1e-12, r.y ? r.p : 1 - r.p)), 0) / rows.length;
@@ -133,8 +150,15 @@ export function backtest(burnUntil = '2020-01-01') {
     }
     console.log(`  mezcla superficie wS=${best.wS} (brier interna ${Number.isFinite(best.brier) ? best.brier.toFixed(4) : 'n/a'})`);
 
-    // 2) evaluación limpia desde burnUntil, wS congelado
-    const rows = run(matches, tour, best.wS, burnUntil);
+    // 1b) coeficiente de shrink ajustado en las MISMAS filas internas del burn-in
+    const innerRows = run(matches, tour, best.wS, mid, burnUntil);
+    const sh = innerRows.length ? fitShrink(innerRows) : { a: 1 };
+    console.log(`  shrink de calibración a=${sh.a}`);
+
+    // 2) evaluación limpia desde burnUntil, wS y a congelados
+    const rawRows = run(matches, tour, best.wS, burnUntil);
+    const rows = rawRows.map((r) => ({ ...r, p: shrinkP(r.p, sh.a) }));
+    const brierRaw = +brier(rawRows).toFixed(4);
     // partidos con ambos jugadores rodados (≥10 previos) — el corte publicable
     const seasoned = rows.filter((r) => r.exp >= 10);
 
@@ -146,9 +170,9 @@ export function backtest(burnUntil = '2020-01-01') {
     const perYearTab = Object.fromEntries(Object.entries(perYear).map(([y, rs]) => [y, { n: rs.length, brier: +brier(rs).toFixed(4), acc: +accuracy(rs).toFixed(3) }]));
 
     const t = {
-      n_matches: matches.length, range: [first, last], wS: best.wS,
+      n_matches: matches.length, range: [first, last], wS: best.wS, shrink: sh.a,
       n_eval: rows.length,
-      metrics: { brier: +brier(rows).toFixed(4), brier_baseline_50: 0.25, logloss: +logloss(rows).toFixed(4), acc: +accuracy(rows).toFixed(3) },
+      metrics: { brier: +brier(rows).toFixed(4), brier_raw: brierRaw, brier_baseline_50: 0.25, logloss: +logloss(rows).toFixed(4), acc: +accuracy(rows).toFixed(3) },
       seasoned: { n: seasoned.length, brier: seasoned.length ? +brier(seasoned).toFixed(4) : null, acc: seasoned.length ? +accuracy(seasoned).toFixed(3) : null },
       per_year: perYearTab,
       tiers: tiers(seasoned),

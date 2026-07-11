@@ -1,0 +1,29 @@
+# AA Sports — NBA en modo sombra: registra picks en D1 (privados) con prob del
+# modelo + prob del mercado, y los gradea con los finales. Fuera de temporada
+# corre y no registra nada. Cada 6 horas; también con poke.
+name: nba-shadow
+on:
+  schedule:
+    - cron: '41 */6 * * *'
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['.github/poke-nba']
+permissions:
+  contents: read
+concurrency:
+  group: nba-shadow
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Modo sombra NBA
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/nba_shadow.mjs
