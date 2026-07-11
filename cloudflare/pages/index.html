@@ -158,8 +158,12 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .ltab:hover{color:var(--text)}
 .ltab.on{color:var(--sky);border-bottom-color:var(--sky)}
 .datebox{margin-left:auto;display:flex;align-items:center;gap:2px;border:1px solid var(--hair);border-radius:10px;padding:2px}
-.datebox .arrow{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;color:var(--faint)}
-.datebox .today{font-size:12.5px;font-weight:600;color:var(--dim);padding:0 14px}
+.datebox .arrow{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;color:var(--dim);transition:background .15s,color .15s}
+.datebox .arrow:hover{background:var(--panel-2);color:var(--text)}
+.datebox .arrow[disabled]{opacity:.3;cursor:default}
+.datebox .today{font-size:12.5px;font-weight:700;color:var(--dim);padding:0 14px;border-radius:8px;transition:background .15s,color .15s}
+.datebox .today:hover{background:var(--panel-2);color:var(--text)}
+.viewingpast .datebox .today{color:var(--sky)}
 .ltop-sep{height:1px;background:var(--hair);margin-top:-1px}
 .pills{display:flex;gap:7px;padding:12px 14px}
 .pill{
@@ -471,6 +475,8 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 <body>
 
 <script src="vendor/lottie_light.min.js" defer></script>
+<script src="vendor/gsap.min.js" defer></script>
+<script src="vendor/Flip.min.js" defer></script>
 
 <header>
   <div class="hwrap">
@@ -531,10 +537,12 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       <button class="ltab" data-lt="favs">Favoritos</button>
       <button class="ltab" data-lt="hist">Historial</button>
       <div class="datebox">
-        <span class="arrow" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></span>
-        <span class="today" id="dlabel">Hoy</span>
-        <span class="arrow" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></span>
+        <button class="arrow" id="dPrev" aria-label="Día anterior"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="today" id="dlabel" aria-label="Elegir fecha">Hoy</button>
+        <button class="arrow" id="dNext" aria-label="Día siguiente"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
+        <input type="date" id="dPick" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" min="2026-07-01" aria-hidden="true">
       </div>
+      <button class="pill" id="dToday" hidden style="margin-left:6px">Hoy</button>
     </div>
     <div class="ltop-sep"></div>
     <div class="pills" id="lgchips" hidden></div>
@@ -770,8 +778,18 @@ function renderList(){
   $('nFinal').textContent = n.final || '';
   $('lgcount').innerHTML = n.live ? `<b>${n.live}</b>/${n.all}` : (n.all || '');
   const rows = visibleRows();
+  const canFlip = window.gsap && window.Flip && !reduceMotion && !firstLoad
+    && sport === 'mlb' && !document.getElementById('listpane').classList.contains('boot');
+  const flipState = canFlip ? window.Flip.getState('#list .mrow') : null;
   $('list').innerHTML = rows.length ? rows.map((ev, i) => rowHtml(ev, i)).join('')
     : `<div class="lempty">${listTab === 'favs' ? 'Marca partidos con ⭐ para verlos aquí.' : 'Sin partidos en este filtro.'}</div>`;
+  if (flipState){
+    window.Flip.from(flipState, {
+      duration: 0.5, ease: 'power2.inOut',
+      onEnter: (els) => window.gsap.fromTo(els, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.35 }),
+      onLeave: (els) => window.gsap.to(els, { opacity: 0, duration: 0.2 }),
+    });
+  }
 }
 
 /* ── detalle ─────────────────────────────────────────────── */
@@ -1079,6 +1097,16 @@ function renderDetail(){
     </div>`;
   // índices para el stagger del contenido
   dc.querySelectorAll('.dbody > *').forEach((el, i) => el.style.setProperty('--j', i));
+  // GSAP: count-up de la probabilidad grande (solo al entrar, no en refrescos)
+  if (window.gsap && !reduceMotion && dc.classList.contains('enter')){
+    dc.querySelectorAll('.bigprob').forEach((el2) => {
+      const v = parseFloat(el2.textContent);
+      if (!Number.isFinite(v)) return;
+      const o = { n: Math.max(0, v - 18) };
+      window.gsap.to(o, { n: v, duration: 0.8, ease: 'power3.out', delay: 0.15,
+        onUpdate: () => { el2.textContent = o.n.toFixed(1) + '%'; } });
+    });
+  }
   dc.querySelectorAll('.fg').forEach((el, i) => el.style.setProperty('--k', i % 5));
   dc.querySelectorAll('.dots i.on').forEach((el, i) => el.style.setProperty('--k', i % 3));
 }
@@ -1146,7 +1174,7 @@ document.addEventListener('click', e => {
     if (listTab === 'hist') loadHistory();
     renderList(); renderDetail(); return;
   }
-  const f = e.target.closest('.pill');
+  const f = e.target.closest('.pill[data-f]');
   if (f){
     filter = f.dataset.f;
     document.querySelectorAll('.pill').forEach(c => {
@@ -1154,6 +1182,27 @@ document.addEventListener('click', e => {
       c.classList.toggle('neutral', c === f && f.dataset.f !== 'live');
     });
     renderList(); return;
+  }
+  if (e.target.closest('#dPrev')){
+    if (sport !== 'mlb') return;
+    const base = viewDate || todayDate;
+    if (base && base > '2026-07-01') loadDay(shiftDate(base, -1));
+    return;
+  }
+  if (e.target.closest('#dNext')){
+    if (sport !== 'mlb' || !viewDate) return;
+    const nx = shiftDate(viewDate, 1);
+    (todayDate && nx >= todayDate) ? backToToday() : loadDay(nx);
+    return;
+  }
+  if (e.target.closest('#dToday')){ backToToday(); return; }
+  if (e.target.closest('#dlabel')){
+    if (sport !== 'mlb') return;
+    const pk = $('dPick');
+    pk.max = todayDate || '';
+    pk.value = viewDate || todayDate || '';
+    pk.showPicker ? pk.showPicker() : pk.click();
+    return;
   }
   if (e.target.closest('#lghead')){ $('lgroup').classList.toggle('closed'); return; }
   if (e.target.closest('#dback')){
@@ -1165,6 +1214,11 @@ document.addEventListener('click', e => {
   if (t) select(t.dataset.id, true);
 });
 $('q').addEventListener('input', e => { query = e.target.value.trim(); renderList(); });
+$('dPick').addEventListener('change', e => {
+  const v = e.target.value;
+  if (!v) return;
+  (todayDate && v >= todayDate) ? backToToday() : loadDay(v);
+});
 
 /* ── datos ───────────────────────────────────────────────── */
 function renderAll(){
@@ -1173,10 +1227,13 @@ function renderAll(){
 }
 
 async function loadToday(){
+  if (viewDate) return; // estamos viendo un día archivado
   try{
     const r = await fetch(API + '/v1/mlb/today');
     const d = await r.json();
     events = d.events || [];
+    todayDate = d.date || todayDate;
+    $('dNext').disabled = true;
     $('cntMLB').hidden = !events.length;
     $('cntMLB').textContent = events.length;
     if (d.date) $('dlabel').textContent = d.date;
@@ -1329,6 +1386,43 @@ function setSport(sp2){
   else { renderOtherList(); renderOtherDetail(); loadOther(); }
 }
 
+/* ── navegación por fechas (historial navegable) ─────────────────────── */
+let viewDate = null;           // null = HOY (KV mlb:today); 'YYYY-MM-DD' = día archivado
+let todayDate = null;          // fecha del doc de hoy (la fija loadToday)
+const dayFmt = (d) => d; // ya viene YYYY-MM-DD
+function shiftDate(d, delta){
+  const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + delta);
+  return t.toISOString().slice(0, 10);
+}
+async function loadDay(date){
+  viewDate = date;
+  document.body.classList.add('viewingpast');
+  $('dlabel').textContent = date;
+  $('dToday').hidden = false;
+  $('dNext').disabled = todayDate && date >= todayDate;
+  $('ticker').hidden = true;
+  $('list').innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  try{
+    const r = await fetch(`${API}/v1/mlb/day/${date}`);
+    const d = await r.json();
+    events = d.events || [];
+    liveByKey = new Map(); // sin live en días pasados
+    selectedId = events.length ? events[0].event_id : null;
+    renderList(); renderDetail(); renderSide();
+  }catch(err){
+    $('list').innerHTML = '<div class="lempty">No pude cargar esa fecha.</div>';
+  }
+}
+function backToToday(){
+  viewDate = null;
+  document.body.classList.remove('viewingpast');
+  $('dToday').hidden = true;
+  $('dNext').disabled = true;
+  $('dlabel').textContent = todayDate || 'Hoy';
+  firstLoad = true; lastLiveSig = '[]';
+  loadToday(); loadLive();
+}
+
 let histData = null, histLoading = false;
 async function loadHistory(){
   if (histData || histLoading) return;
@@ -1344,6 +1438,7 @@ async function loadHistory(){
 
 let lastLiveSig = '[]';
 async function loadLive(){
+  if (viewDate) return; // sin live en días pasados
   try{
     const r = await fetch(API + '/v1/mlb/live');
     const d = await r.json();

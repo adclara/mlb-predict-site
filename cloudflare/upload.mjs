@@ -32,6 +32,7 @@ const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN || null;
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
+const backfill = args.includes('--backfill');
 const dateArg = args.find((a) => /^\d{4}-\d{2}-\d{2}$/.test(a));
 
 function latestDate() {
@@ -134,16 +135,44 @@ async function main() {
   // Subir a KV (lo último) y D1 (historial):
   //  - con CLOUDFLARE_API_TOKEN (GitHub Actions): API REST, sin wrangler.
   //  - sin token (Mac de Adrian): wrangler con su OAuth local.
+  const payload = JSON.stringify(normalized);
   if (API_TOKEN) {
-    await restKvPut('mlb:today', JSON.stringify(normalized));
+    await restKvPut('mlb:today', payload);
+    await restKvPut(`mlb:day:${date}`, payload); // archivo navegable por fecha
     const sql = buildSql(rows);
     if (sql) await restD1Exec(sql);
   } else {
     wrangler(['kv', 'key', 'put', 'mlb:today', '--path', todayPath, '--namespace-id', KV_NAMESPACE_ID, '--remote']);
+    wrangler(['kv', 'key', 'put', `mlb:day:${date}`, '--path', todayPath, '--namespace-id', KV_NAMESPACE_ID, '--remote']);
     if (rows.length) wrangler(['d1', 'execute', D1_NAME, '--remote', '--file', sqlPath]);
   }
 
   console.log('\n🎉 Subido a Cloudflare. Prueba el Worker: /v1/mlb/today');
 }
 
-await main();
+async function backfillDays() {
+  const gdir = join(DATA, 'games');
+  const days = readdirSync(gdir).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).map((f) => f.slice(0, 10)).sort();
+  console.log(`Backfill de ${days.length} días → mlb:day:*`);
+  for (const d of days) {
+    const gamesDoc = readJson(join(gdir, `${d}.json`));
+    if (!gamesDoc) continue;
+    const dailyDoc = readJson(join(DATA, `${d}.json`));
+    const indexDoc = readJson(join(DATA, 'index.json'));
+    const prev = days.filter((x) => x < d).slice(-10).map((x) => readJson(join(gdir, `${x}.json`))).filter(Boolean);
+    const liveDoc = readJson(join(DATA, 'live', `${d}.json`));
+    const doc = normalizeDay(d, gamesDoc, dailyDoc, indexDoc, prev, liveDoc);
+    const body = JSON.stringify(doc);
+    if (API_TOKEN) await restKvPut(`mlb:day:${d}`, body);
+    else {
+      const tmp = join(DIST, `mlb-day-${d}.json`);
+      mkdirSync(DIST, { recursive: true });
+      writeFileSync(tmp, body);
+      wrangler(['kv', 'key', 'put', `mlb:day:${d}`, '--path', tmp, '--namespace-id', KV_NAMESPACE_ID, '--remote']);
+    }
+  }
+  console.log('🎉 Backfill de días completo.');
+}
+
+if (backfill) await backfillDays();
+else await main();
