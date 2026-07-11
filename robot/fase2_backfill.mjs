@@ -18,10 +18,10 @@ const manifest = { generated_at: new Date().toISOString(), soccer: {}, tennis: {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function get(url, asText = true, tries = 3) {
+async function get(url, asText = true, tries = 3, extraHeaders = {}) {
   for (let i = 0; i < tries; i++) {
     try {
-      const res = await fetch(url, { headers: { 'user-agent': 'aa-sports-backfill/1.0' } });
+      const res = await fetch(url, { headers: { 'user-agent': 'aa-sports-backfill/1.0', ...extraHeaders } });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return asText ? await res.text() : await res.json();
@@ -108,6 +108,14 @@ async function pullSoccer() {
   }
 }
 
+// API de GitHub (autenticada con el GITHUB_TOKEN del runner si existe).
+function ghHeaders() {
+  const h = { accept: 'application/vnd.github+json' };
+  if (process.env.GITHUB_TOKEN) h.authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  return h;
+}
+async function ghJson(url) { return get(url, false, 3, ghHeaders()); }
+
 /* ── TENIS ───────────────────────────────────────────────────────────────── */
 const TENNIS_YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
 
@@ -117,14 +125,19 @@ async function pullTennis() {
   mkdirSync(dir, { recursive: true });
   for (const tour of ['atp', 'wta']) {
     const rows = [];
-    for (const y of TENNIS_YEARS) {
-      // el repo puede tener la rama por defecto en master o main: probamos ambas
-      let txt = null;
-      for (const branch of ['master', 'main', 'refs/heads/master']) {
-        txt = await get(`https://raw.githubusercontent.com/JeffSackmann/tennis_${tour}/${branch}/${tour}_matches_${y}.csv`);
-        if (txt) break;
-      }
-      if (!txt) { console.warn(`  ✗ ${tour} ${y}: no encontrado en master/main`); continue; }
+    // Descubrimos la rama y los archivos REALES vía la API de GitHub (los
+    // nombres/ramas del repo pueden cambiar; no adivinamos URLs).
+    const meta = await ghJson(`https://api.github.com/repos/JeffSackmann/tennis_${tour}`);
+    if (!meta) { console.warn(`  ✗ repo tennis_${tour}: no accesible vía API`); continue; }
+    const branch = meta.default_branch || 'master';
+    const listing = await ghJson(`https://api.github.com/repos/JeffSackmann/tennis_${tour}/contents?ref=${branch}`);
+    const wanted = new Set(TENNIS_YEARS.map(String));
+    const files = (Array.isArray(listing) ? listing : [])
+      .filter((f) => { const m = f.name && f.name.match(new RegExp(`^${tour}_matches_(\\d{4})\\.csv$`)); return m && wanted.has(m[1]); });
+    console.log(`  ${tour}: rama ${branch}, ${files.length} archivos de años pedidos`);
+    for (const f of files) {
+      const txt = await get(f.download_url || `https://raw.githubusercontent.com/JeffSackmann/tennis_${tour}/${branch}/${f.name}`);
+      if (!txt) { console.warn(`  ✗ ${f.name}: descarga falló`); continue; }
       for (const r of parseCsv(txt)) {
         if (!r.winner_name || !r.loser_name) continue;
         rows.push({

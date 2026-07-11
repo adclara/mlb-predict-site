@@ -26,6 +26,8 @@ jobs:
           git config user.name "adrian-robot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
       - name: Backfill multideporte
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: DATA_DIR="$PWD/data" node robot/fase2_backfill.mjs all
       - name: Commit data/fase2
         run: |
