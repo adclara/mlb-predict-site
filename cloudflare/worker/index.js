@@ -47,6 +47,8 @@ export default {
       }
 
       if (path === '/v1/mlb/today') return await today(env, origin);
+      const dm = path.match(/^\/v1\/mlb\/day\/(\d{4}-\d{2}-\d{2})$/);
+      if (dm) return await day(dm[1], env, origin);
       if (path === '/v1/mlb/live') return await live(ctx, origin);
       if (path === '/v1/mlb/history') return await history(url, env, origin);
       if (path === '/v1/nba/live') return await otherLive(ctx, origin, 'nba', `${ESPN_BASE}/basketball/nba/scoreboard`);
@@ -77,6 +79,38 @@ async function today(env, origin) {
     status: 200,
     headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=60' },
   });
+}
+
+// Día archivado: KV mlb:day:<fecha> (doc completo); fallback D1 (versión ligera).
+async function day(date, env, origin) {
+  const raw = await env.AA_LATEST.get('mlb:day:' + date);
+  if (raw) {
+    return new Response(raw, {
+      status: 200,
+      headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=300' },
+    });
+  }
+  if (env.DB) {
+    const { results } = await env.DB.prepare(
+      'SELECT event_id, home, away, pick, prob, confidence, status, result FROM predictions WHERE sport = ? AND date = ? ORDER BY prob DESC',
+    ).bind('mlb', date).all();
+    if (results && results.length) {
+      const events = results.map((r) => ({
+        sport: 'mlb', league: 'MLB', event_id: String(r.event_id),
+        matchup: `${r.away} @ ${r.home}`, start: date, status: r.status || 'final',
+        home: { code: r.home, name: r.home }, away: { code: r.away, name: r.away },
+        prediction: {
+          pick: r.pick, prob: r.prob,
+          prob_pct: r.prob != null ? Math.round(r.prob * 1000) / 10 : null,
+          confidence: r.confidence, engine_version: null,
+        },
+        metrics: [], summary_es: null, snapshot: null, risk: null, odds: null,
+        badges: [], result: r.result || null, final: null, live: null, updated_at: null,
+      }));
+      return json({ sport: 'mlb', league: 'MLB', date, source: 'd1', record: null, events }, 200, origin, 300);
+    }
+  }
+  return json({ sport: 'mlb', date, events: [], note: 'sin datos para esa fecha' }, 200, origin, 120);
 }
 
 async function event(id, env, origin) {
