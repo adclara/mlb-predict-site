@@ -59,6 +59,21 @@ export default {
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league', leagues: Object.keys(SOCCER_LEAGUES) }, 400, origin);
         return await otherLive(ctx, origin, 'soccer:' + lg, `${ESPN_BASE}/soccer/${lg}/scoreboard`);
       }
+
+      // últimos resultados (fuera de horario / off-season) + tablas de posiciones
+      if (path === '/v1/nba/recent') return await recentGames(ctx, origin, 'nba', `${ESPN_BASE}/basketball/nba/scoreboard`);
+      if (path === '/v1/tennis/recent') return await tennisRecent(ctx, origin);
+      if (path === '/v1/soccer/recent') {
+        const lg = url.searchParams.get('league') || 'fifa.world';
+        if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
+        return await recentGames(ctx, origin, 'soccer:' + lg, `${ESPN_BASE}/soccer/${lg}/scoreboard`);
+      }
+      if (path === '/v1/nba/standings') return await standings(ctx, origin, 'nba', 'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings');
+      if (path === '/v1/soccer/standings') {
+        const lg = url.searchParams.get('league') || 'fifa.world';
+        if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
+        return await standings(ctx, origin, 'soccer:' + lg, `https://site.api.espn.com/apis/v2/sports/soccer/${lg}/standings`);
+      }
       if (path === '/v1/soccer/leagues') return json({ leagues: SOCCER_LEAGUES }, 200, origin, 3600);
       if (path === '/v1/injuries') return await injuries(env, origin);
 
@@ -251,6 +266,138 @@ async function otherLive(ctx, origin, cacheTag, upstream) {
 
 // Tenis: los "events" de ESPN son torneos con partidos adentro; cada
 // competitor es un atleta (no team). Aplanamos a lista de partidos.
+// Últimos resultados: rango de fechas hacia atrás en un solo request de ESPN
+// (?dates=YYYYMMDD-YYYYMMDD). Cubre off-season: aunque el último juego sea de
+// hace semanas (p. ej. las Finales de junio), aparece.
+const ymd = (d) => d.toISOString().slice(0, 10).replaceAll('-', '');
+
+async function recentGames(ctx, origin, cacheTag, upstream) {
+  const cache = caches.default;
+  const cacheKey = new Request('https://aa-sports.cache/' + cacheTag + '/recent', { method: 'GET' });
+  const cached = await cache.match(cacheKey);
+  if (cached) return withCors(await cached.text(), origin, 300);
+
+  const to = new Date(), from = new Date(Date.now() - 60 * 86400000);
+  const res = await fetch(`${upstream}?dates=${ymd(from)}-${ymd(to)}&limit=350`, { headers: { 'user-agent': 'aa-sports/1.0' } });
+  if (!res.ok) return json({ games: [], note: 'recent upstream ' + res.status }, 200, origin, 60);
+  const data = await res.json();
+
+  const games = (data.events || []).map((ev) => {
+    const c = (ev.competitions && ev.competitions[0]) || {};
+    const comp = c.competitors || [];
+    const home = comp.find((x) => x.homeAway === 'home') || comp[0] || {};
+    const away = comp.find((x) => x.homeAway === 'away') || comp[1] || {};
+    const st = (c.status && c.status.type) || (ev.status && ev.status.type) || {};
+    const side = (t) => ({
+      code: (t.team && (t.team.abbreviation || t.team.shortDisplayName)) || null,
+      name: (t.team && (t.team.shortDisplayName || t.team.displayName)) || null,
+      logo: (t.team && (t.team.logo || (t.team.logos && t.team.logos[0] && t.team.logos[0].href))) || null,
+      score: numOrNull(t.score),
+      rec: (Array.isArray(t.records) && t.records[0] && t.records[0].summary) || null,
+      winner: !!t.winner,
+    });
+    return {
+      espn_id: ev.id, start: ev.date || null, date: ev.date ? String(ev.date).slice(0, 10) : null,
+      league: (ev.league && ev.league.abbreviation) || null,
+      status: mapEspnStatus(st.name), status_detail: st.shortDetail || st.detail || null,
+      home: side(home), away: side(away),
+    };
+  }).filter((g) => g.status === 'final')
+    .sort((a, b) => String(b.start).localeCompare(String(a.start)))
+    .slice(0, 30);
+
+  const payload = JSON.stringify({ updated_at: new Date().toISOString(), games });
+  const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=1800' } });
+  ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
+  return withCors(payload, origin, 300);
+}
+
+// Tenis: finales de los últimos días (ATP+WTA aplanados como en tennisLive)
+async function tennisRecent(ctx, origin) {
+  const cache = caches.default;
+  const cacheKey = new Request('https://aa-sports.cache/tennis/recent', { method: 'GET' });
+  const cached = await cache.match(cacheKey);
+  if (cached) return withCors(await cached.text(), origin, 300);
+
+  const to = new Date(), from = new Date(Date.now() - 7 * 86400000);
+  const out = [];
+  for (const tour of ['atp', 'wta']) {
+    try {
+      const res = await fetch(`${ESPN_BASE}/tennis/${tour}/scoreboard?dates=${ymd(from)}-${ymd(to)}&limit=150`, { headers: { 'user-agent': 'aa-sports/1.0' } });
+      if (!res.ok) continue;
+      const data = await res.json();
+      for (const ev of (data.events || [])) {
+        const comps = ev.competitions || (ev.groupings || []).flatMap((g) => g.competitions || []);
+        for (const c of comps) {
+          const players = c.competitors || [];
+          if (players.length < 2) continue;
+          const st = (c.status && c.status.type) || {};
+          if (mapEspnStatus(st.name) !== 'final') continue;
+          const p = (x) => ({
+            code: (x.athlete && (x.athlete.shortName || x.athlete.displayName)) || null,
+            name: (x.athlete && x.athlete.displayName) || null,
+            logo: (x.athlete && x.athlete.flag && x.athlete.flag.href) || null,
+            score: numOrNull(x.score),
+            sets: Array.isArray(x.linescores) ? x.linescores.map((l) => numOrNull(l.value)).filter((v) => v != null) : null,
+            winner: !!x.winner,
+          });
+          out.push({
+            espn_id: c.id || ev.id, start: c.date || ev.date || null,
+            date: String(c.date || ev.date || '').slice(0, 10) || null,
+            league: tour.toUpperCase() + (ev.name ? ' · ' + ev.name : ''),
+            status: 'final', status_detail: st.shortDetail || st.detail || 'Final',
+            home: p(players[0]), away: p(players[1]),
+          });
+        }
+      }
+    } catch (e) { /* un tour caído no tumba el otro */ }
+  }
+  out.sort((a, b) => String(b.start).localeCompare(String(a.start)));
+  const payload = JSON.stringify({ updated_at: new Date().toISOString(), games: out.slice(0, 30) });
+  const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=1800' } });
+  ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
+  return withCors(payload, origin, 300);
+}
+
+// Tabla de posiciones (NBA por conferencia; soccer tabla de liga o grupos).
+// En off-season ESPN devuelve la última temporada — justo lo que queremos.
+async function standings(ctx, origin, cacheTag, upstream) {
+  const cache = caches.default;
+  const cacheKey = new Request('https://aa-sports.cache/' + cacheTag + '/standings', { method: 'GET' });
+  const cached = await cache.match(cacheKey);
+  if (cached) return withCors(await cached.text(), origin, 600);
+
+  const res = await fetch(upstream, { headers: { 'user-agent': 'aa-sports/1.0' } });
+  if (!res.ok) return json({ sections: [], note: 'standings upstream ' + res.status }, 200, origin, 120);
+  const data = await res.json();
+
+  const mapEntries = (entries) => (entries || []).map((e) => {
+    const stat = (n) => { const x = (e.stats || []).find((t) => t.name === n || t.type === n); return x ? (x.displayValue ?? x.value ?? null) : null; };
+    return {
+      code: (e.team && e.team.abbreviation) || null,
+      name: (e.team && (e.team.shortDisplayName || e.team.displayName)) || null,
+      logo: (e.team && e.team.logos && e.team.logos[0] && e.team.logos[0].href) || null,
+      rank: numOrNull(stat('rank')),
+      gp: stat('gamesPlayed'), w: stat('wins'), d: stat('ties'), l: stat('losses'),
+      pct: stat('winPercent'), gb: stat('gamesBehind'),
+      gd: stat('pointDifferential') ?? stat('goalDifferential') ?? stat('pointsDiff'),
+      pts: stat('points'),
+    };
+  });
+  let sections = (data.children || [])
+    .map((ch) => ({ name: ch.name || ch.abbreviation || '', rows: mapEntries(ch.standings && ch.standings.entries) }))
+    .filter((s) => s.rows.length);
+  if (!sections.length && data.standings && data.standings.entries) {
+    sections = [{ name: data.name || '', rows: mapEntries(data.standings.entries) }];
+  }
+  for (const s of sections) s.rows.sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
+
+  const payload = JSON.stringify({ updated_at: new Date().toISOString(), season: (data.season && (data.season.displayName || data.season.year)) || null, sections });
+  const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=3600' } });
+  ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
+  return withCors(payload, origin, 600);
+}
+
 async function tennisLive(ctx, origin) {
   const cache = caches.default;
   const cacheKey = new Request('https://aa-sports.cache/tennis/live', { method: 'GET' });
