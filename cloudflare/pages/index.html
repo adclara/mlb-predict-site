@@ -491,22 +491,22 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 
 <nav class="sports" aria-label="Deportes">
   <div class="spwrap">
-    <button class="sp on" aria-current="page">
+    <button class="sp on" data-sport="mlb">
       <span class="cnt" id="cntMLB" hidden></span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M5.5 5.5c2 2.5 2 10.5 0 13M18.5 5.5c-2 2.5-2 10.5 0 13" stroke-linecap="round"/></svg>
       Baseball
     </button>
-    <button class="sp off" disabled>
+    <button class="sp" data-sport="nba">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 2.5 3 15.5 0 18M12 3c-3 2.5-3 15.5 0 18" stroke-linecap="round"/></svg>
-      Basketball <span class="soon">PRONTO</span>
+      NBA <span class="soon">LIVE</span>
     </button>
-    <button class="sp off" disabled>
+    <button class="sp" data-sport="soccer">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="m12 7 4.75 3.45-1.8 5.6h-5.9l-1.8-5.6z"/><path d="M12 3v4M20.5 9.3l-3.75 1.15M17.2 20l-2.25-3.35M9.05 16.65 6.8 20M7.25 10.45 3.5 9.3" stroke-linecap="round"/></svg>
-      Soccer <span class="soon">PRONTO</span>
+      Soccer <span class="soon">LIVE</span>
     </button>
-    <button class="sp off" disabled>
+    <button class="sp" data-sport="tennis">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M6 5a12 12 0 0 1 0 14M18 5a12 12 0 0 0 0 14" stroke-linecap="round"/></svg>
-      Tenis <span class="soon">PRONTO</span>
+      Tenis <span class="soon">LIVE</span>
     </button>
   </div>
 </nav>
@@ -526,6 +526,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       </div>
     </div>
     <div class="ltop-sep"></div>
+    <div class="pills" id="lgchips" hidden></div>
     <div class="pills" id="pills">
       <button class="pill on neutral" data-f="all">Todos<span class="n" id="nAll"></span></button>
       <button class="pill" data-f="live">En vivo<span class="n" id="nLive"></span></button>
@@ -571,11 +572,17 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
         <div class="recnums num" id="recNums"></div>
       </div>
     </div>
-    <div class="widget">
+    <div class="widget" id="wTrain" hidden>
+      <h3>🧪 Modelo AA en entrenamiento</h3>
+      <p class="legal">Ya te mostramos los marcadores en vivo de este deporte. Las <b>predicciones AA</b>
+      llegarán cuando el modelo pase nuestra validación con datos históricos (walk-forward, intervalos
+      de confianza). No publicamos números que no estén medidos.</p>
+    </div>
+    <div class="widget wmlb">
       <h3>💎 Gemas de hoy</h3>
       <div id="wGems" class="wempty">—</div>
     </div>
-    <div class="widget">
+    <div class="widget wmlb">
       <h3>🔒 Fijos del día</h3>
       <div id="wLocks" class="wempty">—</div>
     </div>
@@ -741,6 +748,7 @@ function renderHistList(){
 }
 
 function renderList(){
+  if (sport !== 'mlb'){ renderOtherList(); return; }
   if (listTab === 'hist'){ renderHistList(); return; }
   const n = counts();
   $('nAll').textContent = n.all || '';
@@ -809,6 +817,7 @@ function renderHistDash(){
 }
 
 function renderDetail(){
+  if (sport !== 'mlb'){ renderOtherDetail(); return; }
   if (listTab === 'hist'){ renderHistDash(); return; }
   const ev = events.find(e => e.event_id === selectedId);
   if (!ev){ $('dcard').innerHTML = '<div class="dempty">Elige un partido para ver el análisis completo del algoritmo AA.</div>'; return; }
@@ -1091,6 +1100,18 @@ function select(id, openMobile){
   }
 }
 document.addEventListener('click', e => {
+  const sp3 = e.target.closest('.sp[data-sport]');
+  if (sp3){ if (sp3.dataset.sport !== sport) setSport(sp3.dataset.sport); return; }
+  const lg2 = e.target.closest('[data-lg]');
+  if (lg2){ soccerLeague = lg2.dataset.lg; otherGames = []; renderLeagueChips();
+    document.querySelector('.lghead .sub').textContent = SOCCER_LEAGUES[soccerLeague] || '';
+    renderOtherList(); loadOther(); return; }
+  const orow = e.target.closest('[data-oid]');
+  if (orow){
+    otherSel = orow.dataset.oid; renderOtherDetail();
+    if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; }
+    return;
+  }
   const star = e.target.closest('[data-star]');
   if (star){
     e.stopPropagation();
@@ -1131,7 +1152,10 @@ document.addEventListener('click', e => {
 $('q').addEventListener('input', e => { query = e.target.value.trim(); renderList(); });
 
 /* ── datos ───────────────────────────────────────────────── */
-function renderAll(){ renderTicker(); renderList(); renderDetail(); renderSide(); }
+function renderAll(){
+  if (sport !== 'mlb'){ renderOtherList(); renderOtherDetail(); return; }
+  renderTicker(); renderList(); renderDetail(); renderSide();
+}
 
 async function loadToday(){
   try{
@@ -1163,6 +1187,132 @@ async function loadToday(){
     $('list').innerHTML = '<div class="lempty">No pude cargar las predicciones. Reintentando…</div>';
   }
 }
+/* ── multideporte (marcadores en vivo; predicciones cuando el modelo valide) ── */
+let sport = 'mlb';
+let soccerLeague = 'fifa.world';
+const SOCCER_LEAGUES = { 'fifa.world': 'Mundial', 'uefa.champions': 'Champions', 'eng.1': 'Premier', 'esp.1': 'LaLiga', 'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1', 'usa.1': 'MLS', 'mex.1': 'Liga MX' };
+const SPORT_LABEL = { nba: 'NBA', soccer: 'Soccer', tennis: 'Tenis' };
+let otherGames = [], otherSel = null, otherLoading = false;
+
+async function loadOther(){
+  if (sport === 'mlb') return;
+  otherLoading = true;
+  try{
+    const q = sport === 'soccer' ? `?league=${encodeURIComponent(soccerLeague)}` : '';
+    const r = await fetch(`${API}/v1/${sport}/live${q}`);
+    const d = await r.json();
+    otherGames = d.games || [];
+  }catch(err){ otherGames = []; }
+  otherLoading = false;
+  if (sport !== 'mlb') renderAll();
+}
+
+function oLogo(side){
+  const ini = (side.code || '?').slice(0, 3);
+  if (side.logo) return `<img src="${esc(side.logo)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;tfall&quot;>${esc(ini)}</span>'">`;
+  return `<span class="tfall">${esc(ini)}</span>`;
+}
+function oName(side){ return side.name || side.code || '—'; }
+
+function renderOtherList(){
+  const n = { all: otherGames.length, live: 0, pre: 0, final: 0 };
+  for (const g of otherGames) n[g.status] = (n[g.status] || 0) + 1;
+  $('nAll').textContent = n.all || '';
+  $('nLive').textContent = n.live || '';
+  $('nPre').textContent = n.pre || '';
+  $('nFinal').textContent = n.final || '';
+  $('lgcount').innerHTML = n.live ? `<b>${n.live}</b>/${n.all}` : (n.all || '');
+  let rows = otherGames;
+  if (filter !== 'all') rows = rows.filter(g => g.status === filter);
+  if (query){
+    const q2 = query.toLowerCase();
+    rows = rows.filter(g => oName(g.home).toLowerCase().includes(q2) || oName(g.away).toLowerCase().includes(q2));
+  }
+  const order = { live: 0, pre: 1, final: 2 };
+  rows = [...rows].sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3));
+  $('list').innerHTML = otherLoading && !rows.length
+    ? '<div class="skel"></div><div class="skel"></div><div class="skel"></div>'
+    : rows.length ? rows.map((g, i) => {
+      const scored = g.home.score != null && g.status !== 'pre';
+      const t = g.status === 'live' ? `<span class="lv">${esc((g.status_detail || 'LIVE').slice(0, 12))}</span>`
+        : g.status === 'final' ? 'Final'
+        : (g.start ? new Date(g.start).toLocaleTimeString('es', {hour: '2-digit', minute: '2-digit'}) : 'Hoy');
+      const setsA = sport === 'tennis' && g.away.sets ? ` <span class="stdet num">(${g.away.sets.join('-')})</span>` : '';
+      const setsH = sport === 'tennis' && g.home.sets ? ` <span class="stdet num">(${g.home.sets.join('-')})</span>` : '';
+      return `<button class="mrow" data-oid="${esc(g.espn_id)}" style="--i:${i}">
+        <span class="mtime num">${t}</span>
+        <span class="mteams">
+          <span class="mt ${g.away.winner ? 'win' : ''}">${oLogo(g.away)}<span class="nm">${esc(oName(g.away))}</span>${setsA}</span>
+          <span class="mt ${g.home.winner ? 'win' : ''}">${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}</span>${setsH}</span>
+        </span>
+        <span class="mscore num">
+          <span class="ms ${g.status === 'live' ? 'lv' : ''}">${scored ? g.away.score : ''}</span>
+          <span class="ms ${g.status === 'live' ? 'lv' : ''}">${scored ? g.home.score : ''}</span>
+        </span>
+        <span></span>
+      </button>`;
+    }).join('') : `<div class="lempty">Sin eventos ahora mismo en ${esc(SPORT_LABEL[sport] || sport)}.</div>`;
+}
+
+function renderOtherDetail(){
+  const g = otherGames.find(x => x.espn_id === otherSel) || otherGames.find(x => x.status === 'live') || otherGames[0];
+  const dc = $('dcard');
+  const animKey = 'other|' + sport + '|' + (g ? g.espn_id : 'none');
+  dc.classList.toggle('enter', animKey !== lastAnimKey);
+  lastAnimKey = animKey;
+  if (!g){ dc.innerHTML = `<div class="dempty">${otherLoading ? 'Cargando…' : 'Sin eventos por ahora. Vuelve más tarde.'}</div>`; return; }
+  const scored = g.home.score != null && g.status !== 'pre';
+  dc.innerHTML = `
+    <div class="dtop"><span class="crumb">${esc(SPORT_LABEL[sport] || sport)}${g.league ? `<span class="sep">›</span><b>${esc(g.league)}</b>` : ''}</span></div>
+    <div class="dhero">
+      <span class="dwhen num">${g.start ? esc(new Date(g.start).toLocaleString('es', {dateStyle: 'medium', timeStyle: 'short'})) : ''}</span>
+      <div class="dgrid">
+        <div class="dteam">${oLogo(g.away)}<span class="nm">${esc(oName(g.away))}</span>${g.away.rec ? `<span class="rc num">${esc(g.away.rec)}</span>` : ''}${sport === 'tennis' && g.away.sets ? `<span class="rc num">sets: ${g.away.sets.join('-')}</span>` : ''}</div>
+        <div class="dmid">${scored
+          ? `<div class="dscore num">${g.away.score}<span class="sep">–</span>${g.home.score}</div>
+             <div class="dst ${g.status === 'final' ? 'done' : ''}">${g.status === 'live' ? '<span class="ldot"></span> ' : ''}${esc(g.status_detail || '')}</div>`
+          : `<div class="dscore num" style="font-size:22px;color:var(--dim);font-weight:700">${g.start ? esc(new Date(g.start).toLocaleTimeString('es', {hour: '2-digit', minute: '2-digit'})) : 'HOY'}</div><div class="dsub">${esc(g.status_detail || 'Por jugar')}</div>`}</div>
+        <div class="dteam">${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}</span>${g.home.rec ? `<span class="rc num">${esc(g.home.rec)}</span>` : ''}${sport === 'tennis' && g.home.sets ? `<span class="rc num">sets: ${g.home.sets.join('-')}</span>` : ''}</div>
+      </div>
+    </div>
+    <div class="dbody">
+      <div class="verdict"><span class="ic">🧪</span>
+        <p><span class="vt">Modelo AA en entrenamiento</span>Marcadores en vivo activos. Las predicciones de
+        ${esc(SPORT_LABEL[sport] || sport)} se publicarán cuando el modelo pase la validación con datos históricos
+        — el mismo estándar de honestidad de MLB. Sin números inventados.</p>
+      </div>
+      <p class="dnote">Datos en vivo vía AA Sports API. Actualización automática cada 45s.</p>
+    </div>`;
+}
+
+function renderLeagueChips(){
+  const el = $('lgchips');
+  if (sport !== 'soccer'){ el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = Object.entries(SOCCER_LEAGUES).map(([k, v]) =>
+    `<button class="pill ${k === soccerLeague ? 'on neutral' : ''}" data-lg="${esc(k)}">${esc(v)}</button>`).join('');
+}
+
+function setSport(sp2){
+  sport = sp2;
+  listTab = 'all'; filter = 'all'; otherSel = null; otherGames = [];
+  document.querySelectorAll('.sp[data-sport]').forEach(b => b.classList.toggle('on', b.dataset.sport === sport));
+  document.querySelectorAll('.ltab').forEach(c => c.classList.toggle('on', c.dataset.lt === 'all'));
+  document.querySelectorAll('.pill[data-f]').forEach(c => { c.classList.toggle('on', c.dataset.f === 'all'); c.classList.toggle('neutral', c.dataset.f === 'all'); });
+  $('pills').style.display = '';
+  document.querySelector('.ltop').style.display = sport === 'mlb' ? '' : 'none';
+  document.querySelectorAll('.wmlb').forEach(w => w.style.display = sport === 'mlb' ? '' : 'none');
+  $('wRecord').style.display = sport === 'mlb' ? '' : 'none';
+  $('wTrain').hidden = sport === 'mlb';
+  $('ticker').hidden = sport !== 'mlb' || !$('tk').children.length;
+  document.querySelector('.lghead .ttl').textContent = sport === 'mlb' ? 'MLB' : (SPORT_LABEL[sport] || sport);
+  document.querySelector('.lghead .sub').textContent = sport === 'mlb' ? 'USA · Temporada 2026'
+    : sport === 'soccer' ? (SOCCER_LEAGUES[soccerLeague] || '') : 'En vivo · vía ESPN';
+  renderLeagueChips();
+  if (sport === 'mlb') renderAll();
+  else { renderOtherList(); renderOtherDetail(); loadOther(); }
+}
+
 let histData = null, histLoading = false;
 async function loadHistory(){
   if (histData || histLoading) return;
@@ -1192,8 +1342,8 @@ async function loadLive(){
   }catch(err){ /* best-effort */ }
 }
 loadToday(); loadLive();
-setInterval(loadToday, 5 * 60 * 1000);
-setInterval(loadLive, 45 * 1000);
+setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
+setInterval(() => { sport === 'mlb' ? loadLive() : loadOther(); }, 45 * 1000);
 </script>
 </body>
 </html>
