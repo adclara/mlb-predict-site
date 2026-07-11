@@ -62,6 +62,12 @@ jobs:
           else
             node cloudflare/upload.mjs
           fi
+      # Bajas: lesionados/suspendidos por equipo (MLB StatsAPI + NBA ESPN) → KV.
+      - name: Bajas (lesionados y suspendidos)
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/injuries.mjs || echo "bajas: falló sin romper la corrida"
       - name: Live odds watcher (logros en vivo)
         run: DATA_DIR="$PWD/data" node robot/live_odds.mjs
       - name: Commit any remaining live data

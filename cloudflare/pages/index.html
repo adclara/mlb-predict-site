@@ -315,6 +315,15 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 /* forma reciente */
 .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .formside{background:var(--inner);border:1px solid var(--hair);border-radius:12px;padding:11px 13px}
+/* bajas por lesión/suspensión */
+.injrow{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;padding:5px 0;border-bottom:1px solid var(--hair);font-size:11.5px;min-width:0}
+.injrow:last-of-type{border-bottom:0}
+.injrow .ipos{flex:0 0 26px;color:var(--faint);font-size:9.5px;font-weight:800;letter-spacing:.04em}
+.injrow .inm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.injrow .ist{color:var(--live);font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+.injrow .isl{flex-basis:100%;padding-left:34px;color:var(--dim);font-size:10.5px}
+.injrow.crit .inm{color:var(--amber)}
+.injrow .istar{color:var(--amber)}
 .formside .fh{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;margin-bottom:9px}
 .formside .fh img,.formside .fh .tfall{width:20px;height:20px}
 .formside .fh .stk{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--faint)}
@@ -661,8 +670,28 @@ function logoImg(code){
   return `<img src="${url}" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;tfall&quot;>${esc(canon(code))}</span>'">`;
 }
 
+// filas de bajas de un equipo (★ = jugador clave con buenas estadísticas)
+function injuryRows(sportKey, code){
+  const list = (injuriesDoc && injuriesDoc[sportKey] && injuriesDoc[sportKey][canon(code)]) || [];
+  if (!list.length) return '<div class="wempty" style="padding:4px 0">Sin bajas reportadas.</div>';
+  return list.slice(0, 7).map(p => `<div class="injrow ${p.crucial ? 'crit' : ''}">
+    <span class="ipos">${esc(p.pos || '—')}</span>
+    <span class="inm">${p.crucial ? '<span class="istar">★</span> ' : ''}${esc(p.name)}</span>
+    <span class="ist">${esc(p.status || p.detail || '')}</span>
+    ${p.stat_line ? `<span class="isl num">${esc(p.stat_line)}</span>` : ''}
+  </div>`).join('') + (list.length > 7 ? `<div class="wempty" style="padding:4px 0">+${list.length - 7} más en la lista.</div>` : '');
+}
+
 /* ── estado ──────────────────────────────────────────────── */
 let events = [], liveByKey = new Map();
+let injuriesDoc = null; // bajas por equipo (mlb/nba), del robot cada hora
+async function loadInjuries(){
+  try{
+    const r = await fetch(API + '/v1/injuries');
+    const d = await r.json();
+    if (d && (d.mlb || d.nba)){ injuriesDoc = d; renderDetail(); }
+  }catch(err){ /* sin bajas no pasa nada: la sección simplemente no aparece */ }
+}
 let selectedId = null, filter = 'all', listTab = 'all', query = '', dtab = 'analisis';
 let firstLoad = true, lastAnimKey = null;
 let favs = new Set(JSON.parse(localStorage.getItem('aa_favs') || '[]'));
@@ -1015,9 +1044,17 @@ function renderDetail(){
   if (ctx.rest_home != null && ctx.rest_away != null) ctxCards.push({lb: 'Descanso (L / V)', vl: `${ctx.rest_home}d / ${ctx.rest_away}d`, cls: ''});
   if (ctx.weather && (ctx.weather.condition || ctx.weather.temp_f != null)) ctxCards.push({lb: 'Clima', vl: `${ctx.weather.temp_f != null ? ctx.weather.temp_f + '°F ' : ''}${ctx.weather.condition || ''}`, cls: ''});
   if (ctx.weather && ctx.weather.wind) ctxCards.push({lb: 'Viento', vl: ctx.weather.wind, cls: ''});
+  const bajas = injuriesDoc ? `
+    <div class="secttl">Bajas por lesión o suspensión</div>
+    <div class="formgrid">
+      <div class="formside"><div class="fh">${logoImg(ev.away.code)}${esc(tNick(ev.away.code))}</div>${injuryRows('mlb', ev.away.code)}</div>
+      <div class="formside"><div class="fh">${logoImg(ev.home.code)}${esc(tNick(ev.home.code))}</div>${injuryRows('mlb', ev.home.code)}</div>
+    </div>
+    <p style="font-size:10px;color:var(--faint);padding-top:6px">★ = jugador clave (buenas estadísticas esta temporada). Informativo: el modelo AA no se altera con esto sin re-validación.</p>` : '';
   const equipos = `
     ${snap.form ? `<div class="secttl">Forma reciente (últimos ${Math.max(snap.form.home?.length || 0, snap.form.away?.length || 0) || 5})</div>
     <div class="formgrid">${formSide('away', ev.away.code)}${formSide('home', ev.home.code)}</div>` : ''}
+    ${bajas}
     ${duel}
     ${snap.pitchers ? `<div class="secttl">Abridores probables</div>
     <div class="spgrid">${sp('away', ev.away.code)}${sp('home', ev.home.code)}</div>` : ''}
@@ -1349,6 +1386,12 @@ function renderOtherDetail(){
       </div>
     </div>
     <div class="dbody">
+      ${sport === 'nba' && injuriesDoc && injuriesDoc.nba && (g.away.code || g.home.code) ? `
+      <div class="secttl">Bajas reportadas</div>
+      <div class="formgrid">
+        <div class="formside"><div class="fh">${oLogo(g.away)}${esc(oName(g.away))}</div>${injuryRows('nba', g.away.code)}</div>
+        <div class="formside"><div class="fh">${oLogo(g.home)}${esc(oName(g.home))}</div>${injuryRows('nba', g.home.code)}</div>
+      </div>` : ''}
       <div class="verdict"><span class="ic">🧪</span>
         <p><span class="vt">Modelo AA en entrenamiento</span>Marcadores en vivo activos. Las predicciones de
         ${esc(SPORT_LABEL[sport] || sport)} se publicarán cuando el modelo pase la validación con datos históricos
@@ -1506,9 +1549,10 @@ function favCelebrate(){
   });
 }
 
-loadToday(); loadLive();
+loadToday(); loadLive(); loadInjuries();
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
 setInterval(() => { sport === 'mlb' ? loadLive() : loadOther(); }, 45 * 1000);
+setInterval(loadInjuries, 30 * 60 * 1000);
 </script>
 </body>
 </html>

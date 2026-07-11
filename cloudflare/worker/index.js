@@ -41,7 +41,7 @@ export default {
     try {
       if (path === '/' || path === '/v1' || path === '/v1/health') {
         return json(
-          { service: 'aa-sports-api', ok: true, sports: ['mlb'], routes: ['/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live'] },
+          { service: 'aa-sports-api', ok: true, sports: ['mlb'], routes: ['/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live', '/v1/injuries'] },
           200, origin,
         );
       }
@@ -59,6 +59,7 @@ export default {
         return await otherLive(ctx, origin, 'soccer:' + lg, `${ESPN_BASE}/soccer/${lg}/scoreboard`);
       }
       if (path === '/v1/soccer/leagues') return json({ leagues: SOCCER_LEAGUES }, 200, origin, 3600);
+      if (path === '/v1/injuries') return await injuries(env, origin);
 
       const ev = path.match(/^\/v1\/mlb\/event\/([^/]+)$/);
       if (ev) return await event(decodeURIComponent(ev[1]), env, origin);
@@ -78,6 +79,16 @@ async function today(env, origin) {
   return new Response(raw, {
     status: 200,
     headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=60' },
+  });
+}
+
+// Bajas (lesionados/suspendidos) por equipo — las publica robot/injuries.mjs cada hora.
+async function injuries(env, origin) {
+  const raw = await env.AA_LATEST.get('injuries:latest');
+  if (!raw) return json({ mlb: {}, nba: {}, note: 'sin reporte de bajas aún' }, 200, origin, 120);
+  return new Response(raw, {
+    status: 200,
+    headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=600' },
   });
 }
 
