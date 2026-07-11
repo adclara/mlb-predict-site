@@ -194,6 +194,7 @@ async function pullTennis() {
     // Trae jugadores, sets y torneo; superficie/odds se enriquecen después.
     if (!rows.length) {
       console.log(`  ${tour}: tennis-data inaccesible → ESPN por fecha (2022→hoy)`);
+      const seen = new Set(); // el scoreboard devuelve TODO el torneo cada día → dedupe por id de partido
       const dates = [...dateRange('2022-01-01', '2026-07-10')];
       for (let i = 0; i < dates.length; i += 10) {
         const batch = dates.slice(i, i + 10);
@@ -208,11 +209,16 @@ async function pullTennis() {
               if (ps.length < 2) continue;
               const st = (c.status && c.status.type) || {};
               if (!String(st.name || '').toUpperCase().includes('FINAL')) continue;
+              const cid = String(c.id || '');
+              if (!cid || seen.has(cid)) continue;
               const wSide = ps.find((x) => x.winner), lSide = ps.find((x) => !x.winner);
               if (!wSide || !lSide) continue;
               const nm = (x) => (x.athlete && (x.athlete.displayName || x.athlete.shortName)) || null;
               const sets2 = (x) => Array.isArray(x.linescores) ? x.linescores.map((l2) => num(l2.value)).filter((v) => v != null) : null;
               if (!nm(wSide) || !nm(lSide)) continue;
+              const ws = sets2(wSide);
+              if (!ws || ws.length < 2) continue; // partidos completos (descarta retiros de 1 set)
+              seen.add(cid);
               out.push({
                 date: day, tourney: ev.name || ev.shortName || null,
                 round: (c.round && (c.round.displayName || c.round.name)) || null,
