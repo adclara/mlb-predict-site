@@ -314,6 +314,17 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 
 /* forma reciente */
 .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* últimos resultados + tabla de posiciones (otros deportes) */
+.recentnote{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);padding:9px 14px 5px;border-bottom:1px solid var(--hair)}
+.sthead{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:12px 0 6px}
+.sttbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.sttbl th{font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);text-align:right;padding:5px 6px;border-bottom:1px solid var(--hair)}
+.sttbl td{text-align:right;padding:5px 6px;border-bottom:1px solid var(--hair);color:var(--dim)}
+.sttbl .tl{text-align:left}
+.sttbl td.tm{color:var(--text);font-weight:700;display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
+.sttbl td.tm img{width:16px;height:16px;object-fit:contain;flex:none}
+.sttbl tr:nth-child(-n+1) td{color:var(--text)}
+.sttbl td b{color:var(--sky)}
 /* cuenta opcional (Fase 5) */
 #authbox{position:relative;display:flex;align-items:center}
 .authbtn{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.03em;color:var(--text);background:var(--inner);border:1px solid var(--hair-2);border-radius:999px;padding:7px 14px;cursor:pointer;transition:border-color .15s,background .15s}
@@ -577,7 +588,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     </div>
     <div class="lggroup" id="lgroup">
       <button class="lghead" id="lghead">
-        <img src="https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png" alt="" onerror="this.style.display='none'">
+        <img id="lgicon" src="https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png" alt="" onerror="this.style.visibility='hidden'">
         <span><span class="ttl">MLB</span><br><span class="sub">USA · Temporada 2026</span></span>
         <span class="lc num" id="lgcount"></span>
         <span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 15l6-6 6 6"/></svg></span>
@@ -1391,18 +1402,70 @@ let soccerLeague = 'fifa.world';
 const SOCCER_LEAGUES = { 'fifa.world': 'Mundial', 'uefa.champions': 'Champions', 'eng.1': 'Premier', 'esp.1': 'LaLiga', 'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1', 'usa.1': 'MLS', 'mex.1': 'Liga MX' };
 const SPORT_LABEL = { nba: 'NBA', soccer: 'Soccer', tennis: 'Tenis' };
 let otherGames = [], otherSel = null, otherLoading = false;
+let otherRecent = false;                 // true = mostrando últimos resultados (no hay juegos hoy)
+const standingsCache = new Map();        // 'nba' | 'soccer:<liga>' → doc de posiciones
 
 async function loadOther(){
   if (sport === 'mlb') return;
   otherLoading = true;
+  const mySport = sport, myLeague = soccerLeague;
   try{
     const q = sport === 'soccer' ? `?league=${encodeURIComponent(soccerLeague)}` : '';
     const r = await fetch(`${API}/v1/${sport}/live${q}`);
     const d = await r.json();
     otherGames = d.games || [];
-  }catch(err){ otherGames = []; }
+    otherRecent = false;
+    // sin juegos hoy → últimos resultados (aunque sean de la temporada pasada)
+    if (!otherGames.length){
+      const r2 = await fetch(`${API}/v1/${mySport}/recent${q}`);
+      const d2 = await r2.json();
+      if (mySport === sport && myLeague === soccerLeague){
+        otherGames = (d2.games || []).map(g => ({ ...g, _recent: true }));
+        otherRecent = otherGames.length > 0;
+      }
+    }
+  }catch(err){ otherGames = []; otherRecent = false; }
   otherLoading = false;
+  loadStandings();
   if (sport !== 'mlb') renderAll();
+}
+
+async function loadStandings(){
+  if (sport !== 'nba' && sport !== 'soccer') return;
+  const key = sport === 'soccer' ? `soccer:${soccerLeague}` : 'nba';
+  if (standingsCache.has(key)) return;
+  try{
+    const q = sport === 'soccer' ? `?league=${encodeURIComponent(soccerLeague)}` : '';
+    const r = await fetch(`${API}/v1/${sport}/standings${q}`);
+    const d = await r.json();
+    if (d && d.sections && d.sections.length){
+      standingsCache.set(key, d);
+      if (sport !== 'mlb') renderOtherDetail();
+    }
+  }catch(err){ /* sin tabla no pasa nada */ }
+}
+
+const shortDate = (s) => { try{ return new Date(s + 'T12:00Z').toLocaleDateString('es', { day: 'numeric', month: 'short' }); }catch(e){ return s; } };
+
+function standingsHtml(){
+  const key = sport === 'soccer' ? `soccer:${soccerLeague}` : sport;
+  const doc = standingsCache.get(key);
+  if (!doc) return '';
+  const isSoccer = sport === 'soccer';
+  const secs = doc.sections.slice(0, isSoccer ? 8 : 2);
+  return `<div class="secttl">Tabla de posiciones${doc.season ? ` · ${esc(String(doc.season))}` : ''}</div>` +
+    secs.map(sec => `
+      <div class="sthead">${esc(sec.name || '')}</div>
+      <table class="sttbl num">
+        <thead><tr><th class="tl">#</th><th class="tl">Equipo</th>${isSoccer ? '<th>PJ</th><th>G</th><th>E</th><th>P</th><th>DG</th><th>Pts</th>' : '<th>G</th><th>P</th><th>%</th><th>Dif</th>'}</tr></thead>
+        <tbody>${sec.rows.slice(0, isSoccer ? 20 : 15).map((r, i) => `<tr>
+          <td class="tl">${r.rank ?? i + 1}</td>
+          <td class="tl tm">${r.logo ? `<img src="${esc(r.logo)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}${esc(r.name || r.code || '')}</td>
+          ${isSoccer
+            ? `<td>${r.gp ?? '—'}</td><td>${r.w ?? '—'}</td><td>${r.d ?? '—'}</td><td>${r.l ?? '—'}</td><td>${r.gd ?? '—'}</td><td><b>${r.pts ?? '—'}</b></td>`
+            : `<td>${r.w ?? '—'}</td><td>${r.l ?? '—'}</td><td>${r.pct ?? '—'}</td><td>${r.gb ?? '—'}</td>`}
+        </tr>`).join('')}</tbody>
+      </table>`).join('');
 }
 
 function oLogo(side){
@@ -1428,12 +1491,14 @@ function renderOtherList(){
   }
   const order = { live: 0, pre: 1, final: 2 };
   rows = [...rows].sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3));
+  const banner = otherRecent && rows.length
+    ? '<div class="recentnote">Sin juegos hoy · mostrando los últimos resultados</div>' : '';
   $('list').innerHTML = otherLoading && !rows.length
     ? '<div class="skel"></div><div class="skel"></div><div class="skel"></div>'
-    : rows.length ? rows.map((g, i) => {
+    : rows.length ? banner + rows.map((g, i) => {
       const scored = g.home.score != null && g.status !== 'pre';
       const t = g.status === 'live' ? `<span class="lv">${esc((g.status_detail || 'LIVE').slice(0, 12))}</span>`
-        : g.status === 'final' ? 'Final'
+        : g.status === 'final' ? (g._recent && g.date ? esc(shortDate(g.date)) : 'Final')
         : (g.start ? new Date(g.start).toLocaleTimeString('es', {hour: '2-digit', minute: '2-digit'}) : 'Hoy');
       const setsA = sport === 'tennis' && g.away.sets ? ` <span class="stdet num">(${g.away.sets.join('-')})</span>` : '';
       const setsH = sport === 'tennis' && g.home.sets ? ` <span class="stdet num">(${g.home.sets.join('-')})</span>` : '';
@@ -1458,7 +1523,13 @@ function renderOtherDetail(){
   const animKey = 'other|' + sport + '|' + (g ? g.espn_id : 'none');
   dc.classList.toggle('enter', animKey !== lastAnimKey);
   lastAnimKey = animKey;
-  if (!g){ dc.innerHTML = `<div class="dempty">${otherLoading ? 'Cargando…' : 'Sin eventos por ahora. Vuelve más tarde.'}</div>`; return; }
+  if (!g){
+    const st0 = standingsHtml();
+    dc.innerHTML = st0
+      ? `<div class="dtop"><span class="crumb">${esc(SPORT_LABEL[sport] || sport)}</span></div><div class="dbody">${st0}</div>`
+      : `<div class="dempty">${otherLoading ? 'Cargando…' : 'Sin eventos por ahora. Vuelve más tarde.'}</div>`;
+    return;
+  }
   const scored = g.home.score != null && g.status !== 'pre';
   dc.innerHTML = `
     <div class="dtop"><span class="crumb">${esc(SPORT_LABEL[sport] || sport)}${g.league ? `<span class="sep">›</span><b>${esc(g.league)}</b>` : ''}</span></div>
@@ -1485,6 +1556,7 @@ function renderOtherDetail(){
         ${esc(SPORT_LABEL[sport] || sport)} se publicarán cuando el modelo pase la validación con datos históricos
         — el mismo estándar de honestidad de MLB. Sin números inventados.</p>
       </div>
+      ${standingsHtml()}
       <p class="dnote">Datos en vivo vía AA Sports API. Actualización automática cada 45s.</p>
     </div>`;
 }
@@ -1512,6 +1584,15 @@ function setSport(sp2){
   document.querySelector('.lghead .ttl').textContent = sport === 'mlb' ? 'MLB' : (SPORT_LABEL[sport] || sport);
   document.querySelector('.lghead .sub').textContent = sport === 'mlb' ? 'USA · Temporada 2026'
     : sport === 'soccer' ? (SOCCER_LEAGUES[soccerLeague] || '') : 'En vivo · vía ESPN';
+  // el logo de la liga acompaña al deporte (antes se quedaba pegado el de MLB)
+  const lgi = $('lgicon');
+  const LEAGUE_ICON = { mlb: 'mlb', nba: 'nba' };
+  if (LEAGUE_ICON[sport]){
+    lgi.style.display = ''; lgi.style.visibility = '';
+    lgi.src = `https://a.espncdn.com/i/teamlogos/leagues/500/${LEAGUE_ICON[sport]}.png`;
+  } else {
+    lgi.style.display = 'none'; // soccer/tenis: sin logo de liga estable en el CDN
+  }
   renderLeagueChips();
   if (sport === 'mlb') renderAll();
   else { renderOtherList(); renderOtherDetail(); loadOther(); }
