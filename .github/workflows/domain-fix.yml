@@ -1,0 +1,26 @@
+# AA Sports — conectar aasport.net a la app (Pages) vía API. Se dispara con
+# poke (.github/poke-domain) o a mano; idempotente y con verificación real.
+name: domain-fix
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['.github/poke-domain']
+permissions:
+  contents: read
+concurrency:
+  group: domain-fix
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Conectar dominio
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/domain_fix.mjs
