@@ -161,6 +161,35 @@ async function pullTennis() {
       }
       await sleep(200);
     }
+    // Fallback: tennis-data.co.uk (mismo editor que football-data; trae ODDS
+    // por partido — B365/Pinnacle/promedio — ideal para validar vs mercado).
+    if (!rows.length) {
+      console.log(`  ${tour}: Sackmann no disponible → tennis-data.co.uk`);
+      for (const y of TENNIS_YEARS) {
+        const path = tour === 'atp' ? `${y}/${y}.csv` : `${y}w/${y}.csv`;
+        let txt = await get(`http://www.tennis-data.co.uk/${path}`);
+        if (!txt) txt = await get(`https://www.tennis-data.co.uk/${path}`);
+        if (!txt) { console.warn(`  ✗ tennis-data ${tour} ${y}: no disponible`); continue; }
+        let n0 = rows.length;
+        for (const r of parseCsv(txt)) {
+          if (!r.Winner || !r.Loser) continue;
+          rows.push({
+            date: r.Date || null, tourney: r.Tournament || null,
+            surface: r.Surface || null, court: r.Court || null,
+            level: r.Series || r.Tier || null, round: r.Round || null,
+            best_of: num(r['Best of']),
+            w: r.Winner, w_rank: num(r.WRank), w_sets: num(r.Wsets),
+            l: r.Loser, l_rank: num(r.LRank), l_sets: num(r.Lsets),
+            // mercado: B365 y promedio de casas sobre el ganador/perdedor
+            odds_w: num(r.B365W) ?? num(r.PSW), odds_l: num(r.B365L) ?? num(r.PSL),
+            avg_w: num(r.AvgW), avg_l: num(r.AvgL),
+            max_w: num(r.MaxW), max_l: num(r.MaxL),
+          });
+        }
+        console.log(`  ${tour} ${y}: +${rows.length - n0}`);
+        await sleep(200);
+      }
+    }
     writeFileSync(join(dir, `${tour}.json`), JSON.stringify({ tour, matches: rows }));
     manifest.tennis[tour] = rows.length;
     console.log(`  ${tour.toUpperCase()}: ${rows.length} partidos`);
