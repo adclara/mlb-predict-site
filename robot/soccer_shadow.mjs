@@ -114,13 +114,18 @@ async function main() {
     for (const d of dates) {
       const data = await espn(`${lg}/scoreboard?dates=${d.replaceAll('-', '')}`);
       if (!data || !Array.isArray(data.events)) continue;
+      let nEv = 0, nPre = 0, nOdds = 0;
       for (const ev of data.events) {
+        nEv++;
         const c = (ev.competitions && ev.competitions[0]) || {};
         const st = (c.status && c.status.type) || {};
         if (String(st.state || '').toLowerCase() !== 'pre') continue; // solo por jugar
+        nPre++;
         const o = Array.isArray(c.odds) && c.odds[0] ? c.odds[0] : null;
+        if (o && nOdds === 0) console.log(`  [debug ${lg}] odds[0] keys: ${Object.keys(o).join(',')}`);
         const pr = probsFromOdds(o);
         if (!pr) continue;
+        nOdds++;
         const home = (c.competitors || []).find((x) => x.homeAway === 'home') || {};
         const away = (c.competitors || []).find((x) => x.homeAway === 'away') || {};
         const hc = home.team && (home.team.abbreviation || home.team.shortDisplayName);
@@ -137,6 +142,7 @@ async function main() {
         );
         logged++;
       }
+      if (nEv) console.log(`  ${lg} ${d}: ${nEv} eventos, ${nPre} pre, ${nOdds} con odds`);
       await sleep(150);
     }
   }
