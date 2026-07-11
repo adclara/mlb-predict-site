@@ -128,13 +128,13 @@ async function pullTennis() {
     // Descubrimos la rama y los archivos REALES vía la API de GitHub (los
     // nombres/ramas del repo pueden cambiar; no adivinamos URLs).
     const meta = await ghJson(`https://api.github.com/repos/JeffSackmann/tennis_${tour}`);
-    if (!meta) { console.warn(`  ✗ repo tennis_${tour}: no accesible vía API`); continue; }
-    const branch = meta.default_branch || 'master';
-    const listing = await ghJson(`https://api.github.com/repos/JeffSackmann/tennis_${tour}/contents?ref=${branch}`);
+    if (!meta) console.warn(`  ✗ repo tennis_${tour}: no accesible vía API (paso al fallback)`);
+    const branch = (meta && meta.default_branch) || 'master';
+    const listing = meta ? await ghJson(`https://api.github.com/repos/JeffSackmann/tennis_${tour}/contents?ref=${branch}`) : null;
     const wanted = new Set(TENNIS_YEARS.map(String));
     const files = (Array.isArray(listing) ? listing : [])
       .filter((f) => { const m = f.name && f.name.match(new RegExp(`^${tour}_matches_(\\d{4})\\.csv$`)); return m && wanted.has(m[1]); });
-    console.log(`  ${tour}: rama ${branch}, ${files.length} archivos de años pedidos`);
+    if (meta) console.log(`  ${tour}: rama ${branch}, ${files.length} archivos de años pedidos`);
     for (const f of files) {
       const txt = await get(f.download_url || `https://raw.githubusercontent.com/JeffSackmann/tennis_${tour}/${branch}/${f.name}`);
       if (!txt) { console.warn(`  ✗ ${f.name}: descarga falló`); continue; }
