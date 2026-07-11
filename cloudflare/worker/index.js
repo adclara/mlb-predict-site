@@ -109,13 +109,23 @@ async function live(ctx, origin) {
     const home = comp.find((x) => x.homeAway === 'home') || {};
     const away = comp.find((x) => x.homeAway === 'away') || {};
     const st = (c.status && c.status.type) || (ev.status && ev.status.type) || {};
+    const sit = c.situation || null;
+    const recOf = (t) => {
+      const r = Array.isArray(t.records) && t.records.find((x) => x.type === 'total' || x.name === 'overall');
+      return (r && r.summary) || (t.records && t.records[0] && t.records[0].summary) || null;
+    };
     return {
       espn_id: ev.id,
+      start: ev.date || null,
       status: mapEspnStatus(st.name),
       status_detail: st.shortDetail || st.detail || null,
-      home: { code: home.team && home.team.abbreviation, score: numOrNull(home.score) },
-      away: { code: away.team && away.team.abbreviation, score: numOrNull(away.score) },
+      home: { code: home.team && home.team.abbreviation, score: numOrNull(home.score), rec: recOf(home) },
+      away: { code: away.team && away.team.abbreviation, score: numOrNull(away.score), rec: recOf(away) },
       period: (c.status && c.status.period) || null,
+      situation: sit ? {
+        balls: numOrNull(sit.balls), strikes: numOrNull(sit.strikes), outs: numOrNull(sit.outs),
+        onFirst: !!sit.onFirst, onSecond: !!sit.onSecond, onThird: !!sit.onThird,
+      } : null,
     };
   });
 
