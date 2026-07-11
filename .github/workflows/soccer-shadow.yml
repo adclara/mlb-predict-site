@@ -1,0 +1,28 @@
+# AA Sports — Soccer en modo sombra: registra picks en D1 (privados) y los
+# gradea con los marcadores finales. Corre cada 3 horas; también con poke.
+name: soccer-shadow
+on:
+  schedule:
+    - cron: '23 */3 * * *'
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['.github/poke-soccer']
+permissions:
+  contents: read
+concurrency:
+  group: soccer-shadow
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Modo sombra soccer
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/soccer_shadow.mjs
