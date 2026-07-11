@@ -305,6 +305,8 @@ function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
     risk: g.risk ? { level: g.risk.level || null, score: g.risk.score ?? null } : null,
     odds: oddsFor(g),
     badges,
+    result: g.ml_result || null, // win|loss del pick cuando el juego ya se calificó
+    final: g.final || null,      // marcador final "away-home" si terminó
     live: null, // los marcadores en vivo los inyecta el Worker (/v1/mlb/live) a 30-60s.
     updated_at: g.date || null,
   };
@@ -400,7 +402,7 @@ export function toD1Rows(normalized) {
     prob: e.prediction.prob,
     confidence: e.prediction.confidence,
     engine_version: e.prediction.engine_version,
-    result: null,
+    result: e.result || null,
     updated_at: normalized.updated_at,
   }));
 }

@@ -197,6 +197,11 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
   border:1px solid rgba(25,222,159,.4);border-radius:4px;padding:1px 4px;flex-shrink:0;
 }
 .tfall{border-radius:50%;background:var(--panel-2);border:1px solid var(--hair-2);display:inline-flex;align-items:center;justify-content:center;font-size:7.5px;font-weight:800;color:var(--dim)}
+.mt .aapick.won{background:rgba(25,222,159,.16)}
+.mt .aapick.lost{color:var(--red);border-color:rgba(255,70,85,.4);background:rgba(255,70,85,.08)}
+.reschip{font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:6px;margin-left:8px;vertical-align:1px}
+.reschip.won{background:rgba(25,222,159,.14);color:var(--volt);border:1px solid rgba(25,222,159,.35)}
+.reschip.lost{background:rgba(255,70,85,.12);color:var(--red);border:1px solid rgba(255,70,85,.3)}
 .mscore{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
 .ms{font-size:13px;font-weight:700;color:var(--dim);line-height:20px}
 .ms.win{color:var(--text)} .ms.lv{color:var(--red)}
@@ -663,7 +668,8 @@ function rowHtml(ev, idx){
 
   const pickA = p.pick && canon(p.pick) === canon(ev.away.code);
   const pickH = p.pick && canon(p.pick) === canon(ev.home.code);
-  const chip = pct => `<span class="aapick num">AA ${pct}%</span>`;
+  const res = ev.result === 'win' ? 'won' : ev.result === 'loss' ? 'lost' : '';
+  const chip = pct => `<span class="aapick num ${res}">AA ${pct}%${res === 'won' ? ' ✓' : res === 'lost' ? ' ✗' : ''}</span>`;
 
   const tags = (ev.badges || []).map(b => `<span class="tag ${esc(b)}">${b === 'gema' ? '💎 Gema' : esc(b)}</span>`).join('');
 
@@ -934,7 +940,7 @@ function renderDetail(){
       <span style="margin-left:auto"></span>
     </div>
     <div class="dhero">
-      <span class="dwhen num">${esc(ev.start || '')}${ev.updated_at ? '' : ''}</span>
+      <span class="dwhen num">${esc(ev.start || '')}${ev.result ? `<span class="reschip ${ev.result === 'win' ? 'won' : 'lost'}">${ev.result === 'win' ? '✓ pick acertado' : '✗ pick fallado'}</span>` : ''}</span>
       <div class="dgrid">
         <div class="dteam">${logoImg(ev.away.code)}<span class="nm">${esc(CITY[canon(ev.away.code)] || '')}<br>${esc(tNick(ev.away.code))}</span>${recA}</div>
         <div class="dmid">${mid}</div>

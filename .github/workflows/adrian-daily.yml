@@ -50,6 +50,18 @@ jobs:
               git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push && break || sleep 5
             done
           fi
+      # AA Sports: publica los resultados del día a Cloudflare (KV + D1) vía API
+      # REST. Si el secret no existe todavía, se salta sin romper la corrida.
+      - name: Publicar a Cloudflare (AA Sports)
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN no configurado; salto la publicación."
+          else
+            node cloudflare/upload.mjs
+          fi
       - name: Live odds watcher (logros en vivo)
         run: DATA_DIR="$PWD/data" node robot/live_odds.mjs
       - name: Commit any remaining live data
@@ -63,4 +75,16 @@ jobs:
             for i in 1 2 3; do
               git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push && break || sleep 5
             done
+          fi
+      # Segunda publicación: tras el watcher, para que las curvas WP y los
+      # marcadores recién calificados lleguen frescos a AA Sports.
+      - name: Re-publicar a Cloudflare (post-watcher)
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN no configurado; salto la publicación."
+          else
+            node cloudflare/upload.mjs
           fi

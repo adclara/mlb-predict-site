@@ -24,8 +24,11 @@ const ROOT = join(HERE, '..');
 const DATA = join(ROOT, 'data', 'history');
 const DIST = join(HERE, 'dist');
 
+const ACCOUNT_ID = 'f02574feb7272a1da2818e35e0ff4342';
 const KV_NAMESPACE_ID = '683aa2f8846643bf8a6a8b606e5bf0b7';
 const D1_NAME = 'aa-sports';
+const D1_DATABASE_ID = 'ed0969d8-050a-4987-ab98-b047c30f76c9';
+const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN || null;
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
@@ -62,7 +65,36 @@ function wrangler(argv) {
   if (r.status !== 0) throw new Error(`wrangler exited with code ${r.status}`);
 }
 
-function main() {
+// ── Modo API REST (GitHub Actions: sin wrangler, solo CLOUDFLARE_API_TOKEN) ──
+const CF = 'https://api.cloudflare.com/client/v4';
+
+async function cfFetch(path, opts) {
+  const res = await fetch(CF + path, {
+    ...opts,
+    headers: { Authorization: `Bearer ${API_TOKEN}`, ...(opts.headers || {}) },
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.success === false) {
+    throw new Error(`Cloudflare API ${path} -> ${res.status}: ${JSON.stringify(body.errors || body).slice(0, 400)}`);
+  }
+  return body;
+}
+
+async function restKvPut(key, value) {
+  await cfFetch(`/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${KV_NAMESPACE_ID}/values/${encodeURIComponent(key)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: value,
+  });
+  console.log(`✅ KV: ${key} actualizado (REST).`);
+}
+
+async function restD1Exec(sql) {
+  await cfFetch(`/accounts/${ACCOUNT_ID}/d1/database/${D1_DATABASE_ID}/query`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sql }),
+  });
+  console.log('✅ D1: historial actualizado (REST).');
+}
+
+async function main() {
   const date = dateArg || latestDate();
   if (!date) { console.error('No encontré datos en data/history/games/. ¿Corriste el robot?'); process.exit(1); }
 
@@ -99,11 +131,19 @@ function main() {
 
   if (dryRun) { console.log('\n(--dry-run) No se subió nada.'); return; }
 
-  // Subir a KV (lo último) y D1 (historial).
-  wrangler(['kv', 'key', 'put', 'mlb:today', '--path', todayPath, '--namespace-id', KV_NAMESPACE_ID, '--remote']);
-  if (rows.length) wrangler(['d1', 'execute', D1_NAME, '--remote', '--file', sqlPath]);
+  // Subir a KV (lo último) y D1 (historial):
+  //  - con CLOUDFLARE_API_TOKEN (GitHub Actions): API REST, sin wrangler.
+  //  - sin token (Mac de Adrian): wrangler con su OAuth local.
+  if (API_TOKEN) {
+    await restKvPut('mlb:today', JSON.stringify(normalized));
+    const sql = buildSql(rows);
+    if (sql) await restD1Exec(sql);
+  } else {
+    wrangler(['kv', 'key', 'put', 'mlb:today', '--path', todayPath, '--namespace-id', KV_NAMESPACE_ID, '--remote']);
+    if (rows.length) wrangler(['d1', 'execute', D1_NAME, '--remote', '--file', sqlPath]);
+  }
 
   console.log('\n🎉 Subido a Cloudflare. Prueba el Worker: /v1/mlb/today');
 }
 
-main();
+await main();
