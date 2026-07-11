@@ -67,7 +67,8 @@ jobs:
         if: always()
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
-        run: node robot/injuries.mjs || echo "bajas: falló sin romper la corrida"
+        run: |
+          node robot/injuries.mjs || echo "bajas fallaron; la corrida sigue"
       - name: Live odds watcher (logros en vivo)
         run: DATA_DIR="$PWD/data" node robot/live_odds.mjs
       - name: Commit any remaining live data
