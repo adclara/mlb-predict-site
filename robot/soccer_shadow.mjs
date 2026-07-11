@@ -122,7 +122,7 @@ async function main() {
         if (String(st.state || '').toLowerCase() !== 'pre') continue; // solo por jugar
         nPre++;
         const o = Array.isArray(c.odds) && c.odds[0] ? c.odds[0] : null;
-        if (o && nOdds === 0) console.log(`  [debug ${lg}] odds[0] keys: ${Object.keys(o).join(',')}`);
+        if (o && nOdds === 0 && nPre === 1) console.log(`  [debug ${lg}] odds[0]: ${JSON.stringify(o).slice(0, 700)}`);
         const pr = probsFromOdds(o);
         if (!pr) continue;
         nOdds++;
