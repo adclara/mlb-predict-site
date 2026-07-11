@@ -82,7 +82,9 @@ function main() {
     .map((d) => readJson(join(gdir, `${d}.json`)))
     .filter(Boolean);
 
-  const normalized = normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs);
+  const liveDoc = readJson(join(DATA, 'live', `${date}.json`));
+
+  const normalized = normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs, liveDoc);
   const rows = toD1Rows(normalized);
 
   mkdirSync(DIST, { recursive: true });

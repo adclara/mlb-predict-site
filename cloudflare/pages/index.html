@@ -9,13 +9,14 @@
 <style>
 /* ═════════ TOKENS ═════════ */
 :root{
-  --page:#0B0D12;
-  --panel:#151A23; --panel-2:#1B212C; --inner:#0F131B;
-  --hair:rgba(255,255,255,.065); --hair-2:rgba(255,255,255,.12);
-  --text:#F2F4F8; --dim:#9AA4B5; --faint:#5F6B7F;
+  --page:#0A0C11;
+  --panel:rgba(255,255,255,.045); --panel-2:rgba(255,255,255,.085); --inner:rgba(7,9,14,.5);
+  --hair:rgba(255,255,255,.08); --hair-2:rgba(255,255,255,.16);
+  --text:#F2F4F8; --dim:#9AA4B5; --faint:#657185;
   --blaze:#FF4D1C; --volt:#19DE9F; --amber:#FFC53D; --sky:#4DA8FF; --red:#FF4655;
   --grad:linear-gradient(100deg,#FF4D1C,#FFC53D 55%,#19DE9F);
-  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+  --glass:blur(22px) saturate(150%);
+  --shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 1px 2px rgba(0,0,0,.35), 0 14px 34px -16px rgba(0,0,0,.6);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scrollbar-color:#2A3342 var(--page)}
@@ -23,6 +24,16 @@ body{
   background:var(--page); color:var(--text);
   font:13.5px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI","Inter",Roboto,Helvetica,Arial,sans-serif;
   min-height:100vh;
+}
+/* ambiente de color detrás del vidrio (liquid glass) */
+body::before{
+  content:""; position:fixed; inset:-10%; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(42% 34% at 82% 4%,  rgba(255,77,28,.14), transparent 70%),
+    radial-gradient(38% 30% at 8% 12%,  rgba(77,168,255,.11), transparent 70%),
+    radial-gradient(34% 30% at 55% 96%, rgba(25,222,159,.08), transparent 70%),
+    radial-gradient(30% 26% at 30% 55%, rgba(255,197,61,.05), transparent 70%);
+  filter:blur(38px);
 }
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 img{max-width:100%;display:block}
@@ -32,7 +43,12 @@ img{max-width:100%;display:block}
 .lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
 
 /* ═════════ HEADER ═════════ */
-header{position:sticky;top:0;z-index:90;background:rgba(11,13,18,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--hair)}
+header{
+  position:sticky;top:0;z-index:90;
+  background:linear-gradient(180deg,rgba(12,14,20,.78),rgba(12,14,20,.62));
+  backdrop-filter:blur(26px) saturate(160%);-webkit-backdrop-filter:blur(26px) saturate(160%);
+  border-bottom:1px solid var(--hair);box-shadow:inset 0 -1px 0 rgba(255,255,255,.03);
+}
 .hwrap{max-width:1380px;margin:0 auto;padding:11px 20px;display:flex;align-items:center;gap:16px}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);flex-shrink:0}
 .wordmark{font-size:19px;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-.02em;white-space:nowrap}
@@ -90,7 +106,11 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 
 /* ═════════ LAYOUT ═════════ */
 .layout{max-width:1380px;margin:0 auto;padding:16px 20px 80px;display:grid;grid-template-columns:400px minmax(0,1fr) 308px;gap:16px;align-items:start}
-.pane{background:var(--panel);border:1px solid var(--hair);border-radius:16px;box-shadow:var(--shadow)}
+.pane{
+  background:linear-gradient(165deg,rgba(255,255,255,.075),rgba(255,255,255,.028) 40%,rgba(255,255,255,.045));
+  backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
+  border:1px solid var(--hair);border-radius:18px;box-shadow:var(--shadow);
+}
 
 /* ═════════ LEFT: LIST ═════════ */
 .listpane{overflow:hidden}
@@ -286,12 +306,53 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 
 /* contexto */
 .ctxgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+
+/* headshots (caras) */
+.hs{width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;
+  background:var(--inner);border:1px solid var(--hair-2);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+.hsfall{width:44px;height:44px;border-radius:50%;background:var(--inner);border:1px solid var(--hair-2);
+  display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--dim);flex-shrink:0}
+.sprow{display:flex;gap:11px;align-items:center}
+
+/* razones (por qué esta jugada) */
+.whylist{list-style:none;display:flex;flex-direction:column;gap:7px}
+.whylist li{
+  display:flex;gap:9px;font-size:12.5px;line-height:1.55;color:var(--dim);
+  background:var(--inner);border:1px solid var(--hair);border-radius:10px;padding:9px 12px;
+}
+.whylist li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--volt);margin-top:6px;flex-shrink:0}
+
+/* curva de win probability */
+.wpcard{background:var(--inner);border:1px solid var(--hair);border-radius:14px;padding:12px 14px}
+.wphead{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--faint);margin-bottom:6px}
+.wphead b{color:var(--dim);font-weight:700}
+.wpcard svg{display:block;width:100%;height:auto}
+
+/* valor por lado */
+.valtbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.valtbl th{font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);text-align:right;padding:6px 8px;border-bottom:1px solid var(--hair)}
+.valtbl th:first-child{text-align:left}
+.valtbl td{padding:9px 8px;text-align:right;border-bottom:1px solid var(--hair);color:var(--dim)}
+.valtbl td:first-child{text-align:left;font-weight:700;color:var(--text)}
+.valtbl tr:last-child td{border-bottom:0}
+.valtbl tr.best td{background:rgba(25,222,159,.06)}
+.valtbl tr.best td:first-child{box-shadow:inset 3px 0 0 var(--volt);border-radius:6px 0 0 6px}
+.valtbl .pos{color:var(--volt);font-weight:700} .valtbl .neg{color:var(--red)}
+.bookrow{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--hair);font-size:12px}
+.bookrow:last-child{border-bottom:0}
+.bookrow .bp{flex:1;color:var(--dim);font-weight:600}
+.bookrow b{color:var(--text)}
+.warnchip{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);background:rgba(255,197,61,.1);border:1px solid rgba(255,197,61,.3);border-radius:5px;padding:2px 8px}
 .dempty{padding:80px 24px;text-align:center;color:var(--faint);font-size:13px}
 .dnote{font-size:10.5px;color:var(--faint);line-height:1.6;margin-top:16px;padding-top:12px;border-top:1px solid var(--hair)}
 .dback{display:none;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--dim);padding:12px 6px}
 
 /* ═════════ RIGHT: WIDGETS ═════════ */
-.widget{background:var(--panel);border:1px solid var(--hair);border-radius:16px;padding:15px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.widget{
+  background:linear-gradient(165deg,rgba(255,255,255,.075),rgba(255,255,255,.028) 40%,rgba(255,255,255,.045));
+  backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
+  border:1px solid var(--hair);border-radius:18px;padding:15px 16px;margin-bottom:14px;box-shadow:var(--shadow);
+}
 .widget h3{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:12px;display:flex;align-items:center;gap:7px}
 .recwrap{display:flex;align-items:center;gap:16px}
 .ring{position:relative;width:74px;height:74px;flex-shrink:0}
@@ -656,6 +717,42 @@ function renderDetail(){
       <p><span class="vt">Veredicto AA</span>${esc(snap.verdict_es)}</p>
     </div>` : '';
 
+
+  /* curva de win-probability (local) */
+  const wpChart = (() => {
+    const pts = snap.wp;
+    if (!pts || pts.length < 2) return '';
+    const W = 320, H = 84, PAD = 4;
+    const xy = pts.map((p2, i) => [
+      PAD + i * (W - 2 * PAD) / (pts.length - 1),
+      PAD + (1 - Math.max(0, Math.min(1, p2.wp))) * (H - 2 * PAD),
+    ]);
+    const line = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
+    const area = `${line}L${xy[xy.length - 1][0].toFixed(1)},${H - PAD}L${PAD},${H - PAD}Z`;
+    const last = pts[pts.length - 1];
+    return `
+    <div class="secttl">Momento del juego</div>
+    <div class="wpcard">
+      <div class="wphead"><span>Prob. de victoria de <b>${esc(tNick(ev.home.code))}</b> (local)</span>
+        <span class="num"><b>${Math.round(last.wp * 100)}%</b>${last.half && last.inn ? ` · ${esc(last.half)}${last.inn}` : ''}</span></div>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="curva de probabilidad de victoria">
+        <defs><linearGradient id="wpg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(25,222,159,.35)"/><stop offset="1" stop-color="rgba(25,222,159,0)"/>
+        </linearGradient></defs>
+        <line x1="${PAD}" y1="${H / 2}" x2="${W - PAD}" y2="${H / 2}" stroke="rgba(255,255,255,.12)" stroke-dasharray="3 4"/>
+        <path d="${area}" fill="url(#wpg)"/>
+        <path d="${line}" fill="none" stroke="#19DE9F" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${xy[xy.length - 1][0].toFixed(1)}" cy="${xy[xy.length - 1][1].toFixed(1)}" r="3.2" fill="#19DE9F"/>
+        <text x="${PAD}" y="${PAD + 8}" font-size="8" fill="rgba(255,255,255,.35)">gana ${esc(canon(ev.home.code))}</text>
+        <text x="${PAD}" y="${H - PAD - 3}" font-size="8" fill="rgba(255,255,255,.35)">gana ${esc(canon(ev.away.code))}</text>
+      </svg>
+    </div>`;
+  })();
+
+  const whyList = snap.reasons?.length ? `
+    <div class="secttl">Por qué esta jugada</div>
+    <ul class="whylist">${snap.reasons.map(r2 => `<li>${esc(r2)}</li>`).join('')}</ul>` : '';
+
   const analisis = `
     ${verdictBox}
     ${homePct != null ? `
@@ -670,9 +767,10 @@ function renderDetail(){
         ${tags}
       </div>
     </div>` : ''}
+    ${wpChart}
     ${ev.metrics?.length ? `<div class="secttl">Métricas AA</div>
       <div class="mgrid">${ev.metrics.map(m => `<div class="mcard"><div class="lb">${esc(m.label)}</div><div class="vl num ${metricCls(m)}">${esc(m.value)}</div></div>`).join('')}</div>` : ''}
-    ${ev.summary_es ? `<div class="secttl">En base a los datos</div><div class="summary">${esc(ev.summary_es)}</div>` : ''}
+    ${whyList || (ev.summary_es ? `<div class="secttl">En base a los datos</div><div class="summary">${esc(ev.summary_es)}</div>` : '')}
     ${riskPct != null ? `<div class="secttl">Índice de riesgo</div>
       <div class="riskbar"><i style="width:${riskPct}%;background:${riskColor}"></i></div>
       <div class="riskrow num"><span>${riskPct}/100 · ${esc(risk.level || '')}</span><span>menor es mejor</span></div>` : ''}`;
@@ -712,16 +810,26 @@ function renderDetail(){
   const sp = (side, code) => {
     const d2 = snap.pitchers && snap.pitchers[side];
     if (!d2) return '';
+    const ini = (d2.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
+    const face = d2.id
+      ? `<img class="hs" src="https://midfield.mlbstatic.com/v1/people/${d2.id}/spots/120" alt="" loading="lazy"
+           onerror="this.outerHTML='<span class=&quot;hsfall&quot;>${esc(ini)}</span>'">`
+      : `<span class="hsfall">${esc(ini)}</span>`;
     return `<div class="spcard">
-      <div class="who">${esc(d2.name || 'Por confirmar')}</div>
-      <div class="tm2">Abre por ${esc(tNick(code))}</div>
-      <div class="st num">
+      <div class="sprow">${face}
+        <div style="min-width:0">
+          <div class="who">${esc(d2.name || 'Por confirmar')}</div>
+          <div class="tm2" style="margin-bottom:0">Abre por ${esc(tNick(code))}</div>
+        </div>
+      </div>
+      <div class="st num" style="margin-top:9px">
         ${d2.era_recent != null ? `<span>ERA reciente <b>${d2.era_recent}</b></span>` : ''}
         ${d2.starts != null ? `<span><b>${d2.starts}</b> aperturas</span>` : ''}
         ${d2.fatigue ? `<span>Fatiga <b class="fat-${esc(d2.fatigue)}">${esc(d2.fatigue)}</b></span>` : ''}
       </div>
     </div>`;
   };
+
   const ctx = snap.context || {};
   const ctxCards = [];
   if (ctx.elo_diff != null) ctxCards.push({lb: 'Elo (ventaja local)', vl: (ctx.elo_diff > 0 ? '+' : '') + ctx.elo_diff, cls: ctx.elo_diff > 0 ? 'pos' : ctx.elo_diff < 0 ? 'neg' : ''});
@@ -743,17 +851,46 @@ function renderDetail(){
   const o = ev.odds || {};
   const mkt = snap.market;
   const tot = snap.total;
-  const mercado = `
-    <div class="mktrow"><span class="k">Casa</span><b>${esc(o.provider || '—')}</b>${o.n_books ? `<span style="color:var(--faint);font-size:11px">· ${o.n_books} libro${o.n_books > 1 ? 's' : ''}</span>` : ''}</div>
-    <div class="mktrow num"><span class="k">ML ${esc(tNick(ev.away.code))}</span><b>${o.ml_away != null ? (o.ml_away > 0 ? '+' : '') + o.ml_away : '—'}</b></div>
-    <div class="mktrow num"><span class="k">ML ${esc(tNick(ev.home.code))}</span><b>${o.ml_home != null ? (o.ml_home > 0 ? '+' : '') + o.ml_home : '—'}</b></div>
-    <div class="mktrow num"><span class="k">Over/Under</span><b>${o.over_under ?? '—'}</b>${tot && tot.lean ? `<span style="font-size:11px;color:var(--dim)">· AA inclina <b style="color:var(--sky)">${tot.lean === 'over' ? 'Over' : 'Under'}</b>${tot.prob_pct != null ? ` (${tot.prob_pct}%)` : ''}</span>` : ''}</div>
-    ${(ev.metrics || []).filter(m => m.kind === 'edge').map(m => `<div class="mktrow num"><span class="k">${esc(m.label)}</span><b class="${metricCls(m) === 'pos' ? 'vl pos' : 'vl neg'}" style="font-size:13px">${esc(m.value)}</b></div>`).join('')}
-    ${mkt && homePct != null ? `
-    <div class="secttl" style="margin-top:18px">AA vs mercado</div>
+  const val = snap.value;
+  const fmtMl = x => x == null ? '—' : (x > 0 ? '+' : '') + x;
+  const fmtPct = (x, signed) => x == null ? '—' : `${signed && x > 0 ? '+' : ''}${x}%`;
+  const valRow = (side, code) => {
+    const s = val[side];
+    if (!s) return '';
+    const best = val.best_side === side;
+    return `<tr class="${best ? 'best' : ''}">
+      <td>${esc(tNick(code))}${best ? ' <span class="warnchip" style="color:var(--volt);border-color:rgba(25,222,159,.35);background:rgba(25,222,159,.08)">valor AA</span>' : ''}</td>
+      <td class="num">${fmtPct(s.model_pct)}</td>
+      <td class="num">${fmtPct(s.market_pct)}</td>
+      <td class="num">${fmtMl(s.price)}</td>
+      <td class="num ${s.ev_pct > 0 ? 'pos' : s.ev_pct < 0 ? 'neg' : ''}">${fmtPct(s.ev_pct, true)}</td>
+    </tr>`;
+  };
+  const valueTbl = val ? `
+    <div class="secttl">¿Dónde está el valor? (moneyline)</div>
+    <table class="valtbl">
+      <thead><tr><th>Equipo</th><th>AA</th><th>Mercado</th><th>Precio</th><th>EV</th></tr></thead>
+      <tbody>${valRow('away', ev.away.code)}${valRow('home', ev.home.code)}</tbody>
+    </table>
+    <p style="font-size:10.5px;color:var(--faint);padding-top:8px">EV = retorno esperado por unidad apostada según el modelo AA. Positivo = el precio paga más de lo que el riesgo real amerita.</p>` : (mkt && homePct != null ? `
+    <div class="secttl">AA vs mercado</div>
     <div class="mktrow num"><span class="k">${esc(tNick(ev.home.code))}</span><span style="font-size:12px;color:var(--dim)">AA <b>${homePct}%</b> · mercado <b>${mkt.p_home_pct}%</b></span></div>
-    <div class="mktrow num"><span class="k">${esc(tNick(ev.away.code))}</span><span style="font-size:12px;color:var(--dim)">AA <b>${awayPct}%</b> · mercado <b>${mkt.p_away_pct}%</b></span></div>
-    <p style="font-size:10.5px;color:var(--faint);padding-top:8px">Cuando AA ve más probabilidad que el mercado, hay valor teórico en ese lado.</p>` : ''}`;
+    <div class="mktrow num"><span class="k">${esc(tNick(ev.away.code))}</span><span style="font-size:12px;color:var(--dim)">AA <b>${awayPct}%</b> · mercado <b>${mkt.p_away_pct}%</b></span></div>` : '');
+  const booksRows = snap.books?.rows?.length ? `
+    <div class="secttl" style="display:flex;align-items:center;gap:8px">Líneas por casa ${snap.books.disagree ? '<span class="warnchip">las casas discrepan</span>' : ''}</div>
+    ${snap.books.rows.map(b => `<div class="bookrow num">
+      <span class="bp">${esc(b.provider)}</span>
+      <span>${esc(canon(ev.away.code))} <b>${fmtMl(b.ml_away)}</b></span>
+      <span>${esc(canon(ev.home.code))} <b>${fmtMl(b.ml_home)}</b></span>
+      <span>O/U <b>${b.over_under ?? '—'}</b></span>
+    </div>`).join('')}` : '';
+  const mercado = `
+    ${valueTbl}
+    <div class="secttl" style="margin-top:16px">Total de carreras</div>
+    <div class="mktrow num"><span class="k">Línea O/U</span><b>${o.over_under ?? tot?.line ?? '—'}</b>
+      ${tot && tot.aa_total != null ? `<span style="font-size:11.5px;color:var(--dim)">· AA proyecta <b style="color:var(--sky)">${tot.aa_total}</b> carreras</span>` : ''}
+      ${tot && tot.lean ? `<span style="font-size:11.5px;color:var(--dim)">→ inclina <b style="color:var(--sky)">${tot.lean === 'over' ? 'Over' : 'Under'}</b>${tot.prob_pct != null ? ` (${tot.prob_pct}%)` : ''}</span>` : ''}</div>
+    ${booksRows}`;
 
   $('dcard').innerHTML = `
     <div class="dtop">

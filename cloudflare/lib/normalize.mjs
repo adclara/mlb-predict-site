@@ -136,13 +136,14 @@ function edgesFor(g) {
 function pitchersFor(g, pitcherNames) {
   const names = pitcherNames || {};
   const rec = g.pitcher_recent || {};
-  const side = (name, r) => (name || r) ? {
+  const side = (name, id, r) => (name || id || r) ? {
     name: name || null,
+    id: id ?? null, // MLBAM id -> headshot en midfield.mlbstatic.com (CDN oficial, gratis)
     era_recent: r && typeof r.era === 'number' ? Math.round(r.era * 100) / 100 : null,
     starts: r && r.n != null ? r.n : null,
     fatigue: (r && r.fatigue) || null,
   } : null;
-  const home = side(names.hn, rec.home), away = side(names.an, rec.away);
+  const home = side(names.hn, names.h, rec.home), away = side(names.an, names.a, rec.away);
   return (home || away) ? { home, away } : null;
 }
 
@@ -165,7 +166,66 @@ function contextFor(g) {
 function totalFor(g) {
   if (g.line == null || !g.side) return null;
   const p = typeof g.p_over === 'number' ? (g.side === 'over' ? g.p_over : 1 - g.p_over) : null;
-  return { line: g.line, lean: g.side, prob_pct: PCT(p) };
+  return {
+    line: g.line, lean: g.side, prob_pct: PCT(p),
+    aa_total: typeof g.adj_total === 'number' ? Math.round(g.adj_total * 10) / 10 : null,
+  };
+}
+
+// Valor por lado: modelo vs mercado vs precio, con EV — lo que un apostador
+// necesita para ver DÓNDE está el valor. Son salidas del modelo, no internals.
+function valueFor(g) {
+  const v = g.value;
+  if (!v || !v.home || !v.away) return null;
+  const side = (s) => ({
+    model_pct: PCT(s.model), market_pct: PCT(s.market),
+    price: s.price ?? null,
+    edge_pct: PCT(s.edge), ev_pct: PCT(s.ev),
+  });
+  return { home: side(v.home), away: side(v.away), best_side: v.best_side || null };
+}
+
+// Libros individuales (multi-casa) + bandera de discrepancia entre casas.
+function booksFor(g) {
+  const o = g.odds;
+  if (!o || !Array.isArray(o.books) || !o.books.length) return null;
+  return {
+    rows: o.books.slice(0, 8).map((b) => ({
+      provider: b.provider || '?',
+      ml_home: b.ml_home ?? null, ml_away: b.ml_away ?? null,
+      over_under: b.over_under ?? null,
+    })),
+    disagree: typeof o.book_disagreement === 'number' ? o.book_disagreement >= 0.04 : false,
+  };
+}
+
+// Razones completas del brief ("Por qué esta jugada").
+function reasonsFor(g) {
+  const r = g.brief && Array.isArray(g.brief.reasons) ? g.brief.reasons : null;
+  if (!r || !r.length) return null;
+  return r.slice(0, 6).map((x) => (typeof x === 'string' ? x : x.text)).filter(Boolean);
+}
+
+// Curva de win-probability del juego (marcador + WP por media entrada).
+// Fuente: snapshots en vivo del robot; fallback a la curva del mercado (odds).
+function wpFor(g, liveGame) {
+  let pts = null;
+  if (liveGame && Array.isArray(liveGame.snapshots) && liveGame.snapshots.length) {
+    pts = liveGame.snapshots
+      .filter((s) => typeof s.wp === 'number')
+      .map((s) => ({ inn: s.inn ?? null, half: s.half ?? null, wp: Math.round(s.wp * 1000) / 1000, hs: s.hs ?? null, as: s.as ?? null }));
+  } else if (g.odds && Array.isArray(g.odds.wp_curve) && g.odds.wp_curve.length) {
+    pts = g.odds.wp_curve
+      .filter((s) => typeof s.home_wp === 'number')
+      .map((s) => ({ inn: s.inn ?? null, half: s.half ?? null, wp: Math.round(s.home_wp * 1000) / 1000, hs: s.home_score ?? null, as: s.away_score ?? null }));
+  }
+  if (!pts || pts.length < 2) return null;
+  // Máx ~40 puntos para mantener el payload liviano.
+  if (pts.length > 40) {
+    const step = pts.length / 40;
+    pts = Array.from({ length: 40 }, (_, i) => pts[Math.min(pts.length - 1, Math.floor(i * step))]);
+  }
+  return pts;
 }
 
 function marketFor(g) {
@@ -191,7 +251,7 @@ function verdictFor(g, prob) {
   return s;
 }
 
-function snapshotFor(g, formIdx, pitcherNames, prob) {
+function snapshotFor(g, formIdx, pitcherNames, prob, liveGame) {
   const formOf = (team) => {
     const arr = (formIdx && formIdx.get(team)) || [];
     return arr.slice(0, 5);
@@ -203,13 +263,17 @@ function snapshotFor(g, formIdx, pitcherNames, prob) {
     context: contextFor(g),
     total: totalFor(g),
     market: marketFor(g),
+    value: valueFor(g),
+    books: booksFor(g),
+    reasons: reasonsFor(g),
+    wp: wpFor(g, liveGame),
     verdict_es: verdictFor(g, prob),
   };
   return Object.values(snap).some((v) => v != null) ? snap : null;
 }
 
 // Construye un evento normalizado a partir de un juego + su pick del daily (si existe).
-function toEvent(g, pickInfo, formIdx, pitcherNames) {
+function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
   const status = normStatus(g.status);
   const pp = pickProb(g);
   // Prefiere el prob/label del daily (lo que el sitio muestra como pick), si lo hay.
@@ -237,7 +301,7 @@ function toEvent(g, pickInfo, formIdx, pitcherNames) {
     },
     metrics: metricsFor(g),
     summary_es: summarize(g),
-    snapshot: snapshotFor(g, formIdx, pitcherNames, prob),
+    snapshot: snapshotFor(g, formIdx, pitcherNames, prob, liveGame),
     risk: g.risk ? { level: g.risk.level || null, score: g.risk.score ?? null } : null,
     odds: oddsFor(g),
     badges,
@@ -285,14 +349,17 @@ function indexDaily(daily) {
  * @param {object|null} dailyDoc  data/history/{date}.json (plays/locks/gems)
  * @param {object|null} indexDoc  data/history/index.json (record)
  * @param {object[]} [prevGamesDocs]  games docs de días ANTERIORES (para la forma reciente)
+ * @param {object|null} [liveDoc]  data/history/live/{date}.json (snapshots WP en vivo)
  * @returns {{sport,league,date,updated_at,record,events}}
  */
-export function normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs) {
+export function normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs, liveDoc) {
   const games = (gamesDoc && Array.isArray(gamesDoc.games)) ? gamesDoc.games : [];
   const dailyIdx = indexDaily(dailyDoc);
   const formIdx = prevGamesDocs && prevGamesDocs.length ? buildFormIndex(prevGamesDocs) : null;
   const pitcherIdx = (dailyDoc && dailyDoc.pitchers) || {};
-  const events = games.map((g) => toEvent(g, dailyIdx.get(g.game_pk) || null, formIdx, pitcherIdx[String(g.game_pk)] || null));
+  const liveIdx = (liveDoc && liveDoc.games) || {};
+  const events = games.map((g) => toEvent(g, dailyIdx.get(g.game_pk) || null, formIdx,
+    pitcherIdx[String(g.game_pk)] || null, liveIdx[String(g.game_pk)] || null));
 
   // Orden: primero live, luego pre por hora, luego final; dentro, por prob desc.
   const rank = { live: 0, pre: 1, final: 2 };
