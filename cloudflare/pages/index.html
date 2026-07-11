@@ -42,6 +42,38 @@ img{max-width:100%;display:block}
 :focus-visible{outline:2px solid var(--sky);outline-offset:2px;border-radius:6px}
 .lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
 
+/* ═════════ MOTION ═════════ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes popIn{0%{opacity:0;transform:scale(.92)}70%{transform:scale(1.02)}100%{opacity:1;transform:none}}
+@keyframes barIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes wpDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes starPop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:none}}
+@keyframes glowShift{0%,100%{opacity:.75}50%{opacity:1}}
+/* entrada escalonada de la lista (solo primer render) */
+.boot .mrow{opacity:0;animation:fadeUp .45s cubic-bezier(.2,.7,.3,1) forwards;animation-delay:calc(var(--i,0)*35ms)}
+.boot .lghead,.boot .pills,.boot .ltop{opacity:0;animation:fadeUp .4s ease-out forwards}
+/* entrada del detalle al cambiar de juego o tab */
+.dcard.enter .dhero{animation:fadeUp .4s cubic-bezier(.2,.7,.3,1) both}
+.dcard.enter .dbody>*{opacity:0;animation:fadeUp .45s cubic-bezier(.2,.7,.3,1) forwards;animation-delay:calc(var(--j,0)*60ms)}
+.dcard.enter .verdict{animation:popIn .45s cubic-bezier(.2,.7,.3,1) both}
+.dcard.enter .probtrack .aw{transform-origin:left;animation:barIn .7s .15s cubic-bezier(.2,.7,.3,1) both}
+.dcard.enter .probtrack .hm{transform-origin:right;animation:barIn .7s .15s cubic-bezier(.2,.7,.3,1) both}
+.dcard.enter .riskbar i{transform-origin:left;animation:barIn .8s .2s cubic-bezier(.2,.7,.3,1) both}
+.dcard.enter .wppath{stroke-dasharray:1;stroke-dashoffset:1;animation:wpDraw 1.1s .2s cubic-bezier(.4,0,.2,1) forwards}
+.dcard.enter .fg{opacity:0;animation:popIn .35s ease-out forwards;animation-delay:calc(var(--k,0)*45ms)}
+.dcard.enter .dots i.on{transform-origin:center;animation:popIn .3s ease-out both;animation-delay:calc(var(--k,0)*50ms)}
+.mstar.faved svg{animation:starPop .3s cubic-bezier(.2,.7,.3,1)}
+.tkchip,.mrow,.wrow,.pill,.dtab,.ltab{transition:background .18s,border-color .18s,color .18s,transform .15s}
+.mrow:hover{transform:translateY(-1px)}
+.tkchip:hover{transform:translateY(-1px)}
+.wrow:hover{transform:translateX(2px)}
+body::before{animation:glowShift 14s ease-in-out infinite}
+#ringArc{transition:stroke-dasharray 1.1s cubic-bezier(.2,.7,.3,1)}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0ms!important;transition-duration:.01ms!important}
+  .boot .mrow,.dcard.enter .dbody>*,.dcard.enter .fg{opacity:1}
+}
+
 /* ═════════ HEADER ═════════ */
 header{
   position:sticky;top:0;z-index:90;
@@ -446,7 +478,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 <div class="layout">
 
   <!-- ═══ LISTA ═══ -->
-  <aside class="pane listpane">
+  <aside class="pane listpane boot" id="listpane">
     <div class="ltop">
       <button class="ltab on" data-lt="all">Todos</button>
       <button class="ltab" data-lt="favs">Favoritos</button>
@@ -567,7 +599,7 @@ function logoImg(code){
 /* ── estado ──────────────────────────────────────────────── */
 let events = [], liveByKey = new Map();
 let selectedId = null, filter = 'all', listTab = 'all', query = '', dtab = 'analisis';
-let firstLoad = true;
+let firstLoad = true, lastAnimKey = null;
 let favs = new Set(JSON.parse(localStorage.getItem('aa_favs') || '[]'));
 const $ = id => document.getElementById(id);
 const lvOf = ev => liveByKey.get(key(ev.away.code, ev.home.code)) || null;
@@ -616,7 +648,7 @@ function visibleRows(){
     (order[effStatus(a)] ?? 3) - (order[effStatus(b)] ?? 3) ||
     (b.prediction?.prob ?? 0) - (a.prediction?.prob ?? 0));
 }
-function rowHtml(ev){
+function rowHtml(ev, idx){
   const lv = lvOf(ev), st = effStatus(ev), p = ev.prediction || {};
   const hs = lv ? lv.home.score : null, as2 = lv ? lv.away.score : null;
   const scored = lv && hs != null && st !== 'pre';
@@ -635,7 +667,7 @@ function rowHtml(ev){
 
   const tags = (ev.badges || []).map(b => `<span class="tag ${esc(b)}">${b === 'gema' ? '💎 Gema' : esc(b)}</span>`).join('');
 
-  return `<button class="mrow ${ev.event_id === selectedId ? 'sel' : ''}" data-id="${esc(ev.event_id)}">
+  return `<button class="mrow ${ev.event_id === selectedId ? 'sel' : ''}" data-id="${esc(ev.event_id)}" style="--i:${idx ?? 0}">
     <span class="mtime num">${timeCol}</span>
     <span class="mteams">
       <span class="mt ${aWin || (!done && pickA) ? 'win' : ''}">${logoImg(ev.away.code)}<span class="nm">${esc(tNick(ev.away.code))}</span>${pickA && p.prob_pct != null ? chip(p.prob_pct) : ''}</span>
@@ -659,7 +691,7 @@ function renderList(){
   $('nFinal').textContent = n.final || '';
   $('lgcount').innerHTML = n.live ? `<b>${n.live}</b>/${n.all}` : (n.all || '');
   const rows = visibleRows();
-  $('list').innerHTML = rows.length ? rows.map(rowHtml).join('')
+  $('list').innerHTML = rows.length ? rows.map((ev, i) => rowHtml(ev, i)).join('')
     : `<div class="lempty">${listTab === 'favs' ? 'Marca partidos con ⭐ para verlos aquí.' : 'Sin partidos en este filtro.'}</div>`;
 }
 
@@ -741,7 +773,7 @@ function renderDetail(){
         </linearGradient></defs>
         <line x1="${PAD}" y1="${H / 2}" x2="${W - PAD}" y2="${H / 2}" stroke="rgba(255,255,255,.12)" stroke-dasharray="3 4"/>
         <path d="${area}" fill="url(#wpg)"/>
-        <path d="${line}" fill="none" stroke="#19DE9F" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <path class="wppath" pathLength="1" d="${line}" fill="none" stroke="#19DE9F" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
         <circle cx="${xy[xy.length - 1][0].toFixed(1)}" cy="${xy[xy.length - 1][1].toFixed(1)}" r="3.2" fill="#19DE9F"/>
         <text x="${PAD}" y="${PAD + 8}" font-size="8" fill="rgba(255,255,255,.35)">gana ${esc(canon(ev.home.code))}</text>
         <text x="${PAD}" y="${H - PAD - 3}" font-size="8" fill="rgba(255,255,255,.35)">gana ${esc(canon(ev.away.code))}</text>
@@ -892,7 +924,11 @@ function renderDetail(){
       ${tot && tot.lean ? `<span style="font-size:11.5px;color:var(--dim)">→ inclina <b style="color:var(--sky)">${tot.lean === 'over' ? 'Over' : 'Under'}</b>${tot.prob_pct != null ? ` (${tot.prob_pct}%)` : ''}</span>` : ''}</div>
     ${booksRows}`;
 
-  $('dcard').innerHTML = `
+  const dc = $('dcard');
+  const animKey = selectedId + '|' + dtab;
+  dc.classList.toggle('enter', animKey !== lastAnimKey);
+  lastAnimKey = animKey;
+  dc.innerHTML = `
     <div class="dtop">
       <span class="crumb">USA<span class="sep">›</span><b>MLB</b><span class="sep">›</span><b>${esc(ev.matchup)}</b></span>
       <span style="margin-left:auto"></span>
@@ -914,6 +950,10 @@ function renderDetail(){
       ${dtab === 'analisis' ? analisis : dtab === 'equipos' ? equipos : mercado}
       <p class="dnote">Predicción informativa del algoritmo AA. No es consejo de apuestas; la decisión es tuya. Juego responsable 18/21+.</p>
     </div>`;
+  // índices para el stagger del contenido
+  dc.querySelectorAll('.dbody > *').forEach((el, i) => el.style.setProperty('--j', i));
+  dc.querySelectorAll('.fg').forEach((el, i) => el.style.setProperty('--k', i % 5));
+  dc.querySelectorAll('.dots i.on').forEach((el, i) => el.style.setProperty('--k', i % 3));
 }
 
 /* ── widgets ─────────────────────────────────────────────── */
@@ -1000,12 +1040,14 @@ async function loadToday(){
       $('record').innerHTML = `Récord AA <b>${w}–${l}</b>${wr != null ? ` · <b>${Math.round(wr * 100)}%</b>` : ''}`;
       $('wRecord').hidden = false;
       const pct = wr != null ? Math.round(wr * 100) : Math.round(w / Math.max(1, w + l) * 100);
-      $('ringArc').setAttribute('stroke-dasharray', `${pct / 100 * 195} 195`);
+      requestAnimationFrame(() => requestAnimationFrame(() =>
+        $('ringArc').setAttribute('stroke-dasharray', `${pct / 100 * 195} 195`)));
       $('ringPct').textContent = pct + '%';
       $('recNums').innerHTML = `<b>${w}</b> ganados<br><b>${l}</b> perdidos<br><span style="color:var(--faint)">${w + l} picks medidos</span>`;
     }
     if (firstLoad && events.length){
       firstLoad = false;
+      setTimeout(() => $('listpane').classList.remove('boot'), 1400);
       const pick = events.find(e => e.badges?.includes('gema')) || events.find(e => e.badges?.includes('fijo')) || events[0];
       selectedId = pick.event_id;
     }
@@ -1014,10 +1056,14 @@ async function loadToday(){
     $('list').innerHTML = '<div class="lempty">No pude cargar las predicciones. Reintentando…</div>';
   }
 }
+let lastLiveSig = '[]';
 async function loadLive(){
   try{
     const r = await fetch(API + '/v1/mlb/live');
     const d = await r.json();
+    const sig = JSON.stringify(d.games || []);
+    if (sig === lastLiveSig) return; // sin cambios: no re-renderizar (y no cortar animaciones)
+    lastLiveSig = sig;
     liveByKey = new Map();
     for (const g of (d.games || [])){
       if (g.home?.code && g.away?.code) liveByKey.set(key(g.away.code, g.home.code), g);
