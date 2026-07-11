@@ -494,9 +494,11 @@ const SESSION_DAYS = 30;
 function authEnabled(env) {
   return !!(env && env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.AUTH_SECRET);
 }
-function siteOrigin(env) { return (env && env.SITE_ORIGIN) || 'https://aa-sports-5ap.pages.dev'; }
+function siteOrigin(env) { return (env && env.SITE_ORIGIN) || 'https://aasport.net'; }
+// la URL vieja de pages.dev sigue funcionando durante la transición al dominio
+const LEGACY_HOST = 'aa-sports-5ap.pages.dev';
 
-// CORS con credenciales: exige origen EXACTO de la app (o previews del proyecto)
+// CORS con credenciales: exige origen EXACTO de la app (o www/previews)
 function allowedOrigin(request, env) {
   const o = request.headers.get('origin') || '';
   if (!o) return null;
@@ -504,7 +506,8 @@ function allowedOrigin(request, env) {
   try {
     const host = new URL(o).host;
     const siteHost = new URL(siteOrigin(env)).host;
-    if (host.endsWith('.' + siteHost)) return o;           // previews *.aa-sports-5ap.pages.dev
+    if (host.endsWith('.' + siteHost)) return o;                       // www.aasport.net
+    if (host === LEGACY_HOST || host.endsWith('.' + LEGACY_HOST)) return o;
     if (host === 'localhost' || host.startsWith('localhost:')) return o; // dev local
   } catch (e) { /* origen inválido */ }
   return null;
