@@ -408,6 +408,37 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .legal{font-size:11px;color:var(--faint);line-height:1.65}
 .legal b{color:var(--dim)}
 
+/* ═════════ HISTORIAL ═════════ */
+.dayhead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--hair);background:var(--inner)}
+.dayhead .dt{font-size:11.5px;font-weight:800;letter-spacing:.06em;color:var(--dim)}
+.dayhead .drec{margin-left:auto;font-size:11px;font-weight:700;color:var(--faint)}
+.dayhead .drec b.w{color:var(--volt)} .dayhead .drec b.l{color:var(--red)}
+.hrow{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 14px;border-top:1px solid var(--hair);font-size:12.5px}
+.hrow .hm{display:flex;align-items:center;gap:8px;font-weight:600;min-width:0}
+.hrow .hm img,.hrow .hm .tfall{width:18px;height:18px}
+.hrow .hm .mu2{color:var(--faint);font-weight:500;font-size:11px}
+.hrow .hp{font-weight:800;color:var(--dim)}
+.hrow .hr{font-size:10px;font-weight:800;letter-spacing:.05em;padding:2px 8px;border-radius:5px}
+.hrow .hr.w{background:rgba(25,222,159,.13);color:var(--volt)} .hrow .hr.l{background:rgba(255,70,85,.11);color:var(--red)}
+.hrow .hr.p{background:var(--panel-2);color:var(--faint)}
+.dashtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.dtile{background:var(--inner);border:1px solid var(--hair);border-radius:13px;padding:13px 15px}
+.dtile .lb{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.dtile .vl{font-size:24px;font-weight:900;font-style:italic;margin-top:3px}
+.dtile .sub2{font-size:10.5px;color:var(--faint);margin-top:2px}
+.daybars{display:flex;gap:6px;align-items:flex-end;height:90px;padding:6px 2px 0}
+.daybar{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.daybar .col{width:100%;max-width:26px;display:flex;flex-direction:column-reverse;gap:2px;height:64px;justify-content:flex-start}
+.daybar .col i{border-radius:3px;display:block}
+.daybar .col i.w{background:var(--volt)} .daybar .col i.l{background:rgba(255,70,85,.7)}
+.daybar .dlb{font-size:8.5px;color:var(--faint);font-weight:700}
+.confrow{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--hair);font-size:12.5px}
+.confrow:last-child{border-bottom:0}
+.confrow .ck{width:70px;font-weight:700;text-transform:capitalize}
+.confrow .cbar{flex:1;height:7px;border-radius:4px;background:var(--panel-2);overflow:hidden}
+.confrow .cbar i{display:block;height:100%;background:var(--volt);border-radius:4px}
+.confrow .cn{font-size:11.5px;color:var(--dim);width:110px;text-align:right}
+
 footer{border-top:1px solid var(--hair);background:var(--page)}
 .fwrap{max-width:1380px;margin:0 auto;padding:22px 20px 42px;font-size:11.5px;color:var(--faint);line-height:1.7}
 .fwrap b{color:var(--dim)}
@@ -487,6 +518,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     <div class="ltop">
       <button class="ltab on" data-lt="all">Todos</button>
       <button class="ltab" data-lt="favs">Favoritos</button>
+      <button class="ltab" data-lt="hist">Historial</button>
       <div class="datebox">
         <span class="arrow" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></span>
         <span class="today" id="dlabel">Hoy</span>
@@ -689,7 +721,27 @@ function rowHtml(ev, idx){
     ${tags ? `<span class="mtags">${tags}</span>` : ''}
   </button>`;
 }
+function renderHistList(){
+  if (!histData){ $('list').innerHTML = '<div class="lempty">Cargando historial…</div>'; return; }
+  const graded = histData.filter(x => x.result);
+  if (!graded.length){ $('list').innerHTML = '<div class="lempty">Aún no hay picks calificados en la base.</div>'; return; }
+  const byDay = new Map();
+  for (const r of graded){ if (!byDay.has(r.date)) byDay.set(r.date, []); byDay.get(r.date).push(r); }
+  let html = '';
+  for (const [day, rows] of byDay){
+    const w = rows.filter(x => x.result === 'win').length, l = rows.length - w;
+    html += `<div class="dayhead"><span class="dt num">${esc(day)}</span><span class="drec num"><b class="w">${w}G</b> · <b class="l">${l}P</b></span></div>`;
+    html += rows.map(r => `<div class="hrow">
+      <span class="hm">${logoImg(r.pick)}<span>Gana ${esc(tNick(r.pick))}<br><span class="mu2">${esc(canon(r.away))} @ ${esc(canon(r.home))}</span></span></span>
+      <span class="hp num">${r.prob != null ? Math.round(r.prob * 1000) / 10 + '%' : ''}</span>
+      <span class="hr ${r.result === 'win' ? 'w' : 'l'}">${r.result === 'win' ? '✓ GANÓ' : '✗ PERDIÓ'}</span>
+    </div>`).join('');
+  }
+  $('list').innerHTML = html;
+}
+
 function renderList(){
+  if (listTab === 'hist'){ renderHistList(); return; }
   const n = counts();
   $('nAll').textContent = n.all || '';
   $('nLive').textContent = n.live || '';
@@ -710,7 +762,54 @@ function diamondSvg(sit){
     <rect x="5" y="18" width="12" height="12" rx="2.5" transform="rotate(45 11 24)" fill="${b(sit.onThird)}"/>
   </svg>`;
 }
+function renderHistDash(){
+  const dc = $('dcard');
+  dc.classList.toggle('enter', lastAnimKey !== 'hist');
+  lastAnimKey = 'hist';
+  if (!histData){ dc.innerHTML = '<div class="dempty">Cargando historial…</div>'; return; }
+  const g = histData.filter(x => x.result);
+  const w = g.filter(x => x.result === 'win').length, l = g.length - w;
+  const pct = g.length ? Math.round(w / g.length * 100) : 0;
+  let streak = 0;
+  for (const r of g){ if (r.result === 'win') streak++; else break; }
+  const byConf = {};
+  for (const r of g){
+    const c = r.confidence || 'sin dato';
+    byConf[c] = byConf[c] || { w: 0, n: 0 };
+    byConf[c].n++; if (r.result === 'win') byConf[c].w++;
+  }
+  const byDay = new Map();
+  for (const r of g){ if (!byDay.has(r.date)) byDay.set(r.date, { w: 0, l: 0 }); const d2 = byDay.get(r.date); r.result === 'win' ? d2.w++ : d2.l++; }
+  const days = [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-14);
+  const maxN = Math.max(1, ...days.map(([, v]) => v.w + v.l));
+  const u = 60 / maxN;
+  const seg = (cls, n) => n ? `<i class="${cls}" style="height:${Math.max(3, Math.round(n * u))}px"></i>` : '';
+  const bars = days.map(([day, v]) =>
+    `<div class="daybar" title="${day}: ${v.w}G-${v.l}P"><div class="col">${seg('w', v.w)}${seg('l', v.l)}</div><span class="dlb num">${day.slice(5)}</span></div>`
+  ).join('');
+  dc.innerHTML = `
+    <div class="dtop"><span class="crumb">USA<span class="sep">›</span><b>MLB</b><span class="sep">›</span><b>Historial AA</b></span></div>
+    <div class="dbody">
+      <div class="dashtiles">
+        <div class="dtile"><div class="lb">Picks medidos</div><div class="vl num">${g.length}</div><div class="sub2">últimos 30 días</div></div>
+        <div class="dtile"><div class="lb">Récord</div><div class="vl num"><span style="color:var(--volt)">${w}</span>–<span style="color:var(--faint)">${l}</span></div><div class="sub2">ganados–perdidos</div></div>
+        <div class="dtile"><div class="lb">Acierto</div><div class="vl num" style="color:var(--volt)">${pct}%</div><div class="sub2">todo medido, nada oculto</div></div>
+        <div class="dtile"><div class="lb">Racha actual</div><div class="vl num">${streak > 0 ? 'G' + streak : '—'}</div><div class="sub2">picks seguidos ganados</div></div>
+      </div>
+      <div class="secttl">Por día (últimos 14)</div>
+      <div class="wpcard"><div class="daybars">${bars || '<span class="wempty">Sin días calificados aún.</span>'}</div></div>
+      <div class="secttl">Por nivel de confianza</div>
+      ${Object.entries(byConf).map(([c, v]) => `<div class="confrow">
+        <span class="ck">${esc(c)}</span>
+        <span class="cbar"><i style="width:${v.n ? Math.round(v.w / v.n * 100) : 0}%"></i></span>
+        <span class="cn num">${v.w}/${v.n} · ${v.n ? Math.round(v.w / v.n * 100) : 0}%</span>
+      </div>`).join('')}
+      <p class="dnote">Historial completo tal como quedó guardado en el momento del pick — no se reescribe. Transparencia primero: los datos no garantizan resultados.</p>
+    </div>`;
+}
+
 function renderDetail(){
+  if (listTab === 'hist'){ renderHistDash(); return; }
   const ev = events.find(e => e.event_id === selectedId);
   if (!ev){ $('dcard').innerHTML = '<div class="dempty">Elige un partido para ver el análisis completo del algoritmo AA.</div>'; return; }
   const lv = lvOf(ev), st = effStatus(ev), p = ev.prediction || {};
@@ -1007,7 +1106,9 @@ document.addEventListener('click', e => {
   if (lt){
     listTab = lt.dataset.lt;
     document.querySelectorAll('.ltab').forEach(c => c.classList.toggle('on', c === lt));
-    renderList(); return;
+    document.getElementById('pills').style.display = listTab === 'hist' ? 'none' : '';
+    if (listTab === 'hist') loadHistory();
+    renderList(); renderDetail(); return;
   }
   const f = e.target.closest('.pill');
   if (f){
@@ -1062,6 +1163,19 @@ async function loadToday(){
     $('list').innerHTML = '<div class="lempty">No pude cargar las predicciones. Reintentando…</div>';
   }
 }
+let histData = null, histLoading = false;
+async function loadHistory(){
+  if (histData || histLoading) return;
+  histLoading = true;
+  try{
+    const r = await fetch(API + '/v1/mlb/history?days=30');
+    const d = await r.json();
+    histData = (d.predictions || []).filter(x => x.pick);
+  }catch(err){ histData = []; }
+  histLoading = false;
+  if (listTab === 'hist') renderAll();
+}
+
 let lastLiveSig = '[]';
 async function loadLive(){
   try{
