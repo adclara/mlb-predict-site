@@ -14,6 +14,16 @@
 const ESPN_SCOREBOARD =
   'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard';
 
+// Marcadores en vivo multideporte (mismo patrón proxy+caché que MLB).
+// Las predicciones de estos deportes llegarán cuando su modelo pase la
+// validación; mientras, AA Sports ya muestra el "en vivo" estilo SofaScore.
+const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports';
+const SOCCER_LEAGUES = {
+  'fifa.world': 'Mundial 2026', 'eng.1': 'Premier League', 'esp.1': 'LaLiga',
+  'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1',
+  'usa.1': 'MLS', 'mex.1': 'Liga MX', 'uefa.champions': 'Champions',
+};
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -39,6 +49,14 @@ export default {
       if (path === '/v1/mlb/today') return await today(env, origin);
       if (path === '/v1/mlb/live') return await live(ctx, origin);
       if (path === '/v1/mlb/history') return await history(url, env, origin);
+      if (path === '/v1/nba/live') return await otherLive(ctx, origin, 'nba', `${ESPN_BASE}/basketball/nba/scoreboard`);
+      if (path === '/v1/tennis/live') return await tennisLive(ctx, origin);
+      if (path === '/v1/soccer/live') {
+        const lg = url.searchParams.get('league') || 'fifa.world';
+        if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league', leagues: Object.keys(SOCCER_LEAGUES) }, 400, origin);
+        return await otherLive(ctx, origin, 'soccer:' + lg, `${ESPN_BASE}/soccer/${lg}/scoreboard`);
+      }
+      if (path === '/v1/soccer/leagues') return json({ leagues: SOCCER_LEAGUES }, 200, origin, 3600);
 
       const ev = path.match(/^\/v1\/mlb\/event\/([^/]+)$/);
       if (ev) return await event(decodeURIComponent(ev[1]), env, origin);
@@ -131,6 +149,97 @@ async function live(ctx, origin) {
 
   const payload = JSON.stringify({ sport: 'mlb', updated_at: new Date().toISOString(), games });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=30' } });
+  ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
+  return withCors(payload, origin);
+}
+
+// Live genérico (NBA y soccer): mismo esquema que MLB live, sin situation.
+async function otherLive(ctx, origin, cacheTag, upstream) {
+  const cache = caches.default;
+  const cacheKey = new Request('https://aa-sports.cache/' + cacheTag + '/live', { method: 'GET' });
+  const cached = await cache.match(cacheKey);
+  if (cached) return withCors(await cached.text(), origin);
+
+  const res = await fetch(upstream, { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 30 } });
+  if (!res.ok) return json({ games: [], note: 'live upstream ' + res.status }, 200, origin, 15);
+  const data = await res.json();
+
+  const games = (data.events || []).map((ev) => {
+    const c = (ev.competitions && ev.competitions[0]) || {};
+    const comp = c.competitors || [];
+    const home = comp.find((x) => x.homeAway === 'home') || comp[0] || {};
+    const away = comp.find((x) => x.homeAway === 'away') || comp[1] || {};
+    const st = (c.status && c.status.type) || (ev.status && ev.status.type) || {};
+    const side = (t) => ({
+      code: (t.team && (t.team.abbreviation || t.team.shortDisplayName)) || null,
+      name: (t.team && (t.team.shortDisplayName || t.team.displayName)) || null,
+      logo: (t.team && (t.team.logo || (t.team.logos && t.team.logos[0] && t.team.logos[0].href))) || null,
+      score: numOrNull(t.score),
+      rec: (Array.isArray(t.records) && t.records[0] && t.records[0].summary) || null,
+    });
+    return {
+      espn_id: ev.id,
+      start: ev.date || null,
+      league: (ev.league && ev.league.abbreviation) || null,
+      status: mapEspnStatus(st.name),
+      status_detail: st.shortDetail || st.detail || ((c.status && c.status.displayClock) || null),
+      clock: (c.status && c.status.displayClock) || null,
+      period: (c.status && c.status.period) || null,
+      home: side(home), away: side(away),
+    };
+  });
+
+  const payload = JSON.stringify({ updated_at: new Date().toISOString(), games });
+  const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=30' } });
+  ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
+  return withCors(payload, origin);
+}
+
+// Tenis: los "events" de ESPN son torneos con partidos adentro; cada
+// competitor es un atleta (no team). Aplanamos a lista de partidos.
+async function tennisLive(ctx, origin) {
+  const cache = caches.default;
+  const cacheKey = new Request('https://aa-sports.cache/tennis/live', { method: 'GET' });
+  const cached = await cache.match(cacheKey);
+  if (cached) return withCors(await cached.text(), origin);
+
+  const out = [];
+  for (const tour of ['atp', 'wta']) {
+    try {
+      const res = await fetch(`${ESPN_BASE}/tennis/${tour}/scoreboard`, { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 45 } });
+      if (!res.ok) continue;
+      const data = await res.json();
+      for (const ev of (data.events || [])) {
+        const comps = ev.competitions || (ev.groupings || []).flatMap((g) => g.competitions || []);
+        for (const c of comps) {
+          const players = c.competitors || [];
+          if (players.length < 2) continue;
+          const st = (c.status && c.status.type) || {};
+          const p = (x) => ({
+            code: (x.athlete && (x.athlete.shortName || x.athlete.displayName)) || (x.team && x.team.shortDisplayName) || null,
+            name: (x.athlete && x.athlete.displayName) || null,
+            logo: (x.athlete && x.athlete.flag && x.athlete.flag.href) || null,
+            score: numOrNull(x.score),
+            sets: Array.isArray(x.linescores) ? x.linescores.map((l) => numOrNull(l.value)).filter((v) => v != null) : null,
+            winner: !!x.winner,
+          });
+          out.push({
+            espn_id: c.id || ev.id,
+            start: c.date || ev.date || null,
+            league: (tour.toUpperCase()) + (ev.name ? ' · ' + ev.name : ''),
+            status: mapEspnStatus(st.name),
+            status_detail: st.shortDetail || st.detail || null,
+            home: p(players[0]), away: p(players[1]),
+          });
+          if (out.length >= 40) break;
+        }
+        if (out.length >= 40) break;
+      }
+    } catch (e) { /* torneo caído: seguimos con el otro tour */ }
+  }
+
+  const payload = JSON.stringify({ updated_at: new Date().toISOString(), games: out });
+  const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=45' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin);
 }
