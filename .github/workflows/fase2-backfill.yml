@@ -1,0 +1,40 @@
+# AA Sports Fase 2: descarga los históricos multideporte (soccer/tenis/NBA)
+# y los commitea a data/fase2/. Se dispara a mano (workflow_dispatch) o con el
+# poke (.github/poke-fase2). Corre poco: es un backfill, no un cron.
+name: fase2-backfill
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['.github/poke-fase2']
+permissions:
+  contents: write
+concurrency:
+  group: fase2-backfill
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Git identity (robot)
+        run: |
+          git config user.name "adrian-robot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Backfill multideporte
+        run: DATA_DIR="$PWD/data" node robot/fase2_backfill.mjs all
+      - name: Commit data/fase2
+        run: |
+          git add data/fase2
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "fase2: backfill histórico multideporte ($(date -u +%FT%TZ))"
+            for i in 1 2 3; do
+              git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push && break || sleep 5
+            done
+          fi
