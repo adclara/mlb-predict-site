@@ -9,7 +9,7 @@
 //
 // Uso: node robot/fase2_backfill.mjs [soccer|tennis|nba|all]
 
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const OUT = join(process.env.DATA_DIR || join(process.cwd(), 'data'), 'fase2');
@@ -60,10 +60,10 @@ function parseCsv(text) {
 const num = (x) => { const n = parseFloat(x); return Number.isFinite(n) ? n : null; };
 
 /* ── SOCCER ──────────────────────────────────────────────────────────────── */
-// Ligas top de football-data.co.uk + 6 temporadas. Guardamos resultado y las
-// odds de cierre (B365 y Pinnacle) para validar valor vs mercado.
+// Ligas top de football-data.co.uk + 11 temporadas (2015-16 → 2025-26). Guardamos
+// resultado y las odds de cierre (B365 y Pinnacle) para validar valor vs mercado.
 const SOCCER_DIVS = { E0: 'premier', SP1: 'laliga', I1: 'seriea', D1: 'bundesliga', F1: 'ligue1' };
-const SOCCER_SEASONS = ['2021', '2122', '2223', '2324', '2425', '2526'];
+const SOCCER_SEASONS = ['1516', '1617', '1718', '1819', '1920', '2021', '2122', '2223', '2324', '2425', '2526'];
 
 async function pullSoccer() {
   console.log('— SOCCER (football-data.co.uk) —');
@@ -117,13 +117,17 @@ function ghHeaders() {
 async function ghJson(url) { return get(url, false, 3, ghHeaders()); }
 
 /* ── TENIS ───────────────────────────────────────────────────────────────── */
-const TENNIS_YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+const TENNIS_YEARS = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
 
 async function pullTennis() {
   console.log('— TENIS (Jeff Sackmann) —');
   const dir = join(OUT, 'tennis');
   mkdirSync(dir, { recursive: true });
   for (const tour of ['atp', 'wta']) {
+    // incremental: lo ya descargado (p. ej. ESPN 2022→hoy) se conserva y solo se
+    // baja el rango faltante; al final se fusiona con dedupe por fecha+jugadores.
+    const tourFile = join(dir, `${tour}.json`);
+    const existing = existsSync(tourFile) ? (JSON.parse(readFileSync(tourFile, 'utf8')).matches || []) : [];
     const rows = [];
     // Descubrimos la rama y los archivos REALES vía la API de GitHub (los
     // nombres/ramas del repo pueden cambiar; no adivinamos URLs).
@@ -192,10 +196,15 @@ async function pullTennis() {
     }
     // Último fallback: ESPN por fecha (mismo patrón confiable que la NBA).
     // Trae jugadores, sets y torneo; superficie/odds se enriquecen después.
+    let fromEspn = false;
     if (!rows.length) {
-      console.log(`  ${tour}: tennis-data inaccesible → ESPN por fecha (2022→hoy)`);
+      fromEspn = true;
+      // si ya hay datos (p. ej. 2022→hoy), solo bajamos lo anterior a lo existente
+      const minExisting = existing.reduce((m, r) => (r.date && r.date < m ? r.date : m), '9999-99-99');
+      const espnTo = existing.length ? minExisting : new Date().toISOString().slice(0, 10);
+      console.log(`  ${tour}: tennis-data inaccesible → ESPN por fecha (2016-01-01 → ${espnTo})`);
       const seen = new Set(); // el scoreboard devuelve TODO el torneo cada día → dedupe por id de partido
-      const dates = [...dateRange('2022-01-01', '2026-07-10')];
+      const dates = [...dateRange('2016-01-01', espnTo)];
       for (let i = 0; i < dates.length; i += 10) {
         const batch = dates.slice(i, i + 10);
         const results = await Promise.all(batch.map(async (day) => {
@@ -234,15 +243,36 @@ async function pullTennis() {
         await sleep(120);
       }
     }
-    writeFileSync(join(dir, `${tour}.json`), JSON.stringify({ tour, matches: rows }));
-    manifest.tennis[tour] = rows.length;
-    console.log(`  ${tour.toUpperCase()}: ${rows.length} partidos`);
+    // fusión final: nuevo + existente, sin duplicados (fecha + ganador + perdedor).
+    // Solo se fusiona con datos ESPN (mismo esquema); si Sackmann/tennis-data
+    // entregaron el dataset completo, este reemplaza lo anterior.
+    const base = fromEspn ? existing : [];
+    const key = (r) => `${r.date}|${r.w}|${r.l}`;
+    const seenK = new Set();
+    const merged = [...rows, ...base].filter((r) => {
+      const k = key(r);
+      if (seenK.has(k)) return false;
+      seenK.add(k);
+      return true;
+    }).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    writeFileSync(tourFile, JSON.stringify({ tour, matches: merged }));
+    manifest.tennis[tour] = merged.length;
+    console.log(`  ${tour.toUpperCase()}: ${merged.length} partidos (${rows.length} nuevos + ${base.length} existentes)`);
   }
 }
 
 /* ── NBA ─────────────────────────────────────────────────────────────────── */
-// ESPN scoreboard por fecha (keyless). 3 temporadas: regular (type 2) y playoffs (3).
+// ESPN scoreboard por fecha (keyless). 10 temporadas: regular (type 2) y playoffs (3).
+// Rangos ajustados a las temporadas COVID (2019-20 terminó en la burbuja de octubre;
+// 2020-21 arrancó en diciembre). Incremental: una temporada ya descargada se salta.
 const NBA_SEASONS = [
+  { name: '2016-17', from: '2016-10-25', to: '2017-06-30' },
+  { name: '2017-18', from: '2017-10-17', to: '2018-06-30' },
+  { name: '2018-19', from: '2018-10-16', to: '2019-06-30' },
+  { name: '2019-20', from: '2019-10-22', to: '2020-10-12' },
+  { name: '2020-21', from: '2020-12-22', to: '2021-07-22' },
+  { name: '2021-22', from: '2021-10-19', to: '2022-06-30' },
+  { name: '2022-23', from: '2022-10-18', to: '2023-06-30' },
   { name: '2023-24', from: '2023-10-24', to: '2024-06-30' },
   { name: '2024-25', from: '2024-10-22', to: '2025-06-30' },
   { name: '2025-26', from: '2025-10-21', to: '2026-07-01' },
@@ -258,6 +288,14 @@ async function pullNba() {
   const dir = join(OUT, 'nba');
   mkdirSync(dir, { recursive: true });
   for (const season of NBA_SEASONS) {
+    const file = join(dir, `${season.name}.json`);
+    if (existsSync(file)) {
+      // ya descargada en una corrida anterior: no re-bajar (las temporadas cerradas no cambian)
+      const prev = JSON.parse(readFileSync(file, 'utf8'));
+      manifest.nba[season.name] = (prev.games || []).length;
+      console.log(`  ${season.name}: ya existe (${manifest.nba[season.name]} juegos), salto`);
+      continue;
+    }
     const games = [];
     const dates = [...dateRange(season.from, season.to)];
     // lotes de 8 fechas en paralelo para no tardar ni saturar
