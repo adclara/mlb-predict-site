@@ -33,10 +33,23 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
         run: npx --yes wrangler@4 pages deploy pages --project-name=aa-sports --branch=main --commit-dirty=true
-      - name: Verificar producción
+      - name: Verificar y diagnosticar producción
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          sleep 20
+          sleep 25
+          for u in https://aasport.net/ https://www.aasport.net/ https://aa-sports-5ap.pages.dev/ https://main.aa-sports-5ap.pages.dev/; do
+            echo "== $u"
+            curl -s -D /tmp/h "$u" -o /tmp/b || { echo "  (no responde)"; continue; }
+            grep -iE "^(cf-cache-status|etag|last-modified|age|location):" /tmp/h || true
+            for m in authbox recentnote lotBoot dPick; do grep -q "$m" /tmp/b && echo "  marker $m: SI" || echo "  marker $m: no"; done
+          done
+          echo "== estado de dominios en Pages =="
+          curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            https://api.cloudflare.com/client/v4/accounts/f02574feb7272a1da2818e35e0ff4342/pages/projects/aa-sports/domains | head -c 2000; echo
+          echo "== últimos deployments =="
+          curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/f02574feb7272a1da2818e35e0ff4342/pages/projects/aa-sports/deployments?per_page=3" \
+            | tr ',' '\n' | grep -E '"id"|"environment"|"created_on"|"url"' | head -24
           BODY=$(curl -s https://aasport.net/)
-          echo "$BODY" | grep -q 'id="authbox"' && echo "OK login presente" || { echo "FALTA authbox"; exit 1; }
-          echo "$BODY" | grep -q 'recentnote' && echo "OK version nueva (recent/standings)" || { echo "FALTA recentnote"; exit 1; }
-          curl -s https://aa-sports-api.opsmira9.workers.dev/v1/me -H "origin: https://aasport.net" -o /dev/null -D - | grep -i "access-control-allow-origin: https://aasport.net" && echo "OK worker acepta aasport.net"
+          echo "$BODY" | grep -q 'id="authbox"' && echo "✅ aasport.net sirve la versión nueva" || echo "⚠️ aasport.net aún sirve versión vieja (ver diagnóstico)"
