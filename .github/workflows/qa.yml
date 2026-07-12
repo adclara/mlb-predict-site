@@ -28,3 +28,18 @@ jobs:
       - name: Sonda Sackmann (CSV de stats de partido — gate)
         shell: /bin/bash {0}
         run: node robot/sackmann_probe.mjs
+      - name: Diagnóstico de alcance a GitHub externo
+        shell: /bin/bash {0}
+        run: |
+          echo "== raw del repo de la sesión (control positivo) =="
+          curl -s -m 15 -o /dev/null -w "http=%{http_code}\n" "https://raw.githubusercontent.com/adclara/mlb-predict-site/main/README.md"
+          echo "== api.github.com repo JeffSackmann/tennis_atp =="
+          curl -s -m 15 -w "\nhttp=%{http_code}\n" "https://api.github.com/repos/JeffSackmann/tennis_atp" | head -c 400
+          echo
+          echo "== git ls-remote (protocolo git, proxied) =="
+          git ls-remote --heads https://github.com/JeffSackmann/tennis_atp 2>&1 | head -5
+          echo "exit=$?"
+          echo "== git clone --depth 1 (prueba real) =="
+          git clone --depth 1 https://github.com/JeffSackmann/tennis_atp /tmp/tatp 2>&1 | tail -5
+          echo "exit=$?"
+          ls -la /tmp/tatp/*.csv 2>/dev/null | tail -8 || echo "(sin CSV)"
