@@ -69,3 +69,24 @@ jobs:
           echo '== form y records del primer competitor =='
           jq '.events[0].competitions[0].competitors[0] | {form, records, hasLeaders: (.leaders != null)}' /tmp/soc.json | head -c 2000
           echo
+
+      - name: Worker AA en producción (rutas nuevas)
+        run: |
+          W='https://aa-sports-api.opsmira9.workers.dev'
+          echo '== /v1/mlb/live (batter/pitcher en juegos live) =='
+          curl -s "$W/v1/mlb/live" -o /tmp/wlive.json
+          jq '[.games[] | select(.status == "live")] | length' /tmp/wlive.json
+          jq '[.games[] | select(.status == "live" and .situation != null)] | .[0].situation | {balls, outs, batter, pitcher, lastPlay}' /tmp/wlive.json | head -c 1500
+          echo
+          echo '== /v1/tennis/rankings =='
+          curl -s "$W/v1/tennis/rankings" -o /tmp/wrank.json
+          jq '{secciones: [.sections[].name], top_atp: .sections[0].rows[0], filas: [.sections[].rows | length]}' /tmp/wrank.json | head -c 1200
+          echo
+          echo '== /v1/tennis/live (ids para el join) =='
+          curl -s "$W/v1/tennis/live" -o /tmp/wt.json
+          jq '.games[0] | {league, home: {id: .home.id, code: .home.code}, away: {id: .away.id, code: .away.code}}' /tmp/wt.json | head -c 800
+          echo
+          echo '== /v1/soccer/live?league=fifa.world (form) =='
+          curl -s "$W/v1/soccer/live?league=fifa.world" -o /tmp/ws.json
+          jq '.games[0] | {home: {code: .home.code, form: .home.form}, away: {code: .away.code, form: .away.form}}' /tmp/ws.json | head -c 600
+          echo
