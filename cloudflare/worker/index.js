@@ -514,15 +514,19 @@ async function tennisRecent(ctx, origin) {
           if (players.length < 2) continue;
           const st = (c.status && c.status.type) || {};
           if (mapEspnStatus(st.name) !== 'final') continue;
-          const p = (x) => ({
-            id: (x.athlete && x.athlete.id) || x.id || null,
-            code: (x.athlete && (x.athlete.shortName || x.athlete.displayName)) || null,
-            name: (x.athlete && x.athlete.displayName) || null,
-            logo: (x.athlete && x.athlete.flag && x.athlete.flag.href) || null,
-            score: numOrNull(x.score),
-            sets: Array.isArray(x.linescores) ? x.linescores.map((l) => numOrNull(l.value)).filter((v) => v != null) : null,
-            winner: !!x.winner,
-          });
+          const p = (x) => {
+            const ls = Array.isArray(x.linescores) ? x.linescores : [];
+            return {
+              id: (x.athlete && x.athlete.id) || x.id || null,
+              code: (x.athlete && (x.athlete.shortName || x.athlete.displayName)) || null,
+              name: (x.athlete && x.athlete.displayName) || null,
+              logo: (x.athlete && x.athlete.flag && x.athlete.flag.href) || null,
+              score: numOrNull(x.score),
+              sets: ls.map((l) => numOrNull(l.value)).filter((v) => v != null),
+              setscore: ls.length ? ls.map((l) => ({ g: numOrNull(l.value), tb: numOrNull(l.tiebreak) })) : null,
+              winner: !!x.winner,
+            };
+          };
           out.push({
             espn_id: c.id || ev.id, start: c.date || ev.date || null,
             date: String(c.date || ev.date || '').slice(0, 10) || null,
@@ -638,15 +642,19 @@ async function tennisLive(ctx, origin) {
           const players = c.competitors || [];
           if (players.length < 2) continue;
           const st = (c.status && c.status.type) || {};
-          const p = (x) => ({
-            id: (x.athlete && x.athlete.id) || x.id || null,
-            code: (x.athlete && (x.athlete.shortName || x.athlete.displayName)) || (x.team && x.team.shortDisplayName) || null,
-            name: (x.athlete && x.athlete.displayName) || null,
-            logo: (x.athlete && x.athlete.flag && x.athlete.flag.href) || null,
-            score: numOrNull(x.score),
-            sets: Array.isArray(x.linescores) ? x.linescores.map((l) => numOrNull(l.value)).filter((v) => v != null) : null,
-            winner: !!x.winner,
-          });
+          const p = (x) => {
+            const ls = Array.isArray(x.linescores) ? x.linescores : [];
+            return {
+              id: (x.athlete && x.athlete.id) || x.id || null,
+              code: (x.athlete && (x.athlete.shortName || x.athlete.displayName)) || (x.team && x.team.shortDisplayName) || null,
+              name: (x.athlete && x.athlete.displayName) || null,
+              logo: (x.athlete && x.athlete.flag && x.athlete.flag.href) || null,
+              score: numOrNull(x.score),
+              sets: ls.map((l) => numOrNull(l.value)).filter((v) => v != null),
+              setscore: ls.length ? ls.map((l) => ({ g: numOrNull(l.value), tb: numOrNull(l.tiebreak) })) : null,
+              winner: !!x.winner,
+            };
+          };
           out.push({
             espn_id: c.id || ev.id,
             start: c.date || ev.date || null,

@@ -380,6 +380,13 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .boxtbl th,.boxtbl td{padding:4px 5px}
 .boxtbl td.tm{max-width:130px}
 .stdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--volt);margin-right:5px;flex:none}
+.setwrap{overflow-x:auto}
+.setbl th,.setbl td{text-align:center;padding:6px 8px}
+.setbl td.tl,.setbl th.tl{text-align:left}
+.setbl td.tnm{color:var(--text);font-weight:700;white-space:nowrap}
+.setbl td.setw{color:var(--volt);font-weight:800}
+.setbl sup{font-size:8.5px;color:var(--faint);margin-left:1px}
+.wdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--volt);margin-right:6px;flex:none}
 .mktrow .up{color:var(--volt);font-size:11px} .mktrow .dn{color:var(--red);font-size:11px} .mktrow .dim{color:var(--faint)}
 .ww-pick{display:flex;align-items:center;gap:11px;margin-top:13px;flex-wrap:wrap}
 .bigpick{font-size:18.5px;font-weight:900;font-style:italic;text-transform:uppercase;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -1352,6 +1359,29 @@ function nbaBoxCard(box){
   </div>`;
 }
 
+// Marcador por set de tenis (dato real de ESPN: linescores + tiebreaks). Es lo
+// máximo que la API gratis expone por partido; no hay stats de saque/winners.
+function tennisSetline(g){
+  const aw = g.away?.setscore, hm = g.home?.setscore;
+  if (!Array.isArray(aw) || !Array.isArray(hm) || (!aw.length && !hm.length)) return '';
+  const n = Math.max(aw.length, hm.length);
+  const cell = (s, other) => {
+    if (!s || s.g == null) return '<td>—</td>';
+    const won = other && other.g != null && s.g > other.g;
+    const tb = s.tb != null ? `<sup>${s.tb}</sup>` : '';
+    return `<td class="${won ? 'setw' : ''}">${s.g}${tb}</td>`;
+  };
+  const row = (side, other, sideObj) => `<tr>
+    <td class="tl tnm">${sideObj.winner ? '<span class="wdot" title="Ganador"></span>' : ''}${esc(oName(sideObj))}</td>
+    ${Array.from({ length: n }, (_, i) => cell(side[i], other[i])).join('')}
+  </tr>`;
+  return `<div class="secttl">Marcador por set</div>
+    <div class="setwrap"><table class="sttbl setbl num">
+      <thead><tr><th class="tl">Jugador</th>${Array.from({ length: n }, (_, i) => `<th>S${i + 1}</th>`).join('')}</tr></thead>
+      <tbody>${row(aw, hm, g.away)}${row(hm, aw, g.home)}</tbody>
+    </table></div>`;
+}
+
 function renderDetail(){
   if (sport !== 'mlb'){ renderOtherDetail(); return; }
   if (listTab === 'hist'){ renderHistDash(); return; }
@@ -2190,6 +2220,8 @@ function renderOtherDetail(){
         summaryHtml += `<div class="secttl">Estadísticas del equipo</div>${statHead}
           <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.label, s.away, s.home)).join('')}</div>`;
     }
+  } else if (sport === 'tennis'){
+    summaryHtml += tennisSetline(g);
   }
 
   dc.innerHTML = `
