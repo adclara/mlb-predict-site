@@ -76,6 +76,23 @@ export default {
         return await standings(ctx, origin, 'soccer:' + lg, `https://site.api.espn.com/apis/v2/sports/soccer/${lg}/standings`);
       }
       if (path === '/v1/soccer/leagues') return json({ leagues: SOCCER_LEAGUES }, 200, origin, 3600);
+
+      // Detalle de partido (alineaciones + estadísticas + eventos) — proxy con
+      // caché del endpoint summary de ESPN. Descriptivo, sin predicciones.
+      if (path === '/v1/soccer/summary' || path === '/v1/nba/summary') {
+        const sport = path.split('/')[2];
+        const eid = url.searchParams.get('event');
+        if (!eid || !/^\d+$/.test(eid)) return json({ error: 'bad_event' }, 400, origin);
+        let up;
+        if (sport === 'soccer') {
+          const lg = url.searchParams.get('league') || 'fifa.world';
+          if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
+          up = `${ESPN_BASE}/soccer/${lg}/summary?event=${eid}`;
+        } else {
+          up = `${ESPN_BASE}/basketball/nba/summary?event=${eid}`;
+        }
+        return await summary(ctx, origin, sport, eid, up);
+      }
       if (path === '/v1/injuries') return await injuries(env, origin);
 
       // ── cuentas opcionales (Fase 5) ──
@@ -290,6 +307,141 @@ async function otherLive(ctx, origin, cacheTag, upstream) {
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=30' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin);
+}
+
+// Detalle de un partido (alineaciones/formación + estadísticas + eventos para
+// soccer; box score por jugador + estadísticas de equipo para NBA). Proxy con
+// caché del endpoint summary de ESPN. Todo descriptivo (datos reales), sin
+// predicciones — respeta el ADN honesto de los deportes aún no validados.
+async function summary(ctx, origin, sport, eid, upstream) {
+  const cache = caches.default;
+  const cacheKey = new Request('https://aa-sports.cache/' + sport + '/summary/' + eid, { method: 'GET' });
+  const cached = await cache.match(cacheKey);
+  if (cached) return withCors(await cached.text(), origin, 60);
+
+  const res = await fetch(upstream, { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 60 } });
+  if (!res.ok) return json({ ok: false, note: 'summary upstream ' + res.status }, 200, origin, 30);
+  let data;
+  try { data = await res.json(); } catch (e) { return json({ ok: false, note: 'summary non-json' }, 200, origin, 30); }
+
+  const payloadObj = sport === 'soccer' ? soccerSummary(data) : nbaSummary(data);
+  const payload = JSON.stringify({ ok: true, updated_at: new Date().toISOString(), ...payloadObj });
+  const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=60' } });
+  ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
+  return withCors(payload, origin, 60);
+}
+
+// Elige el bloque home/away de un array cuyos elementos traen homeAway (o cae
+// al orden: índice 0 = local por convención de ESPN cuando falta la etiqueta).
+function pickSides(arr) {
+  const list = Array.isArray(arr) ? arr : [];
+  const home = list.find((x) => x && x.homeAway === 'home') || list[0] || null;
+  const away = list.find((x) => x && x.homeAway === 'away') || list[1] || null;
+  return { home, away };
+}
+
+// Estadísticas de soccer que mostramos, traducidas (name de ESPN → etiqueta ES).
+const SOCCER_STAT_LABELS = [
+  ['possessionPct', 'Posesión %'], ['totalShots', 'Tiros'],
+  ['shotsOnTarget', 'Tiros al arco'], ['wonCorners', 'Tiros de esquina'],
+  ['foulsCommitted', 'Faltas'], ['yellowCards', 'Amarillas'],
+  ['redCards', 'Rojas'], ['offsides', 'Fuera de juego'],
+  ['saves', 'Atajadas'], ['accuratePasses', 'Pases completados'],
+  ['totalPasses', 'Pases totales'], ['passPct', '% de pases'],
+];
+
+function soccerSummary(data) {
+  const rosterSides = pickSides(data.rosters);
+  const lineupOf = (block) => {
+    if (!block) return null;
+    const list = Array.isArray(block.roster) ? block.roster : [];
+    const mapP = (p) => ({
+      name: (p.athlete && (p.athlete.shortName || p.athlete.displayName)) || null,
+      id: (p.athlete && p.athlete.id) || null,
+      pos: (p.position && (p.position.abbreviation || p.position.name)) || null,
+      jersey: p.jersey || null,
+    });
+    const starters = list.filter((p) => p.starter).map(mapP).filter((p) => p.name);
+    const subs = list.filter((p) => !p.starter).map(mapP).filter((p) => p.name);
+    return { code: (block.team && block.team.abbreviation) || null, formation: block.formation || null, starters, subs };
+  };
+  const lineups = (rosterSides.home || rosterSides.away)
+    ? { home: lineupOf(rosterSides.home), away: lineupOf(rosterSides.away) } : null;
+
+  const teamSides = pickSides((data.boxscore && data.boxscore.teams) || []);
+  const statMap = (block) => {
+    const m = {};
+    for (const s of ((block && block.statistics) || [])) if (s && s.name != null) m[s.name] = s.displayValue;
+    return m;
+  };
+  const hs = statMap(teamSides.home), as = statMap(teamSides.away);
+  const stats = SOCCER_STAT_LABELS
+    .filter(([k]) => hs[k] != null || as[k] != null)
+    .map(([k, label]) => ({ label, home: hs[k] ?? null, away: as[k] ?? null }));
+
+  const homeAbbr = (teamSides.home && teamSides.home.team && teamSides.home.team.abbreviation) || (lineups && lineups.home && lineups.home.code) || null;
+  const events = (Array.isArray(data.keyEvents) ? data.keyEvents : [])
+    .filter((e) => e && (e.type || e.text))
+    .slice(0, 40)
+    .map((e) => {
+      const teamAbbr = (e.team && e.team.abbreviation) || null;
+      return {
+        clock: (e.clock && e.clock.displayValue) || null,
+        type: (e.type && (e.type.text || e.type.type)) || null,
+        text: e.text || null,
+        side: teamAbbr ? (teamAbbr === homeAbbr ? 'home' : 'away') : null,
+        scoring: !!e.scoringPlay,
+      };
+    });
+
+  return { sport: 'soccer', lineups, stats: stats.length ? stats : null, events: events.length ? events : null };
+}
+
+// Estadísticas de equipo de NBA que mostramos (label de ESPN → etiqueta ES).
+const NBA_TEAM_STAT_LABELS = {
+  'FG': 'Tiros de campo', 'Field Goal %': '% Tiros de campo', '3PT': 'Triples',
+  'Three Point %': '% Triples', 'FT': 'Tiros libres', 'Rebounds': 'Rebotes',
+  'Assists': 'Asistencias', 'Steals': 'Robos', 'Blocks': 'Tapones',
+  'Turnovers': 'Pérdidas', 'Fast Break Points': 'Puntos al contragolpe',
+  'Points in Paint': 'Puntos en la pintura',
+};
+
+function nbaSummary(data) {
+  const teamSides = pickSides((data.boxscore && data.boxscore.players) || []);
+  const rowsOf = (block) => {
+    if (!block) return null;
+    const s = (Array.isArray(block.statistics) && block.statistics[0]) || {};
+    const labels = (s.labels || s.names || []).map((x) => String(x).toUpperCase());
+    const idx = (n) => labels.indexOf(n);
+    const iMin = idx('MIN'), iPts = idx('PTS'), iReb = idx('REB'), iAst = idx('AST'),
+      iFg = idx('FG'), i3 = idx('3PT'), iPm = labels.findIndex((l) => l.includes('+/-') || l === '+/-');
+    const list = (s.athletes || []).map((a) => {
+      const st = a.stats || [];
+      const g = (i) => (i >= 0 && st[i] != null ? st[i] : null);
+      return {
+        name: (a.athlete && (a.athlete.shortName || a.athlete.displayName)) || null,
+        id: (a.athlete && a.athlete.id) || null,
+        starter: !!a.starter,
+        min: g(iMin), pts: g(iPts), reb: g(iReb), ast: g(iAst), fg: g(iFg), tpt: g(i3), pm: g(iPm),
+      };
+    }).filter((r) => r.name && r.min != null && r.min !== '0' && r.min !== '--');
+    return { code: (block.team && block.team.abbreviation) || null, list };
+  };
+  const players = (teamSides.home || teamSides.away)
+    ? { home: rowsOf(teamSides.home), away: rowsOf(teamSides.away) } : null;
+
+  const tSides = pickSides((data.boxscore && data.boxscore.teams) || []);
+  const statMap = (block) => {
+    const m = {};
+    for (const s of ((block && block.statistics) || [])) if (s && s.label != null) m[s.label] = s.displayValue;
+    return m;
+  };
+  const hs = statMap(tSides.home), as = statMap(tSides.away);
+  const stats = Object.entries(NBA_TEAM_STAT_LABELS)
+    .filter(([k]) => hs[k] != null || as[k] != null)
+    .map(([k, label]) => ({ label, home: hs[k] ?? null, away: as[k] ?? null }));
+
+  return { sport: 'nba', players, stats: stats.length ? stats : null };
 }
 
 // Tenis: los "events" de ESPN son torneos con partidos adentro; cada
