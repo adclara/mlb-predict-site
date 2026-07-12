@@ -37,11 +37,12 @@
   --shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 1px 2px rgba(0,0,0,.35), 0 14px 34px -16px rgba(0,0,0,.6);
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;scrollbar-color:#2A3342 var(--page)}
+html{-webkit-text-size-adjust:100%;scrollbar-color:#2A3342 var(--page);overflow-x:hidden}
 body{
   background:var(--page); color:var(--text);
   font:14.5px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Inter",Roboto,Helvetica,Arial,sans-serif;
   min-height:100vh;
+  overflow-x:hidden; /* clip de desborde horizontal accidental (glow/ticker) en móvil */
 }
 /* ambiente de color detrás del vidrio (liquid glass) */
 body::before{
@@ -306,6 +307,45 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .probtrack{height:9px;border-radius:6px;background:var(--panel-2);overflow:hidden;display:flex}
 .probtrack .aw{background:#FF6B3D;height:100%}
 .probtrack .hm{background:var(--volt);height:100%}
+.probtrack.f3 .tie{background:var(--hair-2);height:100%}
+/* ── Match Center: comparación cara a cara, gauge, tarjeta de jugador, F5 ── */
+.glass-in{background:linear-gradient(180deg,var(--panel),rgba(255,255,255,.02));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 10px 26px -14px rgba(0,0,0,.55)}
+.cmphead{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:800;color:var(--text);margin:2px 2px 7px}
+.cmphead .mid{font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.06em}
+.cmpbox{border:1px solid var(--hair);border-radius:13px;padding:6px 13px}
+.cmp{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;gap:10px;padding:7px 0}
+.cmp + .cmp{border-top:1px solid var(--hair)}
+.cmpv{font-size:13.5px;font-weight:700;color:var(--dim);text-align:center}
+.cmpv.lead{color:var(--text)}
+.cmpwrap{display:flex;flex-direction:column;align-items:center;gap:5px}
+.cmpbar{position:relative;height:8px;width:100%;border-radius:5px;background:var(--panel-2);overflow:hidden}
+.cmpbar::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--hair-2);z-index:1}
+.cmpbar .cmpa{position:absolute;right:50%;height:100%;background:#FF6B3D;border-radius:5px 0 0 5px;transform-origin:right}
+.cmpbar .cmph{position:absolute;left:50%;height:100%;background:var(--volt);border-radius:0 5px 5px 0;transform-origin:left}
+.cmpl{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+.dcard.enter .cmpbar .cmpa,.dcard.enter .cmpbar .cmph{animation:barIn .6s .1s cubic-bezier(.2,.7,.3,1) both}
+.aagauge{width:76px;height:76px;margin:0 auto}
+.aagauge svg{transform:rotate(-90deg)}
+.aagauge .pc{color:var(--text)}
+.gaugelbl{font-size:12.5px;color:var(--dim);text-align:center;margin-top:5px}
+.gaugelbl b{color:var(--text);font-weight:800}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.pcard{background:var(--inner);border:1px solid var(--hair);border-radius:12px;padding:11px 13px}
+.pchd{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.pcn{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcr{font-size:11px;color:var(--faint)}
+.handpill{font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:5px;background:var(--panel-2);color:var(--dim);flex-shrink:0}
+.pstat{display:grid;grid-template-columns:34px 1fr 32px;align-items:center;gap:7px;padding:2.5px 0}
+.pstat .pl{font-size:10px;color:var(--faint);font-weight:800}
+.pstat .pbar{height:6px;border-radius:4px;background:var(--panel-2);overflow:hidden}
+.pstat .pbar i{display:block;height:100%;background:var(--sky);border-radius:4px}
+.pstat b{font-size:12.5px;text-align:right}
+.pfat{font-size:11.5px;color:var(--dim);margin-top:5px}
+.f5card .probhead{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:7px}
+.f5card .nrfi{margin-top:9px;font-size:13px;color:var(--dim)}
+.f5card .nrfi b{color:var(--amber)}
+.mktrow .up{color:var(--volt);font-size:11px} .mktrow .dn{color:var(--red);font-size:11px} .mktrow .dim{color:var(--faint)}
 .ww-pick{display:flex;align-items:center;gap:11px;margin-top:13px;flex-wrap:wrap}
 .bigpick{font-size:18.5px;font-weight:900;font-style:italic;text-transform:uppercase;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .bigprob{font-size:18.5px;font-weight:800;color:var(--volt)}
@@ -571,7 +611,10 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   .detail.open{display:block}
   .dback{display:flex}
   .colside{display:block}
+  .pgrid,.formgrid{grid-template-columns:1fr} /* tarjetas apiladas en móvil (no se apretujan) */
 }
+.pcard{min-width:0}
+.formside{min-width:0}
 </style>
 </head>
 <body>
@@ -1141,6 +1184,66 @@ function renderHistDash(){
     </div>`;
 }
 
+/* ── componentes del Match Center ────────────────────────── */
+// Gauge radial autónomo (dasharray inline; NO usa el id #ringArc del récord).
+function aaGauge(pct, pickNick){
+  const r = 31, C = 2 * Math.PI * r, on = C * (Math.max(0, Math.min(100, pct)) / 100);
+  return `<div class="ring aagauge">
+    <svg width="76" height="76" viewBox="0 0 76 76">
+      <circle cx="38" cy="38" r="${r}" fill="none" stroke="var(--panel-2)" stroke-width="7"/>
+      <circle class="aaarc" cx="38" cy="38" r="${r}" fill="none" stroke="url(#aagrad)" stroke-width="7"
+        stroke-linecap="round" stroke-dasharray="${on.toFixed(1)} ${(C - on).toFixed(1)}"/>
+    </svg>
+    <span class="pc num">${Math.round(pct)}%</span>
+    <svg width="0" height="0"><defs><linearGradient id="aagrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF4D1C"/><stop offset="1" stop-color="#19DE9F"/></linearGradient></defs></svg>
+  </div>
+  <div class="gaugelbl">Gana <b>${esc(pickNick)}</b></div>`;
+}
+// Fila de comparación con barra divergente desde el centro. higherBetter=false
+// invierte (FIP, menor mejor). Devuelve '' si no hay datos.
+function cmpRow(label, away, home, higherBetter = true, fmt = (x) => x){
+  if (away == null && home == null) return '';
+  const a = away == null ? null : +away, h = home == null ? null : +home;
+  let hShare = .5;
+  if (a != null && h != null){
+    if (higherBetter) hShare = (a + h) === 0 ? .5 : h / (a + h);
+    else { const ia = 1 / (Math.abs(a) || 1e-6), ih = 1 / (Math.abs(h) || 1e-6); hShare = ih / (ia + ih); }
+  } else if (a == null) hShare = 1; else if (h == null) hShare = 0;
+  const homeFav = hShare >= .5, mag = Math.abs(hShare - .5) * 2;
+  return `<div class="cmp">
+    <span class="cmpv num ${!homeFav ? 'lead' : ''}">${away == null ? '—' : fmt(away)}</span>
+    <div class="cmpwrap">
+      <div class="cmpbar">
+        <span class="cmpa" style="width:${homeFav ? 0 : mag * 50}%"></span>
+        <span class="cmph" style="width:${homeFav ? mag * 50 : 0}%"></span>
+      </div>
+      <span class="cmpl">${esc(label)}</span>
+    </div>
+    <span class="cmpv num ${homeFav ? 'lead' : ''}">${home == null ? '—' : fmt(home)}</span>
+  </div>`;
+}
+// Tarjeta de jugador (abridor): headshot + mini-barras de FIP/ERA + mano.
+function playerCard(pl, role){
+  if (!pl) return `<div class="pcard"><div class="pcr">${esc(role)}</div><div class="pcn">Por confirmar</div></div>`;
+  const ini = (pl.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
+  const face = pl.id
+    ? `<img class="hs" src="https://midfield.mlbstatic.com/v1/people/${pl.id}/spots/120" alt="" loading="lazy"
+         onerror="this.outerHTML='<span class=&quot;hsfall&quot;>${esc(ini)}</span>'">`
+    : `<span class="hsfall">${esc(ini)}</span>`;
+  const hand = pl.hand ? `<span class="handpill">${pl.hand === 'L' ? 'LHP' : 'RHP'}</span>` : '';
+  const bar = (lb, val, max) => val == null ? '' : `<div class="pstat">
+      <span class="pl">${lb}</span>
+      <span class="pbar"><i style="width:${Math.max(6, Math.min(100, (1 - Math.min(val, max) / max) * 100))}%"></i></span>
+      <b class="num">${val}</b></div>`;
+  return `<div class="pcard">
+    <div class="pchd">${face}<div style="min-width:0"><div class="pcn">${esc(pl.name || 'Por confirmar')}${hand}</div>
+      <div class="pcr">${esc(role)}</div></div></div>
+    ${bar('FIP', pl.fip, 7)}${bar('ERA', pl.era_recent, 9)}
+    ${pl.fatigue ? `<div class="pfat">Fatiga <b class="fat-${esc(pl.fatigue)}">${esc(pl.fatigue)}</b></div>` : ''}
+  </div>`;
+}
+
 function renderDetail(){
   if (sport !== 'mlb'){ renderOtherDetail(); return; }
   if (listTab === 'hist'){ renderHistDash(); return; }
@@ -1180,8 +1283,13 @@ function renderDetail(){
       }
     }
   } else {
-    mid = `<div class="dscore num" style="font-size:24px;color:var(--dim);font-weight:700">HOY</div>
-           <div class="dsub">Predicción publicada</div>`;
+    const startTime = ev.start && String(ev.start).includes('T')
+      ? new Date(ev.start).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) : null;
+    mid = (p.prob != null && p.pick)
+      ? `${aaGauge(Math.round(p.prob * 1000) / 10, tNick(p.pick))}
+         <div class="dsub" style="margin-top:6px">${startTime ? 'Primer lanzamiento ' + startTime : 'Por jugar hoy'}</div>`
+      : `<div class="dscore num" style="font-size:22px;color:var(--dim);font-weight:700">${startTime || 'HOY'}</div>
+         <div class="dsub">Por jugar</div>`;
   }
   const recA = lv && lv.away.rec ? `<span class="rc num">${esc(lv.away.rec)}</span>` : '';
   const recH = lv && lv.home.rec ? `<span class="rc num">${esc(lv.home.rec)}</span>` : '';
@@ -1322,37 +1430,49 @@ function renderDetail(){
         ${dots('home', e2)}
       </div>`).join('')}
     </div>` : '';
-  const sp = (side, code) => {
-    const d2 = snap.pitchers && snap.pitchers[side];
-    if (!d2) return '';
-    const ini = (d2.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
-    const face = d2.id
-      ? `<img class="hs" src="https://midfield.mlbstatic.com/v1/people/${d2.id}/spots/120" alt="" loading="lazy"
-           onerror="this.outerHTML='<span class=&quot;hsfall&quot;>${esc(ini)}</span>'">`
-      : `<span class="hsfall">${esc(ini)}</span>`;
-    return `<div class="spcard">
-      <div class="sprow">${face}
-        <div style="min-width:0">
-          <div class="who">${esc(d2.name || 'Por confirmar')}</div>
-          <div class="tm2" style="margin-bottom:0">Abre por ${esc(tNick(code))}</div>
-        </div>
-      </div>
-      <div class="st num" style="margin-top:9px">
-        ${d2.era_recent != null ? `<span>ERA reciente <b>${d2.era_recent}</b></span>` : ''}
-        ${d2.starts != null ? `<span><b>${d2.starts}</b> aperturas</span>` : ''}
-        ${d2.fatigue ? `<span>Fatiga <b class="fat-${esc(d2.fatigue)}">${esc(d2.fatigue)}</b></span>` : ''}
-      </div>
-    </div>`;
-  };
-
   const ctx = snap.context || {};
+
+  // Comparación cara a cara (barras divergentes) — el bloque que da la sensación de inteligencia.
+  const wCount = side => (snap.form && Array.isArray(snap.form[side])) ? snap.form[side].filter(g => g && g.w).length : null;
+  const off = snap.offense || {}, bp = snap.bullpen || {}, bts = snap.bats || {}, pit = snap.pitchers || {};
+  const eloA = ctx.elo_diff != null ? Math.max(0, -ctx.elo_diff) : null;
+  const eloH = ctx.elo_diff != null ? Math.max(0, ctx.elo_diff) : null;
+  const ops = x => (+x).toFixed(3).replace(/^0(?=\.)/, '');
+  const h2hRows = [
+    cmpRow('OPS temporada', off.away?.ops, off.home?.ops, true, ops),
+    cmpRow('Carreras/juego', off.away?.runs, off.home?.runs, true, x => (+x).toFixed(1)),
+    cmpRow('C/juego últimos 5', bts.away?.l5_rpg, bts.home?.l5_rpg, true, x => (+x).toFixed(1)),
+    cmpRow('Bullpen FIP', bp.away_fip, bp.home_fip, false, x => (+x).toFixed(2)),
+    cmpRow('Abridor FIP', pit.away?.fip, pit.home?.fip, false, x => (+x).toFixed(2)),
+    cmpRow('Forma (V de 5)', wCount('away'), wCount('home'), true, x => x),
+    cmpRow('Descanso (días)', ctx.rest_away, ctx.rest_home, true, x => x),
+    (ctx.elo_diff != null ? cmpRow('Elo', eloA, eloH, true, x => Math.round(x) || '·') : ''),
+  ].filter(Boolean).join('');
+  const h2h = h2hRows ? `<div class="secttl">Comparación cara a cara</div>
+    <div class="cmphead"><span>${esc(tNick(ev.away.code))}</span><span class="mid">favorece →</span><span>${esc(tNick(ev.home.code))}</span></div>
+    <div class="cmpbox glass-in">${h2hRows}</div>` : '';
+
+  // Tarjeta de primeras 5 entradas / NRFI (mercado nuevo).
+  const f5 = snap.f5;
+  const f5card = f5 ? `<div class="secttl">Primeras 5 entradas · NRFI</div>
+    <div class="pcard f5card glass-in">
+      <div class="probhead num"><span>${esc(tNick(ev.away.code))} ${f5.away_pct}%</span>
+        <span>Empate ${f5.tie_pct}%</span><span>${f5.home_pct}% ${esc(tNick(ev.home.code))}</span></div>
+      <div class="probtrack f3">
+        <span class="aw" style="width:${f5.away_pct}%"></span>
+        <span class="tie" style="width:${f5.tie_pct}%"></span>
+        <span class="hm" style="width:${f5.home_pct}%"></span></div>
+      <div class="nrfi num">Sin carreras en la 1ª entrada (NRFI): <b>${f5.nrfi_pct}%</b></div>
+    </div>` : '';
+
   const ctxCards = [];
-  if (ctx.elo_diff != null) ctxCards.push({lb: 'Elo (ventaja local)', vl: (ctx.elo_diff > 0 ? '+' : '') + ctx.elo_diff, cls: ctx.elo_diff > 0 ? 'pos' : ctx.elo_diff < 0 ? 'neg' : ''});
   if (ctx.sp_fip_diff != null) ctxCards.push({lb: 'FIP abridores (dif)', vl: (ctx.sp_fip_diff > 0 ? '+' : '') + ctx.sp_fip_diff, cls: ''});
   if (ctx.park_factor != null) ctxCards.push({lb: 'Factor del parque', vl: ctx.park_factor, cls: ctx.park_factor > 1.03 ? 'mid' : ''});
-  if (ctx.rest_home != null && ctx.rest_away != null) ctxCards.push({lb: 'Descanso (L / V)', vl: `${ctx.rest_home}d / ${ctx.rest_away}d`, cls: ''});
-  if (ctx.weather && (ctx.weather.condition || ctx.weather.temp_f != null)) ctxCards.push({lb: 'Clima', vl: `${ctx.weather.temp_f != null ? ctx.weather.temp_f + '°F ' : ''}${ctx.weather.condition || ''}`, cls: ''});
+  if (ctx.day_night) ctxCards.push({lb: 'Horario', vl: ctx.day_night === 'day' ? '☀️ Día' : '🌙 Noche', cls: ''});
+  if (ctx.series && ctx.series.len) ctxCards.push({lb: 'Serie', vl: `Juego ${ctx.series.game || '?'} de ${ctx.series.len}`, cls: ''});
+  if (ctx.weather && (ctx.weather.condition || ctx.weather.temp_f != null)) ctxCards.push({lb: ctx.weather.forecast ? 'Clima (pronóstico)' : 'Clima', vl: `${ctx.weather.temp_f != null ? ctx.weather.temp_f + '°F ' : ''}${ctx.weather.condition || ''}`.trim() || '—', cls: ''});
   if (ctx.weather && ctx.weather.wind) ctxCards.push({lb: 'Viento', vl: ctx.weather.wind, cls: ''});
+  if (ctx.weather && ctx.weather.precip_pct != null) ctxCards.push({lb: 'Prob. lluvia', vl: ctx.weather.precip_pct + '%', cls: ctx.weather.precip_pct >= 40 ? 'mid' : ''});
   const bajas = injuriesDoc ? `
     <div class="secttl">Bajas por lesión o suspensión</div>
     <div class="formgrid">
@@ -1361,6 +1481,10 @@ function renderDetail(){
     </div>
     <p style="font-size:11px;color:var(--faint);padding-top:6px">★ = jugador clave (buenas estadísticas esta temporada). Informativo: el modelo AA no se altera con esto sin re-validación.</p>` : '';
   const equipos = `
+    ${h2h}
+    ${snap.pitchers ? `<div class="secttl">Abridores probables</div>
+    <div class="pgrid">${playerCard(snap.pitchers.away, 'Abre por ' + tNick(ev.away.code))}${playerCard(snap.pitchers.home, 'Abre por ' + tNick(ev.home.code))}</div>` : ''}
+    ${f5card}
     ${snap.form ? `<div class="secttl">Forma reciente (últimos ${Math.max(snap.form.home?.length || 0, snap.form.away?.length || 0) || 5})</div>
     <div class="formgrid">${formSide('away', ev.away.code)}${formSide('home', ev.home.code)}</div>` : ''}
     ${snap.bats ? `<div class="secttl">Bateo últimos 5</div>
@@ -1369,11 +1493,9 @@ function renderDetail(){
     <div class="formgrid">${hitSide('away', ev.away.code)}${hitSide('home', ev.home.code)}</div>` : ''}
     ${bajas}
     ${duel}
-    ${snap.pitchers ? `<div class="secttl">Abridores probables</div>
-    <div class="spgrid">${sp('away', ev.away.code)}${sp('home', ev.home.code)}</div>` : ''}
     ${ctxCards.length ? `<div class="secttl">Contexto del juego</div>
     <div class="ctxgrid">${ctxCards.map(c => `<div class="mcard"><div class="lb">${esc(c.lb)}</div><div class="vl num ${c.cls}" style="font-size:15.5px">${esc(c.vl)}</div></div>`).join('')}</div>` : ''}
-    ${!snap.form && !duel && !snap.pitchers && !ctxCards.length ? '<div class="wempty">Snapshot no disponible para este juego todavía.</div>' : ''}`;
+    ${!h2h && !snap.form && !duel && !snap.pitchers && !ctxCards.length ? '<div class="wempty">Snapshot no disponible para este juego todavía.</div>' : ''}`;
 
   const o = ev.odds || {};
   const mkt = snap.market;
@@ -1411,12 +1533,23 @@ function renderDetail(){
       <span>${esc(canon(ev.home.code))} <b>${fmtMl(b.ml_home)}</b></span>
       <span>O/U <b>${b.over_under ?? '—'}</b></span>
     </div>`).join('')}` : '';
+  // Movimiento de línea (dinero sabio) + run line.
+  const moveRow = (mkt && (mkt.line_move != null || mkt.p_home_open_pct != null)) ? (() => {
+    const up = mkt.line_move != null && mkt.line_move > 0.002;
+    const dn = mkt.line_move != null && mkt.line_move < -0.002;
+    const arrow = up ? '<span class="up">▲</span>' : dn ? '<span class="dn">▼</span>' : '<span class="dim">→</span>';
+    return `<div class="mktrow num"><span class="k">Movimiento de línea</span>
+      <span style="font-size:13px;color:var(--dim)">${mkt.p_home_open_pct != null ? `apertura <b>${mkt.p_home_open_pct}%</b> → ` : ''}actual <b>${mkt.p_home_pct}%</b> ${arrow} <span class="dim" style="font-size:11.5px">(${esc(tNick(ev.home.code))})</span></span></div>`;
+  })() : '';
+  const spreadRow = (mkt && mkt.spread != null) ? `<div class="mktrow num"><span class="k">Run line</span><b>${mkt.spread > 0 ? '+' : ''}${mkt.spread}</b></div>` : '';
   const mercado = `
     ${valueTbl}
     <div class="secttl" style="margin-top:16px">Total de carreras</div>
     <div class="mktrow num"><span class="k">Línea O/U</span><b>${o.over_under ?? tot?.line ?? '—'}</b>
       ${tot && tot.aa_total != null ? `<span style="font-size:12.5px;color:var(--dim)">· AA proyecta <b style="color:var(--sky)">${tot.aa_total}</b> carreras</span>` : ''}
       ${tot && tot.lean ? `<span style="font-size:12.5px;color:var(--dim)">→ inclina <b style="color:var(--sky)">${tot.lean === 'over' ? 'Over' : 'Under'}</b>${tot.prob_pct != null ? ` (${tot.prob_pct}%)` : ''}</span>` : ''}</div>
+    ${spreadRow}
+    ${moveRow ? '<div class="secttl" style="margin-top:16px">Mercado</div>' + moveRow : ''}
     ${booksRows}`;
 
   /* ── pestaña Simulación: 10,000 juegos Monte Carlo ── */

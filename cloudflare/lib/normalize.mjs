@@ -136,20 +136,30 @@ function edgesFor(g) {
 function pitchersFor(g, pitcherNames) {
   const names = pitcherNames || {};
   const rec = g.pitcher_recent || {};
-  const side = (name, id, r) => (name || id || r) ? {
-    name: name || null,
+  const bp = (g.brief && g.brief.pitchers) || {};
+  const aux2 = g.aux2 || {};
+  const side = (name, id, r, b, handFallback) => (name || id || r || b) ? {
+    name: name || (b && b.name) || null,
     id: id ?? null, // MLBAM id -> headshot en midfield.mlbstatic.com (CDN oficial, gratis)
     era_recent: r && typeof r.era === 'number' ? Math.round(r.era * 100) / 100 : null,
-    starts: r && r.n != null ? r.n : null,
-    fatigue: (r && r.fatigue) || null,
+    starts: r && r.n != null ? r.n : (b && b.n != null ? b.n : null),
+    fatigue: (r && r.fatigue) || (b && b.fatigue) || null,
+    fip: b && typeof b.fip === 'number' ? Math.round(b.fip * 100) / 100 : null, // FIP de temporada del abridor
+    hand: (b && b.hand) || handFallback || null, // L/R
   } : null;
-  const home = side(names.hn, names.h, rec.home), away = side(names.an, names.a, rec.away);
+  const home = side(names.hn, names.h, rec.home, bp.home, aux2.home_sp_hand);
+  const away = side(names.an, names.a, rec.away, bp.away, aux2.away_sp_hand);
   return (home || away) ? { home, away } : null;
 }
 
 function contextFor(g) {
-  const w = g.weather;
-  const aux = g.aux || {};
+  const w = g.weather, wf = g.weather_forecast, aux = g.aux || {}, aux2 = g.aux2 || {};
+  // clima observado si existe; si no (pre-juegos), cae al pronóstico + precip%
+  const wx = w
+    ? { condition: w.condition || null, temp_f: w.temp ?? null, wind: w.wind || null, precip_pct: null, forecast: false }
+    : wf
+    ? { condition: wf.condition || null, temp_f: wf.temp ?? null, wind: wf.wind || null, precip_pct: wf.precip_pct ?? null, forecast: true }
+    : null;
   const ctx = {
     elo_diff: typeof g.elo_diff === 'number' ? Math.round(g.elo_diff) : null,
     sp_fip_diff: typeof g.sp_fip_diff === 'number' ? Math.round(g.sp_fip_diff * 100) / 100 : null,
@@ -158,7 +168,10 @@ function contextFor(g) {
     streak_away: typeof g.streak_away === 'number' ? g.streak_away : null,
     rest_home: typeof aux.rest_h === 'number' ? aux.rest_h : null,
     rest_away: typeof aux.rest_a === 'number' ? aux.rest_a : null,
-    weather: w ? { condition: w.condition || null, temp_f: w.temp ?? null, wind: w.wind || null } : null,
+    day_night: aux2.day_night || null,
+    series: (aux2.series_game != null || aux2.series_len != null)
+      ? { game: aux2.series_game ?? null, len: aux2.series_len ?? null } : null,
+    weather: wx,
   };
   return Object.values(ctx).some((v) => v != null) ? ctx : null;
 }
@@ -231,7 +244,12 @@ function wpFor(g, liveGame) {
 function marketFor(g) {
   const o = g.odds;
   if (!o || typeof o.p_home_mkt !== 'number') return null;
-  return { p_home_pct: PCT(o.p_home_mkt), p_away_pct: PCT(o.p_away_mkt) };
+  return {
+    p_home_pct: PCT(o.p_home_mkt), p_away_pct: PCT(o.p_away_mkt),
+    line_move: typeof o.line_move === 'number' ? o.line_move : null, // movimiento vs apertura
+    p_home_open_pct: PCT(typeof o.p_home_open === 'number' ? o.p_home_open : null),
+    spread: o.spread ?? null, // run line
+  };
 }
 
 // Recomendación honesta en una frase, a partir de pick + edge + riesgo.
@@ -290,6 +308,38 @@ function batsFor(formArr, seasonRpg) {
   };
 }
 
+// Fuerza del bullpen (FIP, menor = mejor). brief.bullpen.
+function bullpenFor(g) {
+  const b = g.brief && g.brief.bullpen;
+  if (!b) return null;
+  const n = (x) => typeof x === 'number' ? Math.round(x * 100) / 100 : null;
+  const home = n(b.home_fip), away = n(b.away_fip);
+  return (home != null || away != null) ? { home_fip: home, away_fip: away } : null;
+}
+
+// Mercado de primeras 5 entradas / NRFI. brief.f5 (probs 0..1); el empate es
+// el resto (home_lead + away_lead no suman 1).
+function f5For(g) {
+  const f = g.brief && g.brief.f5;
+  if (!f) return null;
+  const h = typeof f.home_lead === 'number' ? f.home_lead : null;
+  const a = typeof f.away_lead === 'number' ? f.away_lead : null;
+  const tie = (h != null && a != null) ? Math.max(0, 1 - h - a) : null;
+  return {
+    home_pct: PCT(h), away_pct: PCT(a), tie_pct: PCT(tie),
+    nrfi_pct: PCT(typeof f.nrfi === 'number' ? f.nrfi : null),
+  };
+}
+
+// Ventaja de platoon por lado (aux2.platoon_h/a): número pequeño con signo,
+// + favorece a ese equipo (bates vs la mano del abridor rival, vs la liga).
+function platoonFor(g) {
+  const a = g.aux2 || {};
+  const h = typeof a.platoon_h === 'number' ? Math.round(a.platoon_h * 1000) / 1000 : null;
+  const v = typeof a.platoon_a === 'number' ? Math.round(a.platoon_a * 1000) / 1000 : null;
+  return (h != null || v != null) ? { home: h, away: v } : null;
+}
+
 function snapshotFor(g, formIdx, pitcherNames, prob, liveGame) {
   const formOf = (team) => {
     const arr = (formIdx && formIdx.get(team)) || [];
@@ -305,6 +355,9 @@ function snapshotFor(g, formIdx, pitcherNames, prob, liveGame) {
     bats: (batsHome || batsAway) ? { home: batsHome, away: batsAway } : null,
     edges: edgesFor(g),
     pitchers: pitchersFor(g, pitcherNames),
+    bullpen: bullpenFor(g),
+    f5: f5For(g),
+    platoon: platoonFor(g),
     context: contextFor(g),
     total: totalFor(g),
     market: marketFor(g),
