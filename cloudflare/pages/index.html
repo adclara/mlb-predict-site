@@ -183,6 +183,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .viewingpast .datebox .today{color:var(--sky)}
 .ltop-sep{height:1px;background:var(--hair);margin-top:-1px}
 .pills{display:flex;gap:7px;padding:12px 14px}
+.pills[hidden]{display:none}
 .pill{
   font-size:13px;font-weight:600;padding:6px 13px;border-radius:999px;
   background:var(--inner);border:1px solid var(--hair);color:var(--dim);transition:all .15s;
@@ -943,7 +944,17 @@ let selectedId = null, filter = 'all', listTab = 'all', query = '', dtab = 'anal
 let firstLoad = true, lastAnimKey = null;
 let favs = new Set(JSON.parse(localStorage.getItem('aa_favs') || '[]'));
 const $ = id => document.getElementById(id);
-const lvOf = ev => liveByKey.get(key(ev.away.code, ev.home.code)) || null;
+// Cruza el live por equipos PERO solo si es el mismo día: en una serie el
+// matchup se repite y el final de anoche se pegaba al juego de hoy.
+const lvOf = ev => {
+  const lv = liveByKey.get(key(ev.away.code, ev.home.code));
+  if (!lv) return null;
+  if (lv.start && ev.start){
+    const diff = Math.abs(new Date(lv.start) - new Date(ev.start));
+    if (Number.isFinite(diff) && diff > 12 * 3600 * 1000) return null;
+  }
+  return lv;
+};
 const effStatus = ev => { const lv = lvOf(ev); return lv ? lv.status : ev.status; };
 
 /* ── ticker ──────────────────────────────────────────────── */
