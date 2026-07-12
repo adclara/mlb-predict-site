@@ -427,6 +427,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 }
 .fg.w{background:rgba(25,222,159,.22);color:var(--volt);border:1px solid rgba(25,222,159,.4)}
 .fg.l{background:rgba(255,70,85,.16);color:var(--red);border:1px solid rgba(255,70,85,.35)}
+.fg.e{background:rgba(255,197,61,.14);color:var(--amber);border:1px solid rgba(255,197,61,.35)}
 .fgame .fo{font-size:10px;color:var(--faint);font-weight:600}
 .fgame .fs{font-size:10px;color:var(--dim);font-weight:600}
 
@@ -1818,6 +1819,35 @@ function renderOtherDetail(){
       </div>
     </div>
     <div class="dbody">
+      ${(g.away.form || g.home.form) ? `
+      <div class="secttl">Racha reciente</div>
+      <div class="formgrid">
+        ${['away', 'home'].map(s => `<div class="formside">
+          <div class="fh">${oLogo(g[s])}${esc(oName(g[s]))}</div>
+          <div class="fchips">${g[s].form ? [...g[s].form].map(ch => {
+            const k = ch === 'W' ? ['w', 'G'] : ch === 'L' ? ['l', 'P'] : ['e', 'E'];
+            return `<span class="fg ${k[0]}">${k[1]}</span>`;
+          }).join('') : '<span class="wempty">Sin datos.</span>'}</div>
+        </div>`).join('')}
+      </div>` : ''}
+      ${(g.away.leaders || g.home.leaders) ? `
+      <div class="secttl">Líderes del partido</div>
+      <div class="formgrid">
+        ${['away', 'home'].map(s => `<div class="formside">
+          <div class="fh">${oLogo(g[s])}${esc(oName(g[s]))}</div>
+          ${(g[s].leaders || []).map(L => {
+            const ini = (L.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
+            const face = L.headshot
+              ? `<img class="lvhs" src="${esc(L.headshot)}" alt="" loading="lazy"
+                   onerror="this.outerHTML='<span class=&quot;lvhsfall&quot;>${esc(ini)}</span>'">`
+              : `<span class="lvhsfall">${esc(ini)}</span>`;
+            return `<div class="hitrow">${face}
+              <span class="hitname">${esc(L.name)}</span>
+              <span class="hitst num"><b>${esc(String(L.value ?? '—'))}</b> ${esc(L.cat || '')}</span>
+            </div>`;
+          }).join('') || '<span class="wempty">Sin datos.</span>'}
+        </div>`).join('')}
+      </div>` : ''}
       ${sport === 'nba' && injuriesDoc && injuriesDoc.nba && (g.away.code || g.home.code) ? `
       <div class="secttl">Bajas reportadas</div>
       <div class="formgrid">

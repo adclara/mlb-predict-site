@@ -253,12 +253,25 @@ async function otherLive(ctx, origin, cacheTag, upstream) {
     const home = comp.find((x) => x.homeAway === 'home') || comp[0] || {};
     const away = comp.find((x) => x.homeAway === 'away') || comp[1] || {};
     const st = (c.status && c.status.type) || (ev.status && ev.status.type) || {};
+    // leaders (NBA: Pts/Reb/Ast) y form ("WWDLW" en soccer), ambos opcionales.
+    const leadersOf = (t) => Array.isArray(t.leaders) ? t.leaders.slice(0, 3).map((L) => {
+      const top = Array.isArray(L.leaders) && L.leaders[0];
+      return (top && top.athlete && (top.athlete.shortName || top.athlete.displayName)) ? {
+        cat: L.shortDisplayName || L.abbreviation || L.name || null,
+        name: top.athlete.shortName || top.athlete.displayName,
+        value: top.displayValue ?? numOrNull(top.value),
+        headshot: (typeof top.athlete.headshot === 'string' && top.athlete.headshot)
+          || (top.athlete.headshot && top.athlete.headshot.href) || null,
+      } : null;
+    }).filter(Boolean) : null;
     const side = (t) => ({
       code: (t.team && (t.team.abbreviation || t.team.shortDisplayName)) || null,
       name: (t.team && (t.team.shortDisplayName || t.team.displayName)) || null,
       logo: (t.team && (t.team.logo || (t.team.logos && t.team.logos[0] && t.team.logos[0].href))) || null,
       score: numOrNull(t.score),
       rec: (Array.isArray(t.records) && t.records[0] && t.records[0].summary) || null,
+      form: (typeof t.form === 'string' && t.form) ? t.form.slice(0, 6) : null,
+      leaders: (() => { const l = leadersOf(t); return l && l.length ? l : null; })(),
     });
     return {
       espn_id: ev.id,
@@ -309,6 +322,7 @@ async function recentGames(ctx, origin, cacheTag, upstream) {
       score: numOrNull(t.score),
       rec: (Array.isArray(t.records) && t.records[0] && t.records[0].summary) || null,
       winner: !!t.winner,
+      form: (typeof t.form === 'string' && t.form) ? t.form.slice(0, 6) : null,
     });
     return {
       espn_id: ev.id, start: ev.date || null, date: ev.date ? String(ev.date).slice(0, 10) : null,
