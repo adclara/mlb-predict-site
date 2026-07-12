@@ -51,31 +51,23 @@ async function qaMlbToday() {
   const evs = w.data.events || [];
   P(`Worker sirve ${evs.length} eventos`);
 
-  // fecha del doc: cada evento debe caer en el día ET de hoy
-  const src = await getJson(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${TODAY}`);
+  // Cruce independiente contra MLB StatsAPI por CÓDIGO de equipo (el doc del
+  // Worker usa abreviaturas, p.ej. "HOU @ TEX"), con hydrate=team para tenerlas.
+  const src = await getJson(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${TODAY}&hydrate=team`);
   const sgames = (src.data && src.data.dates && src.data.dates[0] && src.data.dates[0].games) || [];
   console.log(`   (StatsAPI reporta ${sgames.length} juegos para ${TODAY})`);
 
   if (!sgames.length) { W('StatsAPI no trae juegos hoy (off-day) — se omite el cruce de matchups'); }
   else {
-    const srcPairs = new Set(sgames.map(g => canonPair(g.teams?.away?.team?.name, g.teams?.home?.team?.name)));
-    const wPairs = evs.map(e => {
-      const parts = String(e.matchup || '').split(/\s+(?:@|vs\.?|en)\s+/i);
-      return { raw: e.matchup, pair: parts.length === 2 ? canonPair(parts[0], parts[1]) : null,
-        away: e.away?.code || e.away?.name, home: e.home?.code || e.home?.name };
-    });
-    // cruce por códigos/nombres del propio doc si el matchup no parsea
+    const srcPairs = new Set(sgames.map(g => canonPair(g.teams?.away?.team?.abbreviation, g.teams?.home?.team?.abbreviation)));
     let matched = 0, missing = [];
     for (const e of evs) {
-      const pair = canonPair(e.away?.name || e.away?.code, e.home?.name || e.home?.code);
-      if (srcPairs.has(pair)) matched++;
+      if (srcPairs.has(canonPair(e.away?.code, e.home?.code))) matched++;
       else missing.push(e.matchup || `${e.away?.code}@${e.home?.code}`);
     }
-    if (matched === evs.length && evs.length === sgames.length) P(`Los ${evs.length} matchups coinciden con StatsAPI`);
-    else {
-      if (matched === evs.length) W(`Todos los ${matched} del Worker existen en StatsAPI, pero StatsAPI tiene ${sgames.length} (posible doble-header o filtro)`);
-      else F(`${evs.length - matched} matchups del Worker NO están en StatsAPI: ${missing.slice(0, 6).join(', ')}`);
-    }
+    if (matched === evs.length && evs.length === sgames.length) P(`Los ${evs.length} matchups coinciden con StatsAPI (por código)`);
+    else if (matched === evs.length) W(`Todos los ${matched} del Worker existen en StatsAPI, pero StatsAPI tiene ${sgames.length} (doble-header o filtro)`);
+    else F(`${evs.length - matched} matchups del Worker NO están en StatsAPI: ${missing.slice(0, 6).join(', ')}`);
   }
 
   // fechas: ¿algún evento con fecha != hoy pintado como de hoy?
