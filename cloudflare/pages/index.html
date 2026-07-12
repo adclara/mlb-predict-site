@@ -407,6 +407,17 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .formside .fh .stk{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--faint)}
 .formside .fh .stk.hot{color:var(--volt)} .formside .fh .stk.cold{color:var(--red)}
 .fchips{display:flex;gap:5px}
+.batchip{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap;
+  background:var(--panel-2);border:1px solid var(--hair-2);color:var(--dim)}
+.batchip.hot{color:var(--volt);border-color:rgba(25,222,159,.35);background:rgba(25,222,159,.08)}
+.batchip.cold{color:var(--sky);border-color:rgba(94,180,255,.35);background:rgba(94,180,255,.08)}
+.batline{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--dim);flex-wrap:wrap}
+.batline b{font-size:14.5px;color:var(--text)}
+.batsea{font-size:11.5px;color:var(--faint)}
+.hitrow{display:flex;align-items:center;gap:8px;padding:4px 0;min-width:0}
+.hitrow + .hitrow{border-top:1px solid var(--hair)}
+.hitname{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hitst{font-size:11.5px;color:var(--dim);margin-left:auto;flex-shrink:0}
 .fgame{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
 .fg{
   width:100%;max-width:34px;aspect-ratio:1;border-radius:8px;display:grid;place-items:center;
@@ -1248,6 +1259,33 @@ function renderDetail(){
       <div class="fchips">${chips}</div>
     </div>`;
   };
+  const batSide = (side, code) => {
+    const b = snap.bats && snap.bats[side];
+    if (!b) return `<div class="formside"><div class="fh">${logoImg(code)}${esc(tNick(code))}</div><span class="wempty">Sin datos suficientes aún.</span></div>`;
+    const badge = b.label === 'hot' ? '<span class="batchip hot">🔥 Bates calientes</span>'
+      : b.label === 'cold' ? '<span class="batchip cold">❄️ Bates fríos</span>'
+      : b.label === 'normal' ? '<span class="batchip">Bates normales</span>' : '';
+    return `<div class="formside">
+      <div class="fh">${logoImg(code)}${esc(tNick(code))}${badge ? `<span style="margin-left:auto">${badge}</span>` : ''}</div>
+      <div class="batline num"><b>${b.l5_rpg}</b> carreras/juego últimos 5
+        ${b.season_rpg != null ? `<span class="batsea">· temporada ${b.season_rpg}</span>` : ''}
+        ${b.delta != null ? `<b class="${b.delta > 0 ? 'pos' : b.delta < 0 ? 'neg' : ''}" style="margin-left:auto">${b.delta > 0 ? '+' : ''}${b.delta}</b>` : ''}</div>
+    </div>`;
+  };
+  const hitSide = (side, code) => {
+    const hs = (snap.hitters && snap.hitters[side]) || [];
+    const rows = hs.length ? hs.map(h => {
+      const ini = (h.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
+      return `<div class="hitrow">
+        <span class="hsfall" style="width:26px;height:26px;font-size:10px">${esc(ini)}</span>
+        <span class="hitname">${esc(h.name)}</span>
+        <span class="hitst num">${h.ops != null ? `OPS <b>${h.ops}</b>` : ''}${h.hr != null ? ` · <b>${h.hr}</b> HR` : ''}${h.avg != null ? ` · ${h.avg}` : ''}</span>
+      </div>`;
+    }).join('') : '<span class="wempty">Sin datos aún.</span>';
+    return `<div class="formside">
+      <div class="fh">${logoImg(code)}${esc(tNick(code))}</div>${rows}
+    </div>`;
+  };
   const dots = (side, e2) => {
     const on = e2.favors === side ? e2.strength : 0;
     const seq = side === 'away' ? [1,2,3] : [3,2,1];
@@ -1304,6 +1342,10 @@ function renderDetail(){
   const equipos = `
     ${snap.form ? `<div class="secttl">Forma reciente (últimos ${Math.max(snap.form.home?.length || 0, snap.form.away?.length || 0) || 5})</div>
     <div class="formgrid">${formSide('away', ev.away.code)}${formSide('home', ev.home.code)}</div>` : ''}
+    ${snap.bats ? `<div class="secttl">Bateo últimos 5</div>
+    <div class="formgrid">${batSide('away', ev.away.code)}${batSide('home', ev.home.code)}</div>` : ''}
+    ${snap.hitters ? `<div class="secttl">Mejores bateadores</div>
+    <div class="formgrid">${hitSide('away', ev.away.code)}${hitSide('home', ev.home.code)}</div>` : ''}
     ${bajas}
     ${duel}
     ${snap.pitchers ? `<div class="secttl">Abridores probables</div>

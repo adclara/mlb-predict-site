@@ -251,13 +251,58 @@ function verdictFor(g, prob) {
   return s;
 }
 
+// Ofensiva de temporada del brief (OPS + carreras/juego), sanitizada.
+function offenseFor(g) {
+  const o = g.brief && g.brief.offense;
+  if (!o) return null;
+  const side = (s) => (s && (s.ops != null || s.runs != null)) ? { ops: s.ops ?? null, runs: s.runs ?? null } : null;
+  const home = side(o.home), away = side(o.away);
+  return (home || away) ? { home, away } : null;
+}
+
+// Top-3 bateadores del brief (nombre + OPS/HR/AVG); sin ids MLBAM.
+function hittersFor(g) {
+  const h = g.brief && g.brief.hitters;
+  if (!h) return null;
+  const side = (arr) => Array.isArray(arr)
+    ? arr.slice(0, 3).map((x) => x && x.name ? { name: x.name, ops: x.ops ?? null, hr: x.hr ?? null, avg: x.avg ?? null } : null).filter(Boolean)
+    : [];
+  const home = side(h.home), away = side(h.away);
+  return (home.length || away.length) ? { home, away } : null;
+}
+
+// ¿Bates calientes o fríos? Carreras anotadas en los últimos 5 (del form,
+// score "mías-suyas") vs el promedio de temporada del brief.
+function batsFor(formArr, seasonRpg) {
+  const runs = (formArr || []).slice(0, 5)
+    .map((f) => Number(String(f && f.score).split('-')[0]))
+    .filter(Number.isFinite);
+  if (runs.length < 3) return null;
+  const l5 = runs.reduce((a, b) => a + b, 0) / runs.length;
+  const season = (typeof seasonRpg === 'number' && Number.isFinite(seasonRpg)) ? seasonRpg : null;
+  const delta = season != null ? l5 - season : null;
+  const label = delta == null ? null : delta >= 0.7 ? 'hot' : delta <= -0.7 ? 'cold' : 'normal';
+  return {
+    l5_rpg: Math.round(l5 * 10) / 10,
+    season_rpg: season != null ? Math.round(season * 10) / 10 : null,
+    delta: delta != null ? Math.round(delta * 10) / 10 : null,
+    label,
+  };
+}
+
 function snapshotFor(g, formIdx, pitcherNames, prob, liveGame) {
   const formOf = (team) => {
     const arr = (formIdx && formIdx.get(team)) || [];
     return arr.slice(0, 5);
   };
+  const off = offenseFor(g);
+  const batsSide = (side) => formIdx ? batsFor(formOf(g[side]), off && off[side] && off[side].runs) : null;
+  const batsHome = batsSide('home'), batsAway = batsSide('away');
   const snap = {
     form: formIdx ? { home: formOf(g.home), away: formOf(g.away) } : null,
+    offense: off,
+    hitters: hittersFor(g),
+    bats: (batsHome || batsAway) ? { home: batsHome, away: batsAway } : null,
     edges: edgesFor(g),
     pitchers: pitchersFor(g, pitcherNames),
     context: contextFor(g),
