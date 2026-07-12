@@ -331,6 +331,18 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 
 /* forma reciente */
 .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* metodología (¿cómo funciona AA?) */
+.howlink{display:block;margin-top:10px;font-size:12px;font-weight:800;color:var(--sky);background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.howlink:hover{text-decoration:underline}
+#howdlg{border:0;background:transparent;padding:16px;max-width:560px;width:calc(100vw - 24px)}
+#howdlg::backdrop{background:rgba(4,6,10,.72);backdrop-filter:blur(6px)}
+.howcard{position:relative;background:var(--panel,#12161f);border:1px solid var(--hair-2);border-radius:18px;padding:26px 26px 20px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.howcard h2{font-size:19px;font-weight:900;font-style:italic;text-transform:uppercase;margin-bottom:14px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.howsec{font-size:13.5px;line-height:1.65;color:var(--dim);padding:9px 0;border-bottom:1px solid var(--hair)}
+.howsec b{color:var(--text)}
+.hownote{font-size:11px;color:var(--faint);padding-top:12px}
+.howclose{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;border:1px solid var(--hair-2);background:var(--inner);color:var(--dim);cursor:pointer;font-size:13px}
+.howclose:hover{color:var(--text)}
 /* pestaña Simulación (Monte Carlo) */
 .simbig{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:9px;margin-bottom:4px}
 .srow{display:flex;align-items:center;gap:10px;padding:5px 0}
@@ -675,9 +687,35 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       <h3>Juego responsable</h3>
       <p class="legal"><b>AA Sports informa, no facilita apuestas.</b> Te damos los datos y nuestra
       lectura; la decisión es tuya. 18/21+ según tu jurisdicción. Los datos no garantizan resultados.</p>
+      <button class="howlink" id="howbtn">¿Cómo funciona el algoritmo AA? →</button>
     </div>
   </aside>
 </div>
+
+<!-- Metodología: la transparencia es la marca -->
+<dialog id="howdlg">
+  <div class="howcard">
+    <button class="howclose" id="howclose" aria-label="Cerrar">✕</button>
+    <h2>Cómo funciona AA Sports</h2>
+    <div class="howsec"><b>1 · Un modelo privado, medido en público.</b> El algoritmo corre en
+      servidores (nunca en tu navegador) y produce una probabilidad por juego. Todo lo que ves
+      —picks, probabilidades, récord— queda guardado tal como se publicó y <b>no se reescribe</b>.</div>
+    <div class="howsec"><b>2 · Validación antes de publicar.</b> Cada deporte se prueba con
+      simulaciones walk-forward sobre años de historia (MLB, y ya validados soccer con 11
+      temporadas, NBA con 10 y tenis con una década de partidos). Si un modelo no supera
+      nuestras pruebas de honestidad, <b>no se publica</b> — así de simple.</div>
+    <div class="howsec"><b>3 · Período de sombra.</b> Antes de encender un deporte nuevo, sus
+      predicciones corren semanas en privado contra resultados reales. Solo se hacen públicas
+      si el acierto en vivo sostiene lo prometido por las simulaciones.</div>
+    <div class="howsec"><b>4 · Probabilidades calibradas.</b> Cuando decimos 70%, históricamente
+      ocurre ~7 de cada 10 veces. La pestaña Simulación te muestra cómo se reparte el resultado
+      en 10,000 corridas derivadas de esa probabilidad.</div>
+    <div class="howsec"><b>5 · Tú decides.</b> AA Sports no toma apuestas ni dinero. Te damos
+      datos honestos (marcadores en vivo, forma, bajas, mercado) y nuestra lectura. La decisión
+      —y la responsabilidad— es tuya. Juego responsable, 18/21+.</div>
+    <p class="hownote">Datos: MLB StatsAPI y ESPN. Infraestructura: Cloudflare. Récord completo en la pestaña Historial.</p>
+  </div>
+</dialog>
 
 <div id="lotToast" style="position:fixed;right:18px;bottom:18px;width:72px;height:72px;z-index:300;pointer-events:none;display:none"></div>
 
@@ -1849,6 +1887,11 @@ function favCelebrate(){
     setTimeout(() => { if (a){ try{ a.destroy(); }catch(e){} } t.style.display = 'none'; }, 1300);
   });
 }
+
+// metodología: la transparencia es la marca
+$('howbtn').onclick = () => $('howdlg').showModal();
+$('howclose').onclick = () => $('howdlg').close();
+$('howdlg').addEventListener('click', (e) => { if (e.target === $('howdlg')) $('howdlg').close(); });
 
 loadToday(); loadLive(); loadInjuries(); loadMe();
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
