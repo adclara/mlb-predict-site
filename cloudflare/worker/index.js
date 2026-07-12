@@ -63,6 +63,7 @@ export default {
       // últimos resultados (fuera de horario / off-season) + tablas de posiciones
       if (path === '/v1/nba/recent') return await recentGames(ctx, origin, 'nba', `${ESPN_BASE}/basketball/nba/scoreboard`);
       if (path === '/v1/tennis/recent') return await tennisRecent(ctx, origin);
+      if (path === '/v1/tennis/rankings') return await tennisRankings(ctx, origin);
       if (path === '/v1/soccer/recent') {
         const lg = url.searchParams.get('league') || 'fifa.world';
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
@@ -347,6 +348,7 @@ async function tennisRecent(ctx, origin) {
           const st = (c.status && c.status.type) || {};
           if (mapEspnStatus(st.name) !== 'final') continue;
           const p = (x) => ({
+            id: (x.athlete && x.athlete.id) || x.id || null,
             code: (x.athlete && (x.athlete.shortName || x.athlete.displayName)) || null,
             name: (x.athlete && x.athlete.displayName) || null,
             logo: (x.athlete && x.athlete.flag && x.athlete.flag.href) || null,
@@ -370,6 +372,46 @@ async function tennisRecent(ctx, origin) {
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=1800' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin, 300);
+}
+
+// Ranking mundial ATP/WTA (semanal → caché larga). El id del athlete es el
+// mismo del competitor del scoreboard, así el frontend une rank ↔ partido.
+async function tennisRankings(ctx, origin) {
+  const cache = caches.default;
+  const cacheKey = new Request('https://aa-sports.cache/tennis/rankings', { method: 'GET' });
+  const cached = await cache.match(cacheKey);
+  if (cached) return withCors(await cached.text(), origin, 3600);
+
+  const sections = [];
+  for (const tour of ['atp', 'wta']) {
+    try {
+      const res = await fetch(`${ESPN_BASE}/tennis/${tour}/rankings`, { headers: { 'user-agent': 'aa-sports/1.0' } });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const rk = (data.rankings || []).find((r) => Array.isArray(r.ranks) && r.ranks.length) || null;
+      if (!rk) continue;
+      const rows = rk.ranks.slice(0, 50).map((r) => {
+        const a = r.athlete || {};
+        const rank = numOrNull(r.current);
+        return (rank == null || rank <= 0 || !a.displayName) ? null : {
+          rank,
+          prev: numOrNull(r.previous),
+          trend: (typeof r.trend === 'string' && r.trend) || null,
+          points: numOrNull(r.points),
+          id: a.id || null,
+          name: a.displayName,
+          short: a.shortname || a.shortName || null,
+          flag: (a.flag && a.flag.href) || null,
+        };
+      }).filter(Boolean);
+      if (rows.length) sections.push({ name: tour.toUpperCase(), rows });
+    } catch (e) { /* un tour caído no tumba el otro */ }
+  }
+
+  const payload = JSON.stringify({ updated_at: new Date().toISOString(), sections });
+  const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=21600' } });
+  ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
+  return withCors(payload, origin, 3600);
 }
 
 // Tabla de posiciones (NBA por conferencia; soccer tabla de liga o grupos).
@@ -430,6 +472,7 @@ async function tennisLive(ctx, origin) {
           if (players.length < 2) continue;
           const st = (c.status && c.status.type) || {};
           const p = (x) => ({
+            id: (x.athlete && x.athlete.id) || x.id || null,
             code: (x.athlete && (x.athlete.shortName || x.athlete.displayName)) || (x.team && x.team.shortDisplayName) || null,
             name: (x.athlete && x.athlete.displayName) || null,
             logo: (x.athlete && x.athlete.flag && x.athlete.flag.href) || null,
