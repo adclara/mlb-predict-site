@@ -231,6 +231,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .tfall{border-radius:50%;background:var(--panel-2);border:1px solid var(--hair-2);display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:var(--dim)}
 .mt .aapick.won{background:rgba(25,222,159,.16)}
 .mt .aapick.lost{color:var(--red);border-color:rgba(255,70,85,.4);background:rgba(255,70,85,.08)}
+.mt .aapick.liveaa{color:var(--sky);border-color:rgba(94,168,255,.45);background:rgba(94,168,255,.08)}
 .reschip{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:6px;margin-left:8px;vertical-align:1px}
 .reschip.won{background:rgba(25,222,159,.14);color:var(--volt);border:1px solid rgba(25,222,159,.35)}
 .reschip.lost{background:rgba(255,70,85,.12);color:var(--red);border:1px solid rgba(255,70,85,.3)}
@@ -245,6 +246,8 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .tag.gema{background:rgba(255,197,61,.12);color:var(--amber)}
 .tag.fijo{background:rgba(25,222,159,.1);color:var(--volt)}
 .tag.oro{background:rgba(255,197,61,.12);color:var(--amber)}
+.tag.muted{opacity:.32;filter:grayscale(.6)}
+.bigpick.muted,.bigprob.muted{opacity:.4;filter:grayscale(.5)}
 .skel{height:58px;border-top:1px solid var(--hair);background:linear-gradient(90deg,transparent,rgba(255,255,255,.03),transparent);background-size:200% 100%;animation:sh 1.4s infinite}
 @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .lempty{padding:34px 16px;text-align:center;color:var(--faint);font-size:13.5px;border-top:1px solid var(--hair)}
@@ -824,9 +827,12 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     <div class="howsec"><b>3 · Período de sombra.</b> Antes de encender un deporte nuevo, sus
       predicciones corren semanas en privado contra resultados reales. Solo se hacen públicas
       si el acierto en vivo sostiene lo prometido por las simulaciones.</div>
-    <div class="howsec"><b>4 · Probabilidades calibradas.</b> Cuando decimos 70%, históricamente
-      ocurre ~7 de cada 10 veces. La pestaña Simulación te muestra cómo se reparte el resultado
-      en 10,000 corridas derivadas de esa probabilidad.</div>
+    <div class="howsec"><b>4 · Probabilidades calibradas y en vivo.</b> Mostramos la probabilidad ya
+      corregida (calibrada) del modelo, no un número inflado: si decimos ~60%, buscamos que ocurra
+      ~6 de cada 10. Medimos nuestra propia calibración y el récord de cada nivel queda público.
+      Durante el juego, el número se mueve con el marcador (probabilidad en vivo). Honestidad:
+      nuestro modelo iguala al mercado, no lo supera — el valor está en la selección y en no
+      inventar. La pestaña Simulación reparte el resultado en 10,000 corridas de esa probabilidad.</div>
     <div class="howsec"><b>5 · Tú decides.</b> AA Sports no toma apuestas ni dinero. Te damos
       datos honestos (marcadores en vivo, forma, bajas, mercado) y nuestra lectura. La decisión
       —y la responsabilidad— es tuya. Juego responsable, 18/21+.</div>
@@ -1115,9 +1121,15 @@ function rowHtml(ev, idx){
   const pickA = p.pick && canon(p.pick) === canon(ev.away.code);
   const pickH = p.pick && canon(p.pick) === canon(ev.home.code);
   const res = ev.result === 'win' ? 'won' : ev.result === 'loss' ? 'lost' : '';
-  const chip = pct => `<span class="aapick num ${res}">AA ${pct}%${res === 'won' ? ' ✓' : res === 'lost' ? ' ✗' : ''}</span>`;
+  // EN VIVO: el % del pick es la prob de ESPN que se mueve con el marcador; si el
+  // juego se volteó en contra, se atenúa (no un badge dorado sobre un juego perdido).
+  const liveWpHome = (st === 'live' && lv && typeof lv.win_prob_home === 'number') ? lv.win_prob_home : null;
+  const sidePct = (side) => { const wp = liveWpHome == null ? null : (side === 'home' ? liveWpHome : 1 - liveWpHome); return wp != null ? Math.round(wp * 100) : p.prob_pct; };
+  const chip = (pct, live) => `<span class="aapick num ${res} ${live ? 'liveaa' : ''}">${live ? '' : 'AA '}${pct}%${live ? ' vivo' : ''}${res === 'won' ? ' ✓' : res === 'lost' ? ' ✗' : ''}</span>`;
+  const pickSideWp = liveWpHome == null ? null : (pickH ? liveWpHome : pickA ? 1 - liveWpHome : null);
+  const rowMuted = pickSideWp != null && pickSideWp < 0.4;
 
-  const tags = (ev.badges || []).map(b => `<span class="tag ${esc(b)}">${b === 'gema' ? '💎 Gema' : esc(b)}</span>`).join('');
+  const tags = (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${rowMuted ? 'muted' : ''}">${b === 'gema' ? '💎 Gema' : esc(b)}</span>`).join('');
 
   // duelo de abridores en la fila (solo pre-juego): se ve el pitcheo de un vistazo
   const sp2 = ev.snapshot && ev.snapshot.pitchers;
@@ -1128,8 +1140,8 @@ function rowHtml(ev, idx){
   return `<button class="mrow ${ev.event_id === selectedId ? 'sel' : ''}" data-id="${esc(ev.event_id)}" style="--i:${idx ?? 0}">
     <span class="mtime num">${timeCol}</span>
     <span class="mteams">
-      <span class="mt ${aWin || (!done && pickA) ? 'win' : ''}">${logoImg(ev.away.code)}<span class="nm">${esc(tNick(ev.away.code))}</span>${pickA && p.prob_pct != null ? chip(p.prob_pct) : ''}</span>
-      <span class="mt ${hWin || (!done && pickH) ? 'win' : ''}">${logoImg(ev.home.code)}<span class="nm">${esc(tNick(ev.home.code))}</span>${pickH && p.prob_pct != null ? chip(p.prob_pct) : ''}</span>
+      <span class="mt ${aWin || (!done && pickA) ? 'win' : ''}">${logoImg(ev.away.code)}<span class="nm">${esc(tNick(ev.away.code))}</span>${pickA && sidePct('away') != null ? chip(sidePct('away'), liveWpHome != null) : ''}</span>
+      <span class="mt ${hWin || (!done && pickH) ? 'win' : ''}">${logoImg(ev.home.code)}<span class="nm">${esc(tNick(ev.home.code))}</span>${pickH && sidePct('home') != null ? chip(sidePct('home'), liveWpHome != null) : ''}</span>
       ${spLine}
     </span>
     <span class="mscore num">
@@ -1389,9 +1401,17 @@ function renderDetail(){
   if (!ev){ $('dcard').innerHTML = '<div class="dempty">Elige un partido para ver el análisis completo del algoritmo AA.</div>'; return; }
   const lv = lvOf(ev), st = effStatus(ev), p = ev.prediction || {};
 
-  const pHome = p.pick && canon(p.pick) === canon(ev.home.code) ? p.prob : (p.prob != null ? 1 - p.prob : null);
+  // Prob del local: calibrada antes del juego; EN VIVO la de ESPN (win_prob_home)
+  // para que el número se mueva con el marcador y no quede congelado.
+  const liveWpHome = (st === 'live' && lv && typeof lv.win_prob_home === 'number') ? lv.win_prob_home : null;
+  const pHomeCal = p.pick && canon(p.pick) === canon(ev.home.code) ? p.prob : (p.prob != null ? 1 - p.prob : null);
+  const pHome = liveWpHome != null ? liveWpHome : pHomeCal;
   const homePct = pHome != null ? Math.round(pHome * 1000) / 10 : null;
   const awayPct = homePct != null ? Math.round((100 - homePct) * 10) / 10 : null;
+  // % del lado del pick (calibrado / en vivo) y si el juego se volteó en su contra
+  const pickWpLive = (liveWpHome != null && p.pick) ? (canon(p.pick) === canon(ev.home.code) ? liveWpHome : 1 - liveWpHome) : null;
+  const pickPct = pickWpLive != null ? Math.round(pickWpLive * 100) : p.prob_pct;
+  const badgeMuted = pickWpLive != null && pickWpLive < 0.4;
 
   let mid;
   if (st !== 'pre' && lv && lv.home.score != null){
@@ -1431,7 +1451,7 @@ function renderDetail(){
   }
   const recA = lv && lv.away.rec ? `<span class="rc num">${esc(lv.away.rec)}</span>` : '';
   const recH = lv && lv.home.rec ? `<span class="rc num">${esc(lv.home.rec)}</span>` : '';
-  const tags = (ev.badges || []).map(b => `<span class="tag ${esc(b)}">${b === 'gema' ? '💎 Gema' : esc(b)}</span>`).join(' ');
+  const tags = (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${badgeMuted ? 'muted' : ''}">${b === 'gema' ? '💎 Gema' : esc(b)}</span>`).join(' ');
 
   const risk = ev.risk || {};
   const riskPct = risk.score != null ? Math.min(100, risk.score) : null;
@@ -1491,13 +1511,13 @@ function renderDetail(){
     ${verdictBox}
     ${homePct != null ? `
     <div class="whowin">
-      <div class="ww-head"><span class="q">¿Quién gana?</span><span class="eng">Motor AA · ${esc(p.engine_version || 'v2')}</span></div>
+      <div class="ww-head"><span class="q">${liveWpHome != null ? 'Probabilidad en vivo' : '¿Quién gana?'}</span><span class="eng">${liveWpHome != null ? 'ESPN · se mueve con el juego' : 'Motor AA · ' + esc(p.engine_version || 'v2')}</span></div>
       <div class="probhead num"><span>${esc(tNick(ev.away.code))} ${awayPct}%</span><span>${homePct}% ${esc(tNick(ev.home.code))}</span></div>
       <div class="probtrack"><span class="aw" style="width:${awayPct}%"></span><span class="hm" style="width:${homePct}%"></span></div>
       <div class="ww-pick">
-        ${p.pick ? `<span class="bigpick">Gana ${esc(tNick(p.pick))}</span>` : ''}
-        ${p.prob_pct != null ? `<span class="bigprob num">${p.prob_pct}%</span>` : ''}
-        ${p.confidence ? `<span class="confpill">Confianza ${esc(p.confidence)}</span>` : ''}
+        ${p.pick ? `<span class="bigpick ${badgeMuted ? 'muted' : ''}">${liveWpHome != null ? 'Pick: ' : 'Gana '}${esc(tNick(p.pick))}</span>` : ''}
+        ${pickPct != null ? `<span class="bigprob num ${badgeMuted ? 'muted' : ''}">${pickPct}%</span>` : ''}
+        ${liveWpHome == null && p.confidence ? `<span class="confpill">Confianza ${esc(p.confidence)}</span>` : ''}
         ${tags}
       </div>
     </div>` : ''}
