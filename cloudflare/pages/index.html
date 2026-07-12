@@ -118,6 +118,7 @@ header{
 .hspacer{flex:1}
 .record{font-size:13px;color:var(--dim);background:var(--panel);border:1px solid var(--hair);padding:7px 14px;border-radius:12px;white-space:nowrap}
 .record b{color:var(--volt);font-weight:700}
+.record b.lo{color:var(--red)}
 
 /* ═════════ TICKER ═════════ */
 .ticker{border-bottom:1px solid var(--hair);background:var(--page)}
@@ -1949,13 +1950,22 @@ async function loadToday(){
     if (d.record && d.record.wins != null){
       const {wins: w, losses: l, win_rate: wr} = d.record;
       $('record').hidden = false;
-      $('record').innerHTML = `Récord AA <b>${w}–${l}</b>${wr != null ? ` · <b>${Math.round(wr * 100)}%</b>` : ''}`;
+      // récord por nivel (honesto: en rojo si va por debajo de 50%)
+      const trChip = (name, r) => (r && r.wins != null) ? ` · ${name} <b class="${((r.win_rate ?? r.wins / Math.max(1, r.wins + r.losses)) < 0.5) ? 'lo' : ''}">${r.wins}-${r.losses}</b>` : '';
+      $('record').innerHTML = `Récord AA <b>${w}–${l}</b>${wr != null ? ` · <b>${Math.round(wr * 100)}%</b>` : ''}${trChip('Fijos', d.record.locks)}${trChip('Gemas', d.record.gems)}`;
       $('wRecord').hidden = false;
       const pct = wr != null ? Math.round(wr * 100) : Math.round(w / Math.max(1, w + l) * 100);
       requestAnimationFrame(() => requestAnimationFrame(() =>
         $('ringArc').setAttribute('stroke-dasharray', `${pct / 100 * 195} 195`)));
       $('ringPct').textContent = pct + '%';
-      $('recNums').innerHTML = `<b>${w}</b> ganados<br><b>${l}</b> perdidos<br><span style="color:var(--faint)">${w + l} picks medidos</span>`;
+      // récord por nivel bajo el general (honesto: unidades en rojo si negativas)
+      const trLine = (name, r) => {
+        if (!r || r.wins == null) return '';
+        const under = (r.win_rate ?? r.wins / Math.max(1, r.wins + r.losses)) < 0.5;
+        const u = (typeof r.units === 'number') ? ` <span style="color:${r.units < 0 ? 'var(--red)' : 'var(--volt)'}">${r.units > 0 ? '+' : ''}${r.units}u</span>` : '';
+        return `<br><span style="color:var(--faint)">${name}</span> <b style="color:${under ? 'var(--red)' : 'var(--volt)'}">${r.wins}-${r.losses}</b>${u}`;
+      };
+      $('recNums').innerHTML = `<b>${w}</b> ganados<br><b>${l}</b> perdidos<br><span style="color:var(--faint)">${w + l} picks medidos</span>${trLine('Fijos', d.record.locks)}${trLine('Gemas', d.record.gems)}`;
     }
     if (firstLoad && events.length){
       firstLoad = false;
