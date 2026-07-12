@@ -347,6 +347,39 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .f5card .probhead{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:7px}
 .f5card .nrfi{margin-top:9px;font-size:13px;color:var(--dim)}
 .f5card .nrfi b{color:var(--amber)}
+/* ── detalle de otros deportes: estadísticas del partido, box score, eventos ── */
+.mstathead{display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:var(--dim);margin:2px 3px 7px}
+.mstatbox{border:1px solid var(--hair);border-radius:13px;padding:9px 14px}
+.mstat{padding:7px 0}
+.mstat + .mstat{border-top:1px solid var(--hair)}
+.mstathd{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mstatv{font-size:13.5px;font-weight:700;color:var(--dim);min-width:44px}
+.mstatv:last-child{text-align:right}
+.mstatv.lead{color:var(--text)}
+.mstatl{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);text-align:center;flex:1}
+.mstatbar{display:flex;height:6px;border-radius:4px;overflow:hidden;background:var(--panel-2);margin-top:6px;gap:2px}
+.mstatbar .mseg{height:100%;border-radius:3px}
+.mstatbar .mseg.a{background:#FF6B3D}
+.mstatbar .mseg.h{background:var(--volt)}
+.dcard.enter .mstatbar .mseg{animation:barIn .5s .05s cubic-bezier(.2,.7,.3,1) both}
+.soclu .luname{flex:1;min-width:0}
+.soclu .lupos{margin-left:auto}
+.formchip{font-size:10px;font-weight:800;color:var(--sky);background:rgba(94,168,255,.12);border-radius:5px;padding:2px 6px;letter-spacing:.04em}
+.lusubs{font-size:11px;color:var(--faint);line-height:1.6;margin-top:9px;padding-top:8px;border-top:1px solid var(--hair)}
+.lusubl{display:block;font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
+.evbox{border:1px solid var(--hair);border-radius:13px;padding:5px 13px;max-height:280px;overflow-y:auto}
+.evrow{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:12.5px}
+.evrow + .evrow{border-top:1px solid var(--hair)}
+.evmin{width:34px;flex-shrink:0;font-weight:800;color:var(--faint);font-size:11.5px}
+.evic{flex-shrink:0;font-size:13px;width:18px;text-align:center}
+.evtx{color:var(--dim);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.evtx.goal{color:var(--text);font-weight:700}
+.boxgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.boxwrap{min-width:0;overflow-x:auto}
+.boxtbl{font-size:11.5px}
+.boxtbl th,.boxtbl td{padding:4px 5px}
+.boxtbl td.tm{max-width:130px}
+.stdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--volt);margin-right:5px;flex:none}
 .mktrow .up{color:var(--volt);font-size:11px} .mktrow .dn{color:var(--red);font-size:11px} .mktrow .dim{color:var(--faint)}
 .ww-pick{display:flex;align-items:center;gap:11px;margin-top:13px;flex-wrap:wrap}
 .bigpick{font-size:18.5px;font-weight:900;font-style:italic;text-transform:uppercase;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -620,7 +653,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   .detail.open{display:block}
   .dback{display:flex}
   .colside{display:block}
-  .pgrid,.formgrid{grid-template-columns:1fr} /* tarjetas apiladas en móvil (no se apretujan) */
+  .pgrid,.formgrid,.boxgrid{grid-template-columns:1fr} /* tarjetas apiladas en móvil (no se apretujan) */
 }
 .pcard{min-width:0}
 .formside{min-width:0}
@@ -1260,6 +1293,65 @@ function playerCard(pl, role){
   </div>`;
 }
 
+/* ── componentes del detalle de otros deportes (summary de ESPN) ─────────── */
+// Fila de estadística del partido estilo SofaScore: valor · etiqueta · valor,
+// con barra de dos segmentos proporcional (resalta al mayor). Descriptivo.
+function mstatRow(label, away, home){
+  const pa = parseFloat(String(away)), ph = parseFloat(String(home));
+  const both = Number.isFinite(pa) && Number.isFinite(ph);
+  const tot = both ? (Math.abs(pa) + Math.abs(ph)) : 0;
+  const aw = both && tot ? Math.abs(pa) / tot * 100 : 50;
+  const aLead = both && pa > ph, hLead = both && ph > pa;
+  return `<div class="mstat">
+    <div class="mstathd"><span class="mstatv num ${aLead ? 'lead' : ''}">${away == null ? '—' : esc(String(away))}</span>
+      <span class="mstatl">${esc(label)}</span>
+      <span class="mstatv num ${hLead ? 'lead' : ''}">${home == null ? '—' : esc(String(home))}</span></div>
+    <div class="mstatbar"><span class="mseg a" style="width:${aw.toFixed(1)}%"></span><span class="mseg h" style="width:${(100 - aw).toFixed(1)}%"></span></div>
+  </div>`;
+}
+// Tarjeta de alineación de soccer: formación + titulares (dorsal/pos) + suplentes.
+function soccerLineupCard(lu){
+  if (!lu) return `<div class="formside"><span class="wempty">Sin alineación.</span></div>`;
+  const rows = (lu.starters || []).map(p => `<div class="lurow">
+    <span class="luord num">${esc(String(p.jersey || '·'))}</span>
+    <span class="luname">${esc(p.name)}</span>
+    ${p.pos ? `<span class="lupos">${esc(p.pos)}</span>` : ''}
+  </div>`).join('');
+  const subs = (lu.subs || []).length
+    ? `<div class="lusubs"><span class="lusubl">Suplentes</span>${lu.subs.map(p => esc(p.name)).join(' · ')}</div>` : '';
+  return `<div class="formside soclu">
+    <div class="fh">${lu.formation ? `<span class="formchip num">${esc(lu.formation)}</span>` : ''}<b>${esc(lu.code || '')}</b></div>
+    ${rows || '<span class="wempty">Sin alineación publicada.</span>'}
+    ${subs}
+  </div>`;
+}
+// Fila de evento de soccer (gol/tarjeta/cambio) con minuto + icono + texto.
+function soccerEventRow(e){
+  const t = String(e.type || '').toLowerCase();
+  const icon = (e.scoring || t.includes('goal')) ? '⚽'
+    : t.includes('yellow') ? '🟨' : t.includes('red') ? '🟥'
+    : t.includes('sub') ? '🔁' : t.includes('penalty') ? '🎯' : '•';
+  return `<div class="evrow ${e.side || ''}">
+    <span class="evmin num">${esc(e.clock || '')}</span>
+    <span class="evic">${icon}</span>
+    <span class="evtx ${e.scoring ? 'goal' : ''}">${esc(e.text || e.type || '')}</span>
+  </div>`;
+}
+// Tarjeta de box score de NBA: jugadores con MIN/PTS/REB/AST/+/-.
+function nbaBoxCard(box){
+  if (!box || !(box.list || []).length) return `<div class="boxwrap"><span class="wempty">Sin box score.</span></div>`;
+  const rows = box.list.slice(0, 8).map(p => `<tr>
+    <td class="tl tm">${p.starter ? '<span class="stdot" title="Titular"></span>' : ''}${esc(p.name)}</td>
+    <td>${esc(String(p.min ?? '—'))}</td><td><b>${esc(String(p.pts ?? '—'))}</b></td>
+    <td>${esc(String(p.reb ?? '—'))}</td><td>${esc(String(p.ast ?? '—'))}</td><td>${esc(String(p.pm ?? '—'))}</td>
+  </tr>`).join('');
+  return `<div class="boxwrap">
+    <div class="sthead">${esc(box.code || '')}</div>
+    <table class="sttbl boxtbl num"><thead><tr><th class="tl">Jugador</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>+/-</th></tr></thead>
+    <tbody>${rows}</tbody></table>
+  </div>`;
+}
+
 function renderDetail(){
   if (sport !== 'mlb'){ renderOtherDetail(); return; }
   if (listTab === 'hist'){ renderHistDash(); return; }
@@ -1877,6 +1969,26 @@ async function loadStandings(){
   }catch(err){ /* sin tabla no pasa nada */ }
 }
 
+// Detalle de partido (alineaciones/box score/estadísticas) — proxy del summary
+// de ESPN, cacheado por evento. Refresca en vivo (60s) y tras terminar (10min).
+const summaryCache = new Map();          // 'sport:liga:eventId' → {at, doc}
+const summaryPending = new Set();
+function summaryKey(g){ return `${sport}:${sport === 'soccer' ? soccerLeague : '-'}:${g.espn_id}`; }
+function loadSummary(g){
+  if (!g || (sport !== 'soccer' && sport !== 'nba')) return;
+  const k = summaryKey(g);
+  const ent = summaryCache.get(k);
+  const ttl = g.status === 'final' ? 6e5 : 6e4;
+  if (summaryPending.has(k) || (ent && Date.now() - ent.at < ttl)) return;
+  summaryPending.add(k);
+  const q = sport === 'soccer' ? `&league=${encodeURIComponent(soccerLeague)}` : '';
+  fetch(`${API}/v1/${sport}/summary?event=${encodeURIComponent(g.espn_id)}${q}`)
+    .then(r => r.json())
+    .then(d => { summaryCache.set(k, { at: Date.now(), doc: d && d.ok ? d : null }); if (sport !== 'mlb') renderOtherDetail(); })
+    .catch(() => { summaryCache.set(k, { at: Date.now(), doc: null }); })
+    .finally(() => summaryPending.delete(k));
+}
+
 const shortDate = (s) => { try{ return new Date(s + 'T12:00Z').toLocaleDateString('es', { day: 'numeric', month: 'short' }); }catch(e){ return s; } };
 // Etiqueta humana: "Hoy · sáb 12 jul" para hoy, "sáb 12 jul" para días pasados.
 const humanDate = (iso, isToday) => {
@@ -2052,6 +2164,34 @@ function renderOtherDetail(){
     <div class="cmphead"><span>${esc(oName(g.away))}</span><span class="mid">favorece →</span><span>${esc(oName(g.home))}</span></div>
     <div class="cmpbox glass-in">${h2hRows}</div>` : '';
 
+  // Detalle del partido (alineaciones/formación + estadísticas + eventos para
+  // soccer; box score + estadísticas de equipo para NBA). Datos reales de ESPN.
+  let summaryHtml = '';
+  if (sport === 'soccer' || sport === 'nba'){
+    loadSummary(g);
+    const ent = summaryCache.get(summaryKey(g));
+    const S = ent && ent.doc;
+    const statHead = `<div class="mstathead"><span>${esc(oName(g.away))}</span><span>${esc(oName(g.home))}</span></div>`;
+    if (S && sport === 'soccer'){
+      if (S.lineups && (S.lineups.home || S.lineups.away))
+        summaryHtml += `<div class="secttl">Alineaciones</div>
+          <div class="formgrid">${soccerLineupCard(S.lineups.away)}${soccerLineupCard(S.lineups.home)}</div>`;
+      if (S.stats && S.stats.length)
+        summaryHtml += `<div class="secttl">Estadísticas del partido</div>${statHead}
+          <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.label, s.away, s.home)).join('')}</div>`;
+      if (S.events && S.events.length)
+        summaryHtml += `<div class="secttl">Eventos</div>
+          <div class="evbox glass-in">${S.events.map(soccerEventRow).join('')}</div>`;
+    } else if (S && sport === 'nba'){
+      if (S.players && (S.players.home || S.players.away))
+        summaryHtml += `<div class="secttl">Box score</div>
+          <div class="boxgrid">${nbaBoxCard(S.players.away)}${nbaBoxCard(S.players.home)}</div>`;
+      if (S.stats && S.stats.length)
+        summaryHtml += `<div class="secttl">Estadísticas del equipo</div>${statHead}
+          <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.label, s.away, s.home)).join('')}</div>`;
+    }
+  }
+
   dc.innerHTML = `
     <div class="dtop"><span class="crumb">${esc(SPORT_LABEL[sport] || sport)}${g.league ? `<span class="sep">›</span><b>${esc(g.league)}</b>` : ''}</span></div>
     <div class="dhero">
@@ -2067,6 +2207,7 @@ function renderOtherDetail(){
     </div>
     <div class="dbody">
       ${otherH2H}
+      ${summaryHtml}
       ${(g.away.form || g.home.form) ? `
       <div class="secttl">Racha reciente</div>
       <div class="formgrid">
