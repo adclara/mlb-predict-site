@@ -46,7 +46,19 @@ function summarize(g) {
 }
 
 // Métricas clave (3-5) — honestas y legibles, sin exponer internals del modelo.
-function metricsFor(g) {
+// Ventaja HONESTA vs mercado = prob CALIBRADA del pick − prob implícita del
+// mercado del mismo lado. Antes se usaba g.value.best_edge (escala clásica
+// inflada), que exageraba el "valor" — el modelo apenas iguala al mercado.
+function honestEdge(g, prob) {
+  const o = g.odds;
+  if (!o || prob == null || !g.ml_pick) return null;
+  const pHomeMkt = typeof o.p_home_mkt === 'number' ? o.p_home_mkt
+    : (o.consensus && typeof o.consensus.p_home === 'number' ? o.consensus.p_home : null);
+  if (pHomeMkt == null) return null;
+  const mktForPick = g.ml_pick === g.home ? pHomeMkt : 1 - pHomeMkt;
+  return prob - mktForPick;
+}
+function metricsFor(g, prob) {
   const out = [];
   const pp = pickProb(g);
   if (pp != null) out.push({ label: 'Prob. modelo', value: `${PCT(pp)}%`, kind: 'pct' });
@@ -54,7 +66,7 @@ function metricsFor(g) {
   if (ap != null) out.push({ label: 'Adrián', value: `${PCT(ap)}%`, kind: 'pct' });
   if (typeof g.agree === 'number') out.push({ label: 'Acuerdo', value: `${g.agree}/6`, kind: 'agree' });
   if (g.risk && g.risk.level) out.push({ label: 'Riesgo', value: g.risk.level, kind: 'risk', score: g.risk.score ?? null });
-  const edge = g.value && typeof g.value.best_edge === 'number' ? g.value.best_edge : null;
+  const edge = honestEdge(g, prob);
   if (edge != null) out.push({ label: 'Ventaja vs mercado', value: `${edge >= 0 ? '+' : ''}${PCT(edge)}%`, kind: 'edge' });
   return out;
 }
@@ -256,7 +268,7 @@ function marketFor(g) {
 function verdictFor(g, prob) {
   const pick = g.ml_pick;
   if (!pick || prob == null) return 'El algoritmo no publica un pick para este juego: las señales no son concluyentes.';
-  const edge = g.value && typeof g.value.best_edge === 'number' ? g.value.best_edge : null;
+  const edge = honestEdge(g, prob);
   const risk = (g.risk && g.risk.level) || null;
   const p = PCT(prob);
   let s = `El algoritmo da ${p}% a ${pick}`;
@@ -390,8 +402,9 @@ function snapshotFor(g, formIdx, pitcherNames, prob, liveGame) {
 function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
   const status = normStatus(g.status);
   const pp = pickProb(g);
-  // Prefiere el prob/label del daily (lo que el sitio muestra como pick), si lo hay.
-  const prob = pickInfo && typeof pickInfo.prob === 'number' ? pickInfo.prob : pp;
+  // Prob CALIBRADA del lado del pick (honestidad — ver calibratedProb). Antes se
+  // mostraba la clásica sobre-confiada; ahora se prefiere prob_v2 / p_final.
+  const prob = calibratedProb(pickInfo, pp);
   const confidence = pickInfo && pickInfo.confidence ? pickInfo.confidence : confFromProb(prob);
   const badges = [];
   if (pickInfo && pickInfo.badge) badges.push(pickInfo.badge);
@@ -413,7 +426,7 @@ function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
       confidence: confidence || null,
       engine_version: g.formula_version || g.engine || 'v2',
     },
-    metrics: metricsFor(g),
+    metrics: metricsFor(g, prob),
     summary_es: summarize(g),
     snapshot: snapshotFor(g, formIdx, pitcherNames, prob, liveGame),
     risk: g.risk ? { level: g.risk.level || null, score: g.risk.score ?? null } : null,
@@ -428,9 +441,29 @@ function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
 
 function confFromProb(p) {
   if (p == null) return null;
-  if (p >= 0.7) return 'alta';
-  if (p >= 0.58) return 'media';
+  // Umbrales en la escala CALIBRADA (los picks calibrados rara vez pasan de ~0.65).
+  if (p >= 0.62) return 'alta';
+  if (p >= 0.55) return 'media';
   return 'baja';
+}
+
+// Probabilidad CALIBRADA del lado del pick para mostrar (honestidad: el número
+// que el sitio enseña debe cumplirse). El repo mide que la prob "clásica" está
+// sobre-confiada (~70% mostrado → ~57% real, ECE 0.108 en learning.json). Orden:
+//   1) prob_v2 = prob calibrada del cerebro v2 (p_final + Platt) — la buena.
+//   2) gema: su `prob` YA es p_final (calibrada) — se usa tal cual.
+//   3) fallback (sin prob_v2 y no-gema): encoger la clásica hacia 0.5 para quitar
+//      la sobre-confianza medida (pendiente ~0.35 de la curva de calibración).
+//   4) sin pick: pickProb (model_p base, ya calibrado, ECE ~0.005 en backtest).
+const CAL_SHRINK = 0.35;
+const calShrink = (p) => (p == null ? null : 0.5 + (p - 0.5) * CAL_SHRINK);
+function calibratedProb(pickInfo, pp) {
+  if (pickInfo) {
+    if (typeof pickInfo.prob_v2 === 'number') return pickInfo.prob_v2;
+    if (pickInfo.badge === 'gema' && typeof pickInfo.prob === 'number') return pickInfo.prob;
+    if (typeof pickInfo.prob === 'number') return calShrink(pickInfo.prob);
+  }
+  return pp;
 }
 
 // Indexa plays/locks/gems del daily por game_pk para enriquecer cada juego.
@@ -444,6 +477,7 @@ function indexDaily(daily) {
       map.set(p.game_pk, {
         pick: p.pick ?? prev.pick,
         prob: typeof p.prob === 'number' ? p.prob : prev.prob,
+        prob_v2: typeof p.prob_v2 === 'number' ? p.prob_v2 : prev.prob_v2,
         confidence: p.confidence ?? prev.confidence,
         badge: badge || prev.badge,
         tier: p.tier ?? prev.tier,

@@ -248,6 +248,29 @@ async function live(ctx, origin) {
     };
   });
 
+  // Probabilidad de victoria EN VIVO (ESPN summary) solo para juegos en curso —
+  // número honesto que se mueve con el marcador (un blowout baja a ~0), en vez de
+  // dejar congelado el % de antes del juego. Acotado a los live; cacheado con el
+  // resto (30s). homeWinPercentage viene 0-1 (a veces 0-100).
+  const liveIds = games.filter((g) => g.status === 'live').map((g) => g.espn_id).filter(Boolean);
+  if (liveIds.length) {
+    const wps = await Promise.all(liveIds.map(async (id) => {
+      try {
+        const r = await fetch(`${ESPN_BASE}/baseball/mlb/summary?event=${id}`, { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 30 } });
+        if (!r.ok) return [id, null];
+        const d = await r.json();
+        const arr = d && d.winprobability;
+        if (!Array.isArray(arr) || !arr.length) return [id, null];
+        let wp = numOrNull(arr[arr.length - 1].homeWinPercentage);
+        if (wp == null) return [id, null];
+        if (wp > 1) wp = wp / 100;
+        return [id, Math.max(0, Math.min(1, wp))];
+      } catch (e) { return [id, null]; }
+    }));
+    const wpMap = new Map(wps);
+    for (const g of games) { const v = wpMap.get(g.espn_id); if (v != null) g.win_prob_home = v; }
+  }
+
   const payload = JSON.stringify({ sport: 'mlb', updated_at: new Date().toISOString(), games });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=30' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
