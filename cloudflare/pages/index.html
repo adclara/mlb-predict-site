@@ -314,6 +314,21 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 
 /* forma reciente */
 .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* pestaña Simulación (Monte Carlo) */
+.simbig{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:9px;margin-bottom:4px}
+.srow{display:flex;align-items:center;gap:10px;padding:5px 0}
+.srow .ss{flex:0 0 52px;font-weight:800;font-size:13.5px}
+.srow .sbar{flex:1;height:12px;background:var(--inner);border-radius:6px;overflow:hidden}
+.srow .sbar i{display:block;height:100%;background:var(--grad);border-radius:6px;transform-origin:left;animation:barIn .6s cubic-bezier(.2,.7,.3,1) both}
+.srow .sp2{flex:0 0 52px;text-align:right;color:var(--dim);font-size:12.5px}
+.shist{display:flex;align-items:flex-end;gap:4px;height:96px;padding:6px 2px 0}
+.shist .sb{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%}
+.shist .sb i{display:block;width:100%;height:var(--h);min-height:2px;border-radius:4px 4px 0 0;background:rgba(255,255,255,.16);transform-origin:bottom;animation:barIn .7s cubic-bezier(.2,.7,.3,1) both}
+.shist .sb.ov i{background:var(--grad)}
+.shist .sb span{font-size:9.5px;color:var(--faint)}
+.simou{font-size:12.5px;color:var(--dim);padding:8px 2px 0}
+.simou b{color:var(--sky)}
+@media (prefers-reduced-motion: reduce){.srow .sbar i,.shist .sb i{animation:none}}
 /* últimos resultados + tabla de posiciones (otros deportes) */
 .recentnote{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);padding:9px 14px 5px;border-bottom:1px solid var(--hair)}
 .sthead{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:12px 0 6px}
@@ -693,6 +708,61 @@ function logoImg(code){
   const url = tLogo(code);
   if (!url) return `<span class="tfall">${esc(canon(code))}</span>`;
   return `<img src="${url}" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;tfall&quot;>${esc(canon(code))}</span>'">`;
+}
+
+/* ── Simulación Monte Carlo del juego ─────────────────────────────────────
+   10,000 corridas derivadas SOLO de números ya publicados (prob del modelo
+   + total AA/línea). Es presentación honesta: ilustra cómo se reparte el
+   resultado, no cambia la predicción ni expone internals del modelo. */
+const simCache = new Map(); // números estables entre re-renders/polling
+function poissonDraw(lambda){
+  const L = Math.exp(-lambda); let k = 0, p = 1;
+  do { k++; p *= Math.random(); } while (p > L);
+  return k - 1;
+}
+function pHomeAnalytic(lh, la){
+  const ph = [], pa = [];
+  let eh = Math.exp(-lh), ea = Math.exp(-la);
+  for (let k = 0; k < 25; k++){ ph.push(eh); pa.push(ea); eh *= lh / (k + 1); ea *= la / (k + 1); }
+  let win = 0, tie = 0;
+  for (let h = 0; h < 25; h++) for (let a = 0; a < 25; a++){
+    const q = ph[h] * pa[a];
+    if (h > a) win += q; else if (h === a) tie += q;
+  }
+  return win + tie * (lh / (lh + la)); // el empate se resuelve en extras
+}
+function simOf(ev){
+  const p = ev.prediction || {};
+  if (p.prob == null || !ev.home?.code || !ev.away?.code) return null;
+  const pHomeTarget = p.pick && canon(p.pick) === canon(ev.home.code) ? p.prob : 1 - p.prob;
+  const snap = ev.snapshot || {};
+  const T = snap.total?.aa_total ?? snap.total?.line ?? ev.odds?.over_under ?? 8.6;
+  const key2 = ev.event_id + '|' + pHomeTarget.toFixed(3) + '|' + T;
+  if (simCache.has(key2)) return simCache.get(key2);
+  // reparto de carreras que reproduce la prob publicada (búsqueda binaria)
+  let lo = 0.08, hi = 0.92;
+  for (let i = 0; i < 40; i++){
+    const mid = (lo + hi) / 2;
+    if (pHomeAnalytic(T * mid, T * (1 - mid)) < pHomeTarget) lo = mid; else hi = mid;
+  }
+  const s = (lo + hi) / 2, lh = T * s, la = T * (1 - s);
+  const N = 10000, line = snap.total?.line ?? ev.odds?.over_under ?? null;
+  const scores = new Map(), margins = new Map(), totals = new Array(26).fill(0);
+  let hw = 0, over = 0;
+  for (let i = 0; i < N; i++){
+    let h = poissonDraw(lh), a = poissonDraw(la);
+    if (h === a){ if (Math.random() < lh / (lh + la)) h++; else a++; } // extra innings
+    if (h > a) hw++;
+    const sk = a + '-' + h;
+    scores.set(sk, (scores.get(sk) || 0) + 1);
+    totals[Math.min(25, h + a)]++;
+    const m = h - a; margins.set(m, (margins.get(m) || 0) + 1);
+    if (line != null && h + a > line) over++;
+  }
+  const top = [...scores.entries()].sort((x, y) => y[1] - x[1]).slice(0, 5);
+  const out = { N, pHomeTarget, T, line, hw, over, top, totals, margins };
+  simCache.set(key2, out);
+  return out;
 }
 
 // filas de bajas de un equipo (★ = jugador clave con buenas estadísticas)
@@ -1204,6 +1274,50 @@ function renderDetail(){
       ${tot && tot.lean ? `<span style="font-size:12.5px;color:var(--dim)">→ inclina <b style="color:var(--sky)">${tot.lean === 'over' ? 'Over' : 'Under'}</b>${tot.prob_pct != null ? ` (${tot.prob_pct}%)` : ''}</span>` : ''}</div>
     ${booksRows}`;
 
+  /* ── pestaña Simulación: 10,000 juegos Monte Carlo ── */
+  let simulacion = '<div class="wempty">Simulación no disponible: este juego no tiene predicción publicada.</div>';
+  const sim = dtab === 'sim' ? simOf(ev) : null;
+  if (sim){
+    const pct = (n) => Math.round(n / sim.N * 1000) / 10;
+    const hwPct = pct(sim.hw), awPct = Math.round((100 - hwPct) * 10) / 10;
+    const favHome = hwPct >= 50;
+    const [topScore, topN] = sim.top[0];
+    const maxTop = topN;
+    // histograma de carreras totales (2..14, 15+ agregado)
+    const buckets = [];
+    for (let r = 2; r <= 14; r++) buckets.push({ r: String(r), n: sim.totals[r] || 0 });
+    buckets.push({ r: '15+', n: sim.totals.slice(15).reduce((x, y) => x + y, 0) });
+    const maxB = Math.max(...buckets.map((b) => b.n), 1);
+    // margen desde el favorito
+    const mSign = favHome ? 1 : -1;
+    const mCount = (lo2, hi2) => { let c = 0; for (const [m, n] of sim.margins){ const fm = m * mSign; if (fm >= lo2 && fm <= hi2) c += n; } return c; };
+    const favCode = favHome ? ev.home.code : ev.away.code;
+    simulacion = `
+      <div class="secttl">Simulamos este juego ${sim.N.toLocaleString('es')} veces</div>
+      <div class="simbig">
+        <div class="mcard"><div class="lb">${esc(tNick(ev.away.code))} gana</div><div class="vl num" style="font-size:19px;${!favHome ? 'color:var(--volt)' : ''}">${awPct}%</div></div>
+        <div class="mcard"><div class="lb">Marcador más probable</div><div class="vl num" style="font-size:19px">${esc(topScore.split('-')[0])}–${esc(topScore.split('-')[1])}<span style="font-size:11px;color:var(--faint)"> · ${pct(topN)}%</span></div></div>
+        <div class="mcard"><div class="lb">${esc(tNick(ev.home.code))} gana</div><div class="vl num" style="font-size:19px;${favHome ? 'color:var(--volt)' : ''}">${hwPct}%</div></div>
+      </div>
+      <div class="secttl">Marcadores más frecuentes (${esc(canon(ev.away.code))}–${esc(canon(ev.home.code))})</div>
+      ${sim.top.map(([sc, n]) => `<div class="srow num">
+        <span class="ss">${esc(sc.split('-')[0])}–${esc(sc.split('-')[1])}</span>
+        <span class="sbar"><i style="width:${Math.round(n / maxTop * 100)}%"></i></span>
+        <span class="sp2">${pct(n)}%</span>
+      </div>`).join('')}
+      <div class="secttl">Carreras totales por juego${sim.line != null ? ` · línea O/U ${sim.line}` : ''}</div>
+      <div class="shist">${buckets.map((b) => `<div class="sb ${sim.line != null && parseFloat(b.r) > sim.line ? 'ov' : ''}" style="--h:${Math.round(b.n / maxB * 100)}%"><i></i><span class="num">${esc(b.r)}</span></div>`).join('')}</div>
+      ${sim.line != null ? `<div class="simou num">Over ${sim.line}: <b>${pct(sim.over)}%</b> · Under: <b>${Math.round((100 - pct(sim.over)) * 10) / 10}%</b> de las simulaciones</div>` : ''}
+      <div class="secttl">¿Por cuánto gana ${esc(tNick(favCode))}?</div>
+      <div class="simbig">
+        <div class="mcard"><div class="lb">Por 1 carrera</div><div class="vl num">${pct(mCount(1, 1))}%</div></div>
+        <div class="mcard"><div class="lb">Por 2-3</div><div class="vl num">${pct(mCount(2, 3))}%</div></div>
+        <div class="mcard"><div class="lb">Por 4+</div><div class="vl num">${pct(mCount(4, 99))}%</div></div>
+        <div class="mcard"><div class="lb">Pierde</div><div class="vl num" style="color:var(--live)">${pct(mCount(-99, -1))}%</div></div>
+      </div>
+      <p style="font-size:11px;color:var(--faint);padding-top:8px;line-height:1.6">${sim.N.toLocaleString('es')} simulaciones Monte Carlo derivadas de la probabilidad publicada del modelo AA (${Math.round(sim.pHomeTarget * 1000) / 10}% local) y ${sim.T} carreras proyectadas. Ilustran cómo se reparte el resultado — no cambian la predicción.</p>`;
+  }
+
   const dc = $('dcard');
   const animKey = selectedId + '|' + dtab;
   dc.classList.toggle('enter', animKey !== lastAnimKey);
@@ -1224,10 +1338,11 @@ function renderDetail(){
     <div class="dtabs">
       <button class="dtab ${dtab === 'analisis' ? 'on' : ''}" data-dt="analisis">Análisis AA</button>
       ${ev.snapshot ? `<button class="dtab ${dtab === 'equipos' ? 'on' : ''}" data-dt="equipos">Equipos</button>` : ''}
+      ${p.prob != null ? `<button class="dtab ${dtab === 'sim' ? 'on' : ''}" data-dt="sim">Simulación</button>` : ''}
       <button class="dtab ${dtab === 'mercado' ? 'on' : ''}" data-dt="mercado">Mercado</button>
     </div>
     <div class="dbody">
-      ${dtab === 'analisis' ? analisis : dtab === 'equipos' ? equipos : mercado}
+      ${dtab === 'analisis' ? analisis : dtab === 'equipos' ? equipos : dtab === 'sim' ? simulacion : mercado}
       <p class="dnote">Predicción informativa del algoritmo AA. No es consejo de apuestas; la decisión es tuya. Juego responsable 18/21+.</p>
     </div>`;
   // índices para el stagger del contenido
