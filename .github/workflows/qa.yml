@@ -1,0 +1,27 @@
+name: qa
+# QA de producción + sonda de tenis. Corre en Actions (con red), solo lectura,
+# sin secretos. Compara el Worker de producción contra la fuente real y busca el
+# endpoint de estadísticas de tenis. Se dispara a mano o tocando .github/poke-qa.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/poke-qa']
+concurrency:
+  group: qa
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: QA de producción (Worker vs fuente real)
+        shell: /bin/bash {0}
+        run: node robot/qa_check.mjs
+      - name: Sonda de tenis (endpoint de estadísticas de partido)
+        shell: /bin/bash {0}
+        run: node robot/tennis_probe.mjs
