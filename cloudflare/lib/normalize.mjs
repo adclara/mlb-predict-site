@@ -519,10 +519,18 @@ export function normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs, 
     return (b.prediction.prob ?? 0) - (a.prediction.prob ?? 0);
   });
 
+  // Récord general + por nivel (fijos/gemas) — honestidad: se ven tal cual,
+  // incluidas las unidades en rojo. Datos de data/history/index.json.
+  const tierRec = (r) => r ? {
+    wins: r.wins ?? null, losses: r.losses ?? null,
+    win_rate: r.win_rate ?? null, units: r.units ?? null,
+  } : null;
   const record = indexDoc && indexDoc.record ? {
     wins: indexDoc.record.wins ?? null,
     losses: indexDoc.record.losses ?? null,
     win_rate: indexDoc.record.win_rate ?? null,
+    locks: tierRec(indexDoc.locks_record),
+    gems: tierRec(indexDoc.gems_record),
   } : null;
 
   return {
