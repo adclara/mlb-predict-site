@@ -201,6 +201,15 @@ async function live(ctx, origin) {
       const r = Array.isArray(t.records) && t.records.find((x) => x.type === 'total' || x.name === 'overall');
       return (r && r.summary) || (t.records && t.records[0] && t.records[0].summary) || null;
     };
+    // batter/pitcher del situation de ESPN: id de athlete de ESPN (no MLBAM),
+    // por eso el headshot sale de athlete.headshot.href y no de mlbstatic.
+    const athOf = (x) => (x && x.athlete) ? {
+      name: x.athlete.shortName || x.athlete.displayName || null,
+      id: x.athlete.id || null,
+      headshot: (x.athlete.headshot && x.athlete.headshot.href)
+        || (typeof x.athlete.headshot === 'string' ? x.athlete.headshot : null),
+      summary: (typeof x.summary === 'string' && x.summary) || null,
+    } : null;
     return {
       espn_id: ev.id,
       start: ev.date || null,
@@ -212,6 +221,10 @@ async function live(ctx, origin) {
       situation: sit ? {
         balls: numOrNull(sit.balls), strikes: numOrNull(sit.strikes), outs: numOrNull(sit.outs),
         onFirst: !!sit.onFirst, onSecond: !!sit.onSecond, onThird: !!sit.onThird,
+        batter: athOf(sit.batter),
+        pitcher: athOf(sit.pitcher),
+        lastPlay: (sit.lastPlay && typeof sit.lastPlay.text === 'string' && sit.lastPlay.text)
+          ? sit.lastPlay.text.slice(0, 140) : null,
       } : null,
     };
   });
