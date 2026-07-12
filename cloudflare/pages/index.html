@@ -418,6 +418,8 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .hitrow + .hitrow{border-top:1px solid var(--hair)}
 .hitname{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hitst{font-size:11.5px;color:var(--dim);margin-left:auto;flex-shrink:0}
+.rankchip{font-size:10px;font-weight:800;color:var(--sky);background:rgba(94,168,255,.10);
+  border:1px solid rgba(94,168,255,.30);border-radius:999px;padding:1px 6px;margin-left:6px;vertical-align:1px;white-space:nowrap}
 .fgame{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
 .fg{
   width:100%;max-width:34px;aspect-ratio:1;border-radius:8px;display:grid;place-items:center;
@@ -1670,26 +1672,58 @@ async function loadOther(){
 }
 
 async function loadStandings(){
-  if (sport !== 'nba' && sport !== 'soccer') return;
-  const key = sport === 'soccer' ? `soccer:${soccerLeague}` : 'nba';
+  if (sport !== 'nba' && sport !== 'soccer' && sport !== 'tennis') return;
+  const key = sport === 'soccer' ? `soccer:${soccerLeague}` : sport;
   if (standingsCache.has(key)) return;
   try{
     const q = sport === 'soccer' ? `?league=${encodeURIComponent(soccerLeague)}` : '';
-    const r = await fetch(`${API}/v1/${sport}/standings${q}`);
+    const path = sport === 'tennis' ? 'tennis/rankings' : `${sport}/standings`;
+    const r = await fetch(`${API}/v1/${path}${q}`);
     const d = await r.json();
     if (d && d.sections && d.sections.length){
       standingsCache.set(key, d);
-      if (sport !== 'mlb') renderOtherDetail();
+      if (sport !== 'mlb'){ renderOtherList(); renderOtherDetail(); }
     }
   }catch(err){ /* sin tabla no pasa nada */ }
 }
 
 const shortDate = (s) => { try{ return new Date(s + 'T12:00Z').toLocaleDateString('es', { day: 'numeric', month: 'short' }); }catch(e){ return s; } };
 
+// Rank mundial por id de athlete (para los chips #n de tenis).
+function tennisRankOf(side){
+  if (sport !== 'tennis' || !side || side.id == null) return null;
+  const doc = standingsCache.get('tennis');
+  if (!doc) return null;
+  for (const sec of doc.sections || []){
+    const hit = (sec.rows || []).find(r => String(r.id) === String(side.id));
+    if (hit && hit.rank != null) return hit.rank;
+  }
+  return null;
+}
+const rankChip = (side) => {
+  const r = tennisRankOf(side);
+  return r != null ? `<span class="rankchip num">#${r}</span>` : '';
+};
+
 function standingsHtml(){
   const key = sport === 'soccer' ? `soccer:${soccerLeague}` : sport;
   const doc = standingsCache.get(key);
   if (!doc) return '';
+  if (sport === 'tennis'){
+    const secs = (doc.sections || []).slice(0, 2);
+    if (!secs.length) return '';
+    return '<div class="secttl">Ranking mundial</div>' +
+      secs.map(sec => `
+        <div class="sthead">${esc(sec.name || '')}</div>
+        <table class="sttbl num">
+          <thead><tr><th class="tl">#</th><th class="tl">Jugador</th><th>Puntos</th></tr></thead>
+          <tbody>${(sec.rows || []).slice(0, 15).map(r => `<tr>
+            <td class="tl">${r.rank}</td>
+            <td class="tl tm">${r.flag ? `<img src="${esc(r.flag)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}${esc(r.name || '')}</td>
+            <td><b>${r.points != null ? r.points.toLocaleString('es') : '—'}</b></td>
+          </tr>`).join('')}</tbody>
+        </table>`).join('');
+  }
   const isSoccer = sport === 'soccer';
   const secs = doc.sections.slice(0, isSoccer ? 8 : 2);
   return `<div class="secttl">Tabla de posiciones${doc.season ? ` · ${esc(String(doc.season))}` : ''}</div>` +
@@ -1744,8 +1778,8 @@ function renderOtherList(){
       return `<button class="mrow" data-oid="${esc(g.espn_id)}" style="--i:${i}">
         <span class="mtime num">${t}</span>
         <span class="mteams">
-          <span class="mt ${g.away.winner ? 'win' : ''}">${oLogo(g.away)}<span class="nm">${esc(oName(g.away))}</span>${setsA}</span>
-          <span class="mt ${g.home.winner ? 'win' : ''}">${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}</span>${setsH}</span>
+          <span class="mt ${g.away.winner ? 'win' : ''}">${oLogo(g.away)}<span class="nm">${esc(oName(g.away))}</span>${rankChip(g.away)}${setsA}</span>
+          <span class="mt ${g.home.winner ? 'win' : ''}">${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}</span>${rankChip(g.home)}${setsH}</span>
         </span>
         <span class="mscore num">
           <span class="ms ${g.status === 'live' ? 'lv' : ''}">${scored ? g.away.score : ''}</span>
@@ -1775,12 +1809,12 @@ function renderOtherDetail(){
     <div class="dhero">
       <span class="dwhen num">${g.start ? esc(new Date(g.start).toLocaleString('es', {dateStyle: 'medium', timeStyle: 'short'})) : ''}</span>
       <div class="dgrid">
-        <div class="dteam">${oLogo(g.away)}<span class="nm">${esc(oName(g.away))}</span>${g.away.rec ? `<span class="rc num">${esc(g.away.rec)}</span>` : ''}${sport === 'tennis' && g.away.sets ? `<span class="rc num">sets: ${g.away.sets.join('-')}</span>` : ''}</div>
+        <div class="dteam">${oLogo(g.away)}<span class="nm">${esc(oName(g.away))}${rankChip(g.away)}</span>${g.away.rec ? `<span class="rc num">${esc(g.away.rec)}</span>` : ''}${sport === 'tennis' && g.away.sets ? `<span class="rc num">sets: ${g.away.sets.join('-')}</span>` : ''}</div>
         <div class="dmid">${scored
           ? `<div class="dscore num">${g.away.score}<span class="sep">–</span>${g.home.score}</div>
              <div class="dst ${g.status === 'final' ? 'done' : ''}">${g.status === 'live' ? '<span class="ldot"></span> ' : ''}${esc(g.status_detail || '')}</div>`
           : `<div class="dscore num" style="font-size:24px;color:var(--dim);font-weight:700">${g.start ? esc(new Date(g.start).toLocaleTimeString('es', {hour: '2-digit', minute: '2-digit'})) : 'HOY'}</div><div class="dsub">${esc(g.status_detail || 'Por jugar')}</div>`}</div>
-        <div class="dteam">${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}</span>${g.home.rec ? `<span class="rc num">${esc(g.home.rec)}</span>` : ''}${sport === 'tennis' && g.home.sets ? `<span class="rc num">sets: ${g.home.sets.join('-')}</span>` : ''}</div>
+        <div class="dteam">${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}${rankChip(g.home)}</span>${g.home.rec ? `<span class="rc num">${esc(g.home.rec)}</span>` : ''}${sport === 'tennis' && g.home.sets ? `<span class="rc num">sets: ${g.home.sets.join('-')}</span>` : ''}</div>
       </div>
     </div>
     <div class="dbody">
