@@ -21,6 +21,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Producción = main (fix de production branch)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          CUR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            https://api.cloudflare.com/client/v4/accounts/f02574feb7272a1da2818e35e0ff4342/pages/projects/aa-sports \
+            | tr ',' '\n' | grep -m1 '"production_branch"' || true)
+          echo "actual: $CUR"
+          echo "$CUR" | grep -q '"main"' && echo "ya es main" || {
+            curl -s -X PATCH -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
+              -d '{"production_branch":"main"}' \
+              https://api.cloudflare.com/client/v4/accounts/f02574feb7272a1da2818e35e0ff4342/pages/projects/aa-sports \
+              | head -c 300; echo; echo "production branch → main"; }
       - name: Deploy Worker (API)
         working-directory: cloudflare
         env:
