@@ -461,6 +461,13 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .hitrow + .hitrow{border-top:1px solid var(--hair)}
 .hitname{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hitst{font-size:11.5px;color:var(--dim);margin-left:auto;flex-shrink:0}
+.lurow{display:flex;align-items:center;gap:8px;padding:4px 0;min-width:0}
+.lurow + .lurow{border-top:1px solid var(--hair)}
+.luord{width:18px;text-align:center;font-size:11px;font-weight:800;color:var(--faint);flex-shrink:0}
+.luhs{width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--panel-2)}
+.luname{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px;min-width:0}
+.lupos{font-size:9.5px;font-weight:800;color:var(--dim);background:var(--panel-2);border-radius:4px;padding:1px 4px;flex-shrink:0}
+.lust{font-size:11px;color:var(--dim);margin-left:auto;flex-shrink:0;white-space:nowrap}
 .rankchip{font-size:10px;font-weight:800;color:var(--sky);background:rgba(94,168,255,.10);
   border:1px solid rgba(94,168,255,.30);border-radius:999px;padding:1px 6px;margin-left:6px;vertical-align:1px;white-space:nowrap}
 .fgame{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
@@ -1424,6 +1431,26 @@ function renderDetail(){
       <div class="fh">${logoImg(code)}${esc(tNick(code))}</div>${rows}
     </div>`;
   };
+  const lineupSide = (side, code) => {
+    const lu = (snap.lineups && snap.lineups[side]) || [];
+    const rows = lu.length ? lu.map(h => {
+      const ini = (h.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
+      const face = h.id
+        ? `<img class="luhs" src="https://midfield.mlbstatic.com/v1/people/${h.id}/spots/120" alt="" loading="lazy"
+             onerror="this.outerHTML='<span class=&quot;hsfall&quot; style=&quot;width:24px;height:24px;font-size:9px&quot;>${esc(ini)}</span>'">`
+        : `<span class="hsfall" style="width:24px;height:24px;font-size:9px">${esc(ini)}</span>`;
+      const stat = [h.ops != null ? `<b>${h.ops}</b>` : '', h.hr != null ? `<b>${h.hr}</b>HR` : '', h.avg != null ? h.avg : '']
+        .filter(Boolean).join(' · ');
+      return `<div class="lurow">
+        <span class="luord num">${h.order ?? ''}</span>${face}
+        <span class="luname">${esc(h.name || '—')}${h.pos ? `<span class="lupos">${esc(h.pos)}</span>` : ''}</span>
+        <span class="lust num">${stat}</span>
+      </div>`;
+    }).join('') : '<span class="wempty">Alineación aún no publicada.</span>';
+    return `<div class="formside">
+      <div class="fh">${logoImg(code)}${esc(tNick(code))}</div>${rows}
+    </div>`;
+  };
   const dots = (side, e2) => {
     const on = e2.favors === side ? e2.strength : 0;
     const seq = side === 'away' ? [1,2,3] : [3,2,1];
@@ -1498,6 +1525,8 @@ function renderDetail(){
     <div class="formgrid">${formSide('away', ev.away.code)}${formSide('home', ev.home.code)}</div>` : ''}
     ${snap.bats ? `<div class="secttl">Bateo últimos 5</div>
     <div class="formgrid">${batSide('away', ev.away.code)}${batSide('home', ev.home.code)}</div>` : ''}
+    ${snap.lineups ? `<div class="secttl">Alineación al bate</div>
+    <div class="formgrid">${lineupSide('away', ev.away.code)}${lineupSide('home', ev.home.code)}</div>` : ''}
     ${snap.hitters ? `<div class="secttl">Mejores bateadores</div>
     <div class="formgrid">${hitSide('away', ev.away.code)}${hitSide('home', ev.home.code)}</div>` : ''}
     ${bajas}

@@ -63,10 +63,13 @@ function parseGame(g) {
     home_probable_pitcher_id: hp.id || null, away_probable_pitcher_id: ap.id || null,
     home_probable_pitcher_name: hp.fullName || null, away_probable_pitcher_name: ap.fullName || null,
     home_score: home.score ?? null, away_score: away.score ?? null,
+    // orden al bate {id,name} — solo cuando MLB publica el lineup (~2-3h antes); si no, []
+    home_lineup: ((g.lineups || {}).homePlayers || []).map((p) => ({ id: p.id, name: p.fullName || null })),
+    away_lineup: ((g.lineups || {}).awayPlayers || []).map((p) => ({ id: p.id, name: p.fullName || null })),
   }
 }
 async function fetchSchedule(date) {
-  const data = await get(`${API}/schedule?sportId=1&date=${date}&hydrate=probablePitcher,team,linescore,venue`)
+  const data = await get(`${API}/schedule?sportId=1&date=${date}&hydrate=probablePitcher,team,linescore,venue,lineups`)
   const games = []
   for (const d of data.dates || []) for (const g of d.games || []) if ((g.gameType || 'R') === 'R') games.push(parseGame(g))
   return games
@@ -166,10 +169,12 @@ async function fetchTeamSplits(teamId, season) {
 // season hitting hydrated, so the brief can answer "quiénes son los mejores
 // bateadores". Parses defensively across statsapi shapes; any failure → [].
 const _hitters = new Map()
+const _hitterMap = new Map() // teamId -> Map(playerId -> {name,ops,hr,avg,pos}) — todo el roster
 async function fetchTeamHitters(teamId, season) {
   if (teamId == null) return []
   if (_hitters.has(teamId)) return _hitters.get(teamId)
   let top = []
+  const idMap = new Map()
   try {
     const d = await get(`${API}/teams/${teamId}/roster?rosterType=active&hydrate=person(stats(type=season,group=hitting,season=${season}))`)
     const players = []
@@ -179,13 +184,22 @@ async function fetchTeamHitters(teamId, season) {
       for (const blk of p.stats || []) for (const s of blk.splits || []) { if (s.stat && (s.stat.ops != null || s.stat.atBats != null)) st = s.stat }
       if (!st) continue
       const ab = Number(st.atBats) || 0, ops = Number(st.ops)
-      if (ab < 40 || !isFinite(ops)) continue
-      players.push({ name: p.fullName || p.lastName || '?', ops: Math.round(ops * 1000) / 1000, hr: Number(st.homeRuns) || 0, avg: st.avg ?? null })
+      const rec = {
+        name: p.fullName || p.lastName || '?',
+        ops: isFinite(ops) ? Math.round(ops * 1000) / 1000 : null,
+        hr: Number(st.homeRuns) || 0, avg: st.avg ?? null,
+        pos: (m.position && m.position.abbreviation) || null,
+      }
+      // mapa por id: TODO el roster (sin gate de AB, para que el lineup no muestre blancos)
+      if (p.id != null) idMap.set(p.id, rec)
+      // top-3 para brief.hitters: sí exige 40+ AB y OPS válido
+      if (ab >= 40 && isFinite(ops)) players.push({ name: rec.name, ops: rec.ops, hr: rec.hr, avg: rec.avg })
     }
     players.sort((a, b) => b.ops - a.ops)
     top = players.slice(0, 3)
   } catch { /* sin dato */ }
   _hitters.set(teamId, top)
+  _hitterMap.set(teamId, idMap)
   return top
 }
 
@@ -201,8 +215,17 @@ function buildBrief(a, prediction, f5, priors, g, homeHand, awayHand, hitters) {
   for (const r of [...(a.ml?.reasons || []), ...(a.total?.reasons || [])]) { if (r?.text && !reasons.includes(r.text)) reasons.push(r.text) }
   const hOff = priors.teams[g.home_team_abbr] || {}, aOff = priors.teams[g.away_team_abbr] || {}
   const pr = a.pitcher_recent || {}
+  // Alineación al bate: une el orden (del schedule) con las stats del roster por id.
+  const lineupSide = (arr, teamId) => {
+    const m = _hitterMap.get(teamId) || new Map()
+    return (arr || []).slice(0, 9).map((e, i) => {
+      const s = m.get(e.id) || {}
+      return { order: i + 1, id: e.id ?? null, name: e.name || s.name || null, ops: s.ops ?? null, hr: s.hr ?? null, avg: s.avg ?? null, pos: s.pos ?? null }
+    })
+  }
   return {
     reasons: reasons.slice(0, 5),
+    lineups: { home: lineupSide(g.home_lineup, g.home_team_id), away: lineupSide(g.away_lineup, g.away_team_id) },
     pitchers: {
       home: { name: g.home_probable_pitcher_name || null, fip: rr(f.home_sp_fip), hand: homeHand, era: pr.home?.recent?.era ?? null, n: pr.home?.recent?.n ?? null, fatigue: pr.home?.fatigue?.level ?? null },
       away: { name: g.away_probable_pitcher_name || null, fip: rr(f.away_sp_fip), hand: awayHand, era: pr.away?.recent?.era ?? null, n: pr.away?.recent?.n ?? null, fatigue: pr.away?.fatigue?.level ?? null },

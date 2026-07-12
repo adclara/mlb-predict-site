@@ -289,6 +289,21 @@ function hittersFor(g) {
   return (home.length || away.length) ? { home, away } : null;
 }
 
+// Alineación al bate (orden 1..9 con stats por jugador). Conserva el id
+// para el headshot. Null si no hay lineup publicado en ningún lado.
+function lineupsFor(g) {
+  const l = g.brief && g.brief.lineups;
+  if (!l) return null;
+  const side = (arr) => Array.isArray(arr)
+    ? arr.slice(0, 9).map((x) => x && (x.name || x.id != null) ? {
+        order: x.order ?? null, id: x.id ?? null, name: x.name ?? null,
+        ops: x.ops ?? null, hr: x.hr ?? null, avg: x.avg ?? null, pos: x.pos ?? null,
+      } : null).filter(Boolean)
+    : [];
+  const home = side(l.home), away = side(l.away);
+  return (home.length || away.length) ? { home, away } : null;
+}
+
 // ¿Bates calientes o fríos? Carreras anotadas en los últimos 5 (del form,
 // score "mías-suyas") vs el promedio de temporada del brief.
 function batsFor(formArr, seasonRpg) {
@@ -352,6 +367,7 @@ function snapshotFor(g, formIdx, pitcherNames, prob, liveGame) {
     form: formIdx ? { home: formOf(g.home), away: formOf(g.away) } : null,
     offense: off,
     hitters: hittersFor(g),
+    lineups: lineupsFor(g),
     bats: (batsHome || batsAway) ? { home: batsHome, away: batsAway } : null,
     edges: edgesFor(g),
     pitchers: pitchersFor(g, pitcherNames),
