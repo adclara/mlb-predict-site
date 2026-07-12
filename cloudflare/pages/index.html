@@ -221,6 +221,8 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .mt{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--dim);min-width:0}
 .mt img,.tfall{width:20px;height:20px;object-fit:contain;flex-shrink:0}
 .mt .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mmeta{font-size:11px;color:var(--faint);font-weight:600;padding-left:28px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mmeta .vs{opacity:.6;font-size:10px;padding:0 2px}
 .mt.win{color:var(--text)}
 .mt .aapick{
   font-size:9.5px;font-weight:800;letter-spacing:.04em;color:var(--volt);
@@ -1070,11 +1072,18 @@ function rowHtml(ev, idx){
 
   const tags = (ev.badges || []).map(b => `<span class="tag ${esc(b)}">${b === 'gema' ? '💎 Gema' : esc(b)}</span>`).join('');
 
+  // duelo de abridores en la fila (solo pre-juego): se ve el pitcheo de un vistazo
+  const sp2 = ev.snapshot && ev.snapshot.pitchers;
+  const ln = n => n ? esc(n.split(' ').slice(-1)[0]) : '?';
+  const spLine = (st === 'pre' && sp2 && (sp2.away?.name || sp2.home?.name))
+    ? `<span class="mmeta">⚾ ${ln(sp2.away?.name)} <span class="vs">vs</span> ${ln(sp2.home?.name)}</span>` : '';
+
   return `<button class="mrow ${ev.event_id === selectedId ? 'sel' : ''}" data-id="${esc(ev.event_id)}" style="--i:${idx ?? 0}">
     <span class="mtime num">${timeCol}</span>
     <span class="mteams">
       <span class="mt ${aWin || (!done && pickA) ? 'win' : ''}">${logoImg(ev.away.code)}<span class="nm">${esc(tNick(ev.away.code))}</span>${pickA && p.prob_pct != null ? chip(p.prob_pct) : ''}</span>
       <span class="mt ${hWin || (!done && pickH) ? 'win' : ''}">${logoImg(ev.home.code)}<span class="nm">${esc(tNick(ev.home.code))}</span>${pickH && p.prob_pct != null ? chip(p.prob_pct) : ''}</span>
+      ${spLine}
     </span>
     <span class="mscore num">
       <span class="ms ${st === 'live' ? 'lv' : aWin ? 'win' : ''}">${scored ? as2 : ''}</span>
