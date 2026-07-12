@@ -431,8 +431,12 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 /* metodología (¿cómo funciona AA?) */
 .howlink{display:block;margin-top:10px;font-size:12px;font-weight:800;color:var(--sky);background:none;border:0;padding:0;cursor:pointer;text-align:left}
 .howlink:hover{text-decoration:underline}
-#howdlg{border:0;background:transparent;padding:16px;max-width:560px;width:calc(100vw - 24px)}
-#howdlg::backdrop{background:rgba(4,6,10,.72);backdrop-filter:blur(6px)}
+#howdlg,#legaldlg{border:0;background:transparent;padding:16px;max-width:560px;width:calc(100vw - 24px)}
+#howdlg::backdrop,#legaldlg::backdrop{background:rgba(4,6,10,.72);backdrop-filter:blur(6px)}
+#legaldlg .howcard{max-height:82vh;overflow-y:auto}
+.legalh{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--volt);margin:14px 0 4px}
+.flinks{margin-top:10px;display:flex;gap:14px;flex-wrap:wrap}
+.flink{background:none;border:0;color:var(--sky);font:inherit;font-size:12.5px;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px}
 .howcard{position:relative;background:var(--panel,#12161f);border:1px solid var(--hair-2);border-radius:18px;padding:26px 26px 20px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
 .howcard h2{font-size:19px;font-weight:900;font-style:italic;text-transform:uppercase;margin-bottom:14px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .howsec{font-size:13.5px;line-height:1.65;color:var(--dim);padding:9px 0;border-bottom:1px solid var(--hair)}
@@ -809,6 +813,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       <p class="legal"><b>AA Sports informa, no facilita apuestas.</b> Te damos los datos y nuestra
       lectura; la decisión es tuya. 18/21+ según tu jurisdicción. Los datos no garantizan resultados.</p>
       <button class="howlink" id="howbtn">¿Cómo funciona el algoritmo AA? →</button>
+      <button class="howlink" id="legalbtn2" style="display:block;margin-top:6px">Aviso legal y términos de uso →</button>
     </div>
   </aside>
 </div>
@@ -841,6 +846,64 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   </div>
 </dialog>
 
+<!-- Aviso legal / Términos de uso -->
+<dialog id="legaldlg">
+  <div class="howcard">
+    <button class="howclose" id="legalclose" aria-label="Cerrar">✕</button>
+    <h2>Aviso legal y términos de uso</h2>
+    <p class="hownote" style="padding-top:0;margin-bottom:6px">Última actualización: julio 2026. Al usar AA Sports aceptas este aviso.</p>
+
+    <div class="legalh">1 · Servicio informativo y de uso personal</div>
+    <div class="howsec">AA Sports es un servicio <b>gratuito, informativo y de uso personal</b>. Ofrece
+      datos deportivos, estadísticas, probabilidades y análisis generados por un algoritmo propio con
+      el único fin de <b>ayudar al usuario a informarse y tomar sus propias decisiones</b>. El contenido
+      <b>no constituye</b> consejo de apuestas, financiero, de inversión, legal ni profesional de ningún
+      tipo, ni una invitación, oferta o recomendación para apostar o jugar.</div>
+
+    <div class="legalh">2 · No facilitamos apuestas ni nos beneficiamos de ellas</div>
+    <div class="howsec">AA Sports <b>no es una casa de apuestas</b>. <b>No aceptamos, procesamos, custodiamos
+      ni intermediamos dinero</b>, no colocamos ni gestionamos apuestas y <b>no recibimos comisión, pago
+      ni beneficio</b> de casas de apuestas, operadores ni terceros por mostrar datos o análisis.
+      Cualquier apuesta o juego lo realiza el usuario por su cuenta, en el operador que él elija, con su
+      propio dinero y bajo su exclusiva responsabilidad.</div>
+
+    <div class="legalh">3 · Sin garantías · el riesgo es del usuario</div>
+    <div class="howsec">Los datos y probabilidades se ofrecen <b>"tal cual" y "según disponibilidad"</b>,
+      sin garantía de exactitud, integridad, actualidad ni de resultado alguno. <b>El rendimiento pasado
+      no garantiza resultados futuros.</b> Apostar y jugar conlleva riesgo de pérdida económica; el
+      usuario <b>asume la totalidad de ese riesgo</b> y de las consecuencias de sus decisiones.</div>
+
+    <div class="legalh">4 · Limitación de responsabilidad</div>
+    <div class="howsec">En la máxima medida permitida por la ley aplicable, AA Sports, sus autores y
+      colaboradores <b>no serán responsables</b> de ninguna pérdida o daño directo, indirecto, incidental
+      o consecuente —incluidas pérdidas económicas derivadas de apuestas o juego— relacionado con el uso
+      o la imposibilidad de uso de esta aplicación o de la información aquí contenida.</div>
+
+    <div class="legalh">5 · Propiedad intelectual y fuentes de datos</div>
+    <div class="howsec">Los datos deportivos provienen de <b>fuentes públicas de terceros</b> (p. ej.
+      MLB Advanced Media / StatsAPI, ESPN y otras) y se muestran con <b>fines informativos</b>. Las marcas,
+      logotipos y nombres de ligas, equipos y jugadores son <b>propiedad de sus respectivos titulares</b>.
+      AA Sports <b>no está afiliada, patrocinada ni respaldada</b> por MLB, ESPN, ninguna liga, equipo,
+      operador ni titular de marca. Los algoritmos y el análisis son de elaboración propia. Si un titular
+      de derechos considera que existe un uso indebido de su contenido, puede solicitarnos su retirada.</div>
+
+    <div class="legalh">6 · Edad, juego responsable y jurisdicción</div>
+    <div class="howsec">Contenido dirigido únicamente a <b>mayores de la edad legal</b> para apostar en su
+      territorio (<b>18/21+</b> según jurisdicción). Las apuestas pueden generar adicción y pérdidas: juega
+      con responsabilidad y solo con lo que puedas permitirte perder. <b>Es responsabilidad exclusiva del
+      usuario</b> conocer y cumplir las leyes de apuestas y juego vigentes en su jurisdicción; el acceso
+      puede no ser legal en algunos territorios.</div>
+
+    <div class="legalh">7 · Privacidad y cambios</div>
+    <div class="howsec">El sitio es de solo lectura y no requiere registro; el inicio de sesión es opcional
+      y con datos mínimos (ver la nota de privacidad al entrar). Podemos actualizar este aviso en cualquier
+      momento; el uso continuado implica su aceptación.</div>
+
+    <p class="hownote">AA Sports informa; no apuesta por ti ni se beneficia de tus apuestas. La decisión
+      —y la responsabilidad— es tuya.</p>
+  </div>
+</dialog>
+
 <div id="lotToast" style="position:fixed;right:18px;bottom:18px;width:72px;height:72px;z-index:300;pointer-events:none;display:none"></div>
 
 <footer>
@@ -849,6 +912,10 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     métricas y resúmenes para que decidas informado. No somos casa de apuestas, no tomamos dinero y no
     colocamos apuestas. Si decides jugar, hazlo con responsabilidad (18/21+). Los resultados pasados no
     garantizan resultados futuros.
+    <div class="flinks">
+      <button class="flink" id="legalbtn">Aviso legal y términos</button>
+      <button class="flink" id="howbtn2">¿Cómo funciona?</button>
+    </div>
   </div>
 </footer>
 
@@ -2476,6 +2543,13 @@ function favCelebrate(){
 $('howbtn').onclick = () => $('howdlg').showModal();
 $('howclose').onclick = () => $('howdlg').close();
 $('howdlg').addEventListener('click', (e) => { if (e.target === $('howdlg')) $('howdlg').close(); });
+if ($('howbtn2')) $('howbtn2').onclick = () => $('howdlg').showModal();
+// Aviso legal
+const openLegal = () => $('legaldlg').showModal();
+if ($('legalbtn')) $('legalbtn').onclick = openLegal;
+if ($('legalbtn2')) $('legalbtn2').onclick = openLegal;
+$('legalclose').onclick = () => $('legaldlg').close();
+$('legaldlg').addEventListener('click', (e) => { if (e.target === $('legaldlg')) $('legaldlg').close(); });
 
 loadToday(); loadLive(); loadInjuries(); loadMe();
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
