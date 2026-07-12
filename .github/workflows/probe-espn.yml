@@ -1,0 +1,71 @@
+name: probe-espn
+
+# Sonda de diagnóstico: imprime en el log la forma real de las respuestas
+# de ESPN que el sandbox no puede consultar. Solo lectura, sin secrets.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/poke-probe']
+
+concurrency:
+  group: probe-espn
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: MLB situation (batter y pitcher en vivo)
+        run: |
+          curl -s 'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard' -H 'user-agent: aa-sports/1.0' -o /tmp/mlb.json
+          echo '== juegos en vivo con situation =='
+          jq '[.events[].competitions[0] | select(.situation != null)] | length' /tmp/mlb.json
+          echo '== situation del primero (batter/pitcher/lastPlay) =='
+          jq '[.events[].competitions[0] | select(.situation != null)] | .[0].situation | {balls, strikes, outs, batter, pitcher, lastPlay: (.lastPlay | if . then {text} else null end), dueUp: (.dueUp != null)}' /tmp/mlb.json | head -c 3000
+          echo
+
+      - name: Tenis scoreboard (competitor completo)
+        run: |
+          for t in atp wta; do
+            echo "== $t =="
+            curl -s "https://site.api.espn.com/apis/site/v2/sports/tennis/$t/scoreboard" -H 'user-agent: aa-sports/1.0' -o /tmp/t-$t.json
+            jq '.events | length' /tmp/t-$t.json
+            echo '-- primer competitor (competitions directas) --'
+            jq '[.events[].competitions[]?] | .[0].competitors[0]' /tmp/t-$t.json | head -c 3000
+            echo
+            echo '-- primer competitor (groupings) --'
+            jq '[.events[].groupings[]?.competitions[]?] | .[0].competitors[0]' /tmp/t-$t.json | head -c 3000
+            echo
+          done
+
+      - name: Rankings de tenis (candidatos)
+        run: |
+          for t in atp wta; do
+            echo "== site.api $t/rankings =="
+            code=$(curl -s -o /tmp/r-$t.json -w '%{http_code}' "https://site.api.espn.com/apis/site/v2/sports/tennis/$t/rankings" -H 'user-agent: aa-sports/1.0')
+            echo "status $code"
+            jq 'keys' /tmp/r-$t.json 2>/dev/null || head -c 300 /tmp/r-$t.json
+            jq '.' /tmp/r-$t.json 2>/dev/null | head -c 3500
+            echo
+          done
+          echo '== core api atp rankings (status) =='
+          curl -s -o /tmp/core.json -w '%{http_code}\n' 'https://sports.core.api.espn.com/v2/sports/tennis/leagues/atp/rankings' -H 'user-agent: aa-sports/1.0'
+          jq 'keys' /tmp/core.json 2>/dev/null || head -c 300 /tmp/core.json
+
+      - name: NBA leaders (Finales de junio)
+        run: |
+          curl -s 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20260601-20260625' -H 'user-agent: aa-sports/1.0' -o /tmp/nba.json
+          echo '== juegos =='
+          jq '.events | length' /tmp/nba.json
+          echo '== leaders del primer competitor =='
+          jq '.events[0].competitions[0].competitors[0].leaders' /tmp/nba.json | head -c 3000
+          echo
+
+      - name: Soccer form (competitors)
+        run: |
+          curl -s 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard' -H 'user-agent: aa-sports/1.0' -o /tmp/soc.json
+          echo '== form y records del primer competitor =='
+          jq '.events[0].competitions[0].competitors[0] | {form, records, hasLeaders: (.leaders != null)}' /tmp/soc.json | head -c 2000
+          echo
