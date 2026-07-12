@@ -367,7 +367,7 @@ async function computeDay(date) {
       platoon_a: pA != null ? Math.round((pA - LG_OPS) * 1000) / 1000 : null,
     }
     const brief = buildBrief(a, prediction, f5, priors, g, homeHand, awayHand, { home: _hitters.get(g.home_team_id) || [], away: _hitters.get(g.away_team_id) || [] })
-    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff, weather_forecast: weather, wx_runs: a.total.components?.wx ?? 0, aux, aux2, brief, odds: null })
+    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, game_datetime: g.game_datetime || null, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff, weather_forecast: weather, wx_runs: a.total.components?.wx ?? 0, aux, aux2, brief, odds: null })
     return a
   })
   // Opening market line (ESPN, free) — additive, best-effort. Captured pre-game
