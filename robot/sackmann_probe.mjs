@@ -27,14 +27,41 @@ function parseCsv(txt) {
   return { header, rows };
 }
 
-for (const [tour, repo, file] of [
-  ['ATP', 'tennis_atp', `atp_matches_${YEAR}.csv`],
-  ['WTA', 'tennis_wta', `wta_matches_${YEAR}.csv`],
+// Descubre qué archivos atp/wta_matches_*.csv existen realmente y en qué rama.
+async function discover(repo, prefix) {
+  // 1) intentar la API de contents (lista el repo)
+  for (const branch of ['master', 'main']) {
+    const r = await grab(`https://api.github.com/repos/JeffSackmann/${repo}/contents?ref=${branch}`);
+    if (r.status === 200) {
+      try {
+        const files = JSON.parse(r.txt).map((x) => x.name).filter((n) => new RegExp(`^${prefix}_matches_\\d{4}\\.csv$`).test(n));
+        if (files.length) { files.sort(); console.log(`  [${repo}@${branch}] años:`, files.map((f) => f.match(/(\d{4})/)[1]).join(',')); return { branch, files }; }
+      } catch (e) { /* no json */ }
+    }
+  }
+  // 2) fallback: probar años descendentes en ambas ramas
+  for (const branch of ['master', 'main']) {
+    for (let y = YEAR; y >= YEAR - 2; y--) {
+      const f = `${prefix}_matches_${y}.csv`;
+      const r = await grab(`${RAW}/${repo}/${branch}/${f}`);
+      console.log(`  probe ${repo}@${branch}/${f} → ${r.status}`);
+      if (r.status === 200) return { branch, files: [f] };
+    }
+  }
+  return null;
+}
+
+for (const [tour, repo, prefix] of [
+  ['ATP', 'tennis_atp', 'atp'],
+  ['WTA', 'tennis_wta', 'wta'],
 ]) {
-  console.log(`\n██████ ${tour} — ${file} ██████`);
-  const url = `${RAW}/${repo}/master/${file}`;
+  console.log(`\n██████ ${tour} — ${repo} ██████`);
+  const disc = await discover(repo, prefix);
+  if (!disc) { console.log('NO se encontró ningún CSV de partidos.'); continue; }
+  const file = disc.files[disc.files.length - 1];              // año más reciente disponible
+  const url = `${RAW}/${repo}/${disc.branch}/${file}`;
+  console.log('usando:', url);
   const res = await grab(url);
-  console.log('url:', url, '→ status', res.status);
   if (res.status !== 200) { console.log('NO DISPONIBLE. primeros 120:', res.txt.slice(0, 120)); continue; }
 
   const { header, rows } = parseCsv(res.txt);
