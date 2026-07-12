@@ -17,76 +17,59 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: MLB situation (batter y pitcher en vivo)
+      - name: Soccer summary (alineaciones + stats + eventos)
         run: |
-          curl -s 'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard' -H 'user-agent: aa-sports/1.0' -o /tmp/mlb.json
-          echo '== juegos en vivo con situation =='
-          jq '[.events[].competitions[0] | select(.situation != null)] | length' /tmp/mlb.json
-          echo '== situation del primero (batter/pitcher/lastPlay) =='
-          jq '[.events[].competitions[0] | select(.situation != null)] | .[0].situation | {balls, strikes, outs, batter, pitcher, lastPlay: (.lastPlay | if . then {text} else null end), dueUp: (.dueUp != null)}' /tmp/mlb.json | head -c 3000
-          echo
-
-      - name: Tenis scoreboard (competitor completo)
-        run: |
-          for t in atp wta; do
-            echo "== $t =="
-            curl -s "https://site.api.espn.com/apis/site/v2/sports/tennis/$t/scoreboard" -H 'user-agent: aa-sports/1.0' -o /tmp/t-$t.json
-            jq '.events | length' /tmp/t-$t.json
-            echo '-- primer competitor (competitions directas) --'
-            jq '[.events[].competitions[]?] | .[0].competitors[0]' /tmp/t-$t.json | head -c 3000
-            echo
-            echo '-- primer competitor (groupings) --'
-            jq '[.events[].groupings[]?.competitions[]?] | .[0].competitors[0]' /tmp/t-$t.json | head -c 3000
-            echo
+          UA='user-agent: aa-sports/1.0'
+          # tomar un evento reciente del Mundial (o de una liga con partidos)
+          for LG in fifa.world eng.1 esp.1 usa.1; do
+            curl -s "https://site.api.espn.com/apis/site/v2/sports/soccer/$LG/scoreboard?dates=$(date -u -d '2 days ago' +%Y%m%d)-$(date -u +%Y%m%d)" -H "$UA" -o /tmp/sb.json
+            EID=$(jq -r '[.events[] | select((.competitions[0].status.type.state // "") != "pre")][0].id // empty' /tmp/sb.json)
+            [ -n "$EID" ] && { echo "liga $LG evento $EID"; break; }
           done
+          [ -z "$EID" ] && EID=$(jq -r '.events[0].id // empty' /tmp/sb.json)
+          echo "== summary evento $EID (liga $LG) =="
+          curl -s "https://site.api.espn.com/apis/site/v2/sports/soccer/$LG/summary?event=$EID" -H "$UA" -o /tmp/sum.json
+          echo '-- top-level keys --'; jq 'keys' /tmp/sum.json
+          echo '-- rosters[0] (alineación): keys + formation + 1er titular --'
+          jq '.rosters[0] | {team: .team.abbreviation, formation, homeAway, keys: keys}' /tmp/sum.json | head -c 1500
+          jq '.rosters[0].roster[0]' /tmp/sum.json | head -c 1500
+          echo
+          echo '-- boxscore.teams[0].statistics (stats del equipo) --'
+          jq '.boxscore.teams[0] | {team: .team.abbreviation, stats: (.statistics // [] | map({name, displayValue}))}' /tmp/sum.json | head -c 2500
+          echo
+          echo '-- keyEvents[0] (goles/tarjetas) --'
+          jq '.keyEvents[0] // .commentary[0] // "sin keyEvents"' /tmp/sum.json | head -c 1200
+          echo
+          echo '-- headToHeadGames? --'
+          jq 'has("headToHeadGames")' /tmp/sum.json
 
-      - name: Rankings de tenis (candidatos)
+      - name: NBA summary (box score por jugador + team stats)
         run: |
-          for t in atp wta; do
-            echo "== site.api $t/rankings =="
-            code=$(curl -s -o /tmp/r-$t.json -w '%{http_code}' "https://site.api.espn.com/apis/site/v2/sports/tennis/$t/rankings" -H 'user-agent: aa-sports/1.0')
-            echo "status $code"
-            jq 'keys' /tmp/r-$t.json 2>/dev/null || head -c 300 /tmp/r-$t.json
-            jq '.' /tmp/r-$t.json 2>/dev/null | head -c 3500
-            echo
+          UA='user-agent: aa-sports/1.0'
+          curl -s 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20260601-20260625' -H "$UA" -o /tmp/nsb.json
+          EID=$(jq -r '.events[0].id // empty' /tmp/nsb.json)
+          echo "== summary NBA evento $EID =="
+          curl -s "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=$EID" -H "$UA" -o /tmp/nsum.json
+          echo '-- top-level keys --'; jq 'keys' /tmp/nsum.json
+          echo '-- boxscore.players[0]: team + labels + 1er jugador (stats) --'
+          jq '.boxscore.players[0] | {team: .team.abbreviation, stat_labels: (.statistics[0].labels // .statistics[0].names), athlete0: (.statistics[0].athletes[0] | {name: .athlete.displayName, stats})}' /tmp/nsum.json | head -c 2500
+          echo
+          echo '-- boxscore.teams[0].statistics (team stats) --'
+          jq '.boxscore.teams[0].statistics // [] | map({label, displayValue}) | .[0:8]' /tmp/nsum.json | head -c 1500
+          echo
+
+      - name: Tenis summary (estadísticas del partido)
+        run: |
+          UA='user-agent: aa-sports/1.0'
+          for T in atp wta; do
+            curl -s "https://site.api.espn.com/apis/site/v2/sports/tennis/$T/scoreboard" -H "$UA" -o /tmp/tsb.json
+            EID=$(jq -r '[.events[].competitions[]?, .events[].groupings[]?.competitions[]?] | .[0].id // empty' /tmp/tsb.json)
+            [ -n "$EID" ] && { echo "tour $T evento $EID"; break; }
           done
-          echo '== core api atp rankings (status) =='
-          curl -s -o /tmp/core.json -w '%{http_code}\n' 'https://sports.core.api.espn.com/v2/sports/tennis/leagues/atp/rankings' -H 'user-agent: aa-sports/1.0'
-          jq 'keys' /tmp/core.json 2>/dev/null || head -c 300 /tmp/core.json
-
-      - name: NBA leaders (Finales de junio)
-        run: |
-          curl -s 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=20260601-20260625' -H 'user-agent: aa-sports/1.0' -o /tmp/nba.json
-          echo '== juegos =='
-          jq '.events | length' /tmp/nba.json
-          echo '== leaders del primer competitor =='
-          jq '.events[0].competitions[0].competitors[0].leaders' /tmp/nba.json | head -c 3000
-          echo
-
-      - name: Soccer form (competitors)
-        run: |
-          curl -s 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard' -H 'user-agent: aa-sports/1.0' -o /tmp/soc.json
-          echo '== form y records del primer competitor =='
-          jq '.events[0].competitions[0].competitors[0] | {form, records, hasLeaders: (.leaders != null)}' /tmp/soc.json | head -c 2000
-          echo
-
-      - name: Worker AA en producción (rutas nuevas)
-        run: |
-          W='https://aa-sports-api.opsmira9.workers.dev'
-          echo '== /v1/mlb/live (batter/pitcher en juegos live) =='
-          curl -s "$W/v1/mlb/live" -o /tmp/wlive.json
-          jq '[.games[] | select(.status == "live")] | length' /tmp/wlive.json
-          jq '[.games[] | select(.status == "live" and .situation != null)] | .[0].situation | {balls, outs, batter, pitcher, lastPlay}' /tmp/wlive.json | head -c 1500
-          echo
-          echo '== /v1/tennis/rankings =='
-          curl -s "$W/v1/tennis/rankings" -o /tmp/wrank.json
-          jq '{secciones: [.sections[].name], top_atp: .sections[0].rows[0], filas: [.sections[].rows | length]}' /tmp/wrank.json | head -c 1200
-          echo
-          echo '== /v1/tennis/live (ids para el join) =='
-          curl -s "$W/v1/tennis/live" -o /tmp/wt.json
-          jq '.games[0] | {league, home: {id: .home.id, code: .home.code}, away: {id: .away.id, code: .away.code}}' /tmp/wt.json | head -c 800
-          echo
-          echo '== /v1/soccer/live?league=fifa.world (form) =='
-          curl -s "$W/v1/soccer/live?league=fifa.world" -o /tmp/ws.json
-          jq '.games[0] | {home: {code: .home.code, form: .home.form}, away: {code: .away.code, form: .away.form}}' /tmp/ws.json | head -c 600
+          echo "== summary tenis evento $EID (tour $T) =="
+          curl -s "https://site.api.espn.com/apis/site/v2/sports/tennis/$T/summary?event=$EID" -H "$UA" -o /tmp/tsum.json
+          echo '-- top-level keys --'; jq 'keys' /tmp/tsum.json
+          echo '-- boxscore / statistics --'
+          jq '(.boxscore // .statistics // "sin boxscore") | if type=="object" then keys else . end' /tmp/tsum.json | head -c 800
+          jq '.boxscore.players // .statistics // [] | .[0]' /tmp/tsum.json | head -c 2000
           echo
