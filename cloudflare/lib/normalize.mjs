@@ -333,7 +333,7 @@ function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
     league: 'MLB',
     event_id: String(g.game_pk),
     matchup: g.matchup || `${g.away} @ ${g.home}`,
-    start: g.game_date || g.date || null,
+    start: g.game_datetime || g.game_date || g.date || null, // hora real si existe, si no la fecha
     status,
     home: { code: g.home, name: g.home },
     away: { code: g.away, name: g.away },

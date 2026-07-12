@@ -214,6 +214,7 @@ async function live(ctx, origin) {
     return {
       espn_id: ev.id,
       start: ev.date || null,
+      date: etDate(ev.date), // día del juego en horario del Este (para el candado de mismo día)
       status: mapEspnStatus(st.name),
       status_detail: st.shortDetail || st.detail || null,
       home: { code: home.team && home.team.abbreviation, score: numOrNull(home.score), rec: recOf(home) },
@@ -527,6 +528,18 @@ function mapEspnStatus(name) {
 function numOrNull(x) {
   const n = Number(x);
   return Number.isFinite(n) ? n : null;
+}
+
+// Día del juego en horario del Este (US). ESPN da la fecha en UTC; un juego
+// nocturno cae en el día UTC siguiente, así que el corte UTC engañaría al
+// candado de "mismo día". en-CA da YYYY-MM-DD.
+function etDate(iso) {
+  if (!iso) return null;
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date(iso));
+  } catch (e) { return String(iso).slice(0, 10); }
 }
 
 function cors(origin) {

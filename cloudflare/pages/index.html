@@ -944,15 +944,22 @@ let selectedId = null, filter = 'all', listTab = 'all', query = '', dtab = 'anal
 let firstLoad = true, lastAnimKey = null;
 let favs = new Set(JSON.parse(localStorage.getItem('aa_favs') || '[]'));
 const $ = id => document.getElementById(id);
-// Cruza el live por equipos PERO solo si es el mismo día: en una serie el
-// matchup se repite y el final de anoche se pegaba al juego de hoy.
+// Cruza el marcador en vivo por equipos, PERO con candado de mismo día
+// calendario. En una serie el matchup se repite día tras día; en la mañana
+// ESPN todavía sirve los finales de ANOCHE y se pegaban al juego de hoy.
+// El delta de horas fallaba porque ev.start suele ser solo-fecha (medianoche
+// UTC); comparamos la fecha del feed en vivo contra la fecha que se ve.
+const dayOf = s => String(s || '').slice(0, 10);
 const lvOf = ev => {
+  // solo mezclamos live cuando se ve HOY, no un día archivado
+  if (viewDate) return null;
   const lv = liveByKey.get(key(ev.away.code, ev.home.code));
   if (!lv) return null;
-  if (lv.start && ev.start){
-    const diff = Math.abs(new Date(lv.start) - new Date(ev.start));
-    if (Number.isFinite(diff) && diff > 12 * 3600 * 1000) return null;
-  }
+  // fecha del juego en vivo en horario del Este (la manda el worker);
+  // fallback al corte del ISO si no viniera.
+  const lvDay = lv.date || dayOf(lv.start);
+  // tiene que ser el día que se está mirando (hoy)
+  if (lvDay && todayDate && lvDay !== todayDate) return null;
   return lv;
 };
 const effStatus = ev => { const lv = lvOf(ev); return lv ? lv.status : ev.status; };
@@ -1625,7 +1632,7 @@ async function loadToday(){
     $('dNext').disabled = true;
     $('cntMLB').hidden = !events.length;
     $('cntMLB').textContent = events.length;
-    if (d.date) $('dlabel').textContent = d.date;
+    if (d.date) $('dlabel').textContent = humanDate(d.date, true);
     if (d.record && d.record.wins != null){
       const {wins: w, losses: l, win_rate: wr} = d.record;
       $('record').hidden = false;
@@ -1700,6 +1707,13 @@ async function loadStandings(){
 }
 
 const shortDate = (s) => { try{ return new Date(s + 'T12:00Z').toLocaleDateString('es', { day: 'numeric', month: 'short' }); }catch(e){ return s; } };
+// Etiqueta humana: "Hoy · sáb 12 jul" para hoy, "sáb 12 jul" para días pasados.
+const humanDate = (iso, isToday) => {
+  try{
+    const t = new Date(iso + 'T12:00Z').toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' });
+    return isToday ? `Hoy · ${t}` : t;
+  }catch(e){ return isToday ? 'Hoy' : iso; }
+};
 
 // Rank mundial por id de athlete (para los chips #n de tenis).
 function tennisRankOf(side){
@@ -1923,7 +1937,7 @@ function shiftDate(d, delta){
 async function loadDay(date){
   viewDate = date;
   document.body.classList.add('viewingpast');
-  $('dlabel').textContent = date;
+  $('dlabel').textContent = humanDate(date, false);
   $('dToday').hidden = false;
   $('dNext').disabled = todayDate && date >= todayDate;
   $('ticker').hidden = true;
