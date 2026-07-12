@@ -1886,16 +1886,34 @@ const humanDate = (iso, isToday) => {
   }catch(e){ return isToday ? 'Hoy' : iso; }
 };
 
-// Rank mundial por id de athlete (para los chips #n de tenis).
-function tennisRankOf(side){
+// Fila de posiciones de un equipo (por código) desde la tabla cargada. Para el
+// head-to-head descriptivo de otros deportes.
+function stRow(code){
+  if (!code) return null;
+  const key = sport === 'soccer' ? `soccer:${soccerLeague}` : sport;
+  const doc = standingsCache.get(key);
+  if (!doc) return null;
+  for (const sec of doc.sections || []){
+    const hit = (sec.rows || []).find(r => canon(r.code) === canon(code));
+    if (hit) return hit;
+  }
+  return null;
+}
+// Fila de ranking de un tenista (rank + puntos) por id de athlete.
+function tennisRow(side){
   if (sport !== 'tennis' || !side || side.id == null) return null;
   const doc = standingsCache.get('tennis');
   if (!doc) return null;
   for (const sec of doc.sections || []){
     const hit = (sec.rows || []).find(r => String(r.id) === String(side.id));
-    if (hit && hit.rank != null) return hit.rank;
+    if (hit) return hit;
   }
   return null;
+}
+// Rank mundial por id de athlete (para los chips #n de tenis).
+function tennisRankOf(side){
+  const r = tennisRow(side);
+  return r && r.rank != null ? r.rank : null;
 }
 const rankChip = (side) => {
   const r = tennisRankOf(side);
@@ -2001,6 +2019,39 @@ function renderOtherDetail(){
     return;
   }
   const scored = g.home.score != null && g.status !== 'pre';
+
+  // Comparación cara a cara descriptiva (datos reales de posiciones/ranking; sin predicciones).
+  let h2hRows = '';
+  if (sport === 'soccer' || sport === 'nba'){
+    const a = stRow(g.away.code), h = stRow(g.home.code);
+    if (a && h){
+      const signed = (x) => { const n = parseFloat(String(x).replace('+', '')); return Number.isFinite(n) ? (n > 0 ? '+' : '') + n : x; };
+      const rows = sport === 'soccer' ? [
+        cmpRow('Posición', a.rank, h.rank, false, x => '#' + x),
+        cmpRow('Puntos', a.pts, h.pts, true),
+        cmpRow('Dif. de gol', a.gd, h.gd, true, signed),
+        cmpRow('Victorias', a.w, h.w, true),
+      ] : [
+        cmpRow('Posición conf.', a.rank, h.rank, false, x => '#' + x),
+        cmpRow('Victorias', a.w, h.w, true),
+        cmpRow('% Victorias', a.pct, h.pct, true),
+        cmpRow('Dif. puntos', a.gd, h.gd, true, signed),
+      ];
+      h2hRows = rows.filter(Boolean).join('');
+    }
+  } else if (sport === 'tennis'){
+    const a = tennisRow(g.away), h = tennisRow(g.home);
+    if (a && h){
+      h2hRows = [
+        cmpRow('Ranking mundial', a.rank, h.rank, false, x => '#' + x),
+        cmpRow('Puntos', a.points, h.points, true),
+      ].filter(Boolean).join('');
+    }
+  }
+  const otherH2H = h2hRows ? `<div class="secttl">Comparación</div>
+    <div class="cmphead"><span>${esc(oName(g.away))}</span><span class="mid">favorece →</span><span>${esc(oName(g.home))}</span></div>
+    <div class="cmpbox glass-in">${h2hRows}</div>` : '';
+
   dc.innerHTML = `
     <div class="dtop"><span class="crumb">${esc(SPORT_LABEL[sport] || sport)}${g.league ? `<span class="sep">›</span><b>${esc(g.league)}</b>` : ''}</span></div>
     <div class="dhero">
@@ -2015,6 +2066,7 @@ function renderOtherDetail(){
       </div>
     </div>
     <div class="dbody">
+      ${otherH2H}
       ${(g.away.form || g.home.form) ? `
       <div class="secttl">Racha reciente</div>
       <div class="formgrid">
