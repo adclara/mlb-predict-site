@@ -19,6 +19,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Diagnóstico de producción (aasport.net + API)
+        shell: /bin/bash {0}
+        run: node robot/prod_diag.mjs
       - name: QA de producción (Worker vs fuente real)
         shell: /bin/bash {0}
         run: node robot/qa_check.mjs
