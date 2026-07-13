@@ -1254,7 +1254,11 @@ function renderList(){
   const canFlip = window.gsap && window.Flip && !reduceMotion && !firstLoad
     && sport === 'mlb' && !document.getElementById('listpane').classList.contains('boot');
   const flipState = canFlip ? window.Flip.getState('#list .mrow') : null;
-  $('list').innerHTML = rows.length ? rows.map((ev, i) => rowHtml(ev, i)).join('')
+  // Aviso claro cuando no hay juegos de MLB hoy (el doc es de un día pasado):
+  // así no parece que la app "no se actualiza" — es que no hay béisbol.
+  const mlbBanner = (!viewDate && docStale && listTab !== 'favs' && events.length)
+    ? '<div class="recentnote">Sin juegos de MLB hoy · mostrando los últimos resultados</div>' : '';
+  $('list').innerHTML = rows.length ? mlbBanner + rows.map((ev, i) => rowHtml(ev, i)).join('')
     : `<div class="lempty">${listTab === 'favs' ? 'Marca partidos con ⭐ para verlos aquí.' : 'Sin partidos en este filtro.'}</div>`;
   if (flipState){
     window.Flip.from(flipState, {
@@ -2003,6 +2007,13 @@ function renderAll(){
   renderTicker(); renderList(); renderDetail(); renderSide();
 }
 
+// Fecha de hoy en horario del Este (reloj del cliente) — para saber si el doc
+// publicado es realmente de hoy o de un día pasado (sin juegos).
+function etTodayClient(){
+  try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
+  catch (e) { return new Date().toISOString().slice(0, 10); }
+}
+
 async function loadToday(){
   if (viewDate) return; // estamos viendo un día archivado
   try{
@@ -2010,10 +2021,14 @@ async function loadToday(){
     const d = await r.json();
     events = d.events || [];
     todayDate = d.date || todayDate;
+    // Fecha REAL (reloj, horario del Este) vs la fecha del doc: si el doc es de
+    // un día pasado (p. ej. no hay juegos hoy — receso del Juego de Estrellas o
+    // día libre), no lo etiquetamos "Hoy" y mostramos un aviso claro.
+    docStale = !!(d.date && d.date !== etTodayClient());
     $('dNext').disabled = true;
     $('cntMLB').hidden = !events.length;
     $('cntMLB').textContent = events.length;
-    if (d.date) $('dlabel').textContent = humanDate(d.date, true);
+    if (d.date) $('dlabel').textContent = humanDate(d.date, !docStale);
     if (d.record && d.record.wins != null){
       const {wins: w, losses: l, win_rate: wr} = d.record;
       $('record').hidden = false;
@@ -2422,6 +2437,7 @@ function setSport(sp2){
 /* ── navegación por fechas (historial navegable) ─────────────────────── */
 let viewDate = null;           // null = HOY (KV mlb:today); 'YYYY-MM-DD' = día archivado
 let todayDate = null;          // fecha del doc de hoy (la fija loadToday)
+let docStale = false;          // true si el doc publicado es de un día pasado (sin juegos hoy)
 const dayFmt = (d) => d; // ya viene YYYY-MM-DD
 function shiftDate(d, delta){
   const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + delta);
