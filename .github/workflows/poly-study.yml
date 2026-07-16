@@ -1,0 +1,27 @@
+# AA Sports — Piloto de MEDICIÓN de Polymarket (sin dinero, sin copiar).
+# Paso 1: sonda-gate (poly_probe.mjs) — verifica endpoints públicos y shapes
+# desde Actions antes de construir el estudio. Solo lectura, sin secretos.
+# Se dispara a mano o tocando .github/poke-poly.
+name: poly-study
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['.github/poke-poly']
+permissions:
+  contents: read
+concurrency:
+  group: poly-study
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Sonda Polymarket (gate)
+        shell: /bin/bash {0}
+        run: node robot/poly_probe.mjs
