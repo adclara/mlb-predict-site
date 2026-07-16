@@ -94,6 +94,7 @@ export default {
         return await summary(ctx, origin, sport, eid, up);
       }
       if (path === '/v1/injuries') return await injuries(env, origin);
+      if (path === '/v1/poly/radar') return await polyRadar(env, origin);
 
       // ── cuentas opcionales (Fase 5) ──
       if (path === '/v1/auth/google') return authStart(url, env);
@@ -121,6 +122,17 @@ async function today(env, origin) {
   return new Response(raw, {
     status: 200,
     headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=60' },
+  });
+}
+
+// Radar de wallets de Polymarket (observatorio descriptivo) — lo publica
+// robot/poly_radar.mjs 2×/día a KV poly:radar.
+async function polyRadar(env, origin) {
+  const raw = await env.AA_LATEST.get('poly:radar');
+  if (!raw) return json({ wallets: [], note: 'radar en preparación' }, 200, origin, 120);
+  return new Response(raw, {
+    status: 200,
+    headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=600' },
   });
 }
 

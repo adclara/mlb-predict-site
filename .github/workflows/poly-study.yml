@@ -1,9 +1,11 @@
-# AA Sports — Piloto de MEDICIÓN de Polymarket (sin dinero, sin copiar).
-# Paso 1: sonda-gate (poly_probe.mjs) — verifica endpoints públicos y shapes
-# desde Actions antes de construir el estudio. Solo lectura, sin secretos.
-# Se dispara a mano o tocando .github/poke-poly.
+# AA Sports — Polymarket: piloto de medición + Radar de wallets.
+# - Radar (poly_radar.mjs): 2×/día por cron → publica KV poly:radar (pestaña Radar).
+# - Estudio (poly_study.mjs): solo a mano/poke (el gate ya corrió; ver docs/POLY_STUDY.md).
+# Sin dinero, sin copiar: solo lectura de datos públicos.
 name: poly-study
 on:
+  schedule:
+    - cron: '23 5,17 * * *'
   workflow_dispatch: {}
   push:
     branches: [main]
@@ -23,15 +25,22 @@ jobs:
         with:
           node-version: 20
       - name: Sonda Polymarket (gate)
+        if: github.event_name != 'schedule'
         shell: /bin/bash {0}
         run: node robot/poly_probe.mjs
       - name: Estudio de wallets + simulación de copiado (medición)
+        if: github.event_name != 'schedule'
         shell: /bin/bash {0}
         run: node robot/poly_study.mjs
-      - name: Guardar JSON del estudio (artifact)
+      - name: Radar de wallets (publica KV poly:radar)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        shell: /bin/bash {0}
+        run: node robot/poly_radar.mjs
+      - name: Guardar JSONs (artifact)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: poly-study
-          path: data/fase2/polymarket/poly_study.json
+          path: data/fase2/polymarket/*.json
           if-no-files-found: ignore
