@@ -16,7 +16,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,3 +25,13 @@ jobs:
       - name: Sonda Polymarket (gate)
         shell: /bin/bash {0}
         run: node robot/poly_probe.mjs
+      - name: Estudio de wallets + simulación de copiado (medición)
+        shell: /bin/bash {0}
+        run: node robot/poly_study.mjs
+      - name: Guardar JSON del estudio (artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: poly-study
+          path: data/fase2/polymarket/poly_study.json
+          if-no-files-found: ignore
