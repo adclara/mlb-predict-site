@@ -461,6 +461,36 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 @media (prefers-reduced-motion: reduce){.srow .sbar i,.shist .sb i{animation:none}}
 /* últimos resultados + tabla de posiciones (otros deportes) */
 .recentnote{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);padding:9px 14px 5px;border-bottom:1px solid var(--hair)}
+/* ── 📡 Radar de wallets (Polymarket) ── */
+.rsub{color:var(--faint);font-size:11px}
+.radarwarn{margin:12px;padding:10px 12px;border:1px solid var(--amber);border-radius:12px;background:rgba(245,158,11,.07);color:var(--dim);font-size:12px;line-height:1.55}
+.radarwarn b{color:var(--amber)}
+.radarwarn a{color:var(--sky)}
+.rhead{display:flex;align-items:center;gap:12px;padding:14px 12px 2px}
+.rhead .av{width:44px;height:44px;border-radius:50%;background:var(--inner);border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;font-weight:800;overflow:hidden;flex:none}
+.rhead .av img{width:100%;height:100%;object-fit:cover}
+.rhead .nm2{font-size:18px;font-weight:800}
+.rhead .wd{font-size:10px;color:var(--faint);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}
+.rchips{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px}
+.rchip{font-size:11px;padding:4px 10px;border-radius:999px;border:1px solid var(--hair);color:var(--dim)}
+.rchip b{color:var(--text)}
+.rcards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 12px 12px}
+@media (max-width:640px){.rcards{grid-template-columns:1fr}}
+.rcard{background:var(--inner);border:1px solid var(--hair);border-radius:12px;padding:12px}
+.rcard .h{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+.rcard .big{font-size:20px;font-weight:800;margin-bottom:4px}
+.rrow{display:flex;align-items:center;gap:8px;font-size:12px;margin:5px 0;min-width:0}
+.rrow .lbl{flex:0 0 68px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rrow .lbl2{color:var(--faint);font-size:11px}
+.rrow .val{flex:0 0 40px;text-align:right}
+.rbar{flex:1;height:8px;border-radius:4px;background:var(--hair);overflow:hidden}
+.rbar i{display:block;height:100%;background:var(--grad)}
+.rtrades{margin:0 12px 14px;font-size:12px}
+.rtrades .tr{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--hair);align-items:baseline;min-width:0}
+.rtrades .when{flex:0 0 92px;color:var(--faint)}
+.rtrades .q{flex:1;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rtrades .px{flex:none;text-align:right}
+@media (max-width:640px){.rtrades .tr{flex-wrap:wrap}.rtrades .px{flex:1 1 100%;text-align:left;padding-left:102px}}
 .sthead{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:12px 0 6px}
 .sttbl{width:100%;border-collapse:collapse;font-size:12.5px}
 .sttbl th{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);text-align:right;padding:5px 6px;border-bottom:1px solid var(--hair)}
@@ -727,6 +757,10 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     <button class="sp" data-sport="tennis">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M6 5a12 12 0 0 1 0 14M18 5a12 12 0 0 0 0 14" stroke-linecap="round"/></svg>
       Tenis <span class="soon">LIVE</span>
+    </button>
+    <button class="sp" data-sport="radar">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.6"/><path d="M12 12l5.2-5.2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/></svg>
+      Radar <span class="soon">POLY</span>
     </button>
   </div>
 </nav>
@@ -1927,6 +1961,14 @@ document.addEventListener('click', e => {
   if (lg2){ soccerLeague = lg2.dataset.lg; otherGames = []; renderLeagueChips();
     document.querySelector('.lghead .sub').textContent = SOCCER_LEAGUES[soccerLeague] || '';
     renderOtherList(); loadOther(); return; }
+  const rl = e.target.closest('#radarlegal');
+  if (rl){ e.preventDefault(); $('legaldlg').showModal(); return; }
+  const rrow = e.target.closest('[data-rw]');
+  if (rrow){
+    radarSel = rrow.dataset.rw; renderRadarDetail();
+    if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; }
+    return;
+  }
   const orow = e.target.closest('[data-oid]');
   if (orow){
     otherSel = orow.dataset.oid; renderOtherDetail();
@@ -2003,6 +2045,7 @@ $('dPick').addEventListener('change', e => {
 
 /* ── datos ───────────────────────────────────────────────── */
 function renderAll(){
+  if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); return; }
   if (sport !== 'mlb'){ renderOtherList(); renderOtherDetail(); return; }
   renderTicker(); renderList(); renderDetail(); renderSide();
 }
@@ -2065,13 +2108,13 @@ async function loadToday(){
 let sport = 'mlb';
 let soccerLeague = 'fifa.world';
 const SOCCER_LEAGUES = { 'fifa.world': 'Mundial', 'uefa.champions': 'Champions', 'eng.1': 'Premier', 'esp.1': 'LaLiga', 'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1', 'usa.1': 'MLS', 'mex.1': 'Liga MX' };
-const SPORT_LABEL = { nba: 'NBA', soccer: 'Soccer', tennis: 'Tenis' };
+const SPORT_LABEL = { nba: 'NBA', soccer: 'Soccer', tennis: 'Tenis', radar: 'Radar' };
 let otherGames = [], otherSel = null, otherLoading = false;
 let otherRecent = false;                 // true = mostrando últimos resultados (no hay juegos hoy)
 const standingsCache = new Map();        // 'nba' | 'soccer:<liga>' → doc de posiciones
 
 async function loadOther(){
-  if (sport === 'mlb') return;
+  if (sport === 'mlb' || sport === 'radar') return;
   otherLoading = true;
   const mySport = sport, myLeague = soccerLeague;
   try{
@@ -2129,6 +2172,117 @@ function loadSummary(g){
     .then(d => { summaryCache.set(k, { at: Date.now(), doc: d && d.ok ? d : null }); if (sport !== 'mlb') renderOtherDetail(); })
     .catch(() => { summaryCache.set(k, { at: Date.now(), doc: null }); })
     .finally(() => summaryPending.delete(k));
+}
+
+/* ── 📡 Radar de wallets (Polymarket) — observatorio descriptivo ─────────── */
+let radarDoc = null, radarAt = 0, radarLoading = false, radarSel = null;
+async function loadRadar(){
+  if (radarLoading || (radarDoc && Date.now() - radarAt < 6e5)) return;
+  radarLoading = true;
+  try{
+    const r = await fetch(`${API}/v1/poly/radar`);
+    const d = await r.json();
+    if (d && Array.isArray(d.wallets)){ radarDoc = d; radarAt = Date.now(); }
+  }catch(err){ /* sin radar no pasa nada */ }
+  radarLoading = false;
+  if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); }
+}
+const rName = (w) => w.pseudonym || w.name || (w.w ? w.w.slice(0, 6) + '…' + w.w.slice(-4) : '—');
+const cents = (x) => (100 * x).toFixed(1) + '¢';
+function radarWarnHtml(){
+  const h = (radarDoc && radarDoc.honesty) || {};
+  const rho = h.spearman != null ? (+h.spearman).toFixed(2) : '0.10';
+  const rep = h.still_pos != null ? Math.round(100 * h.still_pos) : 40;
+  return `<div class="radarwarn"><b>Radar descriptivo — no es recomendación.</b> Muestra qué hacen estas wallets con datos públicos de Polymarket. Nuestro estudio midió que aquí el pasado apenas predice el futuro (correlación ${esc(rho)}; solo ${rep}% de las ganadoras repite al mes siguiente). <a href="#" id="radarlegal">Aviso legal</a></div>`;
+}
+function renderRadarList(){
+  if (sport !== 'radar') return;
+  const ws = (radarDoc && radarDoc.wallets) || [];
+  $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
+  $('lgcount').innerHTML = ws.length ? `<b>${ws.length}</b>` : '';
+  if (!ws.length){
+    $('list').innerHTML = radarLoading
+      ? '<div class="skel"></div><div class="skel"></div><div class="skel"></div>'
+      : '<div class="lempty">Radar en preparación — el observatorio publica sus primeros datos pronto.</div>';
+    return;
+  }
+  const sel = radarSel || ws[0].w;
+  $('list').innerHTML =
+    '<div class="recentnote">Observatorio de wallets · datos públicos de Polymarket</div>' +
+    ws.map((w, i) => {
+      const cat = w.cats && w.cats[0] ? w.cats[0].cat : '—';
+      return `<button class="mrow" data-rw="${esc(w.w)}" style="--i:${i}" aria-pressed="${w.w === sel}">
+        <span class="mtime num">#${i + 1}</span>
+        <span class="mteams">
+          <span class="mt"><span class="nm">${esc(rName(w))}</span></span>
+          <span class="mt"><span class="nm rsub">${esc(cat)} · ${w.n_markets} mercados</span></span>
+        </span>
+        <span class="mscore num">
+          <span class="ms">+${cents(w.edge_sh)}</span>
+          <span class="ms rsub">${w.wins}-${w.losses}</span>
+        </span>
+        <span></span>
+      </button>`;
+    }).join('');
+}
+function renderRadarDetail(){
+  if (sport !== 'radar') return;
+  const dc = $('dcard');
+  const ws = (radarDoc && radarDoc.wallets) || [];
+  const w = ws.find(x => x.w === radarSel) || ws[0];
+  const animKey = 'radar|' + (w ? w.w : 'none');
+  dc.classList.toggle('enter', animKey !== lastAnimKey);
+  lastAnimKey = animKey;
+  if (!w){
+    dc.innerHTML = radarWarnHtml() + `<div class="dempty">${radarLoading ? 'Cargando el radar…' : 'Radar en preparación. El robot publica el observatorio 2 veces al día.'}</div>`;
+    return;
+  }
+  const ini = (rName(w) || '?').slice(0, 2).toUpperCase();
+  const bar = (lbl, share) => `<div class="rrow"><span class="lbl">${esc(lbl)}</span><span class="rbar"><i style="width:${Math.round(100 * (share || 0))}%"></i></span><span class="val num">${Math.round(100 * (share || 0))}%</span></div>`;
+  const bandRows = (w.bands || []).map(b => bar(b.band, b.share)).join('');
+  const catRows = (w.cats || []).slice(0, 5).map(c => bar(c.cat, c.share)).join('');
+  const t = w.timing || {}, sz = w.sizing || {}, st = w.style || {};
+  const flip = st.flip_share != null ? st.flip_share : 0;
+  const money = (x) => x == null ? '—' : '$' + (+x).toLocaleString('es');
+  const dt = (ts) => new Date(ts * 1000).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  dc.innerHTML = radarWarnHtml() + `
+    <div class="rhead">
+      <span class="av">${w.img ? `<img src="${esc(w.img)}" alt="" onerror="this.parentNode.textContent='${ini}'">` : ini}</span>
+      <span><span class="nm2">${esc(rName(w))}</span><br><span class="wd">${esc(w.w)}</span></span>
+    </div>
+    <div class="rchips">
+      <span class="rchip">Mercados <b>${w.n_markets}</b></span>
+      <span class="rchip">Récord <b class="num">${w.wins}-${w.losses}</b></span>
+      <span class="rchip">Edge de entrada <b class="num">+${cents(w.edge_sh)}</b>/acción</span>
+      <span class="rchip">PnL est. <b class="num">${money(w.pnl_usd)}</b></span>
+      <span class="rchip">Precio medio <b class="num">${w.avg_entry != null ? cents(w.avg_entry) : '—'}</b></span>
+    </div>
+    <div class="rcards">
+      <div class="rcard"><div class="h">⏱ Cuándo entra</div>
+        <div class="big num">${t.median_hours_before != null ? '~' + t.median_hours_before + ' h' : '—'}</div>
+        <div class="rrow"><span class="lbl2">antes del cierre del mercado (mediana)</span></div>
+        ${bar('últimas 24h', t.last24h_share)}
+      </div>
+      <div class="rcard"><div class="h">💵 Cuánto arriesga</div>
+        <div class="big num">${money(sz.median_usd)}</div>
+        <div class="rrow"><span class="lbl2">por trade (mediana) · p90 ${esc(money(sz.p90_usd))} · total ${esc(money(sz.total_usd))}</span></div>
+      </div>
+      <div class="rcard"><div class="h">🎯 A qué precio compra</div>${bandRows || '<div class="rrow"><span class="lbl2">sin compras en la ventana</span></div>'}</div>
+      <div class="rcard"><div class="h">🗂 En qué mercados</div>${catRows || '<div class="rrow"><span class="lbl2">—</span></div>'}</div>
+      <div class="rcard"><div class="h">♟ Estilo</div>
+        <div class="big">${flip < 0.15 ? 'Aguanta hasta el final' : flip < 0.5 ? 'Mixto' : 'Voltea posiciones'}</div>
+        ${bar('vende antes', flip)}
+      </div>
+    </div>
+    <div class="rtrades">
+      <div class="secttl">Últimos movimientos</div>
+      ${(w.last_trades || []).map(x => `<div class="tr">
+        <span class="when num">${esc(dt(x.ts))}</span>
+        <span class="q" title="${esc(x.q)}">${esc(x.q)}</span>
+        <span class="px num">${x.side === 'BUY' ? 'Compra' : 'Vende'} ${esc(String(x.outcome))} · ${cents(x.p)} · $${(x.usd || 0).toLocaleString('es')}</span>
+      </div>`).join('') || '<div class="rrow"><span class="lbl2">sin movimientos recientes</span></div>'}
+      <p class="dnote">${esc((radarDoc && radarDoc.attribution) || 'Datos públicos de Polymarket')} · actualizado ${radarDoc && radarDoc.ran_at ? esc(dt(Date.parse(radarDoc.ran_at) / 1000)) : '—'} · AA informa, no apuesta.</p>
+    </div>`;
 }
 
 const shortDate = (s) => { try{ return new Date(s + 'T12:00Z').toLocaleDateString('es', { day: 'numeric', month: 'short' }); }catch(e){ return s; } };
@@ -2411,14 +2565,15 @@ function setSport(sp2){
   document.querySelectorAll('.sp[data-sport]').forEach(b => b.classList.toggle('on', b.dataset.sport === sport));
   document.querySelectorAll('.ltab').forEach(c => c.classList.toggle('on', c.dataset.lt === 'all'));
   document.querySelectorAll('.pill[data-f]').forEach(c => { c.classList.toggle('on', c.dataset.f === 'all'); c.classList.toggle('neutral', c.dataset.f === 'all'); });
-  $('pills').style.display = '';
+  $('pills').style.display = sport === 'radar' ? 'none' : '';
   document.querySelector('.ltop').style.display = sport === 'mlb' ? '' : 'none';
   document.querySelectorAll('.wmlb').forEach(w => w.style.display = sport === 'mlb' ? '' : 'none');
   $('wRecord').style.display = sport === 'mlb' ? '' : 'none';
-  $('wTrain').hidden = sport === 'mlb';
+  $('wTrain').hidden = sport === 'mlb' || sport === 'radar';
   $('ticker').hidden = sport !== 'mlb' || !$('tk').children.length;
   document.querySelector('.lghead .ttl').textContent = sport === 'mlb' ? 'MLB' : (SPORT_LABEL[sport] || sport);
   document.querySelector('.lghead .sub').textContent = sport === 'mlb' ? 'USA · Temporada 2026'
+    : sport === 'radar' ? 'Observatorio de wallets · Polymarket'
     : sport === 'soccer' ? (SOCCER_LEAGUES[soccerLeague] || '') : 'En vivo · vía ESPN';
   // el logo de la liga acompaña al deporte (antes se quedaba pegado el de MLB)
   const lgi = $('lgicon');
@@ -2431,6 +2586,7 @@ function setSport(sp2){
   }
   renderLeagueChips();
   if (sport === 'mlb') renderAll();
+  else if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); loadRadar(); }
   else { renderOtherList(); renderOtherDetail(); loadOther(); }
 }
 
