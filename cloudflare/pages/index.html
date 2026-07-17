@@ -3432,6 +3432,8 @@ $('legaldlg').addEventListener('click', (e) => { if (e.target === $('legaldlg'))
 
 applyI18n(); // pinta el idioma guardado antes de cargar datos
 loadToday(); loadLive(); loadInjuries(); loadMe();
+// PWA: registra el service worker (instalable + arranque offline; solo cachea el shell).
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
 setInterval(() => { sport === 'mlb' ? loadLive() : sport === 'radar' ? loadAlerts() : loadOther(); }, 45 * 1000);
 setInterval(loadInjuries, 30 * 60 * 1000);
