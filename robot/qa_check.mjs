@@ -35,7 +35,14 @@ function etDate(iso) {
   catch (e) { return String(iso).slice(0, 10); }
 }
 const norm = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-const canonPair = (a, b) => [norm(a), norm(b)].sort().join('|');
+// Alias de códigos de equipo: distintas fuentes (StatsAPI/ESPN/sports-ref) usan
+// abreviaturas distintas para el mismo equipo. El caso vivo es Oakland: StatsAPI
+// ya devuelve "ATH" (rebranding de los Athletics) mientras el doc trae "OAK".
+// Espeja el mapa CANON del frontend (index.html) para que el cruce no dé falsos
+// negativos. Ambos lados se colapsan al mismo token → misma llave de par.
+const TEAM_CANON = { CHW: 'CWS', ARI: 'AZ', ATH: 'OAK', SFG: 'SF', SDP: 'SD', TBR: 'TB', KCR: 'KC', WSN: 'WSH' };
+const canonTeam = (s) => { const n = norm(s); return TEAM_CANON[n] || n; };
+const canonPair = (a, b) => [canonTeam(a), canonTeam(b)].sort().join('|');
 
 const TODAY = etToday();
 console.log('AA Sports — QA de producción');
