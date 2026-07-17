@@ -116,6 +116,8 @@ header{
 .search input::placeholder{color:var(--faint)}
 .search input:focus{outline:none;border-color:var(--hair-2);background:var(--panel-2)}
 .hspacer{flex:1}
+.langbtn{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--dim);background:var(--panel);border:1px solid var(--hair);padding:7px 11px;border-radius:12px;cursor:pointer;margin-right:8px}
+.langbtn:hover{color:var(--text);border-color:var(--volt)}
 .record{font-size:13px;color:var(--dim);background:var(--panel);border:1px solid var(--hair);padding:7px 14px;border-radius:12px;white-space:nowrap}
 .record b{color:var(--volt);font-weight:700}
 .record b.lo{color:var(--red)}
@@ -800,14 +802,15 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       </svg>
       <span>
         <span class="wordmark"><span class="aa">AA</span> Sports</span>
-        <span class="tagline">Los datos deciden</span>
+        <span class="tagline" data-i18n="tagline">Los datos deciden</span>
       </span>
     </a>
     <div class="search">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9AA4B5" stroke-width="2.3" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" placeholder="Busca equipos, partidos…" aria-label="Buscar">
+      <input id="q" type="search" placeholder="Busca equipos, partidos…" data-i18n-ph="search_ph" aria-label="Buscar">
     </div>
     <span class="hspacer"></span>
+    <button class="langbtn" id="langbtn" title="Switch to English">EN</button>
     <span class="record num" id="record" hidden></span>
     <span id="authbox"></span>
   </div>
@@ -832,7 +835,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     </button>
     <button class="sp" data-sport="tennis">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M6 5a12 12 0 0 1 0 14M18 5a12 12 0 0 0 0 14" stroke-linecap="round"/></svg>
-      Tenis <span class="soon">LIVE</span>
+      <span data-i18n="sport_tennis">Tenis</span> <span class="soon">LIVE</span>
     </button>
     <button class="sp" data-sport="radar">
       <span class="cnt" id="cntRadar" hidden></span>
@@ -847,29 +850,29 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   <!-- ═══ LISTA ═══ -->
   <aside class="pane listpane boot" id="listpane">
     <div class="ltop">
-      <button class="ltab on" data-lt="all">Todos</button>
-      <button class="ltab" data-lt="favs">Favoritos</button>
-      <button class="ltab" data-lt="hist">Historial</button>
+      <button class="ltab on" data-lt="all" data-i18n="tab_all">Todos</button>
+      <button class="ltab" data-lt="favs" data-i18n="tab_favs">Favoritos</button>
+      <button class="ltab" data-lt="hist" data-i18n="tab_hist">Historial</button>
       <div class="datebox">
         <button class="arrow" id="dPrev" aria-label="Día anterior"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <button class="today" id="dlabel" aria-label="Elegir fecha">Hoy</button>
+        <button class="today" id="dlabel" aria-label="Elegir fecha" data-i18n="today">Hoy</button>
         <button class="arrow" id="dNext" aria-label="Día siguiente"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
         <input type="date" id="dPick" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" min="2026-07-01" aria-hidden="true">
       </div>
-      <button class="pill" id="dToday" hidden style="margin-left:6px">Hoy</button>
+      <button class="pill" id="dToday" hidden style="margin-left:6px" data-i18n="today">Hoy</button>
     </div>
     <div class="ltop-sep"></div>
     <div class="pills" id="lgchips" hidden></div>
     <div class="pills" id="pills">
-      <button class="pill on neutral" data-f="all">Todos<span class="n" id="nAll"></span></button>
-      <button class="pill" data-f="live">En vivo<span class="n" id="nLive"></span></button>
-      <button class="pill" data-f="final">Finales<span class="n" id="nFinal"></span></button>
-      <button class="pill" data-f="pre">Por jugar<span class="n" id="nPre"></span></button>
+      <button class="pill on neutral" data-f="all"><span data-i18n="f_all">Todos</span><span class="n" id="nAll"></span></button>
+      <button class="pill" data-f="live"><span data-i18n="f_live">En vivo</span><span class="n" id="nLive"></span></button>
+      <button class="pill" data-f="final"><span data-i18n="f_final">Finales</span><span class="n" id="nFinal"></span></button>
+      <button class="pill" data-f="pre"><span data-i18n="f_pre">Por jugar</span><span class="n" id="nPre"></span></button>
     </div>
     <div class="lggroup" id="lgroup">
       <button class="lghead" id="lghead">
         <img id="lgicon" src="https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png" alt="" onerror="this.style.visibility='hidden'">
-        <span><span class="ttl">MLB</span><br><span class="sub">USA · Temporada 2026</span></span>
+        <span><span class="ttl">MLB</span><br><span class="sub" data-i18n="season">USA · Temporada 2026</span></span>
         <span class="lc num" id="lgcount"></span>
         <span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 15l6-6 6 6"/></svg></span>
       </button>
@@ -883,17 +886,17 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   <section class="detail" id="detail" aria-live="polite">
     <button class="dback" id="dback">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
-      Partidos
+      <span data-i18n="back_games">Partidos</span>
     </button>
     <div class="pane dpane" id="dcard">
-      <div class="dempty">Elige un partido para ver el análisis completo del algoritmo AA.</div>
+      <div class="dempty" data-i18n="detail_empty">Elige un partido para ver el análisis completo del algoritmo AA.</div>
     </div>
   </section>
 
   <!-- ═══ WIDGETS ═══ -->
   <aside class="colside">
     <div class="widget" id="wRecord" hidden>
-      <h3>Rendimiento del algoritmo</h3>
+      <h3 data-i18n="w_perf">Rendimiento del algoritmo</h3>
       <div class="recwrap">
         <div class="ring">
           <svg width="74" height="74" viewBox="0 0 74 74">
@@ -906,25 +909,25 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       </div>
     </div>
     <div class="widget" id="wTrain" hidden>
-      <h3>🧪 Modelo AA en entrenamiento</h3>
-      <p class="legal">Ya te mostramos los marcadores en vivo de este deporte. Las <b>predicciones AA</b>
+      <h3 data-i18n="w_train">🧪 Modelo AA en entrenamiento</h3>
+      <p class="legal" data-i18n-html="w_train_p">Ya te mostramos los marcadores en vivo de este deporte. Las <b>predicciones AA</b>
       llegarán cuando el modelo pase nuestra validación con datos históricos (walk-forward, intervalos
       de confianza). No publicamos números que no estén medidos.</p>
     </div>
     <div class="widget wmlb">
-      <h3>💎 Gemas de hoy</h3>
+      <h3 data-i18n="w_gems">💎 Gemas de hoy</h3>
       <div id="wGems" class="wempty">—</div>
     </div>
     <div class="widget wmlb">
-      <h3>🔒 Fijos del día</h3>
+      <h3 data-i18n="w_locks">🔒 Fijos del día</h3>
       <div id="wLocks" class="wempty">—</div>
     </div>
     <div class="widget">
-      <h3>Juego responsable</h3>
-      <p class="legal"><b>AA Sports informa, no facilita apuestas.</b> Te damos los datos y nuestra
+      <h3 data-i18n="w_resp">Juego responsable</h3>
+      <p class="legal" data-i18n-html="w_resp_p"><b>AA Sports informa, no facilita apuestas.</b> Te damos los datos y nuestra
       lectura; la decisión es tuya. 18/21+ según tu jurisdicción. Los datos no garantizan resultados.</p>
-      <button class="howlink" id="howbtn">¿Cómo funciona el algoritmo AA? →</button>
-      <button class="howlink" id="legalbtn2" style="display:block;margin-top:6px">Aviso legal y términos de uso →</button>
+      <button class="howlink" id="howbtn" data-i18n="how_link">¿Cómo funciona el algoritmo AA? →</button>
+      <button class="howlink" id="legalbtn2" style="display:block;margin-top:6px" data-i18n="legal_link2">Aviso legal y términos de uso →</button>
     </div>
   </aside>
 </div>
@@ -933,7 +936,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 <dialog id="howdlg">
   <div class="howcard">
     <button class="howclose" id="howclose" aria-label="Cerrar">✕</button>
-    <h2>Cómo funciona AA Sports</h2>
+    <div id="howbody" data-i18n-html="how_html"><h2>Cómo funciona AA Sports</h2>
     <div class="howsec"><b>1 · Un modelo privado, medido en público.</b> El algoritmo corre en
       servidores (nunca en tu navegador) y produce una probabilidad por juego. Todo lo que ves
       —picks, probabilidades, récord— queda guardado tal como se publicó y <b>no se reescribe</b>.</div>
@@ -953,7 +956,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     <div class="howsec"><b>5 · Tú decides.</b> AA Sports no toma apuestas ni dinero. Te damos
       datos honestos (marcadores en vivo, forma, bajas, mercado) y nuestra lectura. La decisión
       —y la responsabilidad— es tuya. Juego responsable, 18/21+.</div>
-    <p class="hownote">Datos: MLB StatsAPI y ESPN. Infraestructura: Cloudflare. Récord completo en la pestaña Historial.</p>
+    <p class="hownote">Datos: MLB StatsAPI y ESPN. Infraestructura: Cloudflare. Récord completo en la pestaña Historial.</p></div>
   </div>
 </dialog>
 
@@ -961,7 +964,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 <dialog id="legaldlg">
   <div class="howcard">
     <button class="howclose" id="legalclose" aria-label="Cerrar">✕</button>
-    <h2>Aviso legal y términos de uso</h2>
+    <div id="legalbody" data-i18n-html="legal_html"><h2>Aviso legal y términos de uso</h2>
     <p class="hownote" style="padding-top:0;margin-bottom:6px">Última actualización: julio 2026. Al usar AA Sports aceptas este aviso.</p>
 
     <div class="legalh">1 · Servicio informativo y de uso personal</div>
@@ -1011,7 +1014,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       momento; el uso continuado implica su aceptación.</div>
 
     <p class="hownote">AA Sports informa; no apuesta por ti ni se beneficia de tus apuestas. La decisión
-      —y la responsabilidad— es tuya.</p>
+      —y la responsabilidad— es tuya.</p></div>
   </div>
 </dialog>
 
@@ -1019,13 +1022,13 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 
 <footer>
   <div class="fwrap">
-    <b>AA Sports</b> — inteligencia deportiva basada en datos. Publicamos predicciones del algoritmo AA,
+    <span data-i18n-html="foot"><b>AA Sports</b> — inteligencia deportiva basada en datos. Publicamos predicciones del algoritmo AA,
     métricas y resúmenes para que decidas informado. No somos casa de apuestas, no tomamos dinero y no
     colocamos apuestas. Si decides jugar, hazlo con responsabilidad (18/21+). Los resultados pasados no
-    garantizan resultados futuros.
+    garantizan resultados futuros.</span>
     <div class="flinks">
-      <button class="flink" id="legalbtn">Aviso legal y términos</button>
-      <button class="flink" id="howbtn2">¿Cómo funciona?</button>
+      <button class="flink" id="legalbtn" data-i18n="foot_legal">Aviso legal y términos</button>
+      <button class="flink" id="howbtn2" data-i18n="foot_how">¿Cómo funciona?</button>
     </div>
   </div>
 </footer>
@@ -1033,6 +1036,101 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 <script>
 'use strict';
 const API = 'https://aa-sports-api.opsmira9.workers.dev';
+
+/* ── i18n: Español / English ─────────────────────────────────
+   lang guía t(k) (textos), LOCALE (fechas/números) y applyI18n()
+   que re-pinta el HTML estático con [data-i18n]/[data-i18n-html]. */
+let lang = (localStorage.getItem('aa_lang') === 'en') ? 'en' : 'es';
+const LOCALE = () => (lang === 'en' ? 'en-US' : 'es');
+const T = {
+  es: {
+    tagline: 'Los datos deciden', search_ph: 'Busca equipos, partidos…',
+    tab_all: 'Todos', tab_favs: 'Favoritos', tab_hist: 'Historial', today: 'Hoy',
+    f_all: 'Todos', f_live: 'En vivo', f_final: 'Finales', f_pre: 'Por jugar',
+    season: 'USA · Temporada 2026', matches: 'Partidos',
+    radar_sub: 'Observatorio de wallets · Polymarket', live_via_espn: 'En vivo · vía ESPN',
+    detail_empty: 'Elige un partido para ver el análisis completo del algoritmo AA.',
+    w_perf: 'Rendimiento del algoritmo', w_train: '🧪 Modelo AA en entrenamiento',
+    w_train_p: 'Ya te mostramos los marcadores en vivo de este deporte. Las <b>predicciones AA</b> llegarán cuando el modelo pase nuestra validación con datos históricos (walk-forward, intervalos de confianza). No publicamos números que no estén medidos.',
+    w_gems: '💎 Gemas de hoy', w_locks: '🔒 Fijos del día', w_resp: 'Juego responsable',
+    w_resp_p: '<b>AA Sports informa, no facilita apuestas.</b> Te damos los datos y nuestra lectura; la decisión es tuya. 18/21+ según tu jurisdicción. Los datos no garantizan resultados.',
+    how_link: '¿Cómo funciona el algoritmo AA? →', legal_link2: 'Aviso legal y términos de uso →',
+    back_games: 'Partidos', sport_baseball: 'Baseball', sport_tennis: 'Tenis',
+    foot: '<b>AA Sports</b> — inteligencia deportiva basada en datos. Publicamos predicciones del algoritmo AA, métricas y resúmenes para que decidas informado. No somos casa de apuestas, no tomamos dinero y no colocamos apuestas. Si decides jugar, hazlo con responsabilidad (18/21+). Los resultados pasados no garantizan resultados futuros.',
+    foot_legal: 'Aviso legal y términos', foot_how: '¿Cómo funciona?',
+    lang_btn: 'EN', lang_title: 'Switch to English',
+  },
+  en: {
+    tagline: 'The data decides', search_ph: 'Search teams, games…',
+    tab_all: 'All', tab_favs: 'Favorites', tab_hist: 'History', today: 'Today',
+    f_all: 'All', f_live: 'Live', f_final: 'Final', f_pre: 'Upcoming',
+    season: 'USA · 2026 Season', matches: 'Games',
+    radar_sub: 'Wallet observatory · Polymarket', live_via_espn: 'Live · via ESPN',
+    detail_empty: 'Pick a game to see the full AA algorithm analysis.',
+    w_perf: 'Algorithm performance', w_train: '🧪 AA model in training',
+    w_train_p: 'We already show live scores for this sport. <b>AA predictions</b> arrive once the model passes our validation on historical data (walk-forward, confidence intervals). We don\'t publish numbers we haven\'t measured.',
+    w_gems: '💎 Today\'s gems', w_locks: '🔒 Locks of the day', w_resp: 'Responsible gaming',
+    w_resp_p: '<b>AA Sports informs, it does not facilitate betting.</b> We give you the data and our read; the decision is yours. 18/21+ per your jurisdiction. Data does not guarantee results.',
+    how_link: 'How does the AA algorithm work? →', legal_link2: 'Legal notice & terms of use →',
+    back_games: 'Games', sport_baseball: 'Baseball', sport_tennis: 'Tennis',
+    foot: '<b>AA Sports</b> — data-driven sports intelligence. We publish AA algorithm predictions, metrics and summaries so you decide informed. We are not a sportsbook, we take no money and we place no bets. If you choose to play, do it responsibly (18/21+). Past results do not guarantee future results.',
+    foot_legal: 'Legal notice & terms', foot_how: 'How it works?',
+    lang_btn: 'ES', lang_title: 'Cambiar a Español',
+    how_html: `<h2>How AA Sports works</h2>
+      <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
+      <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
+      <div class="howsec"><b>3 · Shadow period.</b> Before turning on a new sport, its predictions run for weeks in private against real results. They only go public if live accuracy holds up what the simulations promised.</div>
+      <div class="howsec"><b>4 · Calibrated, live probabilities.</b> We show the model's corrected (calibrated) probability, not an inflated number: if we say ~60%, we aim for it to happen ~6 out of 10. We measure our own calibration and each tier's record stays public. During the game, the number moves with the score (live probability). Honesty: our model matches the market, it doesn't beat it — the value is in the selection and in not making things up. The Simulation tab spreads the outcome across 10,000 runs of that probability.</div>
+      <div class="howsec"><b>5 · You decide.</b> AA Sports takes no bets and no money. We give you honest data (live scores, form, injuries, market) and our read. The decision —and the responsibility— is yours. Responsible gaming, 18/21+.</div>
+      <p class="hownote">Data: MLB StatsAPI and ESPN. Infrastructure: Cloudflare. Full record in the History tab.</p>`,
+    legal_html: `<h2>Legal notice & terms of use</h2>
+      <p class="hownote" style="padding-top:0;margin-bottom:6px">Last updated: July 2026. By using AA Sports you accept this notice.</p>
+      <div class="legalh">1 · Informational service for personal use</div>
+      <div class="howsec">AA Sports is a <b>free, informational, personal-use</b> service. It offers sports data, statistics, probabilities and analysis generated by a proprietary algorithm for the sole purpose of <b>helping the user get informed and make their own decisions</b>. The content <b>does not constitute</b> betting, financial, investment, legal or professional advice of any kind, nor an invitation, offer or recommendation to bet or gamble.</div>
+      <div class="legalh">2 · We don't facilitate betting or profit from it</div>
+      <div class="howsec">AA Sports <b>is not a sportsbook</b>. <b>We do not accept, process, hold or intermediate money</b>, we do not place or manage bets, and <b>we receive no commission, payment or benefit</b> from sportsbooks, operators or third parties for showing data or analysis. Any bet or gambling is done by the user on their own, with the operator they choose, with their own money and under their sole responsibility.</div>
+      <div class="legalh">3 · No warranties · the risk is the user's</div>
+      <div class="howsec">Data and probabilities are provided <b>"as is" and "as available"</b>, with no warranty of accuracy, completeness, timeliness or any outcome. <b>Past performance does not guarantee future results.</b> Betting and gambling carry a risk of financial loss; the user <b>assumes the entirety of that risk</b> and of the consequences of their decisions.</div>
+      <div class="legalh">4 · Limitation of liability</div>
+      <div class="howsec">To the maximum extent permitted by applicable law, AA Sports, its authors and contributors <b>shall not be liable</b> for any direct, indirect, incidental or consequential loss or damage —including financial losses arising from betting or gambling— related to the use of or inability to use this application or the information contained herein.</div>
+      <div class="legalh">5 · Intellectual property and data sources</div>
+      <div class="howsec">Sports data comes from <b>public third-party sources</b> (e.g. MLB Advanced Media / StatsAPI, ESPN and others) and is shown for <b>informational purposes</b>. The trademarks, logos and names of leagues, teams and players are <b>property of their respective owners</b>. AA Sports <b>is not affiliated with, sponsored or endorsed</b> by MLB, ESPN, any league, team, operator or trademark owner. The algorithms and analysis are our own work. If a rights holder believes their content is being used improperly, they may request its removal.</div>
+      <div class="legalh">6 · Age, responsible gaming and jurisdiction</div>
+      <div class="howsec">Content aimed only at those of <b>legal age</b> to bet in their territory (<b>18/21+</b> per jurisdiction). Betting can be addictive and cause losses: play responsibly and only with what you can afford to lose. <b>It is the user's sole responsibility</b> to know and comply with the betting and gambling laws in force in their jurisdiction; access may not be legal in some territories.</div>
+      <div class="legalh">7 · Privacy and changes</div>
+      <div class="howsec">The site is read-only and requires no registration; sign-in is optional and with minimal data (see the privacy note on entry). We may update this notice at any time; continued use implies acceptance.</div>
+      <p class="hownote">AA Sports informs; it does not bet for you nor profit from your bets. The decision —and the responsibility— is yours.</p>`,
+  },
+};
+const t = (k) => (T[lang] && T[lang][k]) != null ? T[lang][k] : (T.es[k] != null ? T.es[k] : k);
+// El contenido ES es la fuente en el DOM; guardamos el original y solo lo
+// sustituimos por EN cuando toca. Así no duplicamos el copy español.
+const _orig = new WeakMap();
+function applyI18n(){
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    if (!_orig.has(el)) _orig.set(el, el.textContent);
+    const k = el.getAttribute('data-i18n');
+    el.textContent = (lang === 'en' && T.en[k] != null) ? T.en[k] : _orig.get(el);
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    if (!_orig.has(el)) _orig.set(el, el.innerHTML);
+    const k = el.getAttribute('data-i18n-html');
+    el.innerHTML = (lang === 'en' && T.en[k] != null) ? T.en[k] : _orig.get(el);
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    if (!_orig.has(el)) _orig.set(el, el.getAttribute('placeholder') || '');
+    const k = el.getAttribute('data-i18n-ph');
+    el.setAttribute('placeholder', (lang === 'en' && T.en[k] != null) ? T.en[k] : _orig.get(el));
+  });
+  const lb = document.getElementById('langbtn'); if (lb){ lb.textContent = t('lang_btn'); lb.title = t('lang_title'); }
+}
+function setLang(l){
+  lang = (l === 'en') ? 'en' : 'es';
+  localStorage.setItem('aa_lang', lang);
+  applyI18n();
+  try { renderAll(); if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); } } catch(e){}
+}
 
 /* ── equipos ─────────────────────────────────────────────── */
 const TEAMS = {
@@ -1222,6 +1320,7 @@ function pushFavs(){
 document.addEventListener('click', (e) => {
   const m = $('authmenu');
   if (m && !m.hidden && !e.target.closest('#authbox')) m.hidden = true;
+  if (e.target.closest('#langbtn')) setLang(lang === 'en' ? 'es' : 'en');
 });
 let selectedId = null, filter = 'all', listTab = 'all', query = '', dtab = 'analisis';
 let firstLoad = true, lastAnimKey = null;
@@ -2505,13 +2604,13 @@ function renderRadarDetail(){
     </div>`;
 }
 
-const shortDate = (s) => { try{ return new Date(s + 'T12:00Z').toLocaleDateString('es', { day: 'numeric', month: 'short' }); }catch(e){ return s; } };
+const shortDate = (s) => { try{ return new Date(s + 'T12:00Z').toLocaleDateString(LOCALE(), { day: 'numeric', month: 'short' }); }catch(e){ return s; } };
 // Etiqueta humana: "Hoy · sáb 12 jul" para hoy, "sáb 12 jul" para días pasados.
 const humanDate = (iso, isToday) => {
   try{
-    const t = new Date(iso + 'T12:00Z').toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' });
-    return isToday ? `Hoy · ${t}` : t;
-  }catch(e){ return isToday ? 'Hoy' : iso; }
+    const d = new Date(iso + 'T12:00Z').toLocaleDateString(LOCALE(), { weekday: 'short', day: 'numeric', month: 'short' });
+    return isToday ? `${t('today')} · ${d}` : d;
+  }catch(e){ return isToday ? t('today') : iso; }
 };
 
 // Fila de posiciones de un equipo (por código) desde la tabla cargada. Para el
@@ -2792,9 +2891,9 @@ function setSport(sp2){
   $('wTrain').hidden = sport === 'mlb' || sport === 'radar';
   $('ticker').hidden = sport !== 'mlb' || !$('tk').children.length;
   document.querySelector('.lghead .ttl').textContent = sport === 'mlb' ? 'MLB' : (SPORT_LABEL[sport] || sport);
-  document.querySelector('.lghead .sub').textContent = sport === 'mlb' ? 'USA · Temporada 2026'
-    : sport === 'radar' ? 'Observatorio de wallets · Polymarket'
-    : sport === 'soccer' ? (SOCCER_LEAGUES[soccerLeague] || '') : 'En vivo · vía ESPN';
+  document.querySelector('.lghead .sub').textContent = sport === 'mlb' ? t('season')
+    : sport === 'radar' ? t('radar_sub')
+    : sport === 'soccer' ? (SOCCER_LEAGUES[soccerLeague] || '') : t('live_via_espn');
   // el logo de la liga acompaña al deporte (antes se quedaba pegado el de MLB)
   const lgi = $('lgicon');
   const LEAGUE_ICON = { mlb: 'mlb', nba: 'nba' };
@@ -2843,7 +2942,7 @@ function backToToday(){
   document.body.classList.remove('viewingpast');
   $('dToday').hidden = true;
   $('dNext').disabled = true;
-  $('dlabel').textContent = todayDate || 'Hoy';
+  $('dlabel').textContent = todayDate || t('today');
   firstLoad = true; lastLiveSig = '[]';
   loadToday(); loadLive();
 }
@@ -2943,6 +3042,7 @@ if ($('legalbtn2')) $('legalbtn2').onclick = openLegal;
 $('legalclose').onclick = () => $('legaldlg').close();
 $('legaldlg').addEventListener('click', (e) => { if (e.target === $('legaldlg')) $('legaldlg').close(); });
 
+applyI18n(); // pinta el idioma guardado antes de cargar datos
 loadToday(); loadLive(); loadInjuries(); loadMe();
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
 setInterval(() => { sport === 'mlb' ? loadLive() : sport === 'radar' ? loadAlerts() : loadOther(); }, 45 * 1000);
