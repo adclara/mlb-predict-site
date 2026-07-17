@@ -468,6 +468,13 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .radarwarn{margin:12px;padding:10px 12px;border:1px solid var(--amber);border-radius:12px;background:rgba(245,158,11,.07);color:var(--dim);font-size:12px;line-height:1.55}
 .radarwarn b{color:var(--amber)}
 .radarwarn a{color:var(--sky)}
+.tracklive{margin-top:8px;padding-top:8px;border-top:1px solid rgba(245,158,11,.22);display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.tracklive b{color:var(--volt)}
+.newchip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border:1px solid var(--volt);border-radius:999px;color:var(--volt);font-size:11px;font-weight:700;white-space:nowrap}
+/* La caja de honestidad en #dcard (columna media) es invisible en móvil, donde el
+   detalle es un overlay. En móvil la mostramos en #list (siempre visible). */
+.lwarn{display:none}
+@media (max-width:900px){.lwarn{display:block}}
 .rhead{display:flex;align-items:center;gap:12px;padding:14px 12px 2px}
 .rhead .av{width:44px;height:44px;border-radius:50%;background:var(--inner);border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;font-weight:800;overflow:hidden;flex:none}
 .rhead .av img{width:100%;height:100%;object-fit:cover}
@@ -1105,6 +1112,7 @@ const T = {
     frase_won: 'Ganó', frase_this_month: 'este mes', frase_hits: 'acierta', frase_of10: 'de cada 10', frase_bets: 'apuesta ~', frase_per_play: 'por jugada', frase_mostly: 'sobre todo en', frase_and: 'y',
     tb_before: 'ANTES del partido', tb_live: 'EN VIVO', tb_nohour: 'sin hora de inicio', tb_before_s: 'ANTES',
     warn_desc: 'Radar descriptivo — no es recomendación.', warn_body: 'Muestra qué hacen estas wallets con datos públicos de Polymarket. «🎯 Posible informado» es un patrón estadístico (aciertos + entra temprano y barato + ganancia sostenida),', warn_notproof: 'no una acusación probada', warn_delay: '; las alertas llegan con ~5 min de retraso. Nuestro estudio midió que el pasado apenas predice el futuro aquí (correlación', warn_repeat: 'solo', warn_repeat2: 'de las ganadoras repite al mes siguiente).', warn_legal: 'Aviso legal',
+    track_pre: 'Persistencia viva: de', track_ago: 'vigiladas hace ~7 días,', track_still: 'siguen hoy', track_wait: 'Persistencia viva: midiendo nuestra propia lista en vivo (acumulando historial).', track_new: 'nuevas en el top esta semana',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1154,6 +1162,7 @@ const T = {
     frase_won: 'Won', frase_this_month: 'this month', frase_hits: 'hits', frase_of10: 'out of 10', frase_bets: 'bets ~', frase_per_play: 'per play', frase_mostly: 'mostly in', frase_and: 'and',
     tb_before: 'BEFORE the game', tb_live: 'LIVE', tb_nohour: 'no start time', tb_before_s: 'BEFORE',
     warn_desc: 'Descriptive radar — not a recommendation.', warn_body: 'It shows what these wallets do with public Polymarket data. «🎯 Possible insider» is a statistical pattern (hits + enters early and cheap + sustained profit),', warn_notproof: 'not a proven accusation', warn_delay: '; alerts arrive with ~5 min delay. Our study measured that the past barely predicts the future here (correlation', warn_repeat: 'only', warn_repeat2: 'of winners repeat the next month).', warn_legal: 'Legal notice',
+    track_pre: 'Live persistence: of', track_ago: 'watched ~7 days ago,', track_still: 'still watched today', track_wait: 'Live persistence: measuring our own list live (building history).', track_new: 'new in the top this week',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
       <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
@@ -2454,6 +2463,7 @@ function loadSummary(g){
 /* ── 📡 Radar de wallets (Polymarket) — observatorio descriptivo ─────────── */
 let radarDoc = null, radarAt = 0, radarLoading = false, radarSel = null;
 let alertsDoc = null, alertsAt = 0, alertsLoading = false;
+let trackDoc = null, trackAt = 0; // persistencia viva + wallets nuevas (poly:track)
 const agoTxt = (ts) => {
   const m = Math.max(0, Math.round(Date.now() / 1000 - ts) / 60 | 0);
   const pre = t('ago_min') ? t('ago_min') + ' ' : '';
@@ -2494,9 +2504,11 @@ async function loadRadar(){
   if (radarLoading || (radarDoc && Date.now() - radarAt < 6e5)) return;
   radarLoading = true;
   try{
-    const r = await fetch(`${API}/v1/poly/radar`);
+    // radar (obligatorio) + track (persistencia viva, opcional) en paralelo
+    const [r, tr] = await Promise.all([ fetch(`${API}/v1/poly/radar`), fetch(`${API}/v1/poly/track`).catch(() => null) ]);
     const d = await r.json();
     if (d && Array.isArray(d.wallets)){ radarDoc = d; radarAt = Date.now(); }
+    if (tr && tr.ok){ try{ const td = await tr.json(); if (td){ trackDoc = td; trackAt = Date.now(); } }catch(e){} }
   }catch(err){ /* sin radar no pasa nada */ }
   radarLoading = false;
   if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); }
@@ -2579,7 +2591,19 @@ function radarWarnHtml(){
   const h = (radarDoc && radarDoc.honesty) || {};
   const rho = h.spearman != null ? (+h.spearman).toFixed(2) : '0.10';
   const rep = h.still_pos != null ? Math.round(100 * h.still_pos) : 40;
-  return `<div class="radarwarn"><b>${t('warn_desc')}</b> ${t('warn_body')} <b>${t('warn_notproof')}</b>${t('warn_delay')} ${esc(rho)}; ${t('warn_repeat')} ${rep}% ${t('warn_repeat2')} <a href="#" id="radarlegal">${t('warn_legal')}</a></div>`;
+  return `<div class="radarwarn"><b>${t('warn_desc')}</b> ${t('warn_body')} <b>${t('warn_notproof')}</b>${t('warn_delay')} ${esc(rho)}; ${t('warn_repeat')} ${rep}% ${t('warn_repeat2')} <a href="#" id="radarlegal">${t('warn_legal')}</a>${trackLiveHtml()}</div>`;
+}
+// Medidor de persistencia VIVO (nuestra propia lista, no el estudio estático) +
+// contador de wallets nuevas en el top esta semana. Degradado honesto mientras
+// se acumula el historial (poly:track aún sin snapshots suficientes).
+function trackLiveHtml(){
+  const p = trackDoc && trackDoc.persistence;
+  const meter = (p && p.then_n)
+    ? `📈 ${t('track_pre')} <b>${p.then_n}</b> ${t('track_ago')} <b>${p.stayed}</b> ${t('track_still')} (${Math.round(100 * p.overlap)}%).`
+    : `📈 ${t('track_wait')}`;
+  const nw = trackDoc && Array.isArray(trackDoc.new_wallets) ? trackDoc.new_wallets.length : 0;
+  const chip = nw ? ` <span class="newchip num">🆕 ${nw} ${t('track_new')}</span>` : '';
+  return `<div class="tracklive">${meter}${chip}</div>`;
 }
 // estado de las secciones plegables del dashboard
 let radarOpen = { alerts: false, top: false, all: false };
@@ -2593,9 +2617,9 @@ function renderRadarList(){
   $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
   $('lgcount').innerHTML = ws.length ? `<b>${ws.length}</b>` : '';
   if (!ws.length){
-    $('list').innerHTML = radarLoading
+    $('list').innerHTML = `<div class="lwarn">${radarWarnHtml()}</div>` + (radarLoading
       ? '<div class="skel"></div><div class="skel"></div><div class="skel"></div>'
-      : `<div class="lempty">${t('r_prep')}</div>`;
+      : `<div class="lempty">${t('r_prep')}</div>`);
     return;
   }
   const as = (alertsDoc && alertsDoc.alerts) || [];
@@ -2607,6 +2631,7 @@ function renderRadarList(){
   const showAl = radarOpen.alerts ? groups.slice(0, 30) : groups.slice(0, 3);
   const showTt = radarOpen.top ? tts : tts.slice(0, 5);
   $('list').innerHTML = `
+    <div class="lwarn">${radarWarnHtml()}</div>
     <div class="stats3">
       <div class="stile"><div class="v num">${ws[0] ? '+' + rUsd(ws[0].pnl_usd) : '—'}</div><div class="l">${t('r_stat_best')}</div></div>
       <div class="stile"><div class="v num">🎯 ${nWatch}</div><div class="l">${t('r_stat_watch')}</div></div>
