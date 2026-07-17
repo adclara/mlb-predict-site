@@ -65,8 +65,10 @@ try {
   const secs = st.sections || [];
   const rows = secs.reduce((n, s) => n + (s.rows || []).length, 0);
   console.log('secciones:', secs.length, '| equipos:', rows, '| temporada:', st.season || '—', rows ? '' : '→ ⚠️ tabla vacía (revisar shape ESPN)');
+  console.log('  secciones:', secs.map((s) => `${s.name} (${(s.rows || []).length})`).join(' · ') || '—');
   const s0 = secs[0]; const r0 = s0 && (s0.rows || [])[0];
   if (r0) console.log(`  ej: ${s0.name} → ${r0.name || r0.code} ${r0.w}-${r0.l} (${r0.pct})`);
+  console.log('  vista:', secs.length >= 4 ? '✅ por DIVISIÓN' : secs.length ? 'por liga (fallback)' : '⚠️ vacía');
 } catch (e) { console.log('no-json:', String(e).slice(0, 120)); }
 console.log('\n== /v1/poly/radar + /v1/poly/alerts (Radar de wallets) ==');
 const pr = await get(`${API}/v1/poly/radar`);
