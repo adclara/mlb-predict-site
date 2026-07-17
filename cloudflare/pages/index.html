@@ -508,6 +508,13 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .wsearch input::placeholder{color:var(--faint)}
 .wsearchb{flex:none;background:var(--sky);color:#04121f;border:0;border-radius:10px;padding:8px 14px;font:inherit;font-weight:800;font-size:13px;cursor:pointer}
 .wsnote{margin:8px 12px;padding:8px 10px;border:1px solid var(--hair);border-radius:10px;background:var(--inner);color:var(--dim);font-size:11.5px;line-height:1.5}
+/* v7 PR C: filtros de categoría + compartir (toast) + track record */
+.catchips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 12px 0}
+.catchip{background:none;border:1px solid var(--hair);color:var(--dim);border-radius:999px;padding:4px 11px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.catchip.on{border-color:var(--sky);color:var(--sky);background:rgba(94,168,255,.10)}
+.tracklive .trec{color:var(--dim)}
+#polytoast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#151a24;color:var(--text);border:1px solid var(--hair);border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;z-index:400;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+#polytoast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .rhead{display:flex;align-items:center;gap:12px;padding:14px 12px 2px}
 .rhead .av{width:44px;height:44px;border-radius:50%;background:var(--inner);border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;font-weight:800;overflow:hidden;flex:none}
 .rhead .av img{width:100%;height:100%;object-fit:cover}
@@ -1152,6 +1159,7 @@ const T = {
     tab_standings: 'Posiciones', st_title: 'Tabla de posiciones', st_rank_title: 'Ranking mundial', st_team: 'Equipo', st_player: 'Jugador', st_points: 'Puntos', st_gp: 'PJ', st_w: 'G', st_d: 'E', st_l: 'P', st_gd: 'DG', st_pts: 'Pts', st_pct: '%', st_gb: 'Dif', st_loading: 'Cargando posiciones…', st_none: 'Posiciones no disponibles ahora.',
     notif_live: 'En vivo', notif_final: 'Final', notif_live_b: 'Empezó un juego que sigues ⭐', notif_final_b: 'Terminó un juego que sigues ⭐',
     r_search_ph: 'Buscar cualquier wallet (0x… o link)', r_search_go: 'Buscar', r_ws_bad: 'Dirección no válida. Pega una wallet 0x… o el link de un perfil de Polymarket.', r_ws_empty: 'Sin movimientos recientes.', r_ws_moves: 'movimientos', r_ws_vol: 'volumen', r_ws_recent: 'Movimientos recientes', r_ws_note: 'Consulta en vivo de la actividad reciente de esta wallet — datos crudos, sin nuestro filtro anti-trampa. Para el historial completo, abre su perfil en Polymarket ↗.',
+    r_cat_all: 'Todas', r_no_cat: 'Ninguna cuenta en esta categoría.', r_share: 'Compartir', r_share_txt: 'Mira esta wallet en el Radar AA', r_copied: 'Link copiado ✓', track_measuring: 'midiendo hace', track_days: 'días',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1207,6 +1215,7 @@ const T = {
     tab_standings: 'Standings', st_title: 'Standings', st_rank_title: 'World ranking', st_team: 'Team', st_player: 'Player', st_points: 'Points', st_gp: 'GP', st_w: 'W', st_d: 'D', st_l: 'L', st_gd: 'GD', st_pts: 'Pts', st_pct: '%', st_gb: 'GB', st_loading: 'Loading standings…', st_none: 'Standings unavailable right now.',
     notif_live: 'Live', notif_final: 'Final', notif_live_b: 'A game you follow ⭐ just started', notif_final_b: 'A game you follow ⭐ just ended',
     r_search_ph: 'Search any wallet (0x… or link)', r_search_go: 'Search', r_ws_bad: 'Invalid address. Paste a 0x… wallet or a Polymarket profile link.', r_ws_empty: 'No recent moves.', r_ws_moves: 'moves', r_ws_vol: 'volume', r_ws_recent: 'Recent moves', r_ws_note: 'Live lookup of this wallet\'s recent activity — raw data, without our anti-manipulation filter. For the full history, open its Polymarket profile ↗.',
+    r_cat_all: 'All', r_no_cat: 'No accounts in this category.', r_share: 'Share', r_share_txt: 'Check this wallet on the AA Radar', r_copied: 'Link copied ✓', track_measuring: 'measuring for', track_days: 'days',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
       <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
@@ -2325,6 +2334,10 @@ document.addEventListener('click', e => {
   }
   const pfilter = e.target.closest('[data-pfilter]');
   if (pfilter){ e.stopPropagation(); followOnly = !followOnly; renderRadarList(); return; }
+  const catf = e.target.closest('[data-catf]');
+  if (catf){ e.stopPropagation(); const v = catf.dataset.catf; catFilter = (v && catFilter !== v) ? v : null; renderRadarList(); return; }
+  const psh = e.target.closest('[data-pshare]');
+  if (psh){ e.stopPropagation(); e.preventDefault(); shareWallet(psh.dataset.pshare); return; }
   const pcmpx = e.target.closest('[data-pcmpclear]');
   if (pcmpx){ e.stopPropagation(); compareSel = []; renderRadarList(); renderRadarDetail(); return; }
   const rrow = e.target.closest('[data-rw]');
@@ -2551,6 +2564,20 @@ let followOnly = false;              // filtro "solo seguidas" en el dashboard
 let compareSel = [];                 // hasta 2 wallets seleccionadas para comparar
 let notifiedTs = +(localStorage.getItem('aa_poly_notified') || 0); // último ts avisado
 let walletSearch = null, walletSearchLoading = false; // buscador de wallet on-demand
+let catFilter = null; // filtro por categoría del Radar (deportes/política/cripto)
+// Toast simple (link copiado, etc.)
+function polyToast(msg){
+  let el = document.getElementById('polytoast');
+  if (!el){ el = document.createElement('div'); el.id = 'polytoast'; document.body.appendChild(el); }
+  el.textContent = msg; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 1900);
+}
+// Compartir el perfil de una wallet (deep-link ?w=). navigator.share en móvil,
+// copiar al portapapeles en desktop.
+async function shareWallet(addr){
+  const url = `${location.origin}/?w=${addr}`;
+  try { if (navigator.share){ await navigator.share({ title: 'AA Radar', text: t('r_share_txt'), url }); return; } } catch (e) { return; }
+  try { await navigator.clipboard.writeText(url); polyToast(t('r_copied')); } catch (e) { polyToast(url); }
+}
 const savePfollow = () => localStorage.setItem('aa_poly_follow', JSON.stringify([...pfollow]));
 const openRadarOverlay = () => { if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; } };
 // Busca CUALQUIER wallet en vivo (Data API vía Worker). Acepta dirección 0x… o
@@ -2582,7 +2609,7 @@ function walletSearchHtml(){
     <span class="q" title="${esc(tr.title || '')}">${esc(tr.title || '')}</span>
   </div>`).join('') || `<div class="lempty2">${t('r_ws_empty')}</div>`;
   return radarWarnHtml() + `
-    <div class="rback"><a href="#" data-wsback="1">${t('r_back')}</a> ${pmLink(d.addr)}</div>
+    <div class="rback"><a href="#" data-wsback="1">${t('r_back')}</a><span class="rbtns"><span class="pfbtn" data-pshare="${esc(d.addr)}" role="button">↗ ${t('r_share')}</span></span></div>
     <div class="rhead"><span class="av">${esc(ini)}</span>
       <span><span class="nm2">${esc(d.name || short)} ${pmLink(d.addr)}</span><br><span class="wd">${esc(d.addr)}</span></span></div>
     <div class="rchips">
@@ -2668,6 +2695,8 @@ const rUsd = (x) => (x == null || !isFinite(x)) ? '—' : '$' + Math.round(+x).t
 const bandLabel = (b) => ({ '<20¢': t('band_lo'), '20-40¢': t('band_mlo'), '40-60¢': t('band_mid'), '60-85¢': t('band_fav'), '>85¢': t('band_hi') }[b] || b);
 // categoría del robot (español) → traducida
 const rCat = (c) => ({ deportes: t('cat_sports'), 'política': t('cat_politics'), politica: t('cat_politics'), cripto: t('cat_crypto'), crypto: t('cat_crypto'), otros: t('cat_other') }[c] || c);
+// categoría canónica dominante de una wallet (para el filtro)
+const wCat = (w) => { const c = (w.cats && w.cats[0] && w.cats[0].cat) || ''; return /depor/i.test(c) ? 'deportes' : /pol[ií]t/i.test(c) ? 'política' : /crip|cryp/i.test(c) ? 'cripto' : 'otros'; };
 
 /* ── Gráficas SVG inline ($0, responsivas, tema oscuro) — guía /dataviz:
    una serie sin leyenda, un solo hue por signo, marcas finas, baseline en 0,
@@ -2752,7 +2781,9 @@ function trackLiveHtml(){
     : `📈 ${t('track_wait')}`;
   const nw = trackDoc && Array.isArray(trackDoc.new_wallets) ? trackDoc.new_wallets.length : 0;
   const chip = nw ? ` <span class="newchip num">🆕 ${nw} ${t('track_new')}</span>` : '';
-  return `<div class="tracklive">${meter}${chip}</div>`;
+  const days = trackDoc && Array.isArray(trackDoc.history) ? trackDoc.history.length : 0;
+  const rec = days >= 2 ? ` <span class="trec">📊 ${t('track_measuring')} ${days} ${t('track_days')}</span>` : '';
+  return `<div class="tracklive">${meter}${chip}${rec}</div>`;
 }
 // estado de las secciones plegables del dashboard
 let radarOpen = { alerts: false, top: false, all: false };
@@ -2779,7 +2810,8 @@ function renderRadarList(){
   const groups = groupAlerts(as);
   const tts = (radarDoc && radarDoc.top_trades) || [];
   const nWatch = ws.filter(w => w.watch).length;
-  const baseWs = followOnly ? ws.filter(w => pfollow.has(w.w)) : ws;
+  let baseWs = followOnly ? ws.filter(w => pfollow.has(w.w)) : ws;
+  if (catFilter) baseWs = baseWs.filter(w => wCat(w) === catFilter);
   const showWs = radarOpen.all ? baseWs : baseWs.slice(0, 6);
   const showAl = radarOpen.alerts ? groups.slice(0, 30) : groups.slice(0, 3);
   const showTt = radarOpen.top ? tts : tts.slice(0, 5);
@@ -2794,9 +2826,15 @@ function renderRadarList(){
       <div class="stile"><div class="v num">🎯 ${nWatch}</div><div class="l">${t('r_stat_watch')}</div></div>
       <div class="stile"><div class="v num">🔔 ${n24}</div><div class="l">${t('r_stat_alerts')}</div></div>
     </div>
+    <div class="catchips">
+      <button class="catchip${!catFilter ? ' on' : ''}" data-catf="">${t('r_cat_all')}</button>
+      <button class="catchip${catFilter === 'deportes' ? ' on' : ''}" data-catf="deportes">${t('cat_sports')}</button>
+      <button class="catchip${catFilter === 'política' ? ' on' : ''}" data-catf="política">${t('cat_politics')}</button>
+      <button class="catchip${catFilter === 'cripto' ? ' on' : ''}" data-catf="cripto">${t('cat_crypto')}</button>
+    </div>
     <div class="secttl2">${t('r_best')} <span class="sub3">${t('r_best_sub')}</span><button class="ffilter${followOnly ? ' on' : ''}" data-pfilter="1">⭐ ${t('r_myfollowed')}${pfollow.size ? ` (${pfollow.size})` : ''}</button></div>
     ${cmpTray}
-    ${showWs.length ? showWs.map(walletCard).join('') : `<div class="lempty2">${followOnly ? t('r_no_follow') : t('r_prep')}</div>`}
+    ${showWs.length ? showWs.map(walletCard).join('') : `<div class="lempty2">${catFilter ? t('r_no_cat') : followOnly ? t('r_no_follow') : t('r_prep')}</div>`}
     ${baseWs.length > 6 ? `<button class="expbtn" data-rtoggle="all">${radarOpen.all ? t('r_see_less') : t('r_see_all').replace('↓', `${baseWs.length} ↓`)}</button>` : ''}
     <button class="secttl2 tgl" data-rtoggle="alerts">${t('r_live_alerts')}${n24 ? ` (${n24} ${t('r_hoy')})` : ''} <span class="caret">${radarOpen.alerts ? '▴' : '▾'}</span></button>
     ${showAl.map(alertRow).join('') || `<div class="lempty2">${t('r_no_moves')}</div>`}
@@ -2911,7 +2949,7 @@ function renderRadarDetail(){
   const flip = st.flip_share != null ? st.flip_share : 0;
   dc.innerHTML = radarWarnHtml() + `
     <div class="rback"><a href="#" data-rback="1">${t('r_back')}</a>
-      <span class="rbtns"><span class="pfbtn${pfollow.has(w.w) ? ' on' : ''}" data-pstar="${esc(w.w)}" role="button">${pfollow.has(w.w) ? '★ ' + t('r_following') : '☆ ' + t('r_follow')}</span><span class="pfbtn${compareSel.includes(w.w) ? ' on' : ''}" data-pcmp="${esc(w.w)}" role="button">⚖ ${t('r_compare')}</span></span>
+      <span class="rbtns"><span class="pfbtn${pfollow.has(w.w) ? ' on' : ''}" data-pstar="${esc(w.w)}" role="button">${pfollow.has(w.w) ? '★ ' + t('r_following') : '☆ ' + t('r_follow')}</span><span class="pfbtn${compareSel.includes(w.w) ? ' on' : ''}" data-pcmp="${esc(w.w)}" role="button">⚖ ${t('r_compare')}</span><span class="pfbtn" data-pshare="${esc(w.w)}" role="button">↗ ${t('r_share')}</span></span>
     </div>
     <div class="rhead">
       <span class="av">${w.img ? `<img src="${esc(w.img)}" alt="" onerror="this.parentNode.textContent='${ini}'">` : ini}</span>
@@ -3434,6 +3472,8 @@ applyI18n(); // pinta el idioma guardado antes de cargar datos
 loadToday(); loadLive(); loadInjuries(); loadMe();
 // PWA: registra el service worker (instalable + arranque offline; solo cachea el shell).
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+// Deep-link ?w=<0x…>: abre esa wallet en el Radar al cargar (perfil compartido).
+{ const _wp = (new URLSearchParams(location.search).get('w') || '').match(/0x[0-9a-fA-F]{40}/); if (_wp){ try { setSport('radar'); loadWalletSearch(_wp[0]); } catch (e) {} } }
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
 setInterval(() => { sport === 'mlb' ? loadLive() : sport === 'radar' ? loadAlerts() : loadOther(); }, 45 * 1000);
 setInterval(loadInjuries, 30 * 60 * 1000);
