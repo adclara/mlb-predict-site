@@ -40,6 +40,31 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
         run: npx --yes wrangler@4 deploy
+      - name: Telegram del vigía (secretos al Worker + mensaje de prueba)
+        working-directory: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: |
+          if [ -z "$TG_BOT_TOKEN" ]; then
+            echo "Telegram sin configurar (falta el secreto TG_BOT_TOKEN) — salto."
+          elif [ -z "$TG_CHAT_ID" ]; then
+            echo "Tengo TG_BOT_TOKEN pero falta TG_CHAT_ID. Chat ids detectados por el bot:"
+            curl -s "https://api.telegram.org/bot${TG_BOT_TOKEN}/getUpdates" \
+              | tr ',' '\n' | grep -A1 '"chat"' | grep '"id"' | grep -o '[-0-9]*' | sort -u \
+              || echo "  (ninguno — envíale un mensaje al bot en Telegram y re-dispara el deploy)"
+            echo "→ Guarda ese número como secreto TG_CHAT_ID (Settings → Secrets → Actions) y re-dispara el deploy."
+          else
+            printf '%s' "$TG_BOT_TOKEN" | npx --yes wrangler@4 secret put TG_BOT_TOKEN
+            printf '%s' "$TG_CHAT_ID" | npx --yes wrangler@4 secret put TG_CHAT_ID
+            echo "✅ Secretos de Telegram cargados al Worker."
+            curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+              -H 'content-type: application/json' \
+              -d "{\"chat_id\":\"${TG_CHAT_ID}\",\"text\":\"✅ Radar AA conectado — recibirás aquí las alertas de las wallets vigiladas (🎯 posibles informados). Descriptivo, no recomendación.\"}" \
+              | grep -o '"ok":[a-z]*' || true
+          fi
       - name: Deploy Pages (app)
         working-directory: cloudflare
         env:
