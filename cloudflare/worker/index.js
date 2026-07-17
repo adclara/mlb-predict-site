@@ -95,6 +95,7 @@ export default {
       }
       if (path === '/v1/injuries') return await injuries(env, origin);
       if (path === '/v1/poly/radar') return await polyRadar(env, origin);
+      if (path === '/v1/poly/alerts') return await polyAlerts(env, origin);
 
       // ── cuentas opcionales (Fase 5) ──
       if (path === '/v1/auth/google') return authStart(url, env);
@@ -112,6 +113,12 @@ export default {
       return json({ error: 'internal', detail: String(err && err.message || err) }, 500, origin);
     }
   },
+
+  // Vigía del Radar (cron */5): transacciones nuevas de las wallets vigiladas
+  // → KV poly:alerts (+ Telegram si hay secretos). Solo lectura de datos públicos.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(polyWatch(env));
+  },
 };
 
 // --- rutas ---------------------------------------------------------------
@@ -123,6 +130,93 @@ async function today(env, origin) {
     status: 200,
     headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=60' },
   });
+}
+
+// Alertas del vigía del Radar (las escribe scheduled() cada 5 min).
+async function polyAlerts(env, origin) {
+  const raw = await env.AA_LATEST.get('poly:alerts');
+  if (!raw) return json({ alerts: [], note: 'sin alertas aún' }, 200, origin, 60);
+  return new Response(raw, {
+    status: 200,
+    headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=60' },
+  });
+}
+
+// ── Vigía del Radar (cron) ───────────────────────────────────────────────────
+// Lee la watchlist de poly:radar, pide la actividad reciente de cada wallet a la
+// Data API pública y detecta trades NUEVOS vs poly:lastseen. La primera vez que
+// ve una wallet solo fija la línea base (sin inundar de alertas viejas).
+async function polyWatch(env) {
+  const raw = await env.AA_LATEST.get('poly:radar');
+  if (!raw) return;
+  let doc; try { doc = JSON.parse(raw); } catch (e) { return; }
+  const watch = (doc.watchlist || []).slice(0, 25);
+  if (!watch.length) return;
+  const lsRaw = await env.AA_LATEST.get('poly:lastseen');
+  let lastseen; try { lastseen = lsRaw ? JSON.parse(lsRaw) : {}; } catch (e) { lastseen = {}; }
+  const found = [];
+  for (const w of watch) {
+    try {
+      const r = await fetch(`https://data-api.polymarket.com/activity?user=${encodeURIComponent(w.w)}&limit=15&type=TRADE`, { headers: { Accept: 'application/json' } });
+      if (!r.ok) continue;
+      const acts = await r.json();
+      const bootstrap = lastseen[w.w] == null;
+      const { fresh, maxTs } = polyFreshTrades(acts, bootstrap ? Infinity : lastseen[w.w]);
+      const seenMax = maxTs != null ? maxTs : polyMaxTs(acts);
+      if (seenMax != null) lastseen[w.w] = seenMax;
+      else if (bootstrap) lastseen[w.w] = 0;
+      if (!bootstrap) for (const a of fresh) found.push({ ...a, wallet: w.w, pseudonym: w.pseudonym || w.name || null, score: w.insider_score ?? null });
+    } catch (e) { /* una wallet fallida no tumba la ronda */ }
+  }
+  if (found.length) {
+    const oldRaw = await env.AA_LATEST.get('poly:alerts');
+    let old; try { old = oldRaw ? JSON.parse(oldRaw) : { alerts: [] }; } catch (e) { old = { alerts: [] }; }
+    const seen = new Set((old.alerts || []).map((a) => a.tx).filter(Boolean));
+    const fresh = found.filter((a) => !a.tx || !seen.has(a.tx)).sort((a, b) => b.ts - a.ts);
+    if (fresh.length) {
+      const merged = [...fresh, ...(old.alerts || [])].slice(0, 100);
+      await env.AA_LATEST.put('poly:alerts', JSON.stringify({ updated_at: new Date().toISOString(), alerts: merged }));
+      if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) await tgNotify(env, fresh.slice(0, 5));
+    }
+  }
+  await env.AA_LATEST.put('poly:lastseen', JSON.stringify(lastseen));
+}
+
+// Helper puro (exportado para tests): filtra la actividad a trades más nuevos
+// que sinceTs y los normaliza al shape de alerta.
+export function polyFreshTrades(acts, sinceTs) {
+  const rows = (Array.isArray(acts) ? acts : [])
+    .filter((a) => (!a.type || a.type === 'TRADE') && isFinite(+a.timestamp) && +a.timestamp > sinceTs);
+  const maxTs = rows.length ? Math.max(...rows.map((a) => +a.timestamp)) : null;
+  return {
+    maxTs,
+    fresh: rows.map((a) => ({
+      ts: +a.timestamp,
+      tx: a.transactionHash || null,
+      title: String(a.title || '').slice(0, 90),
+      side: a.side || null,
+      outcome: a.outcome != null ? String(a.outcome) : null,
+      price: isFinite(+a.price) ? +a.price : null,
+      usd: a.usdcSize != null && isFinite(+a.usdcSize) ? Math.round(+a.usdcSize)
+        : (isFinite(+a.price) && isFinite(+a.size) ? Math.round(+a.price * +a.size) : null),
+    })),
+  };
+}
+export function polyMaxTs(acts) {
+  const ts = (Array.isArray(acts) ? acts : []).map((a) => +a.timestamp).filter(isFinite);
+  return ts.length ? Math.max(...ts) : null;
+}
+
+// Telegram (opcional): agrupa hasta 5 alertas en un mensaje. Sin secretos → no-op.
+async function tgNotify(env, alerts) {
+  const line = (a) => `🚨 ${a.pseudonym || a.wallet.slice(0, 8)}${a.score != null ? ` (score ${a.score})` : ''}: ${a.side === 'BUY' ? 'COMPRA' : 'VENDE'} "${a.outcome}" a ${a.price != null ? (100 * a.price).toFixed(0) : '?'}¢${a.usd != null ? ` ($${a.usd})` : ''} — ${a.title}`;
+  const text = `📡 Radar AA — movimiento de wallets vigiladas:\n\n${alerts.map(line).join('\n\n')}\n\nDescriptivo, no recomendación. aasport.net → Radar`;
+  try {
+    await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text }),
+    });
+  } catch (e) { /* Telegram caído no afecta las alertas de la página */ }
 }
 
 // Radar de wallets de Polymarket (observatorio descriptivo) — lo publica

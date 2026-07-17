@@ -491,6 +491,21 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .rtrades .q{flex:1;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .rtrades .px{flex:none;text-align:right}
 @media (max-width:640px){.rtrades .tr{flex-wrap:wrap}.rtrades .px{flex:1 1 100%;text-align:left;padding-left:102px}}
+.alrow{display:flex;gap:8px;align-items:baseline;padding:7px 14px;border-bottom:1px solid var(--hair);font-size:12px;min-width:0}
+.alrow .when{flex:0 0 74px;color:var(--faint);font-size:11px}
+.alrow .who{flex:0 0 auto;font-weight:700}
+.alrow .what{flex:0 0 auto;font-size:11px;font-weight:800}
+.alrow .what.buy{color:var(--volt)} .alrow .what.sell{color:var(--red)}
+.alrow .q{flex:1;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:11px}
+@media (max-width:640px){.alrow{flex-wrap:wrap}.alrow .q{flex:1 1 100%;padding-left:82px}}
+.rfilter{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;border-bottom:1px solid var(--hair)}
+.rfilter .pill{white-space:nowrap;flex:none}
+.rchip.watch{border-color:var(--amber);color:var(--amber)}
+.wkbars{display:flex;gap:10px;align-items:flex-end;height:64px;padding:4px 2px 0}
+.wkbars .wk{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px}
+.wkbars .wk i{display:block;width:100%;max-width:34px;border-radius:4px 4px 0 0}
+.wkbars .wk i.pos{background:var(--volt)} .wkbars .wk i.neg{background:var(--red)}
+.wkbars .wk em{font-style:normal;font-size:9px;color:var(--faint)}
 .sthead{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:12px 0 6px}
 .sttbl{width:100%;border-collapse:collapse;font-size:12.5px}
 .sttbl th{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);text-align:right;padding:5px 6px;border-bottom:1px solid var(--hair)}
@@ -759,6 +774,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       Tenis <span class="soon">LIVE</span>
     </button>
     <button class="sp" data-sport="radar">
+      <span class="cnt" id="cntRadar" hidden></span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.6"/><path d="M12 12l5.2-5.2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/></svg>
       Radar <span class="soon">POLY</span>
     </button>
@@ -1963,6 +1979,8 @@ document.addEventListener('click', e => {
     renderOtherList(); loadOther(); return; }
   const rl = e.target.closest('#radarlegal');
   if (rl){ e.preventDefault(); $('legaldlg').showModal(); return; }
+  const rw2 = e.target.closest('[data-rwatch]');
+  if (rw2){ radarOnlyWatch = !radarOnlyWatch; renderRadarList(); return; }
   const rrow = e.target.closest('[data-rw]');
   if (rrow){
     radarSel = rrow.dataset.rw; renderRadarDetail();
@@ -2176,6 +2194,37 @@ function loadSummary(g){
 
 /* ── 📡 Radar de wallets (Polymarket) — observatorio descriptivo ─────────── */
 let radarDoc = null, radarAt = 0, radarLoading = false, radarSel = null;
+let alertsDoc = null, alertsAt = 0, alertsLoading = false, radarOnlyWatch = false;
+const agoTxt = (ts) => {
+  const m = Math.max(0, Math.round(Date.now() / 1000 - ts) / 60 | 0);
+  return m < 1 ? 'ahora' : m < 60 ? `hace ${m} min` : m < 1440 ? `hace ${Math.round(m / 60)} h` : `hace ${Math.round(m / 1440)} d`;
+};
+async function loadAlerts(force){
+  if (alertsLoading || (!force && alertsDoc && Date.now() - alertsAt < 55e3)) return;
+  alertsLoading = true;
+  try{
+    const r = await fetch(`${API}/v1/poly/alerts`);
+    const d = await r.json();
+    if (d && Array.isArray(d.alerts)){ alertsDoc = d; alertsAt = Date.now(); }
+  }catch(err){ /* sin alertas no pasa nada */ }
+  alertsLoading = false;
+  const dayAgo = Date.now() / 1000 - 86400;
+  const n24 = alertsDoc ? alertsDoc.alerts.filter(a => a.ts > dayAgo).length : 0;
+  $('cntRadar').hidden = !n24;
+  $('cntRadar').textContent = n24 > 99 ? '99+' : n24;
+  if (sport === 'radar') renderRadarList();
+}
+function alertsFeedHtml(){
+  const as = (alertsDoc && alertsDoc.alerts) || [];
+  if (!as.length) return '';
+  return `<div class="recentnote">🔔 Alertas de wallets vigiladas · se refresca solo</div>` +
+    as.slice(0, 20).map(a => `<div class="alrow">
+      <span class="when num">${esc(agoTxt(a.ts))}</span>
+      <span class="who">🎯 ${esc(a.pseudonym || (a.wallet || '').slice(0, 8))}</span>
+      <span class="what ${a.side === 'BUY' ? 'buy' : 'sell'}">${a.side === 'BUY' ? 'COMPRA' : 'VENDE'} ${esc(String(a.outcome ?? ''))} · ${a.price != null ? (100 * a.price).toFixed(0) + '¢' : ''}${a.usd != null ? ` · $${(+a.usd).toLocaleString('es')}` : ''}</span>
+      <span class="q" title="${esc(a.title || '')}">${esc(a.title || '')}</span>
+    </div>`).join('');
+}
 async function loadRadar(){
   if (radarLoading || (radarDoc && Date.now() - radarAt < 6e5)) return;
   radarLoading = true;
@@ -2193,7 +2242,7 @@ function radarWarnHtml(){
   const h = (radarDoc && radarDoc.honesty) || {};
   const rho = h.spearman != null ? (+h.spearman).toFixed(2) : '0.10';
   const rep = h.still_pos != null ? Math.round(100 * h.still_pos) : 40;
-  return `<div class="radarwarn"><b>Radar descriptivo — no es recomendación.</b> Muestra qué hacen estas wallets con datos públicos de Polymarket. Nuestro estudio midió que aquí el pasado apenas predice el futuro (correlación ${esc(rho)}; solo ${rep}% de las ganadoras repite al mes siguiente). <a href="#" id="radarlegal">Aviso legal</a></div>`;
+  return `<div class="radarwarn"><b>Radar descriptivo — no es recomendación.</b> Muestra qué hacen estas wallets con datos públicos de Polymarket. «🎯 Posible informado» es un patrón estadístico (aciertos + entra temprano y barato + ganancia sostenida), <b>no una acusación probada</b>; las alertas llegan con ~5 min de retraso. Nuestro estudio midió que el pasado apenas predice el futuro aquí (correlación ${esc(rho)}; solo ${rep}% de las ganadoras repite al mes siguiente). <a href="#" id="radarlegal">Aviso legal</a></div>`;
 }
 function renderRadarList(){
   if (sport !== 'radar') return;
@@ -2206,16 +2255,20 @@ function renderRadarList(){
       : '<div class="lempty">Radar en preparación — el observatorio publica sus primeros datos pronto.</div>';
     return;
   }
-  const sel = radarSel || ws[0].w;
+  const shown = radarOnlyWatch ? ws.filter(w => w.watch) : ws;
+  const sel = radarSel || (shown[0] || ws[0]).w;
+  const nWatch = ws.filter(w => w.watch).length;
   $('list').innerHTML =
-    '<div class="recentnote">Observatorio de wallets · datos públicos de Polymarket</div>' +
-    ws.map((w, i) => {
+    alertsFeedHtml() +
+    `<div class="rfilter"><span class="recentnote" style="border:0;padding:9px 0 5px">Observatorio · datos públicos de Polymarket</span>
+      <button class="pill ${radarOnlyWatch ? 'on neutral' : ''}" data-rwatch="1">🎯 Vigiladas ${nWatch ? `(${nWatch})` : ''}</button></div>` +
+    (shown.length ? shown.map((w, i) => {
       const cat = w.cats && w.cats[0] ? w.cats[0].cat : '—';
       return `<button class="mrow" data-rw="${esc(w.w)}" style="--i:${i}" aria-pressed="${w.w === sel}">
         <span class="mtime num">#${i + 1}</span>
         <span class="mteams">
-          <span class="mt"><span class="nm">${esc(rName(w))}</span></span>
-          <span class="mt"><span class="nm rsub">${esc(cat)} · ${w.n_markets} mercados</span></span>
+          <span class="mt"><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num">🎯 ${w.insider_score}</span>` : ''}</span>
+          <span class="mt"><span class="nm rsub">${esc(cat)} · ${w.n_markets} mercados${w.win_rate != null ? ` · ${Math.round(100 * w.win_rate)}% aciertos` : ''}</span></span>
         </span>
         <span class="mscore num">
           <span class="ms">+${cents(w.edge_sh)}</span>
@@ -2223,7 +2276,7 @@ function renderRadarList(){
         </span>
         <span></span>
       </button>`;
-    }).join('');
+    }).join('') : '<div class="lempty">Ninguna wallet cumple hoy el umbral de vigilancia (≥70% con ganancia sostenida).</div>');
 }
 function renderRadarDetail(){
   if (sport !== 'radar') return;
@@ -2251,6 +2304,8 @@ function renderRadarDetail(){
       <span><span class="nm2">${esc(rName(w))}</span><br><span class="wd">${esc(w.w)}</span></span>
     </div>
     <div class="rchips">
+      ${w.watch ? `<span class="rchip watch">🎯 posible informado · score <b class="num">${w.insider_score}</b></span>` : ''}
+      ${w.win_rate != null ? `<span class="rchip">Aciertos <b class="num">${Math.round(100 * w.win_rate)}%</b></span>` : ''}
       <span class="rchip">Mercados <b>${w.n_markets}</b></span>
       <span class="rchip">Récord <b class="num">${w.wins}-${w.losses}</b></span>
       <span class="rchip">Edge de entrada <b class="num">+${cents(w.edge_sh)}</b>/acción</span>
@@ -2273,6 +2328,15 @@ function renderRadarDetail(){
         <div class="big">${flip < 0.15 ? 'Aguanta hasta el final' : flip < 0.5 ? 'Mixto' : 'Voltea posiciones'}</div>
         ${bar('vende antes', flip)}
       </div>
+      ${Array.isArray(w.pnl_weeks) ? (() => {
+        const mx = Math.max(1, ...w.pnl_weeks.map(v => Math.abs(v)));
+        return `<div class="rcard"><div class="h">📈 Ganancia en el tiempo</div>
+          <div class="wkbars">${w.pnl_weeks.map((v, k) => `<span class="wk" title="$${(+v).toLocaleString('es')}">
+            <i class="${v >= 0 ? 'pos' : 'neg'}" style="height:${Math.max(6, Math.round(46 * Math.abs(v) / mx))}%"></i>
+            <em>S${k + 1}</em></span>`).join('')}</div>
+          <div class="rrow"><span class="lbl2">PnL por semana (5 semanas, izq = más vieja) · consistencia ${w.consistency != null ? Math.round(100 * w.consistency) + '%' : '—'} de semanas en positivo</span></div>
+        </div>`;
+      })() : ''}
     </div>
     <div class="rtrades">
       <div class="secttl">Últimos movimientos</div>
@@ -2586,7 +2650,7 @@ function setSport(sp2){
   }
   renderLeagueChips();
   if (sport === 'mlb') renderAll();
-  else if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); loadRadar(); }
+  else if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); loadRadar(); loadAlerts(); }
   else { renderOtherList(); renderOtherDetail(); loadOther(); }
 }
 
@@ -2725,7 +2789,7 @@ $('legaldlg').addEventListener('click', (e) => { if (e.target === $('legaldlg'))
 
 loadToday(); loadLive(); loadInjuries(); loadMe();
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
-setInterval(() => { sport === 'mlb' ? loadLive() : loadOther(); }, 45 * 1000);
+setInterval(() => { sport === 'mlb' ? loadLive() : sport === 'radar' ? loadAlerts() : loadOther(); }, 45 * 1000);
 setInterval(loadInjuries, 30 * 60 * 1000);
 </script>
 </body>
