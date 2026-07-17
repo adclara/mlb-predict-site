@@ -1053,9 +1053,15 @@ const CITY = {
   SD:'San Diego', SEA:'Seattle', SF:'San Francisco', STL:'St. Louis', TB:'Tampa Bay',
   TEX:'Texas', TOR:'Toronto', WSH:'Washington',
 };
-// códigos ESPN ↔ robot (difieren en algunos equipos)
-const CANON = { CHW:'CWS', ARI:'AZ', ATH:'OAK' };
-const canon = c => CANON[c] || c;
+// códigos ESPN/otros ↔ robot (difieren en algunos equipos). Blindado: cubrimos
+// las variantes de ESPN y de Sports-Reference para que el join en vivo nunca
+// falle por una abreviatura distinta.
+const CANON = {
+  CHW:'CWS', ARI:'AZ', ATH:'OAK',           // ESPN → robot
+  SFG:'SF', SDP:'SD', TBR:'TB', KCR:'KC', WSN:'WSH', CHW2:'CWS', // sports-ref
+  LA:'LAD', NYM2:'NYM', AZ2:'AZ',
+};
+const canon = c => CANON[String(c || '').toUpperCase()] || String(c || '').toUpperCase();
 const tNick = c => (TEAMS[canon(c)] || [c])[0];
 const tLogo = c => { const t = TEAMS[canon(c)]; return t ? `https://a.espncdn.com/i/teamlogos/mlb/500/${t[1]}.png` : null; };
 
@@ -1235,9 +1241,15 @@ const lvOf = ev => {
   // fecha del juego en vivo en horario del Este (la manda el worker);
   // fallback al corte del ISO si no viniera.
   const lvDay = lv.date || dayOf(lv.start);
-  // tiene que ser el día que se está mirando (hoy)
-  if (lvDay && todayDate && lvDay !== todayDate) return null;
-  return lv;
+  if (!lvDay) return lv;
+  // Aceptamos el marcador si su fecha ET coincide con la del doc O con el HOY
+  // real del cliente (mata el off-by-one cuando el doc quedó con fecha vieja o
+  // un juego nocturno rueda de día en UTC). Si no, toleramos ±36h; más allá,
+  // es de otro día y no se mezcla. (Los días archivados ya salen arriba.)
+  const ok = [todayDate, etTodayClient()].filter(Boolean);
+  if (ok.includes(lvDay)) return lv;
+  const near = ok.some(d => Math.abs(Date.parse(lvDay + 'T00:00Z') - Date.parse(d + 'T00:00Z')) <= 36 * 3600 * 1000);
+  return near ? lv : null;
 };
 const effStatus = ev => { const lv = lvOf(ev); return lv ? lv.status : ev.status; };
 

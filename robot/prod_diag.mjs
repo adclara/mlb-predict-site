@@ -30,13 +30,35 @@ try {
 
 console.log('\n== /v1/mlb/live (¿en vivo + win_prob_home?) ==');
 const lv = await get(`${API}/v1/mlb/live`);
+let liveDoc = null;
 try {
-  const d = JSON.parse(lv.text);
-  console.log('updated_at:', d.updated_at, '| juegos:', (d.games || []).length);
-  const liveG = (d.games || []).filter(g => g.status === 'live');
+  const d = JSON.parse(lv.text); liveDoc = d;
+  const games = d.games || [];
+  const byStatus = games.reduce((a, g) => { a[g.status] = (a[g.status] || 0) + 1; return a; }, {});
+  console.log('updated_at:', d.updated_at, '| juegos:', games.length, '| por estado:', JSON.stringify(byStatus), d.note ? '| note: ' + d.note : '');
+  const liveG = games.filter(g => g.status === 'live');
   console.log('en vivo:', liveG.length, '| con win_prob_home:', liveG.filter(g => g.win_prob_home != null).length);
-  if (liveG[0]) console.log('ejemplo:', liveG[0].away?.code, liveG[0].away?.score, '-', liveG[0].home?.score, liveG[0].home?.code, '| wp_home:', liveG[0].win_prob_home);
-} catch (e) { console.log('no-json:', lv.status); }
+  if (liveG[0]) console.log('ejemplo live:', liveG[0].away?.code, liveG[0].away?.score, '-', liveG[0].home?.score, liveG[0].home?.code, '| wp_home:', liveG[0].win_prob_home);
+  console.log('  fechas ET del feed:', JSON.stringify([...new Set(games.map(g => g.date))]));
+  console.log('  llaves live (away@home):', JSON.stringify(games.slice(0, 6).map(g => `${g.away?.code}@${g.home?.code}`)));
+} catch (e) { console.log('no-json:', lv.status, lv.text.slice(0, 160)); }
+
+// ── Diagnóstico del JOIN en vivo (por qué el marcador no aparece) ──
+console.log('\n== JOIN live↔today (raíz del bug "todo Por jugar") ==');
+try {
+  const doc = JSON.parse(t.text);
+  console.log('fecha del doc (today.date):', doc.date, '| fecha ET real hoy:', new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()));
+  const docKeys = (doc.events || []).map(e => `${e.away?.code}@${e.home?.code}`);
+  console.log('  llaves doc (away@home):', JSON.stringify(docKeys.slice(0, 6)));
+  if (liveDoc) {
+    const liveKeys = new Set((liveDoc.games || []).map(g => `${g.away?.code}@${g.home?.code}`));
+    const matches = docKeys.filter(k => liveKeys.has(k)).length;
+    const liveDates = new Set((liveDoc.games || []).map(g => g.date));
+    console.log(`  coincidencias directas de llave: ${matches}/${docKeys.length}`, matches === 0 && (liveDoc.games || []).length ? '→ ⚠️ CÓDIGOS NO CASAN (causa 2)' : '');
+    console.log('  ¿la fecha del doc está en las fechas del feed?:', liveDates.has(doc.date), liveDates.has(doc.date) ? '' : '→ ⚠️ posible off-by-one de fecha (causa 3)');
+    if (!(liveDoc.games || []).length) console.log('  → ⚠️ /live vacío (causa 1: ESPN caído/cambiado)');
+  }
+} catch (e) { console.log('no se pudo cruzar:', String(e).slice(0, 120)); }
 console.log('\n== /v1/poly/radar + /v1/poly/alerts (Radar de wallets) ==');
 const pr = await get(`${API}/v1/poly/radar`);
 try {
