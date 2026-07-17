@@ -69,7 +69,7 @@ export default {
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
         return await recentGames(ctx, origin, 'soccer:' + lg, `${ESPN_BASE}/soccer/${lg}/scoreboard`);
       }
-      if (path === '/v1/mlb/standings') return await standings(ctx, origin, 'mlb', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings?level=3', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings');
+      if (path === '/v1/mlb/standings') return await standings(ctx, origin, 'mlb-div', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings?level=3', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings');
       if (path === '/v1/nba/standings') return await standings(ctx, origin, 'nba', 'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings');
       if (path === '/v1/soccer/standings') {
         const lg = url.searchParams.get('league') || 'fifa.world';
