@@ -37,4 +37,17 @@ try {
   console.log('en vivo:', liveG.length, '| con win_prob_home:', liveG.filter(g => g.win_prob_home != null).length);
   if (liveG[0]) console.log('ejemplo:', liveG[0].away?.code, liveG[0].away?.score, '-', liveG[0].home?.score, liveG[0].home?.code, '| wp_home:', liveG[0].win_prob_home);
 } catch (e) { console.log('no-json:', lv.status); }
+console.log('\n== /v1/poly/radar + /v1/poly/alerts (Radar de wallets) ==');
+const pr = await get(`${API}/v1/poly/radar`);
+try {
+  const d = JSON.parse(pr.text);
+  console.log('wallets:', (d.wallets || []).length, '| vigiladas:', (d.watchlist || []).length, '| top_trades:', (d.top_trades || []).length, '| actualizado:', d.ran_at || '—');
+  const w0 = (d.wallets || [])[0];
+  if (w0) console.log('  top1:', w0.pseudonym || (w0.w || '').slice(0, 8), '| ganó $' + (w0.pnl_usd || 0).toLocaleString(), '|', Math.round(100 * (w0.win_rate || 0)) + '% aciertos', '| compras≥40%:', w0.watch != null ? 'campo watch ok' : '—');
+  const t0 = (d.top_trades || [])[0];
+  if (t0) console.log('  mejor trade: +$' + t0.profit.toLocaleString(), '—', (t0.who || t0.w.slice(0, 8)));
+} catch (e) { console.log('no-json:', pr.status, pr.text.slice(0, 120)); }
+const pa = await get(`${API}/v1/poly/alerts`);
+try { const d = JSON.parse(pa.text); console.log('alertas en KV:', (d.alerts || []).length, '| updated:', d.updated_at || '—'); } catch (e) { console.log('no-json:', pa.status); }
+
 console.log('\n████ fin diagnóstico ████');

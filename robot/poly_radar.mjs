@@ -62,7 +62,11 @@ for (const [w, ww] of wallets) {
   }
   const weeksActive = active.filter(Boolean).length;
   const weeksPos = weeks.filter((p, i) => active[i] && p > 0).length;
+  const totBuySh = ww.mkts.reduce((x, k) => x + k.buySh, 0), totSellSh = ww.mkts.reduce((x, k) => x + k.sellSh, 0);
   scored.push({
+    // % de su actividad que son COMPRAS (los "informados" compran temprano; los
+    // récords perfectos de puro VENDEDOR a 99¢ no llevan información)
+    buyShare: (totBuySh + totSellSh) > 0 ? totBuySh / (totBuySh + totSellSh) : 0,
     w, s, avgP, washy, wins, losses,
     wr: (wins + losses) ? wins / (wins + losses) : null,
     // longshots ganados: compró a <40¢ y el mercado terminó a su favor (señal fuerte)
@@ -72,7 +76,10 @@ for (const [w, ww] of wallets) {
     flip: (() => { const b = ww.mkts.reduce((x, k) => x + k.buySh, 0), v = ww.mkts.reduce((x, k) => x + k.sellSh, 0); return b > 0 ? Math.min(1, v / b) : 0; })(),
   });
 }
-const clean = (r) => r.washy < 0.3 && (r.avgP == null || r.avgP <= 0.85);
+// filtros de calidad: sin wash, sin compra-favoritos, mayormente COMPRADOR
+// (≥40% compras) y con dinero real en juego (≥$500 comprados en la ventana) —
+// fuera los vendedores-puros de 99¢ y las wallets de centavos.
+const clean = (r) => r.washy < 0.3 && (r.avgP == null || r.avgP <= 0.85) && r.buyShare >= 0.4 && r.s.cost >= 500;
 const qualified = scored.filter((r) => clean(r) && r.s.mean > 0 && r.s.t >= 2).sort((a, b) => b.s.t - a.s.t);
 const top = qualified.slice(0, TOP_K);
 // candidatas a VIGILADAS (umbral de Adrian): ≥70% de aciertos con n≥10 resueltos
@@ -82,6 +89,28 @@ const isWatch = (r) => clean(r) && r.wr != null && r.wr >= WATCH_WR && (r.wins +
 const watchCand = scored.filter(isWatch)
   .sort((a, b) => (b.wr - a.wr) || (b.longshots - a.longshots)).slice(0, WATCH_K);
 console.log(`Con ≥${MIN_MARKETS} mercados: ${scored.length} · calificadas tras filtros: ${qualified.length} · top: ${top.length} · candidatas a vigiladas (≥${100 * WATCH_WR}% con n≥${WATCH_MIN_N}, $>0 sostenido): ${watchCand.length}`);
+
+// ── 🏆 Top 10 transacciones de la ventana (ganancia REAL en $) ───────────────
+// La mejor COMPRA individual: pagó p, el mercado resolvió a su favor → ganó
+// (1−p)×acciones en USD. Se excluyen compras a >97% (redenciones/ruido) y
+// apuestas de menos de $10.
+const topTrades = [];
+for (const m of uni) {
+  for (const t of m.trades) {
+    if (t.s !== 'BUY' || !(t.p <= 0.97)) continue;
+    const usd = t.p * t.sz;
+    if (usd < 10) continue;
+    const profit = (t.o === m.win ? 1 - t.p : -t.p) * t.sz;
+    if (profit <= 0) continue;
+    if (topTrades.length < 10 || profit > topTrades[topTrades.length - 1].profit) {
+      const id = identities.get(t.w) || {};
+      topTrades.push({ w: t.w, who: id.pseudonym || id.name || null, q: (m.q || '').slice(0, 90), cat: m.cat, prob: +t.p.toFixed(2), usd: Math.round(usd), profit: Math.round(profit), ts: t.ts });
+      topTrades.sort((a, b) => b.profit - a.profit);
+      if (topTrades.length > 10) topTrades.pop();
+    }
+  }
+}
+console.log(`🏆 Top transacciones: ${topTrades.length} · mayor: $${topTrades[0] ? topTrades[0].profit.toLocaleString() : 0} (${topTrades[0] ? (topTrades[0].who || topTrades[0].w.slice(0, 8)) : '—'})`);
 
 // ── Honestidad medida (walk-forward 60/40, como el estudio) ──────────────────
 const cutEnd = uni[Math.floor(uni.length * 0.6)].end;
@@ -163,6 +192,7 @@ const blob = JSON.stringify({
   honesty: { spearman: rho, still_pos: stillPos, n: rowsWF.length },
   wallets: profiles,
   watchlist,
+  top_trades: topTrades,
 });
 mkdirSync('data/fase2/polymarket', { recursive: true });
 writeFileSync('data/fase2/polymarket/poly_radar.json', blob);
