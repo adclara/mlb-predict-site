@@ -50,21 +50,27 @@ jobs:
         run: |
           if [ -z "$TG_BOT_TOKEN" ]; then
             echo "Telegram sin configurar (falta el secreto TG_BOT_TOKEN) — salto."
-          elif [ -z "$TG_CHAT_ID" ]; then
-            echo "Tengo TG_BOT_TOKEN pero falta TG_CHAT_ID. Chat ids detectados por el bot:"
-            curl -s "https://api.telegram.org/bot${TG_BOT_TOKEN}/getUpdates" \
-              | tr ',' '\n' | grep -A1 '"chat"' | grep '"id"' | grep -o '[-0-9]*' | sort -u \
-              || echo "  (ninguno — envíale un mensaje al bot en Telegram y re-dispara el deploy)"
-            echo "→ Guarda ese número como secreto TG_CHAT_ID (Settings → Secrets → Actions) y re-dispara el deploy."
-          else
-            printf '%s' "$TG_BOT_TOKEN" | npx --yes wrangler@4 secret put TG_BOT_TOKEN
-            printf '%s' "$TG_CHAT_ID" | npx --yes wrangler@4 secret put TG_CHAT_ID
-            echo "✅ Secretos de Telegram cargados al Worker."
-            curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
-              -H 'content-type: application/json' \
-              -d "{\"chat_id\":\"${TG_CHAT_ID}\",\"text\":\"✅ Radar AA conectado — recibirás aquí las alertas de las wallets vigiladas (🎯 posibles informados). Descriptivo, no recomendación.\"}" \
-              | grep -o '"ok":[a-z]*' || true
+            exit 0
           fi
+          # chat id: usa el secreto si existe; si no, lo descubre solo con getUpdates
+          CHAT="$TG_CHAT_ID"
+          if [ -z "$CHAT" ]; then
+            CHAT=$(curl -s "https://api.telegram.org/bot${TG_BOT_TOKEN}/getUpdates" \
+              | tr '{' '\n' | grep -m1 '"chat":' -A0 || true)
+            CHAT=$(curl -s "https://api.telegram.org/bot${TG_BOT_TOKEN}/getUpdates" \
+              | grep -o '"chat":{"id":[-0-9]*' | grep -o '[-0-9]*$' | sort -u | head -1)
+          fi
+          if [ -z "$CHAT" ]; then
+            echo "⚠️ El bot aún no tiene mensajes: envíale cualquier texto a t.me/POLYSIBOT y re-dispara el deploy."
+            exit 0
+          fi
+          printf '%s' "$TG_BOT_TOKEN" | npx --yes wrangler@4 secret put TG_BOT_TOKEN
+          printf '%s' "$CHAT" | npx --yes wrangler@4 secret put TG_CHAT_ID
+          echo "✅ Secretos de Telegram cargados al Worker (chat …${CHAT: -4})."
+          curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+            -H 'content-type: application/json' \
+            -d "{\"chat_id\":\"${CHAT}\",\"text\":\"✅ Radar AA conectado — recibirás aquí las alertas de las wallets vigiladas (🎯 posibles informados). Descriptivo, no recomendación.\"}" \
+            | grep -o '"ok":[a-z]*' || true
       - name: Deploy Pages (app)
         working-directory: cloudflare
         env:
