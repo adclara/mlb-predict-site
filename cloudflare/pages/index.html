@@ -899,6 +899,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     <div class="ltop">
       <button class="ltab on" data-lt="all" data-i18n="tab_all">Todos</button>
       <button class="ltab" data-lt="favs" data-i18n="tab_favs">Favoritos</button>
+      <button class="ltab" data-lt="pos" data-i18n="tab_standings">Posiciones</button>
       <button class="ltab" data-lt="hist" data-i18n="tab_hist">Historial</button>
       <div class="datebox">
         <button class="arrow" id="dPrev" aria-label="Día anterior"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -1141,6 +1142,8 @@ const T = {
     track_pre: 'Persistencia viva: de', track_ago: 'vigiladas hace ~7 días,', track_still: 'siguen hoy', track_wait: 'Persistencia viva: midiendo nuestra propia lista en vivo (acumulando historial).', track_new: 'nuevas en el top esta semana',
     r_follow: 'Seguir', r_following: 'Siguiendo', r_compare: 'Comparar', r_myfollowed: 'Mis seguidas', r_no_follow: 'Aún no sigues ninguna wallet. Toca ☆ en una cuenta para seguirla.',
     r_comparing: 'Comparando', r_pick_second: 'elige otra', r_close_cmp: 'Cerrar', r_compare_title: 'Comparación', r_cmp_won: 'Ganó', r_cmp_hits: 'Aciertos', r_cmp_markets: 'Mercados', r_cmp_type: 'Tipo', r_cmp_when: 'Cuándo entra', r_cmp_bet: 'Apuesta típica', r_cmp_cat: 'Dónde', r_cmp_beforew: 'antes',
+    tab_standings: 'Posiciones', st_title: 'Tabla de posiciones', st_rank_title: 'Ranking mundial', st_team: 'Equipo', st_player: 'Jugador', st_points: 'Puntos', st_gp: 'PJ', st_w: 'G', st_d: 'E', st_l: 'P', st_gd: 'DG', st_pts: 'Pts', st_pct: '%', st_gb: 'Dif', st_loading: 'Cargando posiciones…', st_none: 'Posiciones no disponibles ahora.',
+    notif_live: 'En vivo', notif_final: 'Final', notif_live_b: 'Empezó un juego que sigues ⭐', notif_final_b: 'Terminó un juego que sigues ⭐',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1193,6 +1196,8 @@ const T = {
     track_pre: 'Live persistence: of', track_ago: 'watched ~7 days ago,', track_still: 'still watched today', track_wait: 'Live persistence: measuring our own list live (building history).', track_new: 'new in the top this week',
     r_follow: 'Follow', r_following: 'Following', r_compare: 'Compare', r_myfollowed: 'My followed', r_no_follow: 'You don\'t follow any wallet yet. Tap ☆ on an account to follow it.',
     r_comparing: 'Comparing', r_pick_second: 'pick another', r_close_cmp: 'Close', r_compare_title: 'Comparison', r_cmp_won: 'Won', r_cmp_hits: 'Hits', r_cmp_markets: 'Markets', r_cmp_type: 'Type', r_cmp_when: 'When it enters', r_cmp_bet: 'Typical bet', r_cmp_cat: 'Where', r_cmp_beforew: 'before',
+    tab_standings: 'Standings', st_title: 'Standings', st_rank_title: 'World ranking', st_team: 'Team', st_player: 'Player', st_points: 'Points', st_gp: 'GP', st_w: 'W', st_d: 'D', st_l: 'L', st_gd: 'GD', st_pts: 'Pts', st_pct: '%', st_gb: 'GB', st_loading: 'Loading standings…', st_none: 'Standings unavailable right now.',
+    notif_live: 'Live', notif_final: 'Final', notif_live_b: 'A game you follow ⭐ just started', notif_final_b: 'A game you follow ⭐ just ended',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
       <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
@@ -1580,9 +1585,16 @@ function renderHistList(){
   $('list').innerHTML = html;
 }
 
+function renderMlbStandings(){
+  $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
+  $('lgcount').innerHTML = '';
+  const html = standingsHtml();
+  $('list').innerHTML = html || `<div class="lempty">${standingsCache.has('mlb') ? t('st_none') : t('st_loading')}</div>`;
+}
 function renderList(){
   if (sport !== 'mlb'){ renderOtherList(); return; }
   if (listTab === 'hist'){ renderHistList(); return; }
+  if (listTab === 'pos'){ renderMlbStandings(); return; }
   const n = counts();
   $('nAll').textContent = n.all || '';
   $('nLive').textContent = n.live || '';
@@ -2320,6 +2332,7 @@ document.addEventListener('click', e => {
     const id = star.dataset.star;
     const adding = !favs.has(id);
     adding ? favs.add(id) : favs.delete(id);
+    if (adding) ensureNotifyPerm(); // permiso para avisar cuando este juego pase a vivo/final
     localStorage.setItem('aa_favs', JSON.stringify([...favs]));
     pushFavs();
     renderList();
@@ -2332,8 +2345,9 @@ document.addEventListener('click', e => {
   if (lt){
     listTab = lt.dataset.lt;
     document.querySelectorAll('.ltab').forEach(c => c.classList.toggle('on', c === lt));
-    document.getElementById('pills').style.display = listTab === 'hist' ? 'none' : '';
+    document.getElementById('pills').style.display = (listTab === 'hist' || listTab === 'pos') ? 'none' : '';
     if (listTab === 'hist') loadHistory();
+    if (listTab === 'pos') loadStandings();
     renderList(); renderDetail(); return;
   }
   const f = e.target.closest('.pill[data-f]');
@@ -2478,7 +2492,7 @@ async function loadOther(){
 }
 
 async function loadStandings(){
-  if (sport !== 'nba' && sport !== 'soccer' && sport !== 'tennis') return;
+  if (!['nba', 'soccer', 'tennis', 'mlb'].includes(sport)) return;
   const key = sport === 'soccer' ? `soccer:${soccerLeague}` : sport;
   if (standingsCache.has(key)) return;
   try{
@@ -2488,7 +2502,8 @@ async function loadStandings(){
     const d = await r.json();
     if (d && d.sections && d.sections.length){
       standingsCache.set(key, d);
-      if (sport !== 'mlb'){ renderOtherList(); renderOtherDetail(); }
+      if (sport === 'mlb'){ if (listTab === 'pos') renderList(); }
+      else { renderOtherList(); renderOtherDetail(); }
     }
   }catch(err){ /* sin tabla no pasa nada */ }
 }
@@ -2940,25 +2955,25 @@ function standingsHtml(){
   if (sport === 'tennis'){
     const secs = (doc.sections || []).slice(0, 2);
     if (!secs.length) return '';
-    return '<div class="secttl">Ranking mundial</div>' +
+    return `<div class="secttl">${t('st_rank_title')}</div>` +
       secs.map(sec => `
         <div class="sthead">${esc(sec.name || '')}</div>
         <table class="sttbl num">
-          <thead><tr><th class="tl">#</th><th class="tl">Jugador</th><th>Puntos</th></tr></thead>
+          <thead><tr><th class="tl">#</th><th class="tl">${t('st_player')}</th><th>${t('st_points')}</th></tr></thead>
           <tbody>${(sec.rows || []).slice(0, 15).map(r => `<tr>
             <td class="tl">${r.rank}</td>
             <td class="tl tm">${r.flag ? `<img src="${esc(r.flag)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}${esc(r.name || '')}</td>
-            <td><b>${r.points != null ? r.points.toLocaleString('es') : '—'}</b></td>
+            <td><b>${r.points != null ? r.points.toLocaleString(LOCALE()) : '—'}</b></td>
           </tr>`).join('')}</tbody>
         </table>`).join('');
   }
   const isSoccer = sport === 'soccer';
-  const secs = doc.sections.slice(0, isSoccer ? 8 : 2);
-  return `<div class="secttl">Tabla de posiciones${doc.season ? ` · ${esc(String(doc.season))}` : ''}</div>` +
+  const secs = doc.sections.slice(0, isSoccer ? 8 : (sport === 'mlb' ? 6 : 2));
+  return `<div class="secttl">${t('st_title')}${doc.season ? ` · ${esc(String(doc.season))}` : ''}</div>` +
     secs.map(sec => `
       <div class="sthead">${esc(sec.name || '')}</div>
       <table class="sttbl num">
-        <thead><tr><th class="tl">#</th><th class="tl">Equipo</th>${isSoccer ? '<th>PJ</th><th>G</th><th>E</th><th>P</th><th>DG</th><th>Pts</th>' : '<th>G</th><th>P</th><th>%</th><th>Dif</th>'}</tr></thead>
+        <thead><tr><th class="tl">#</th><th class="tl">${t('st_team')}</th>${isSoccer ? `<th>${t('st_gp')}</th><th>${t('st_w')}</th><th>${t('st_d')}</th><th>${t('st_l')}</th><th>${t('st_gd')}</th><th>${t('st_pts')}</th>` : `<th>${t('st_w')}</th><th>${t('st_l')}</th><th>${t('st_pct')}</th><th>${t('st_gb')}</th>`}</tr></thead>
         <tbody>${sec.rows.slice(0, isSoccer ? 20 : 15).map((r, i) => `<tr>
           <td class="tl">${r.rank ?? i + 1}</td>
           <td class="tl tm">${r.logo ? `<img src="${esc(r.logo)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}${esc(r.name || r.code || '')}</td>
@@ -3247,6 +3262,27 @@ async function loadHistory(){
 }
 
 let lastLiveSig = '[]';
+let favSeen = null; // event_id → estado efectivo (bootstrap en el 1er sondeo: no avisa de lo ya en curso)
+// Aviso del navegador cuando un juego ⭐ favorito pasa a EN VIVO o FINAL (con la
+// pestaña abierta; pide permiso al marcar el primer favorito). Sin duplicar.
+function notifyFavGames(){
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const cur = new Map();
+  for (const ev of events) if (favs.has(ev.event_id)) cur.set(ev.event_id, effStatus(ev));
+  if (favSeen === null){ favSeen = cur; return; }
+  for (const [id, st] of cur){
+    const prev = favSeen.get(id);
+    if (prev && prev !== st && (st === 'live' || st === 'final')){
+      const ev = events.find(e => e.event_id === id); if (!ev) continue;
+      const lv = lvOf(ev);
+      const nm = `${ev.away?.code || '?'} @ ${ev.home?.code || '?'}`;
+      const sc = (lv && lv.away && lv.home && lv.away.score != null && lv.home.score != null) ? ` ${lv.away.score}-${lv.home.score}` : '';
+      const title = st === 'live' ? `⚾ ${nm} — ${t('notif_live')}` : `⚾ ${nm} — ${t('notif_final')}${sc}`;
+      try { new Notification(title, { tag: 'aa-mlb-' + id, body: st === 'live' ? t('notif_live_b') : t('notif_final_b') }); } catch (e) {}
+    }
+  }
+  favSeen = cur;
+}
 async function loadLive(){
   if (viewDate) return; // sin live en días pasados
   try{
@@ -3259,6 +3295,7 @@ async function loadLive(){
     for (const g of (d.games || [])){
       if (g.home?.code && g.away?.code) liveByKey.set(key(g.away.code, g.home.code), g);
     }
+    notifyFavGames();
     if (events.length) renderAll();
   }catch(err){ /* best-effort */ }
 }
