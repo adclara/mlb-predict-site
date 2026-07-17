@@ -96,6 +96,7 @@ export default {
       if (path === '/v1/injuries') return await injuries(env, origin);
       if (path === '/v1/poly/radar') return await polyRadar(env, origin);
       if (path === '/v1/poly/alerts') return await polyAlerts(env, origin);
+      if (path === '/v1/poly/track') return await polyTrack(env, origin);
 
       // ── cuentas opcionales (Fase 5) ──
       if (path === '/v1/auth/google') return authStart(url, env);
@@ -114,10 +115,15 @@ export default {
     }
   },
 
-  // Vigía del Radar (cron */5): transacciones nuevas de las wallets vigiladas
-  // → KV poly:alerts (+ Telegram si hay secretos). Solo lectura de datos públicos.
+  // Crons del Radar:
+  //  · "*/5 * * * *"  → vigía: transacciones nuevas de las wallets vigiladas → KV
+  //    poly:alerts (+ Telegram si hay secretos).
+  //  · "0 13 * * *"   → diario (9am ET): archiva snapshot en D1, mide persistencia
+  //    viva + wallets nuevas en el top, publica poly:track y manda el resumen del día.
+  // Solo lectura de datos públicos.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(polyWatch(env));
+    if (event && event.cron === '0 13 * * *') ctx.waitUntil(polyDaily(env));
+    else ctx.waitUntil(polyWatch(env));
   },
 };
 
@@ -139,6 +145,17 @@ async function polyAlerts(env, origin) {
   return new Response(raw, {
     status: 200,
     headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=60' },
+  });
+}
+
+// Persistencia viva + wallets nuevas en el top (lo calcula el cron diario a KV
+// poly:track). Sin historial aún → { ok:false } y la UI muestra "acumulando".
+async function polyTrack(env, origin) {
+  const raw = await env.AA_LATEST.get('poly:track');
+  if (!raw) return json({ ok: false, note: 'acumulando historial' }, 200, origin, 300);
+  return new Response(raw, {
+    status: 200,
+    headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=1800' },
   });
 }
 
@@ -231,6 +248,89 @@ async function polyRadar(env, origin) {
     status: 200,
     headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=600' },
   });
+}
+
+// ── Automatizaciones diarias del Radar (cron "0 13 * * *" ≈ 9am ET) ──────────
+// Fecha calendario ET (YYYY-MM-DD). etDate() (definida más abajo) convierte un
+// timestamp/Date a día del Este; hoy = etDate(new Date()), N días atrás = resta ms.
+const etDaysAgo = (n) => etDate(new Date(Date.now() - n * 86400000));
+
+// Helper puro (exportado para tests): a partir del doc del Radar + los snapshots
+// previos de D1, calcula la persistencia viva (vigiladas de hace ~7 días que siguen
+// hoy) y las wallets nuevas en el top. No toca red ni D1 — se le pasan los datos.
+export function polyTrackCompute(doc, { thenDate, thenWatched, seenPrev }) {
+  const top = (doc.wallets || []).slice(0, 40);
+  const nowWatched = new Set(top.filter((w) => w.watch).map((w) => w.w));
+  let persistence = null;
+  if (thenDate && Array.isArray(thenWatched) && thenWatched.length) {
+    const stayed = thenWatched.filter((w) => nowWatched.has(w)).length;
+    persistence = { then_date: thenDate, then_n: thenWatched.length, now_n: nowWatched.size, stayed, overlap: stayed / thenWatched.length };
+  }
+  let newWallets = [];
+  const seen = new Set(seenPrev || []);
+  if (seen.size) newWallets = top.slice(0, 10).filter((w) => !seen.has(w.w))
+    .map((w) => ({ w: w.w, name: w.pseudonym || w.name || null, pnl: Math.round(+w.pnl_usd || 0) }));
+  return { persistence, new_wallets: newWallets };
+}
+
+async function polyDaily(env) {
+  const raw = await env.AA_LATEST.get('poly:radar');
+  if (!raw || !env.DB) return;
+  let doc; try { doc = JSON.parse(raw); } catch (e) { return; }
+  const top = (doc.wallets || []).slice(0, 40);
+  if (!top.length) return;
+  const date = etDate(new Date());
+
+  // 1. Tabla (creación perezosa e idempotente) + snapshot de hoy (top 40 por dinero).
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS poly_snapshots (date TEXT NOT NULL, wallet TEXT NOT NULL, name TEXT, pnl REAL, win_rate REAL, watch INTEGER, PRIMARY KEY (date, wallet))'
+  ).run();
+  await env.DB.batch(top.map((w) => env.DB.prepare(
+    'INSERT OR REPLACE INTO poly_snapshots (date, wallet, name, pnl, win_rate, watch) VALUES (?,?,?,?,?,?)'
+  ).bind(date, w.w, w.pseudonym || w.name || null, Math.round(+w.pnl_usd || 0), w.win_rate ?? null, w.watch ? 1 : 0)));
+
+  // 2. Datos históricos para el cálculo (snapshot ≈ hace 7 días + wallets de los 7 días previos).
+  let thenDate = null, thenWatched = [], seenPrev = [], history = [];
+  try {
+    const tr = await env.DB.prepare(
+      'SELECT date FROM poly_snapshots WHERE date <= ? ORDER BY date DESC LIMIT 1'
+    ).bind(etDaysAgo(7)).first();
+    if (tr && tr.date) {
+      thenDate = tr.date;
+      const { results } = await env.DB.prepare('SELECT wallet FROM poly_snapshots WHERE date = ? AND watch = 1').bind(thenDate).all();
+      thenWatched = (results || []).map((r) => r.wallet);
+    }
+    const sp = await env.DB.prepare('SELECT DISTINCT wallet FROM poly_snapshots WHERE date < ? AND date >= ?').bind(date, etDaysAgo(8)).all();
+    seenPrev = (sp.results || []).map((r) => r.wallet);
+    const hs = await env.DB.prepare('SELECT date, SUM(watch) AS w FROM poly_snapshots GROUP BY date ORDER BY date DESC LIMIT 14').all();
+    history = (hs.results || []).map((r) => ({ date: r.date, watched: +r.w || 0 })).reverse();
+  } catch (e) { /* primer día: sin historial */ }
+
+  const { persistence, new_wallets } = polyTrackCompute(doc, { thenDate, thenWatched, seenPrev });
+  await env.AA_LATEST.put('poly:track', JSON.stringify({ updated_at: new Date().toISOString(), date, persistence, new_wallets, history }));
+
+  // 3. Resumen diario por Telegram (opcional).
+  if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) await tgDaily(env, doc, new_wallets, persistence);
+}
+
+// Resumen diario del Radar por Telegram: Top 3 por dinero + 1 nueva + mejor jugada
+// + persistencia viva, en un solo mensaje. Sin secretos → no se llama.
+async function tgDaily(env, doc, newWallets, persistence) {
+  const money = (x) => '$' + Math.round(+x || 0).toLocaleString('en-US');
+  const nm = (w) => w.pseudonym || w.name || String(w.w || '').slice(0, 8);
+  const top3 = (doc.wallets || []).slice(0, 3).map((w, i) => `${i + 1}. ${nm(w)} +${money(w.pnl_usd)}`).join('\n');
+  const bt = (doc.top_trades || [])[0];
+  const lines = ['🏆 Radar AA — resumen del día', '', 'Top 3 por dinero ganado:', top3];
+  if (newWallets && newWallets.length) lines.push('', `🆕 Nueva en el top: ${newWallets[0].name || String(newWallets[0].w).slice(0, 8)} (+${money(newWallets[0].pnl)})`);
+  if (bt) lines.push('', `🎯 Mejor jugada: "${String(bt.q || '').slice(0, 60)}" +${money(bt.profit)}`);
+  if (persistence) lines.push('', `📈 Persistencia viva: de ${persistence.then_n} vigiladas hace ~7 días, ${persistence.stayed} siguen hoy (${Math.round(100 * persistence.overlap)}%).`);
+  lines.push('', 'Descriptivo, no recomendación. aasport.net → Radar');
+  try {
+    await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text: lines.join('\n') }),
+    });
+  } catch (e) { /* Telegram caído no afecta nada */ }
 }
 
 // Bajas (lesionados/suspendidos) por equipo — las publica robot/injuries.mjs cada hora.

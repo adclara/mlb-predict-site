@@ -17,11 +17,13 @@ binding = "DB"
 database_name = "aa-sports"
 database_id = "ed0969d8-050a-4987-ab98-b047c30f76c9"
 
-# Vigía del Radar: cada 5 min revisa las transacciones nuevas de las wallets
-# vigiladas (poly:radar.watchlist) y publica alertas a KV poly:alerts (+Telegram
-# si están los secretos TG_BOT_TOKEN / TG_CHAT_ID).
+# Crons del Radar:
+#  · cada 5 min → vigía: transacciones nuevas de las wallets vigiladas
+#    (poly:radar.watchlist) → KV poly:alerts (+Telegram si hay secretos).
+#  · 13:00 UTC (≈9am ET) → diario: snapshot en D1 poly_snapshots, persistencia
+#    viva + wallets nuevas en el top → KV poly:track + resumen del día por Telegram.
 [triggers]
-crons = ["*/5 * * * *"]
+crons = ["*/5 * * * *", "0 13 * * *"]
 
 [vars]
 # Orígenes permitidos para CORS. "*" mientras probamos en .pages.dev;
