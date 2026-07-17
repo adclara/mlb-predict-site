@@ -55,7 +55,10 @@ export async function fetchUniverse(tags, { sinceTs, minVol, maxMarkets, log = c
           if (!prices || prices.length < 2 || Math.max(...prices) < 0.99) continue;
           if ((m.volumeNum || 0) < minVol) continue;
           seen.add(m.conditionId);
-          markets.push({ cid: m.conditionId, q: m.question, tag, cat: catOf(tag), vol: m.volumeNum || 0, win: prices.indexOf(Math.max(...prices)), end: end || (Date.now() / 1000) });
+          // gs = hora de inicio del evento (los mercados deportivos de Gamma la
+          // traen como gameStartTime) — permite clasificar trades ANTES/EN VIVO.
+          const gs = m.gameStartTime ? Date.parse(m.gameStartTime) / 1000 : null;
+          markets.push({ cid: m.conditionId, q: m.question, tag, cat: catOf(tag), vol: m.volumeNum || 0, win: prices.indexOf(Math.max(...prices)), end: end || (Date.now() / 1000), gs: gs && isFinite(gs) ? gs : null });
         }
       }
       got += evs.length;

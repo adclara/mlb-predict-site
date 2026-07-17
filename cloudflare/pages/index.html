@@ -513,6 +513,39 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .wkbars .wk i{display:block;width:100%;max-width:34px;border-radius:4px 4px 0 0}
 .wkbars .wk i.pos{background:var(--volt)} .wkbars .wk i.neg{background:var(--red)}
 .wkbars .wk em{font-style:normal;font-size:9px;color:var(--faint)}
+/* v4: dashboard + badges + links de perfil + frase simple */
+.pml{color:var(--sky);text-decoration:none;font-size:12px;padding:2px 5px;border-radius:6px}
+.pml:hover{background:var(--inner)}
+.rback{padding:10px 14px 0;font-size:12px}
+.rback a{color:var(--sky);text-decoration:none}
+.frase{color:var(--dim);font-size:13px;line-height:1.5}
+.dashcard{margin:10px 12px;padding:14px;border:1px solid var(--hair);border-radius:14px;background:var(--inner);cursor:pointer}
+.dashcard:hover{border-color:var(--sky)}
+.dashcard .dtop{display:flex;align-items:center;gap:8px;margin-bottom:6px;min-width:0}
+.dashcard .dtop .rank{color:var(--faint);font-weight:800}
+.dashcard .dtop .nm{font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbadge{flex:none;font-size:9px;font-weight:800;letter-spacing:.05em;padding:3px 7px;border-radius:999px;text-transform:uppercase}
+.tbadge.antes{background:rgba(74,222,128,.14);color:var(--volt)}
+.tbadge.vivo{background:rgba(56,189,248,.14);color:var(--sky)}
+.tbadge.nohora{background:var(--hair);color:var(--faint)}
+.btr{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-top:1px solid var(--hair);font-size:12px;min-width:0}
+.btr .q{flex:1;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.btr .amt{flex:none} .btr .amt b{color:var(--volt)}
+.btr .when{flex:none;color:var(--faint);font-size:11px}
+.rfbtns{display:flex;gap:6px;flex:none}
+@media (max-width:640px){
+  .btr{flex-wrap:wrap}.btr .q{flex:1 1 100%}
+  .alrow .q{padding-left:0}
+  .rtrades .px{padding-left:0}
+}
+@media (max-width:400px){
+  .rcards{margin:4px 8px 10px;gap:8px}.rcard{padding:10px}
+  .rtrades{margin:0 8px 12px}.radarwarn{margin:8px;padding:9px 10px}
+  .dashcard{margin:8px;padding:11px}
+  .rhead{padding:12px 8px 2px}.rchips{padding:8px}
+  .rfilter{padding:0 8px;flex-wrap:wrap}
+  .alrow,.ttrow{padding:7px 8px}
+}
 .sthead{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:12px 0 6px}
 .sttbl{width:100%;border-collapse:collapse;font-size:12.5px}
 .sttbl th{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);text-align:right;padding:5px 6px;border-bottom:1px solid var(--hair)}
@@ -1984,8 +2017,17 @@ document.addEventListener('click', e => {
   if (lg2){ soccerLeague = lg2.dataset.lg; otherGames = []; renderLeagueChips();
     document.querySelector('.lghead .sub').textContent = SOCCER_LEAGUES[soccerLeague] || '';
     renderOtherList(); loadOther(); return; }
+  if (e.target.closest('a[data-ext]')) return; // links externos (perfil Polymarket): navegación normal
   const rl = e.target.closest('#radarlegal');
   if (rl){ e.preventDefault(); $('legaldlg').showModal(); return; }
+  const rb = e.target.closest('[data-rback]');
+  if (rb){ e.preventDefault(); radarSel = null; renderRadarDetail(); renderRadarList(); return; }
+  const rd = e.target.closest('[data-rdash]');
+  if (rd){
+    radarSel = null; renderRadarDetail(); renderRadarList();
+    if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; }
+    return;
+  }
   const rw2 = e.target.closest('[data-rwatch]');
   if (rw2){ radarOnlyWatch = !radarOnlyWatch; renderRadarList(); return; }
   const rrow = e.target.closest('[data-rw]');
@@ -2227,7 +2269,7 @@ function alertsFeedHtml(){
   return `<div class="recentnote">🔔 Alertas de wallets vigiladas · se refresca solo</div>` +
     as.slice(0, 8).map(a => `<div class="alrow">
       <span class="when num">${esc(agoTxt(a.ts))}</span>
-      <span class="who">🎯 ${esc(a.pseudonym || (a.wallet || '').slice(0, 8))}</span>
+      <span class="who">🎯 ${esc(a.pseudonym || (a.wallet || '').slice(0, 8))} ${pmLink(a.wallet)}</span>
       <span class="what ${a.side === 'BUY' ? 'buy' : 'sell'}">${a.side === 'BUY' ? 'COMPRA' : 'VENDE'} ${esc(String(a.outcome ?? ''))}${a.usd != null ? ` · $${(+a.usd).toLocaleString('es')}` : ''}${a.price != null ? ` · ${(100 * a.price).toFixed(0)}% prob` : ''}</span>
       <span class="q" title="${esc(a.title || '')}">${esc(a.title || '')}</span>
     </div>`).join('');
@@ -2253,7 +2295,7 @@ function topTradesHtml(){
   return `<div class="recentnote">🏆 Top 10 transacciones del mes</div>` +
     ts.map((t, i) => `<div class="ttrow">
       <span class="rank num">${i + 1}</span>
-      <span class="mid"><span class="who2">${esc(t.who || (t.w || '').slice(0, 8))}</span><span class="qq" title="${esc(t.q || '')}">${esc(t.q || '')}</span></span>
+      <span class="mid"><span class="who2">${esc(t.who || (t.w || '').slice(0, 8))} ${pmLink(t.w)}</span><span class="qq" title="${esc(t.q || '')}">${esc(t.q || '')}</span></span>
       <span class="winamt num">+${rUsd(t.profit)}</span>
     </div>`).join('');
 }
@@ -2275,13 +2317,14 @@ function renderRadarList(){
     return;
   }
   const shown = radarOnlyWatch ? ws.filter(w => w.watch) : ws;
-  const sel = radarSel || (shown[0] || ws[0]).w;
+  const sel = radarSel;
   const nWatch = ws.filter(w => w.watch).length;
   $('list').innerHTML =
     alertsFeedHtml() +
     topTradesHtml() +
-    `<div class="rfilter"><span class="recentnote" style="border:0;padding:9px 0 5px">Mejores wallets · datos públicos de Polymarket</span>
-      <button class="pill ${radarOnlyWatch ? 'on neutral' : ''}" data-rwatch="1">🎯 Vigiladas ${nWatch ? `(${nWatch})` : ''}</button></div>` +
+    `<div class="rfilter"><span class="recentnote" style="border:0;padding:9px 0 5px">Mejores wallets</span>
+      <span class="rfbtns"><button class="pill" data-rdash="1">📊 Resumen</button>
+      <button class="pill ${radarOnlyWatch ? 'on neutral' : ''}" data-rwatch="1">🎯 Vigiladas ${nWatch ? `(${nWatch})` : ''}</button></span></div>` +
     (shown.length ? shown.map((w, i) => {
       const cat = w.cats && w.cats[0] ? w.cats[0].cat : '—';
       return `<button class="mrow" data-rw="${esc(w.w)}" style="--i:${i}" aria-pressed="${w.w === sel}">
@@ -2298,71 +2341,129 @@ function renderRadarList(){
       </button>`;
     }).join('') : '<div class="lempty">Ninguna wallet cumple hoy el umbral de vigilancia (≥70% con ganancia sostenida).</div>');
 }
+// enlace al perfil PÚBLICO real de la wallet en Polymarket (pestaña nueva)
+const pmLink = (w, cls) => `<a class="pml ${cls || ''}" data-ext="1" href="https://polymarket.com/profile/${esc(w)}" target="_blank" rel="noopener" title="Ver el perfil real en Polymarket">↗</a>`;
+const rdt = (ts) => new Date(ts * 1000).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+// UNA frase que cualquiera entiende — sin jerga
+function fraseDe(w){
+  const t = w.timing || {}, sz = w.sizing || {};
+  const aciertos = w.win_rate != null ? Math.round(10 * w.win_rate) : null;
+  const cat = w.cats && w.cats[0] ? w.cats[0].cat : null;
+  const cuando = w.pre_win_share != null && w.pre_win_share >= 0.7 ? 'casi siempre entra ANTES de que empiece el evento'
+    : w.pre_win_share != null && w.pre_win_share <= 0.3 ? 'suele entrar con el evento EN VIVO'
+    : t.median_hours_before != null && t.median_hours_before >= 48 ? 'entra con días de anticipación'
+    : t.median_hours_before != null && t.median_hours_before >= 6 ? 'entra horas antes del cierre'
+    : 'entra a última hora';
+  return `Ganó ${rUsd(w.pnl_usd)} este mes` +
+    (aciertos != null ? ` · acierta ${aciertos} de cada 10` : '') +
+    (sz.median_usd != null ? ` · apuesta ~${rUsd(sz.median_usd)} por jugada` : '') +
+    (cat ? `, sobre todo en ${cat},` : '') + ` y ${cuando}.`;
+}
+const timingBadge = (t) => t === 'antes' ? '<span class="tbadge antes">ANTES del partido</span>'
+  : t === 'vivo' ? '<span class="tbadge vivo">EN VIVO</span>'
+  : '<span class="tbadge nohora">sin hora de inicio</span>';
+
+// 📊 Dashboard (vista por defecto): quiénes, dónde, qué y CUÁNDO ganaron
+function radarDashHtml(ws){
+  const catAgg = new Map();
+  for (const w of ws) for (const c of (w.cats || [])) catAgg.set(c.cat, (catAgg.get(c.cat) || 0) + c.share * (w.sizing && w.sizing.total_usd || 0));
+  const catTot = [...catAgg.values()].reduce((a, b) => a + b, 0) || 1;
+  const catBars = [...catAgg].sort((a, b) => b[1] - a[1]).slice(0, 4)
+    .map(([cat, usd]) => `<div class="rrow"><span class="lbl">${esc(cat)}</span><span class="rbar"><i style="width:${Math.round(100 * usd / catTot)}%"></i></span><span class="val num">${Math.round(100 * usd / catTot)}%</span></div>`).join('');
+  return radarWarnHtml() + `
+    <div class="rhead"><span><span class="nm2">📊 Resumen del Radar</span><br><span class="lbl2">Las cuentas que más ganan en Polymarket, dónde juegan y cuándo entran. Toca una para ver todo su perfil.</span></span></div>
+    <div class="rcards" style="grid-template-columns:1fr">
+      <div class="rcard"><div class="h">🗂 Dónde tradean los mejores</div>${catBars || '<div class="rrow"><span class="lbl2">—</span></div>'}</div>
+    </div>
+    ${ws.slice(0, 5).map((w, i) => `
+      <div class="dashcard" data-rw="${esc(w.w)}">
+        <div class="dtop">
+          <span class="rank num">#${i + 1}</span>
+          <span class="nm">${esc(rName(w))}</span>
+          ${w.watch ? `<span class="rankchip num" title="Patrón de posible informado: gana mucho entrando temprano. Puntuación de 0 a 100.">🎯 ${w.insider_score}</span>` : ''}
+          ${pmLink(w.w)}
+        </div>
+        <div class="frase">${esc(fraseDe(w))}</div>
+        ${(w.best_trades || []).map(b => `<div class="btr">
+          ${timingBadge(b.timing)}
+          <span class="q" title="${esc(b.q)}">${esc(b.q)}</span>
+          <span class="amt num">puso ${rUsd(b.usd)} → ganó <b>${rUsd(b.profit)}</b></span>
+          <span class="when num">${esc(rdt(b.ts))}</span>
+        </div>`).join('')}
+      </div>`).join('')}
+    <p class="dnote">${esc((radarDoc && radarDoc.attribution) || 'Datos públicos de Polymarket')} · actualizado ${radarDoc && radarDoc.ran_at ? esc(rdt(Date.parse(radarDoc.ran_at) / 1000)) : '—'} · AA informa, no apuesta.</p>`;
+}
+
 function renderRadarDetail(){
   if (sport !== 'radar') return;
   const dc = $('dcard');
   const ws = (radarDoc && radarDoc.wallets) || [];
-  const w = ws.find(x => x.w === radarSel) || ws[0];
-  const animKey = 'radar|' + (w ? w.w : 'none');
+  const w = ws.find(x => x.w === radarSel);
+  const animKey = 'radar|' + (w ? w.w : 'dash');
   dc.classList.toggle('enter', animKey !== lastAnimKey);
   lastAnimKey = animKey;
-  if (!w){
-    dc.innerHTML = radarWarnHtml() + `<div class="dempty">${radarLoading ? 'Cargando el radar…' : 'Radar en preparación. El robot publica el observatorio 2 veces al día.'}</div>`;
+  if (!ws.length){
+    dc.innerHTML = radarWarnHtml() + `<div class="dempty">${radarLoading ? 'Cargando el radar…' : 'Radar en preparación. El robot publica el observatorio cada 2 horas.'}</div>`;
     return;
   }
+  if (!w){ dc.innerHTML = radarDashHtml(ws); return; }
   const ini = (rName(w) || '?').slice(0, 2).toUpperCase();
   const bar = (lbl, share) => `<div class="rrow"><span class="lbl">${esc(lbl)}</span><span class="rbar"><i style="width:${Math.round(100 * (share || 0))}%"></i></span><span class="val num">${Math.round(100 * (share || 0))}%</span></div>`;
   const bandRows = (w.bands || []).map(b => bar(BAND_LABEL[b.band] || b.band, b.share)).join('');
   const catRows = (w.cats || []).slice(0, 5).map(c => bar(c.cat, c.share)).join('');
   const t = w.timing || {}, sz = w.sizing || {}, st = w.style || {};
   const flip = st.flip_share != null ? st.flip_share : 0;
-  const money = (x) => x == null ? '—' : '$' + (+x).toLocaleString('es');
-  const dt = (ts) => new Date(ts * 1000).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   dc.innerHTML = radarWarnHtml() + `
+    <div class="rback"><a href="#" data-rback="1">← Volver al resumen</a></div>
     <div class="rhead">
       <span class="av">${w.img ? `<img src="${esc(w.img)}" alt="" onerror="this.parentNode.textContent='${ini}'">` : ini}</span>
-      <span><span class="nm2">${esc(rName(w))}</span><br><span class="wd">${esc(w.w)}</span></span>
+      <span><span class="nm2">${esc(rName(w))} ${pmLink(w.w)}</span><br>
+        <span class="frase">${esc(fraseDe(w))}</span><br><span class="wd">${esc(w.w)}</span></span>
     </div>
     <div class="rchips">
-      ${w.watch ? `<span class="rchip watch">🎯 posible informado · puntuación <b class="num">${w.insider_score}/100</b></span>` : ''}
+      ${w.watch ? `<span class="rchip watch" title="Patrón estadístico: gana mucho entrando temprano y barato. NO es una acusación probada.">🎯 posible informado — gana entrando temprano · puntuación <b class="num">${w.insider_score}/100</b></span>` : ''}
       <span class="rchip">💰 Ganó <b class="num">${rUsd(w.pnl_usd)}</b> en 30 días</span>
       <span class="rchip">✅ Acertó <b class="num">${w.wins} de ${w.wins + w.losses}</b>${w.win_rate != null ? ` (${Math.round(100 * w.win_rate)}%)` : ''}</span>
-      <span class="rchip">Movió <b class="num">${rUsd(w.sizing && w.sizing.total_usd)}</b> en ${w.n_markets} mercados</span>
+      <span class="rchip">Movió <b class="num">${rUsd(sz.total_usd)}</b> en ${w.n_markets} mercados</span>
+      ${w.pre_win_share != null ? `<span class="rchip" title="De sus apuestas ganadoras con hora de inicio conocida, % que hizo ANTES de que empezara el evento.">⏱ Gana entrando antes: <b class="num">${Math.round(100 * w.pre_win_share)}%</b> de las veces</span>` : ''}
     </div>
+    ${(w.best_trades || []).length ? `<div class="rtrades"><div class="secttl">Sus mejores jugadas</div>
+      ${w.best_trades.map(b => `<div class="btr">${timingBadge(b.timing)}<span class="q" title="${esc(b.q)}">${esc(b.q)}</span><span class="amt num">puso ${rUsd(b.usd)} → ganó <b>${rUsd(b.profit)}</b></span><span class="when num">${esc(rdt(b.ts))}</span></div>`).join('')}
+    </div>` : ''}
     <div class="rcards">
-      <div class="rcard"><div class="h">⏱ Cuándo entra</div>
-        <div class="big num">${t.median_hours_before != null ? '~' + t.median_hours_before + ' h' : '—'}</div>
-        <div class="rrow"><span class="lbl2">antes del cierre del mercado (mediana)</span></div>
-        ${bar('últimas 24h', t.last24h_share)}
+      <div class="rcard"><div class="h" title="Cuánto tiempo antes del cierre del mercado suele hacer sus apuestas">⏱ Cuándo entra</div>
+        <div class="big num">${t.median_hours_before != null ? '~' + t.median_hours_before + ' h antes' : '—'}</div>
+        <div class="rrow"><span class="lbl2">del cierre del mercado (lo típico)</span></div>
+        ${bar('a último día', t.last24h_share)}
       </div>
       <div class="rcard"><div class="h">💵 Cuánto arriesga</div>
-        <div class="big num">${money(sz.median_usd)}</div>
-        <div class="rrow"><span class="lbl2">por trade (mediana) · p90 ${esc(money(sz.p90_usd))} · total ${esc(money(sz.total_usd))}</span></div>
+        <div class="big num">${rUsd(sz.median_usd)}</div>
+        <div class="rrow"><span class="lbl2">por jugada (lo típico) · apuesta máxima habitual ${esc(rUsd(sz.p90_usd))} · total del mes ${esc(rUsd(sz.total_usd))}</span></div>
       </div>
-      <div class="rcard"><div class="h">🎯 Qué tipo de apuestas hace</div>${bandRows || '<div class="rrow"><span class="lbl2">sin compras en la ventana</span></div>'}</div>
+      <div class="rcard"><div class="h" title="Según la probabilidad que pagó al comprar: arriesgada = poco probable pero paga mucho">🎯 Qué tipo de apuestas hace</div>${bandRows || '<div class="rrow"><span class="lbl2">sin compras en la ventana</span></div>'}</div>
       <div class="rcard"><div class="h">🗂 En qué mercados</div>${catRows || '<div class="rrow"><span class="lbl2">—</span></div>'}</div>
       <div class="rcard"><div class="h">♟ Estilo</div>
-        <div class="big">${flip < 0.15 ? 'Aguanta hasta el final' : flip < 0.5 ? 'Mixto' : 'Voltea posiciones'}</div>
+        <div class="big">${flip < 0.15 ? 'Aguanta hasta el final' : flip < 0.5 ? 'Mixto' : 'Vende antes de que termine'}</div>
         ${bar('vende antes', flip)}
       </div>
       ${Array.isArray(w.pnl_weeks) ? (() => {
         const mx = Math.max(1, ...w.pnl_weeks.map(v => Math.abs(v)));
-        return `<div class="rcard"><div class="h">📈 Ganancia en el tiempo</div>
+        return `<div class="rcard"><div class="h">📈 Ganancia semana a semana</div>
           <div class="wkbars">${w.pnl_weeks.map((v, k) => `<span class="wk" title="$${(+v).toLocaleString('es')}">
             <i class="${v >= 0 ? 'pos' : 'neg'}" style="height:${Math.max(6, Math.round(46 * Math.abs(v) / mx))}%"></i>
             <em>S${k + 1}</em></span>`).join('')}</div>
-          <div class="rrow"><span class="lbl2">PnL por semana (5 semanas, izq = más vieja) · consistencia ${w.consistency != null ? Math.round(100 * w.consistency) + '%' : '—'} de semanas en positivo</span></div>
+          <div class="rrow"><span class="lbl2">verde = ganó, rojo = perdió (izq = hace 5 semanas) · ganó en ${w.consistency != null ? Math.round(100 * w.consistency) + '%' : '—'} de sus semanas activas</span></div>
         </div>`;
       })() : ''}
     </div>
     <div class="rtrades">
       <div class="secttl">Últimos movimientos</div>
       ${(w.last_trades || []).map(x => `<div class="tr">
-        <span class="when num">${esc(dt(x.ts))}</span>
+        <span class="when num">${esc(rdt(x.ts))}</span>
         <span class="q" title="${esc(x.q)}">${esc(x.q)}</span>
         <span class="px num">${x.side === 'BUY' ? 'Compra' : 'Vende'} ${esc(String(x.outcome))} · $${(x.usd || 0).toLocaleString('es')} · ${Math.round(100 * x.p)}% prob</span>
       </div>`).join('') || '<div class="rrow"><span class="lbl2">sin movimientos recientes</span></div>'}
-      <p class="dnote">${esc((radarDoc && radarDoc.attribution) || 'Datos públicos de Polymarket')} · actualizado ${radarDoc && radarDoc.ran_at ? esc(dt(Date.parse(radarDoc.ran_at) / 1000)) : '—'} · AA informa, no apuesta.</p>
+      <p class="dnote">${esc((radarDoc && radarDoc.attribution) || 'Datos públicos de Polymarket')} · actualizado ${radarDoc && radarDoc.ran_at ? esc(rdt(Date.parse(radarDoc.ran_at) / 1000)) : '—'} · AA informa, no apuesta.</p>
     </div>`;
 }
 

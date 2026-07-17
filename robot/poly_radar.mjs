@@ -104,7 +104,7 @@ for (const m of uni) {
     if (profit <= 0) continue;
     if (topTrades.length < 10 || profit > topTrades[topTrades.length - 1].profit) {
       const id = identities.get(t.w) || {};
-      topTrades.push({ w: t.w, who: id.pseudonym || id.name || null, q: (m.q || '').slice(0, 90), cat: m.cat, prob: +t.p.toFixed(2), usd: Math.round(usd), profit: Math.round(profit), ts: t.ts });
+      topTrades.push({ w: t.w, who: id.pseudonym || id.name || null, q: (m.q || '').slice(0, 90), cat: m.cat, prob: +t.p.toFixed(2), usd: Math.round(usd), profit: Math.round(profit), ts: t.ts, timing: m.gs ? (t.ts < m.gs ? 'antes' : 'vivo') : null });
       topTrades.sort((a, b) => b.profit - a.profit);
       if (topTrades.length > 10) topTrades.pop();
     }
@@ -135,7 +135,7 @@ for (const m of uni) {
     if (!topSet.has(t.w)) continue;
     const p = prof.get(t.w);
     const usd = t.p * t.sz;
-    if (t.s === 'BUY') p.buys.push({ p: t.p, usd, hrsBefore: Math.max(0, (m.end - t.ts) / 3600), cat: m.cat });
+    if (t.s === 'BUY') p.buys.push({ p: t.p, usd, hrsBefore: Math.max(0, (m.end - t.ts) / 3600), cat: m.cat, win: t.o === m.win, profit: (t.o === m.win ? 1 - t.p : -t.p) * t.sz, timing: m.gs ? (t.ts < m.gs ? 'antes' : 'vivo') : null, q: (m.q || '').slice(0, 90), ts: t.ts });
     else p.sells++;
     p.trades.push({ ts: t.ts, q: (m.q || '').slice(0, 90), cat: m.cat, side: t.s, outcome: t.ol || String(t.o), p: t.p, usd: Math.round(usd) });
   }
@@ -150,11 +150,20 @@ function profileOf(r) {
   const hrs = p.buys.map((b) => b.hrsBefore);
   const usds = p.buys.map((b) => b.usd);
   const id = identities.get(r.w) || {};
+  // ANTES/EN VIVO: de sus compras GANADORAS en mercados con hora de inicio (gs),
+  // qué % entró ANTES de que empezara — la señal fuerte de posible información.
+  const gsWins = p.buys.filter((b) => b.win && b.timing);
+  const preWinShare = gsWins.length ? gsWins.filter((b) => b.timing === 'antes').length / gsWins.length : null;
+  // mejores 3 compras ganadoras (para el dashboard: qué tradearon y cuándo)
+  const bestTrades = p.buys.filter((b) => b.profit > 0).sort((a, b) => b.profit - a.profit).slice(0, 3)
+    .map((b) => ({ q: b.q, cat: b.cat, usd: Math.round(b.usd), profit: Math.round(b.profit), ts: b.ts, timing: b.timing }));
   // "posible informado": patrón estadístico (NUNCA acusación probada) — win rate
-  // alto + entra temprano y barato + longshots ganados + ganancia sostenida. 0-100.
+  // alto + gana entrando ANTES (o temprano-barato si no hay hora de inicio) +
+  // longshots ganados + ganancia sostenida. 0-100.
   const medianH = hrs.length ? median(hrs) : null;
   const wrC = r.wr != null ? Math.max(0, Math.min(1, (r.wr - 0.5) / 0.5)) : 0;
-  const earlyC = (medianH != null && medianH >= 24 ? 0.6 : medianH != null && medianH >= 6 ? 0.3 : 0)
+  const earlyC = (preWinShare != null ? 0.6 * preWinShare
+    : (medianH != null && medianH >= 24 ? 0.6 : medianH != null && medianH >= 6 ? 0.3 : 0))
     + (r.avgP != null && r.avgP <= 0.65 ? 0.4 : 0);
   const lsC = Math.min(1, r.longshots / 3);
   const consC = r.s.pnl > 0 ? r.consistency : 0;
@@ -164,6 +173,8 @@ function profileOf(r) {
     w: r.w, name: id.name || null, pseudonym: id.pseudonym || null, img: id.img || null,
     win_rate: r.wr != null ? +r.wr.toFixed(3) : null, longshot_wins: r.longshots,
     insider_score: insider, watch,
+    pre_win_share: preWinShare != null ? +preWinShare.toFixed(2) : null,
+    best_trades: bestTrades,
     pnl_weeks: r.pnlWeeks, consistency: +r.consistency.toFixed(2),
     n_markets: r.s.n, wins: r.wins, losses: r.losses,
     edge_sh: +r.s.mean.toFixed(4), t: +r.s.t.toFixed(2), pnl_usd: Math.round(r.s.pnl), cost_usd: Math.round(r.s.cost),

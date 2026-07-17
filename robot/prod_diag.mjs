@@ -43,9 +43,9 @@ try {
   const d = JSON.parse(pr.text);
   console.log('wallets:', (d.wallets || []).length, '| vigiladas:', (d.watchlist || []).length, '| top_trades:', (d.top_trades || []).length, '| actualizado:', d.ran_at || '—');
   const w0 = (d.wallets || [])[0];
-  if (w0) console.log('  top1:', w0.pseudonym || (w0.w || '').slice(0, 8), '| ganó $' + (w0.pnl_usd || 0).toLocaleString(), '|', Math.round(100 * (w0.win_rate || 0)) + '% aciertos', '| compras≥40%:', w0.watch != null ? 'campo watch ok' : '—');
+  if (w0) console.log('  top1:', w0.pseudonym || (w0.w || '').slice(0, 8), '| ganó $' + (w0.pnl_usd || 0).toLocaleString(), '|', Math.round(100 * (w0.win_rate || 0)) + '% aciertos', '| gana entrando ANTES:', w0.pre_win_share != null ? Math.round(100 * w0.pre_win_share) + '%' : 'sin hora', '| best_trades:', (w0.best_trades || []).length);
   const t0 = (d.top_trades || [])[0];
-  if (t0) console.log('  mejor trade: +$' + t0.profit.toLocaleString(), '—', (t0.who || t0.w.slice(0, 8)));
+  if (t0) console.log('  mejor trade: +$' + t0.profit.toLocaleString(), '—', (t0.who || t0.w.slice(0, 8)), '| timing:', t0.timing || 'sin hora de inicio');
 } catch (e) { console.log('no-json:', pr.status, pr.text.slice(0, 120)); }
 const pa = await get(`${API}/v1/poly/alerts`);
 try { const d = JSON.parse(pa.text); console.log('alertas en KV:', (d.alerts || []).length, '| updated:', d.updated_at || '—'); } catch (e) { console.log('no-json:', pa.status); }
