@@ -59,6 +59,15 @@ try {
     if (!(liveDoc.games || []).length) console.log('  → ⚠️ /live vacío (causa 1: ESPN caído/cambiado)');
   }
 } catch (e) { console.log('no se pudo cruzar:', String(e).slice(0, 120)); }
+console.log('\n== /v1/mlb/standings (posiciones por división) ==');
+try {
+  const st = JSON.parse((await get(`${API}/v1/mlb/standings`)).text);
+  const secs = st.sections || [];
+  const rows = secs.reduce((n, s) => n + (s.rows || []).length, 0);
+  console.log('secciones:', secs.length, '| equipos:', rows, '| temporada:', st.season || '—', rows ? '' : '→ ⚠️ tabla vacía (revisar shape ESPN)');
+  const s0 = secs[0]; const r0 = s0 && (s0.rows || [])[0];
+  if (r0) console.log(`  ej: ${s0.name} → ${r0.name || r0.code} ${r0.w}-${r0.l} (${r0.pct})`);
+} catch (e) { console.log('no-json:', String(e).slice(0, 120)); }
 console.log('\n== /v1/poly/radar + /v1/poly/alerts (Radar de wallets) ==');
 const pr = await get(`${API}/v1/poly/radar`);
 try {
