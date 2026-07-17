@@ -515,6 +515,20 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .wkbars .wk i{display:block;width:100%;max-width:34px;border-radius:4px 4px 0 0}
 .wkbars .wk i.pos{background:var(--volt)} .wkbars .wk i.neg{background:var(--red)}
 .wkbars .wk em{font-style:normal;font-size:9px;color:var(--faint)}
+/* v6a: gráficas SVG + badges racha/golpe */
+.eqcard{grid-column:1 / -1}
+.eqsvg{display:block;margin-top:6px;height:90px;overflow:visible}
+.spkw{margin-left:auto;display:flex;align-items:center}
+.spk{display:block;opacity:.9}
+.wcard .row1 .gan{margin-left:10px}
+.donutwrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dlegs{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--dim)}
+.dleg{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.dleg i{width:9px;height:9px;border-radius:2px;flex:none}
+.kbadge{font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;border:1px solid var(--hair);white-space:nowrap}
+.kbadge.golpe{color:var(--amber);border-color:var(--amber)}
+.kbadge.racha{color:var(--volt);border-color:var(--volt)}
+.kbadge.cons{color:var(--sky);border-color:var(--sky)}
 /* v4: dashboard + badges + links de perfil + frase simple */
 .pml{color:var(--sky);text-decoration:none;font-size:12px;padding:2px 5px;border-radius:6px}
 .pml:hover{background:var(--inner)}
@@ -1061,6 +1075,10 @@ const T = {
     lang_btn: 'EN', lang_title: 'Switch to English',
     r_prep: 'Radar en preparación — el observatorio publica sus primeros datos pronto.',
     r_loading: 'Cargando el radar…', r_pm_title: 'Ver el perfil real en Polymarket',
+    r_no_history: 'aún sin historial suficiente', r_equity: 'Ganancia acumulada', r_equity_card: '📈 Ganancia acumulada',
+    kind_golpe: '⚡ Un solo golpe', kind_golpe_t: 'Ganó casi todo en una sola jugada — puede ser suerte, no señal.',
+    kind_racha: '🔥 En racha', kind_racha_t: 'Varias jugadas ganadoras seguidas — patrón más sólido.',
+    kind_cons: '🧊 Consistente', kind_cons_t: 'Gana de forma repartida, sin depender de un solo golpe.',
     r_best: '🎯 Mejores cuentas', r_best_sub: 'por dinero ganado · toca una para ver su perfil',
     r_stat_best: 'mejor cuenta (30 días)', r_stat_watch: 'vigiladas', r_stat_alerts: 'alertas hoy',
     r_live_alerts: '🔔 Alertas en vivo', r_hoy: 'hoy', r_no_moves: 'Sin movimientos todavía — el vigía revisa cada 5 minutos.',
@@ -1106,6 +1124,10 @@ const T = {
     lang_btn: 'ES', lang_title: 'Cambiar a Español',
     r_prep: 'Radar getting ready — the observatory publishes its first data soon.',
     r_loading: 'Loading the radar…', r_pm_title: 'See the real profile on Polymarket',
+    r_no_history: 'not enough history yet', r_equity: 'Cumulative profit', r_equity_card: '📈 Cumulative profit',
+    kind_golpe: '⚡ One big hit', kind_golpe_t: 'Won almost everything in a single play — could be luck, not signal.',
+    kind_racha: '🔥 On a streak', kind_racha_t: 'Several winning plays in a row — a stronger pattern.',
+    kind_cons: '🧊 Consistent', kind_cons_t: 'Wins spread out, not dependent on a single hit.',
     r_best: '🎯 Top accounts', r_best_sub: 'by money won · tap one to see its profile',
     r_stat_best: 'best account (30 days)', r_stat_watch: 'watched', r_stat_alerts: 'alerts today',
     r_live_alerts: '🔔 Live alerts', r_hoy: 'today', r_no_moves: 'No moves yet — the watcher checks every 5 minutes.',
@@ -2485,6 +2507,69 @@ const rUsd = (x) => (x == null || !isFinite(x)) ? '—' : '$' + Math.round(+x).t
 const bandLabel = (b) => ({ '<20¢': t('band_lo'), '20-40¢': t('band_mlo'), '40-60¢': t('band_mid'), '60-85¢': t('band_fav'), '>85¢': t('band_hi') }[b] || b);
 // categoría del robot (español) → traducida
 const rCat = (c) => ({ deportes: t('cat_sports'), 'política': t('cat_politics'), politica: t('cat_politics'), cripto: t('cat_crypto'), crypto: t('cat_crypto'), otros: t('cat_other') }[c] || c);
+
+/* ── Gráficas SVG inline ($0, responsivas, tema oscuro) — guía /dataviz:
+   una serie sin leyenda, un solo hue por signo, marcas finas, baseline en 0,
+   tooltips nativos <title> en puntos muestreados. ─────────────────────── */
+// curva de ganancia acumulada (héroe del perfil). curve=[{ts,acc}]
+function svgEquity(curve){
+  if (!Array.isArray(curve) || curve.length < 2) return `<div class="rrow"><span class="lbl2">${t('r_no_history')}</span></div>`;
+  const W = 300, H = 90, PAD = 6;
+  const xs = curve.map(p => p.ts), ys = curve.map(p => p.acc);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), yMin = Math.min(0, ...ys), yMax = Math.max(0, ...ys);
+  const sx = v => PAD + (x1 === x0 ? 0.5 : (v - x0) / (x1 - x0)) * (W - 2 * PAD);
+  const sy = v => H - PAD - (yMax === yMin ? 0.5 : (v - yMin) / (yMax - yMin)) * (H - 2 * PAD);
+  const up = (curve[curve.length - 1].acc >= 0);
+  const col = up ? 'var(--volt)' : 'var(--red)';
+  const line = curve.map((p, i) => `${i ? 'L' : 'M'}${sx(p.ts).toFixed(1)} ${sy(p.acc).toFixed(1)}`).join(' ');
+  const area = `${line} L${sx(x1).toFixed(1)} ${sy(0).toFixed(1)} L${sx(x0).toFixed(1)} ${sy(0).toFixed(1)} Z`;
+  const base = sy(0).toFixed(1);
+  const gid = 'eqg' + Math.abs(Math.round(x1));
+  // ~5 puntos muestreados con tooltip nativo
+  const step = Math.max(1, Math.floor(curve.length / 5));
+  const dots = curve.filter((_, i) => i % step === 0 || i === curve.length - 1)
+    .map(p => `<circle cx="${sx(p.ts).toFixed(1)}" cy="${sy(p.acc).toFixed(1)}" r="3" fill="${col}"><title>${esc(rdt(p.ts))}: ${rUsd(p.acc)}</title></circle>`).join('');
+  return `<svg class="eqsvg" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" role="img" aria-label="${t('r_equity')}">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity="0.30"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+    <line x1="${PAD}" y1="${base}" x2="${W - PAD}" y2="${base}" stroke="var(--hair)" stroke-width="1" stroke-dasharray="3 3"/>
+    <path d="${area}" fill="url(#${gid})"/>
+    <path d="${line}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}
+  </svg>`;
+}
+// sparkline mini (tarjetas): misma curva, sin ejes
+function svgSpark(curve){
+  if (!Array.isArray(curve) || curve.length < 2) return '';
+  const W = 72, H = 26, ys = curve.map(p => p.acc), n = curve.length;
+  const yMin = Math.min(...ys), yMax = Math.max(...ys);
+  const sx = i => (i / (n - 1)) * W, sy = v => H - 2 - (yMax === yMin ? 0.5 : (v - yMin) / (yMax - yMin)) * (H - 4);
+  const col = curve[n - 1].acc >= 0 ? 'var(--volt)' : 'var(--red)';
+  const line = curve.map((p, i) => `${i ? 'L' : 'M'}${sx(i).toFixed(1)} ${sy(p.acc).toFixed(1)}`).join(' ');
+  return `<svg class="spk" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><path d="${line}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
+}
+// dona "dónde tradea": categórica ≤4 + otros, hue fijo por categoría + leyenda
+const CAT_HUE = { deportes: 'var(--volt)', 'política': 'var(--sky)', politica: 'var(--sky)', cripto: 'var(--amber)', crypto: 'var(--amber)', otros: '#a78bfa' };
+function svgDonut(cats){
+  const items = (cats || []).slice(0, 4).map(c => ({ ...c }));
+  const shown = items.reduce((s, c) => s + c.share, 0);
+  if (shown < 0.999 && shown > 0) items.push({ cat: 'otros', share: 1 - shown });
+  if (!items.length) return '<div class="rrow"><span class="lbl2">—</span></div>';
+  const R = 34, r = 20, C = 44, circ = 2 * Math.PI * ((R + r) / 2), sw = R - r;
+  let off = 0;
+  const arcs = items.map(c => {
+    const frac = Math.max(0, Math.min(1, c.share));
+    const seg = `<circle cx="${C}" cy="${C}" r="${(R + r) / 2}" fill="none" stroke="${CAT_HUE[c.cat] || '#a78bfa'}" stroke-width="${sw}" stroke-dasharray="${(frac * circ).toFixed(1)} ${circ.toFixed(1)}" stroke-dashoffset="${(-off * circ).toFixed(1)}" transform="rotate(-90 ${C} ${C})"><title>${esc(rCat(c.cat))}: ${Math.round(frac * 100)}%</title></circle>`;
+    off += frac; return seg;
+  }).join('');
+  const legend = items.map(c => `<span class="dleg"><i style="background:${CAT_HUE[c.cat] || '#a78bfa'}"></i>${esc(rCat(c.cat))} ${Math.round(c.share * 100)}%</span>`).join('');
+  return `<div class="donutwrap"><svg viewBox="0 0 ${2 * C} ${2 * C}" width="88" height="88" role="img" aria-label="${t('r_where')}">${arcs}</svg><div class="dlegs">${legend}</div></div>`;
+}
+// badge racha vs golpe único
+function kindBadge(kind, streak){
+  if (kind === 'golpe') return `<span class="kbadge golpe" title="${t('kind_golpe_t')}">${t('kind_golpe')}</span>`;
+  if (kind === 'racha') return `<span class="kbadge racha" title="${t('kind_racha_t')}">${t('kind_racha')}${streak ? ` (${streak})` : ''}</span>`;
+  return `<span class="kbadge cons" title="${t('kind_cons_t')}">${t('kind_cons')}</span>`;
+}
 const ttRow = (tt, i) => `<div class="ttrow">
   <span class="rank num">${i + 1}</span>
   <span class="mid"><span class="who2">${esc(tt.who || (tt.w || '').slice(0, 8))} ${pmLink(tt.w)} ${tt.timing ? (tt.timing === 'antes' ? `<span class="tbadge antes">${t('tb_before_s')}</span>` : `<span class="tbadge vivo">${t('tb_live')}</span>`) : ''}</span><span class="qq" title="${esc(tt.q || '')}">${esc(tt.q || '')}</span></span>
@@ -2499,7 +2584,7 @@ function radarWarnHtml(){
 // estado de las secciones plegables del dashboard
 let radarOpen = { alerts: false, top: false, all: false };
 const walletCard = (w, i) => `<button class="wcard" data-rw="${esc(w.w)}" style="--i:${i}">
-  <span class="row1"><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}<span class="gan num">+${rUsd(w.pnl_usd)}</span></span>
+  <span class="row1"><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}<span class="spkw">${svgSpark(w.equity_curve)}</span><span class="gan num">+${rUsd(w.pnl_usd)}</span></span>
   <span class="row2">${w.win_rate != null ? `${t('r_acierta')} ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(rCat(w.cats[0].cat)) : '—'} · ${w.n_markets} ${t('r_mercados')}<span class="ver">${t('r_ver_perfil')}</span></span>
 </button>`;
 function renderRadarList(){
@@ -2618,6 +2703,7 @@ function renderRadarDetail(){
     </div>
     <div class="rchips">
       ${w.watch ? `<span class="rchip watch">🎯 ${t('r_informed')} <b class="num">${w.insider_score}/100</b></span>` : ''}
+      ${w.kind ? kindBadge(w.kind, w.streak) : ''}
       <span class="rchip">${t('r_chip_won')} <b class="num">${rUsd(w.pnl_usd)}</b> ${t('r_chip_in30')}</span>
       <span class="rchip">${t('r_chip_hit')} <b class="num">${w.wins} ${t('r_chip_of')} ${w.wins + w.losses}</b>${w.win_rate != null ? ` (${Math.round(100 * w.win_rate)}%)` : ''}</span>
       <span class="rchip">${t('r_chip_moved')} <b class="num">${rUsd(sz.total_usd)}</b> ${lang === 'en' ? 'across' : 'en'} ${w.n_markets} ${t('r_mercados')}</span>
@@ -2627,6 +2713,10 @@ function renderRadarDetail(){
       ${w.best_trades.map(b => `<div class="btr">${timingBadge(b.timing)}<span class="q" title="${esc(b.q)}">${esc(b.q)}</span><span class="amt num">${t('r_puso')} ${rUsd(b.usd)} → ${t('r_gano')} <b>${rUsd(b.profit)}</b></span><span class="when num">${esc(rdt(b.ts))}</span></div>`).join('')}
     </div>` : ''}
     <div class="rcards">
+      ${Array.isArray(w.equity_curve) && w.equity_curve.length >= 2 ? `<div class="rcard eqcard"><div class="h">${t('r_equity_card')}</div>
+        <div class="big num" style="color:${(w.cum_now ?? 0) >= 0 ? 'var(--volt)' : 'var(--red)'}">${(w.cum_now ?? 0) >= 0 ? '+' : ''}${rUsd(w.cum_now)}</div>
+        ${svgEquity(w.equity_curve)}
+      </div>` : ''}
       <div class="rcard"><div class="h">${t('r_when')}</div>
         <div class="big num">${tm.median_hours_before != null ? '~' + tm.median_hours_before + ' ' + t('r_hbefore') : '—'}</div>
         <div class="rrow"><span class="lbl2">${t('r_before_close')}</span></div>
@@ -2637,7 +2727,7 @@ function renderRadarDetail(){
         <div class="rrow"><span class="lbl2">${t('r_per_play')} · ${t('r_maxbet')} ${esc(rUsd(sz.p90_usd))} · ${t('r_month_total')} ${esc(rUsd(sz.total_usd))}</span></div>
       </div>
       <div class="rcard"><div class="h">${t('r_bet_type')}</div>${bandRows || `<div class="rrow"><span class="lbl2">—</span></div>`}</div>
-      <div class="rcard"><div class="h">${t('r_which')}</div>${catRows || '<div class="rrow"><span class="lbl2">—</span></div>'}</div>
+      <div class="rcard"><div class="h">${t('r_which')}</div>${(w.cats && w.cats.length) ? svgDonut(w.cats) : '<div class="rrow"><span class="lbl2">—</span></div>'}</div>
       <div class="rcard"><div class="h">${t('r_style')}</div>
         <div class="big">${flip < 0.15 ? t('r_hold') : flip < 0.5 ? t('r_mixed') : t('r_flips')}</div>
         ${bar(t('r_sells_before'), flip)}

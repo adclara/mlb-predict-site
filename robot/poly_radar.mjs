@@ -63,7 +63,18 @@ for (const [w, ww] of wallets) {
   const weeksActive = active.filter(Boolean).length;
   const weeksPos = weeks.filter((p, i) => active[i] && p > 0).length;
   const totBuySh = ww.mkts.reduce((x, k) => x + k.buySh, 0), totSellSh = ww.mkts.reduce((x, k) => x + k.sellSh, 0);
+  // ── ganancia acumulada en el tiempo + racha vs golpe único ──
+  const byEnd = [...ww.mkts].sort((a, b) => a.end - b.end);
+  let acc = 0; const equity = byEnd.map((k) => { acc += k.pnl; return { ts: Math.round(k.end), acc: Math.round(acc) }; });
+  const cumNow = Math.round(acc);
+  const posPnls = ww.mkts.filter((k) => k.pnl > 0).map((k) => k.pnl);
+  const posSum = posPnls.reduce((x, p) => x + p, 0);
+  const biggestWinShare = posSum > 0 ? Math.max(...posPnls) / posSum : 0;
+  let streak = 0, cur = 0;
+  for (const k of byEnd) { if (k.pnl > 0) { cur++; streak = Math.max(streak, cur); } else if (k.pnl < 0) cur = 0; }
+  const kind = biggestWinShare >= 0.6 ? 'golpe' : (streak >= 5 && biggestWinShare < 0.4 ? 'racha' : 'consistente');
   scored.push({
+    equity, cumNow, biggestWinShare, streak, kind,
     // % de su actividad que son COMPRAS (los "informados" compran temprano; los
     // récords perfectos de puro VENDEDOR a 99¢ no llevan información)
     buyShare: (totBuySh + totSellSh) > 0 ? totBuySh / (totBuySh + totSellSh) : 0,
@@ -95,6 +106,7 @@ console.log(`Con ≥${MIN_MARKETS} mercados: ${scored.length} · calificadas tra
 // (1−p)×acciones en USD. Se excluyen compras a >97% (redenciones/ruido) y
 // apuestas de menos de $10. DEDUPE por wallet+mercado: 10 historias DISTINTAS,
 // no la misma wallet repetida con el mismo partido.
+const kindByW = new Map(scored.map((r) => [r.w, r.kind])); // para marcar jugadas en racha
 let topTrades = [];
 for (const m of uni) {
   const bestInMkt = new Map(); // wallet → su mejor compra EN ESTE mercado
@@ -110,7 +122,7 @@ for (const m of uni) {
   for (const [w, x] of bestInMkt) {
     if (topTrades.length >= 10 && x.profit <= topTrades[topTrades.length - 1].profit) continue;
     const id = identities.get(w) || {};
-    topTrades.push({ w, who: id.pseudonym || id.name || null, q: (m.q || '').slice(0, 90), cat: m.cat, prob: +x.t.p.toFixed(2), usd: Math.round(x.usd), profit: Math.round(x.profit), ts: x.t.ts, timing: m.gs ? (x.t.ts < m.gs ? 'antes' : 'vivo') : null });
+    topTrades.push({ w, who: id.pseudonym || id.name || null, q: (m.q || '').slice(0, 90), cat: m.cat, prob: +x.t.p.toFixed(2), usd: Math.round(x.usd), profit: Math.round(x.profit), ts: x.t.ts, timing: m.gs ? (x.t.ts < m.gs ? 'antes' : 'vivo') : null, in_streak: kindByW.get(w) === 'racha' });
     topTrades.sort((a, b) => b.profit - a.profit);
     if (topTrades.length > 10) topTrades.length = 10;
   }
@@ -172,7 +184,10 @@ function profileOf(r) {
     + (r.avgP != null && r.avgP <= 0.65 ? 0.4 : 0);
   const lsC = Math.min(1, r.longshots / 3);
   const consC = r.s.pnl > 0 ? r.consistency : 0;
-  const insider = Math.round(100 * (0.3 * wrC + 0.25 * earlyC + 0.25 * lsC + 0.2 * consC));
+  // racha vs golpe: 'golpe' = ganó casi todo en 1 jugada (suerte, no señal) → baja;
+  // 'racha' = muchas seguidas → sube.
+  const kindAdj = r.kind === 'golpe' ? -0.15 : r.kind === 'racha' ? 0.10 : 0;
+  const insider = Math.max(0, Math.min(100, Math.round(100 * (0.3 * wrC + 0.25 * earlyC + 0.25 * lsC + 0.2 * consC + kindAdj))));
   const watch = isWatch(r);
   return {
     w: r.w, name: id.name || null, pseudonym: id.pseudonym || null, img: id.img || null,
@@ -180,6 +195,7 @@ function profileOf(r) {
     insider_score: insider, watch,
     pre_win_share: preWinShare != null ? +preWinShare.toFixed(2) : null,
     best_trades: bestTrades,
+    equity_curve: r.equity, cum_now: r.cumNow, biggest_win_share: +r.biggestWinShare.toFixed(2), streak: r.streak, kind: r.kind,
     pnl_weeks: r.pnlWeeks, consistency: +r.consistency.toFixed(2),
     n_markets: r.s.n, wins: r.wins, losses: r.losses,
     edge_sh: +r.s.mean.toFixed(4), t: +r.s.t.toFixed(2), pnl_usd: Math.round(r.s.pnl), cost_usd: Math.round(r.s.cost),
