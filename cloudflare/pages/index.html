@@ -475,6 +475,32 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
    detalle es un overlay. En móvil la mostramos en #list (siempre visible). */
 .lwarn{display:none}
 @media (max-width:900px){.lwarn{display:block}}
+/* PR5: seguir ⭐ + comparar ⚖️ */
+.wctl{flex:none;display:flex;align-items:center;gap:2px}
+.pstar,.pcmp{cursor:pointer;color:var(--faint);line-height:1;padding:1px}
+.pstar{font-size:14px}.pstar.on{color:var(--amber)}
+.pcmp{font-size:12px}.pcmp.on{color:var(--sky)}
+.ffilter{margin-left:auto;flex:none;background:none;border:1px solid var(--hair);color:var(--dim);border-radius:999px;padding:2px 9px;font:inherit;font-size:11px;cursor:pointer}
+.ffilter.on{border-color:var(--amber);color:var(--amber);background:rgba(245,158,11,.08)}
+.cmptray{display:flex;align-items:center;gap:8px;margin:0 12px 8px;padding:7px 10px;border:1px solid var(--sky);border-radius:10px;background:rgba(94,168,255,.08);color:var(--dim);font-size:12px}
+.cmptray b{color:var(--sky)}
+.cmpx{margin-left:auto;flex:none;background:none;border:0;color:var(--dim);cursor:pointer;font-size:14px;font:inherit}
+.alrow.followed{background:rgba(245,158,11,.06);box-shadow:inset 2px 0 0 var(--amber)}
+.rback{display:flex;align-items:center;gap:10px}
+.rbtns{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pfbtn{cursor:pointer;border:1px solid var(--hair);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--dim);white-space:nowrap}
+.pfbtn.on{border-color:var(--amber);color:var(--amber);background:rgba(245,158,11,.08)}
+.cmphd{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 12px 10px}
+.cmpcol{text-align:center;padding:10px 8px;border:1px solid var(--hair);border-radius:12px;background:var(--inner);min-width:0}
+.cmpname{font-weight:800;font-size:14px;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmpspk{display:flex;justify-content:center;margin-bottom:6px}
+.cmptbl{margin:0 12px 12px}
+.cmprow{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--hair)}
+.cmprow .cv{font-weight:700;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.cmprow .cv:first-child{text-align:right}
+.cmprow .cv:last-child{text-align:left}
+.cmprow .cv.win{color:var(--volt)}
+.cmprow .cl{color:var(--dim);font-size:11px;text-align:center;white-space:nowrap}
 .rhead{display:flex;align-items:center;gap:12px;padding:14px 12px 2px}
 .rhead .av{width:44px;height:44px;border-radius:50%;background:var(--inner);border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;font-weight:800;overflow:hidden;flex:none}
 .rhead .av img{width:100%;height:100%;object-fit:cover}
@@ -1113,6 +1139,8 @@ const T = {
     tb_before: 'ANTES del partido', tb_live: 'EN VIVO', tb_nohour: 'sin hora de inicio', tb_before_s: 'ANTES',
     warn_desc: 'Radar descriptivo — no es recomendación.', warn_body: 'Muestra qué hacen estas wallets con datos públicos de Polymarket. «🎯 Posible informado» es un patrón estadístico (aciertos + entra temprano y barato + ganancia sostenida),', warn_notproof: 'no una acusación probada', warn_delay: '; las alertas llegan con ~5 min de retraso. Nuestro estudio midió que el pasado apenas predice el futuro aquí (correlación', warn_repeat: 'solo', warn_repeat2: 'de las ganadoras repite al mes siguiente).', warn_legal: 'Aviso legal',
     track_pre: 'Persistencia viva: de', track_ago: 'vigiladas hace ~7 días,', track_still: 'siguen hoy', track_wait: 'Persistencia viva: midiendo nuestra propia lista en vivo (acumulando historial).', track_new: 'nuevas en el top esta semana',
+    r_follow: 'Seguir', r_following: 'Siguiendo', r_compare: 'Comparar', r_myfollowed: 'Mis seguidas', r_no_follow: 'Aún no sigues ninguna wallet. Toca ☆ en una cuenta para seguirla.',
+    r_comparing: 'Comparando', r_pick_second: 'elige otra', r_close_cmp: 'Cerrar', r_compare_title: 'Comparación', r_cmp_won: 'Ganó', r_cmp_hits: 'Aciertos', r_cmp_markets: 'Mercados', r_cmp_type: 'Tipo', r_cmp_when: 'Cuándo entra', r_cmp_bet: 'Apuesta típica', r_cmp_cat: 'Dónde', r_cmp_beforew: 'antes',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1163,6 +1191,8 @@ const T = {
     tb_before: 'BEFORE the game', tb_live: 'LIVE', tb_nohour: 'no start time', tb_before_s: 'BEFORE',
     warn_desc: 'Descriptive radar — not a recommendation.', warn_body: 'It shows what these wallets do with public Polymarket data. «🎯 Possible insider» is a statistical pattern (hits + enters early and cheap + sustained profit),', warn_notproof: 'not a proven accusation', warn_delay: '; alerts arrive with ~5 min delay. Our study measured that the past barely predicts the future here (correlation', warn_repeat: 'only', warn_repeat2: 'of winners repeat the next month).', warn_legal: 'Legal notice',
     track_pre: 'Live persistence: of', track_ago: 'watched ~7 days ago,', track_still: 'still watched today', track_wait: 'Live persistence: measuring our own list live (building history).', track_new: 'new in the top this week',
+    r_follow: 'Follow', r_following: 'Following', r_compare: 'Compare', r_myfollowed: 'My followed', r_no_follow: 'You don\'t follow any wallet yet. Tap ☆ on an account to follow it.',
+    r_comparing: 'Comparing', r_pick_second: 'pick another', r_close_cmp: 'Close', r_compare_title: 'Comparison', r_cmp_won: 'Won', r_cmp_hits: 'Hits', r_cmp_markets: 'Markets', r_cmp_type: 'Type', r_cmp_when: 'When it enters', r_cmp_bet: 'Typical bet', r_cmp_cat: 'Where', r_cmp_beforew: 'before',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
       <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
@@ -2249,9 +2279,32 @@ document.addEventListener('click', e => {
   }
   const rt = e.target.closest('[data-rtoggle]');
   if (rt){ radarOpen[rt.dataset.rtoggle] = !radarOpen[rt.dataset.rtoggle]; renderRadarList(); return; }
+  const pstar = e.target.closest('[data-pstar]');
+  if (pstar){
+    e.stopPropagation();
+    const w = pstar.dataset.pstar;
+    if (pfollow.has(w)) pfollow.delete(w); else { pfollow.add(w); ensureNotifyPerm(); }
+    savePfollow(); renderRadarList(); renderRadarDetail();
+    return;
+  }
+  const pcmp = e.target.closest('[data-pcmp]');
+  if (pcmp){
+    e.stopPropagation();
+    const w = pcmp.dataset.pcmp; const idx = compareSel.indexOf(w);
+    if (idx >= 0) compareSel.splice(idx, 1);
+    else { compareSel.push(w); if (compareSel.length > 2) compareSel.shift(); }
+    if (compareSel.length === 2){ radarSel = null; renderRadarDetail();
+      if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; } }
+    renderRadarList();
+    return;
+  }
+  const pfilter = e.target.closest('[data-pfilter]');
+  if (pfilter){ e.stopPropagation(); followOnly = !followOnly; renderRadarList(); return; }
+  const pcmpx = e.target.closest('[data-pcmpclear]');
+  if (pcmpx){ e.stopPropagation(); compareSel = []; renderRadarList(); renderRadarDetail(); return; }
   const rrow = e.target.closest('[data-rw]');
   if (rrow){
-    radarSel = rrow.dataset.rw; renderRadarDetail();
+    radarSel = rrow.dataset.rw; compareSel = []; renderRadarDetail();
     if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; }
     return;
   }
@@ -2464,6 +2517,30 @@ function loadSummary(g){
 let radarDoc = null, radarAt = 0, radarLoading = false, radarSel = null;
 let alertsDoc = null, alertsAt = 0, alertsLoading = false;
 let trackDoc = null, trackAt = 0; // persistencia viva + wallets nuevas (poly:track)
+// ⭐ wallets seguidas (localStorage) + estado de comparación de 2 wallets
+let pfollow = new Set(JSON.parse(localStorage.getItem('aa_poly_follow') || '[]'));
+let followOnly = false;              // filtro "solo seguidas" en el dashboard
+let compareSel = [];                 // hasta 2 wallets seleccionadas para comparar
+let notifiedTs = +(localStorage.getItem('aa_poly_notified') || 0); // último ts avisado
+const savePfollow = () => localStorage.setItem('aa_poly_follow', JSON.stringify([...pfollow]));
+// Pide permiso de notificaciones del navegador (una vez, al seguir la primera wallet).
+function ensureNotifyPerm(){
+  try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
+}
+// Avisa (Notification API, con la pestaña abierta) cuando una wallet SEGUIDA se mueve.
+// Client-side y sin duplicar: solo alertas más nuevas que el último ts avisado.
+function notifyFollowed(alerts){
+  if (!('Notification' in window) || Notification.permission !== 'granted' || !pfollow.size) return;
+  const maxTs = Math.max(0, ...(alerts || []).map(a => +a.ts || 0));
+  if (!notifiedTs){ notifiedTs = maxTs; localStorage.setItem('aa_poly_notified', String(maxTs)); return; } // bootstrap: no avisar de alertas históricas
+  const fresh = (alerts || []).filter(a => a.wallet && pfollow.has(a.wallet) && a.ts > notifiedTs);
+  if (!fresh.length) return;
+  notifiedTs = Math.max(notifiedTs, ...fresh.map(a => a.ts));
+  localStorage.setItem('aa_poly_notified', String(notifiedTs));
+  const a = fresh[0];
+  const body = `${a.side === 'BUY' ? t('r_buy') : t('r_sell')} "${a.outcome ?? ''}"${a.usd != null ? ` · $${(+a.usd).toLocaleString(LOCALE())}` : ''} — ${a.title || ''}`;
+  try { new Notification(`⭐ ${a.pseudonym || (a.wallet || '').slice(0, 8)}${fresh.length > 1 ? ` (+${fresh.length - 1})` : ''}`, { body, tag: 'aa-poly-' + a.wallet }); } catch (e) {}
+}
 const agoTxt = (ts) => {
   const m = Math.max(0, Math.round(Date.now() / 1000 - ts) / 60 | 0);
   const pre = t('ago_min') ? t('ago_min') + ' ' : '';
@@ -2475,7 +2552,7 @@ async function loadAlerts(force){
   try{
     const r = await fetch(`${API}/v1/poly/alerts`);
     const d = await r.json();
-    if (d && Array.isArray(d.alerts)){ alertsDoc = d; alertsAt = Date.now(); }
+    if (d && Array.isArray(d.alerts)){ alertsDoc = d; alertsAt = Date.now(); notifyFollowed(d.alerts); }
   }catch(err){ /* sin alertas no pasa nada */ }
   alertsLoading = false;
   const dayAgo = Date.now() / 1000 - 86400;
@@ -2494,9 +2571,9 @@ function groupAlerts(as){
   }
   return out;
 }
-const alertRow = (a) => `<div class="alrow" data-rw="${esc(a.wallet)}" role="button">
+const alertRow = (a) => `<div class="alrow${pfollow.has(a.wallet) ? ' followed' : ''}" data-rw="${esc(a.wallet)}" role="button">
   <span class="when num">${esc(agoTxt(a.ts))}</span>
-  <span class="who">🎯 ${esc(a.pseudonym || (a.wallet || '').slice(0, 8))} ${pmLink(a.wallet)}</span>
+  <span class="who">${pfollow.has(a.wallet) ? '⭐' : '🎯'} ${esc(a.pseudonym || (a.wallet || '').slice(0, 8))} ${pmLink(a.wallet)}</span>
   <span class="what ${a.side === 'BUY' ? 'buy' : 'sell'}">${a.side === 'BUY' ? t('r_buy').toUpperCase() : t('r_sell').toUpperCase()}${a.n > 1 ? ` ×${a.n}` : ''} ${esc(String(a.outcome ?? ''))}${a.usd != null ? ` · $${(+a.usd).toLocaleString(LOCALE())}` : ''}${a.n === 1 && a.price != null ? ` · ${(100 * a.price).toFixed(0)}% ${t('r_prob')}` : ''}</span>
   <span class="q" title="${esc(a.title || '')}">${esc(a.title || '')}</span>
 </div>`;
@@ -2607,10 +2684,13 @@ function trackLiveHtml(){
 }
 // estado de las secciones plegables del dashboard
 let radarOpen = { alerts: false, top: false, all: false };
-const walletCard = (w, i) => `<button class="wcard" data-rw="${esc(w.w)}" style="--i:${i}">
-  <span class="row1"><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}<span class="spkw">${svgSpark(w.equity_curve)}</span><span class="gan num">+${rUsd(w.pnl_usd)}</span></span>
+// ⭐ seguir + ⚖️ comparar (spans clicables; la delegación los atiende antes que data-rw)
+const pStar = (w) => `<span class="pstar${pfollow.has(w) ? ' on' : ''}" data-pstar="${esc(w)}" role="button" title="${t('r_follow')}">${pfollow.has(w) ? '★' : '☆'}</span>`;
+const pCmp = (w) => `<span class="pcmp${compareSel.includes(w) ? ' on' : ''}" data-pcmp="${esc(w)}" role="button" title="${t('r_compare')}">⚖</span>`;
+const walletCard = (w, i) => `<div class="wcard" data-rw="${esc(w.w)}" role="button" style="--i:${i}">
+  <span class="row1"><span class="wctl">${pStar(w.w)}${pCmp(w.w)}</span><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}<span class="spkw">${svgSpark(w.equity_curve)}</span><span class="gan num">+${rUsd(w.pnl_usd)}</span></span>
   <span class="row2">${w.win_rate != null ? `${t('r_acierta')} ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(rCat(w.cats[0].cat)) : '—'} · ${w.n_markets} ${t('r_mercados')}<span class="ver">${t('r_ver_perfil')}</span></span>
-</button>`;
+</div>`;
 function renderRadarList(){
   if (sport !== 'radar') return;
   const ws = (radarDoc && radarDoc.wallets) || [];
@@ -2627,9 +2707,12 @@ function renderRadarList(){
   const groups = groupAlerts(as);
   const tts = (radarDoc && radarDoc.top_trades) || [];
   const nWatch = ws.filter(w => w.watch).length;
-  const showWs = radarOpen.all ? ws : ws.slice(0, 6);
+  const baseWs = followOnly ? ws.filter(w => pfollow.has(w.w)) : ws;
+  const showWs = radarOpen.all ? baseWs : baseWs.slice(0, 6);
   const showAl = radarOpen.alerts ? groups.slice(0, 30) : groups.slice(0, 3);
   const showTt = radarOpen.top ? tts : tts.slice(0, 5);
+  const cmpNames = compareSel.map(cw => rName(ws.find(x => x.w === cw) || { w: cw }));
+  const cmpTray = compareSel.length ? `<div class="cmptray">⚖ <b>${t('r_comparing')}:</b> ${cmpNames.map(esc).join(' · ')}${compareSel.length < 2 ? ` — ${t('r_pick_second')}` : ''} <button class="cmpx" data-pcmpclear="1">✕</button></div>` : '';
   $('list').innerHTML = `
     <div class="lwarn">${radarWarnHtml()}</div>
     <div class="stats3">
@@ -2637,9 +2720,10 @@ function renderRadarList(){
       <div class="stile"><div class="v num">🎯 ${nWatch}</div><div class="l">${t('r_stat_watch')}</div></div>
       <div class="stile"><div class="v num">🔔 ${n24}</div><div class="l">${t('r_stat_alerts')}</div></div>
     </div>
-    <div class="secttl2">${t('r_best')} <span class="sub3">${t('r_best_sub')}</span></div>
-    ${showWs.map(walletCard).join('')}
-    ${ws.length > 6 ? `<button class="expbtn" data-rtoggle="all">${radarOpen.all ? t('r_see_less') : t('r_see_all').replace('↓', `${ws.length} ↓`)}</button>` : ''}
+    <div class="secttl2">${t('r_best')} <span class="sub3">${t('r_best_sub')}</span><button class="ffilter${followOnly ? ' on' : ''}" data-pfilter="1">⭐ ${t('r_myfollowed')}${pfollow.size ? ` (${pfollow.size})` : ''}</button></div>
+    ${cmpTray}
+    ${showWs.length ? showWs.map(walletCard).join('') : `<div class="lempty2">${followOnly ? t('r_no_follow') : t('r_prep')}</div>`}
+    ${baseWs.length > 6 ? `<button class="expbtn" data-rtoggle="all">${radarOpen.all ? t('r_see_less') : t('r_see_all').replace('↓', `${baseWs.length} ↓`)}</button>` : ''}
     <button class="secttl2 tgl" data-rtoggle="alerts">${t('r_live_alerts')}${n24 ? ` (${n24} ${t('r_hoy')})` : ''} <span class="caret">${radarOpen.alerts ? '▴' : '▾'}</span></button>
     ${showAl.map(alertRow).join('') || `<div class="lempty2">${t('r_no_moves')}</div>`}
     ${groups.length > 3 && !radarOpen.alerts ? `<button class="expbtn" data-rtoggle="alerts">${t('r_see_all')}</button>` : ''}
@@ -2700,18 +2784,44 @@ function radarDashHtml(ws){
     <p class="dnote">${t('r_attr')} · ${t('r_updated')} ${radarDoc && radarDoc.ran_at ? esc(rdt(Date.parse(radarDoc.ran_at) / 1000)) : '—'} · ${t('r_aa_informs')}</p>`;
 }
 
+// ⚖️ Comparación lado a lado de 2 wallets (ganancia, aciertos, tipo, antes/vivo, curva).
+function compareHtml(ws){
+  const a = ws.find(x => x.w === compareSel[0]), b = ws.find(x => x.w === compareSel[1]);
+  if (!a || !b){ compareSel = []; return radarDashHtml(ws); } // una wallet ya no está → volver al resumen
+  const kindTxt = (w) => w.kind === 'golpe' ? t('kind_golpe') : w.kind === 'racha' ? t('kind_racha') : w.kind === 'consistente' ? t('kind_cons') : '—';
+  const preTxt = (w) => w.pre_win_share != null ? Math.round(100 * w.pre_win_share) + '% ' + t('r_cmp_beforew') : t('tb_nohour');
+  const cat = (w) => w.cats && w.cats[0] ? rCat(w.cats[0].cat) : '—';
+  const col = (w) => `<div class="cmpcol"><div class="cmpname">${esc(rName(w))} ${pmLink(w.w)}</div><div class="cmpspk">${svgSpark(w.equity_curve)}</div>${w.kind ? kindBadge(w.kind, w.streak) : ''}</div>`;
+  const gt = (x, y) => (x ?? -Infinity) > (y ?? -Infinity);
+  const row = (label, va, vb, wa, wb) => `<div class="cmprow"><span class="cv num${wa ? ' win' : ''}">${va}</span><span class="cl">${esc(label)}</span><span class="cv num${wb ? ' win' : ''}">${vb}</span></div>`;
+  return radarWarnHtml() + `
+    <div class="rback"><a href="#" data-rback="1">${t('r_back')}</a><span class="rbtns"><span class="pfbtn" data-pcmpclear="1" role="button">✕ ${t('r_close_cmp')}</span></span></div>
+    <div class="secttl">⚖ ${t('r_compare_title')}</div>
+    <div class="cmphd">${col(a)}${col(b)}</div>
+    <div class="cmptbl">
+      ${row(t('r_cmp_won'), rUsd(a.pnl_usd), rUsd(b.pnl_usd), gt(a.pnl_usd, b.pnl_usd), gt(b.pnl_usd, a.pnl_usd))}
+      ${row(t('r_cmp_hits'), a.win_rate != null ? Math.round(100 * a.win_rate) + '%' : '—', b.win_rate != null ? Math.round(100 * b.win_rate) + '%' : '—', gt(a.win_rate, b.win_rate), gt(b.win_rate, a.win_rate))}
+      ${row(t('r_cmp_markets'), a.n_markets ?? '—', b.n_markets ?? '—', gt(a.n_markets, b.n_markets), gt(b.n_markets, a.n_markets))}
+      ${row(t('r_cmp_type'), esc(kindTxt(a)), esc(kindTxt(b)))}
+      ${row(t('r_cmp_when'), esc(preTxt(a)), esc(preTxt(b)))}
+      ${row(t('r_cmp_bet'), rUsd(a.sizing && a.sizing.median_usd), rUsd(b.sizing && b.sizing.median_usd))}
+      ${row(t('r_cmp_cat'), esc(cat(a)), esc(cat(b)))}
+    </div>`;
+}
 function renderRadarDetail(){
   if (sport !== 'radar') return;
   const dc = $('dcard');
   const ws = (radarDoc && radarDoc.wallets) || [];
   const w = ws.find(x => x.w === radarSel);
-  const animKey = 'radar|' + (w ? w.w : 'dash');
+  const cmp2 = compareSel.length === 2;
+  const animKey = 'radar|' + (cmp2 ? 'cmp|' + compareSel.join(',') : w ? w.w : 'dash');
   dc.classList.toggle('enter', animKey !== lastAnimKey);
   lastAnimKey = animKey;
   if (!ws.length){
     dc.innerHTML = radarWarnHtml() + `<div class="dempty">${radarLoading ? t('r_loading') : t('r_prep')}</div>`;
     return;
   }
+  if (cmp2){ dc.innerHTML = compareHtml(ws); return; }
   if (!w){ dc.innerHTML = radarDashHtml(ws); return; }
   const ini = (rName(w) || '?').slice(0, 2).toUpperCase();
   const bar = (lbl, share) => `<div class="rrow"><span class="lbl">${esc(lbl)}</span><span class="rbar"><i style="width:${Math.round(100 * (share || 0))}%"></i></span><span class="val num">${Math.round(100 * (share || 0))}%</span></div>`;
@@ -2720,7 +2830,9 @@ function renderRadarDetail(){
   const tm = w.timing || {}, sz = w.sizing || {}, st = w.style || {};
   const flip = st.flip_share != null ? st.flip_share : 0;
   dc.innerHTML = radarWarnHtml() + `
-    <div class="rback"><a href="#" data-rback="1">${t('r_back')}</a></div>
+    <div class="rback"><a href="#" data-rback="1">${t('r_back')}</a>
+      <span class="rbtns"><span class="pfbtn${pfollow.has(w.w) ? ' on' : ''}" data-pstar="${esc(w.w)}" role="button">${pfollow.has(w.w) ? '★ ' + t('r_following') : '☆ ' + t('r_follow')}</span><span class="pfbtn${compareSel.includes(w.w) ? ' on' : ''}" data-pcmp="${esc(w.w)}" role="button">⚖ ${t('r_compare')}</span></span>
+    </div>
     <div class="rhead">
       <span class="av">${w.img ? `<img src="${esc(w.img)}" alt="" onerror="this.parentNode.textContent='${ini}'">` : ini}</span>
       <span><span class="nm2">${esc(rName(w))} ${pmLink(w.w)}</span><br>
