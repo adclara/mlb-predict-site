@@ -69,6 +69,7 @@ export default {
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
         return await recentGames(ctx, origin, 'soccer:' + lg, `${ESPN_BASE}/soccer/${lg}/scoreboard`);
       }
+      if (path === '/v1/mlb/standings') return await standings(ctx, origin, 'mlb', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings');
       if (path === '/v1/nba/standings') return await standings(ctx, origin, 'nba', 'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings');
       if (path === '/v1/soccer/standings') {
         const lg = url.searchParams.get('league') || 'fifa.world';
@@ -842,9 +843,13 @@ async function standings(ctx, origin, cacheTag, upstream) {
       pts: stat('points'),
     };
   });
-  let sections = (data.children || [])
-    .map((ch) => ({ name: ch.name || ch.abbreviation || '', rows: mapEntries(ch.standings && ch.standings.entries) }))
-    .filter((s) => s.rows.length);
+  // Recolecta secciones de forma recursiva: NBA/soccer traen las entradas en el
+  // primer nivel de children; MLB las anida (Liga → División), así que si un nodo
+  // no tiene entradas propias, bajamos a sus hijos.
+  const collect = (node) => (node.standings && node.standings.entries && node.standings.entries.length)
+    ? [{ name: node.name || node.abbreviation || '', rows: mapEntries(node.standings.entries) }]
+    : (node.children || []).flatMap(collect);
+  let sections = (data.children || []).flatMap(collect).filter((s) => s.rows.length);
   if (!sections.length && data.standings && data.standings.entries) {
     sections = [{ name: data.name || '', rows: mapEntries(data.standings.entries) }];
   }
