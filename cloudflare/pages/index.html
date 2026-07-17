@@ -533,6 +533,27 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .btr .amt{flex:none} .btr .amt b{color:var(--volt)}
 .btr .when{flex:none;color:var(--faint);font-size:11px}
 .rfbtns{display:flex;gap:6px;flex:none}
+/* v5: dashboard-first en la lista del Radar */
+.stats3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 12px 4px}
+.stile{background:var(--inner);border:1px solid var(--hair);border-radius:12px;padding:10px 8px;text-align:center}
+.stile .v{font-size:16px;font-weight:800;color:var(--volt)}
+.stile .l{font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-top:3px}
+.secttl2{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;background:none;border:0;color:var(--amber);font:inherit;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:14px 14px 6px;border-bottom:1px solid var(--hair)}
+.secttl2 .sub3{color:var(--faint);font-weight:600;letter-spacing:0;text-transform:none;font-size:11px}
+.secttl2.tgl{cursor:pointer}
+.secttl2 .caret{margin-left:auto;color:var(--faint)}
+.expbtn{display:block;width:100%;background:none;border:0;border-bottom:1px solid var(--hair);color:var(--sky);font:inherit;font-size:12px;font-weight:700;padding:9px 14px;text-align:center;cursor:pointer}
+.wcard{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--hair);padding:11px 14px;cursor:pointer;font:inherit;color:var(--text)}
+.wcard:hover{background:var(--inner)}
+.wcard .row1{display:flex;align-items:center;gap:8px;min-width:0}
+.wcard .row1 .rank{flex:none;color:var(--faint);font-weight:800;font-size:12px}
+.wcard .row1 .nm{font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wcard .row1 .gan{margin-left:auto;flex:none;color:var(--volt);font-weight:800;font-size:16px}
+.wcard .row2{display:flex;gap:6px;align-items:baseline;color:var(--dim);font-size:12px;margin-top:3px;min-width:0}
+.wcard .row2 .ver{margin-left:auto;flex:none;color:var(--sky);font-size:11px}
+.lempty2{padding:14px;color:var(--faint);font-size:12px}
+.alrow{cursor:pointer}
+@media (max-width:400px){.stats3{padding:10px 8px 2px}.wcard{padding:10px 8px}.secttl2{padding:12px 8px 6px}}
 @media (max-width:640px){
   .btr{flex-wrap:wrap}.btr .q{flex:1 1 100%}
   .alrow .q{padding-left:0}
@@ -2028,8 +2049,8 @@ document.addEventListener('click', e => {
     if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; }
     return;
   }
-  const rw2 = e.target.closest('[data-rwatch]');
-  if (rw2){ radarOnlyWatch = !radarOnlyWatch; renderRadarList(); return; }
+  const rt = e.target.closest('[data-rtoggle]');
+  if (rt){ radarOpen[rt.dataset.rtoggle] = !radarOpen[rt.dataset.rtoggle]; renderRadarList(); return; }
   const rrow = e.target.closest('[data-rw]');
   if (rrow){
     radarSel = rrow.dataset.rw; renderRadarDetail();
@@ -2243,7 +2264,7 @@ function loadSummary(g){
 
 /* ── 📡 Radar de wallets (Polymarket) — observatorio descriptivo ─────────── */
 let radarDoc = null, radarAt = 0, radarLoading = false, radarSel = null;
-let alertsDoc = null, alertsAt = 0, alertsLoading = false, radarOnlyWatch = false;
+let alertsDoc = null, alertsAt = 0, alertsLoading = false;
 const agoTxt = (ts) => {
   const m = Math.max(0, Math.round(Date.now() / 1000 - ts) / 60 | 0);
   return m < 1 ? 'ahora' : m < 60 ? `hace ${m} min` : m < 1440 ? `hace ${Math.round(m / 60)} h` : `hace ${Math.round(m / 1440)} d`;
@@ -2263,17 +2284,22 @@ async function loadAlerts(force){
   $('cntRadar').textContent = n24 > 99 ? '99+' : n24;
   if (sport === 'radar') renderRadarList();
 }
-function alertsFeedHtml(){
-  const as = (alertsDoc && alertsDoc.alerts) || [];
-  if (!as.length) return '';
-  return `<div class="recentnote">🔔 Alertas de wallets vigiladas · se refresca solo</div>` +
-    as.slice(0, 8).map(a => `<div class="alrow">
-      <span class="when num">${esc(agoTxt(a.ts))}</span>
-      <span class="who">🎯 ${esc(a.pseudonym || (a.wallet || '').slice(0, 8))} ${pmLink(a.wallet)}</span>
-      <span class="what ${a.side === 'BUY' ? 'buy' : 'sell'}">${a.side === 'BUY' ? 'COMPRA' : 'VENDE'} ${esc(String(a.outcome ?? ''))}${a.usd != null ? ` · $${(+a.usd).toLocaleString('es')}` : ''}${a.price != null ? ` · ${(100 * a.price).toFixed(0)}% prob` : ''}</span>
-      <span class="q" title="${esc(a.title || '')}">${esc(a.title || '')}</span>
-    </div>`).join('');
+// agrupa alertas consecutivas de la misma wallet en el mismo mercado (anti-spam)
+function groupAlerts(as){
+  const out = [];
+  for (const a of as){
+    const last = out[out.length - 1];
+    if (last && last.wallet === a.wallet && last.title === a.title && last.side === a.side){ last.n++; last.usd = (last.usd || 0) + (a.usd || 0); }
+    else out.push({ ...a, n: 1 });
+  }
+  return out;
 }
+const alertRow = (a) => `<div class="alrow" data-rw="${esc(a.wallet)}" role="button">
+  <span class="when num">${esc(agoTxt(a.ts))}</span>
+  <span class="who">🎯 ${esc(a.pseudonym || (a.wallet || '').slice(0, 8))} ${pmLink(a.wallet)}</span>
+  <span class="what ${a.side === 'BUY' ? 'buy' : 'sell'}">${a.side === 'BUY' ? 'COMPRA' : 'VENDE'}${a.n > 1 ? ` ×${a.n}` : ''} ${esc(String(a.outcome ?? ''))}${a.usd != null ? ` · $${(+a.usd).toLocaleString('es')}` : ''}${a.n === 1 && a.price != null ? ` · ${(100 * a.price).toFixed(0)}% prob` : ''}</span>
+  <span class="q" title="${esc(a.title || '')}">${esc(a.title || '')}</span>
+</div>`;
 async function loadRadar(){
   if (radarLoading || (radarDoc && Date.now() - radarAt < 6e5)) return;
   radarLoading = true;
@@ -2289,22 +2315,23 @@ const rName = (w) => w.pseudonym || w.name || (w.w ? w.w.slice(0, 6) + '…' + w
 const rUsd = (x) => (x == null || !isFinite(x)) ? '—' : '$' + Math.round(+x).toLocaleString('es');
 // etiquetas humanas para las bandas de probabilidad (fuera los céntimos)
 const BAND_LABEL = { '<20¢': 'Muy arriesgadas', '20-40¢': 'Arriesgadas', '40-60¢': 'Parejas', '60-85¢': 'Favoritas', '>85¢': 'Casi seguras' };
-function topTradesHtml(){
-  const ts = (radarDoc && radarDoc.top_trades) || [];
-  if (!ts.length) return '';
-  return `<div class="recentnote">🏆 Top 10 transacciones del mes</div>` +
-    ts.map((t, i) => `<div class="ttrow">
-      <span class="rank num">${i + 1}</span>
-      <span class="mid"><span class="who2">${esc(t.who || (t.w || '').slice(0, 8))} ${pmLink(t.w)}</span><span class="qq" title="${esc(t.q || '')}">${esc(t.q || '')}</span></span>
-      <span class="winamt num">+${rUsd(t.profit)}</span>
-    </div>`).join('');
-}
+const ttRow = (t, i) => `<div class="ttrow">
+  <span class="rank num">${i + 1}</span>
+  <span class="mid"><span class="who2">${esc(t.who || (t.w || '').slice(0, 8))} ${pmLink(t.w)} ${t.timing ? (t.timing === 'antes' ? '<span class="tbadge antes">ANTES</span>' : '<span class="tbadge vivo">EN VIVO</span>') : ''}</span><span class="qq" title="${esc(t.q || '')}">${esc(t.q || '')}</span></span>
+  <span class="winamt num">+${rUsd(t.profit)}</span>
+</div>`;
 function radarWarnHtml(){
   const h = (radarDoc && radarDoc.honesty) || {};
   const rho = h.spearman != null ? (+h.spearman).toFixed(2) : '0.10';
   const rep = h.still_pos != null ? Math.round(100 * h.still_pos) : 40;
   return `<div class="radarwarn"><b>Radar descriptivo — no es recomendación.</b> Muestra qué hacen estas wallets con datos públicos de Polymarket. «🎯 Posible informado» es un patrón estadístico (aciertos + entra temprano y barato + ganancia sostenida), <b>no una acusación probada</b>; las alertas llegan con ~5 min de retraso. Nuestro estudio midió que el pasado apenas predice el futuro aquí (correlación ${esc(rho)}; solo ${rep}% de las ganadoras repite al mes siguiente). <a href="#" id="radarlegal">Aviso legal</a></div>`;
 }
+// estado de las secciones plegables del dashboard
+let radarOpen = { alerts: false, top: false, all: false };
+const walletCard = (w, i) => `<button class="wcard" data-rw="${esc(w.w)}" style="--i:${i}">
+  <span class="row1"><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="Posible informado (0-100)">🎯 ${w.insider_score}</span>` : ''}<span class="gan num">+${rUsd(w.pnl_usd)}</span></span>
+  <span class="row2">${w.win_rate != null ? `acierta ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(w.cats[0].cat) : '—'} · ${w.n_markets} mercados<span class="ver">ver perfil →</span></span>
+</button>`;
 function renderRadarList(){
   if (sport !== 'radar') return;
   const ws = (radarDoc && radarDoc.wallets) || [];
@@ -2316,30 +2343,29 @@ function renderRadarList(){
       : '<div class="lempty">Radar en preparación — el observatorio publica sus primeros datos pronto.</div>';
     return;
   }
-  const shown = radarOnlyWatch ? ws.filter(w => w.watch) : ws;
-  const sel = radarSel;
+  const as = (alertsDoc && alertsDoc.alerts) || [];
+  const n24 = as.filter(a => a.ts > Date.now() / 1000 - 86400).length;
+  const groups = groupAlerts(as);
+  const tts = (radarDoc && radarDoc.top_trades) || [];
   const nWatch = ws.filter(w => w.watch).length;
-  $('list').innerHTML =
-    alertsFeedHtml() +
-    topTradesHtml() +
-    `<div class="rfilter"><span class="recentnote" style="border:0;padding:9px 0 5px">Mejores wallets</span>
-      <span class="rfbtns"><button class="pill" data-rdash="1">📊 Resumen</button>
-      <button class="pill ${radarOnlyWatch ? 'on neutral' : ''}" data-rwatch="1">🎯 Vigiladas ${nWatch ? `(${nWatch})` : ''}</button></span></div>` +
-    (shown.length ? shown.map((w, i) => {
-      const cat = w.cats && w.cats[0] ? w.cats[0].cat : '—';
-      return `<button class="mrow" data-rw="${esc(w.w)}" style="--i:${i}" aria-pressed="${w.w === sel}">
-        <span class="mtime num">#${i + 1}</span>
-        <span class="mteams">
-          <span class="mt"><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num">🎯 ${w.insider_score}</span>` : ''}</span>
-          <span class="mt"><span class="nm rsub">${esc(cat)} · ${w.n_markets} mercados</span></span>
-        </span>
-        <span class="mscore num">
-          <span class="ms winamt">${rUsd(w.pnl_usd)}</span>
-          <span class="ms rsub">${w.win_rate != null ? Math.round(100 * w.win_rate) + '% aciertos' : `${w.wins}-${w.losses}`}</span>
-        </span>
-        <span></span>
-      </button>`;
-    }).join('') : '<div class="lempty">Ninguna wallet cumple hoy el umbral de vigilancia (≥70% con ganancia sostenida).</div>');
+  const showWs = radarOpen.all ? ws : ws.slice(0, 6);
+  const showAl = radarOpen.alerts ? groups.slice(0, 30) : groups.slice(0, 3);
+  const showTt = radarOpen.top ? tts : tts.slice(0, 5);
+  $('list').innerHTML = `
+    <div class="stats3">
+      <div class="stile"><div class="v num">${ws[0] ? '+' + rUsd(ws[0].pnl_usd) : '—'}</div><div class="l">mejor cuenta (30 días)</div></div>
+      <div class="stile"><div class="v num">🎯 ${nWatch}</div><div class="l">vigiladas</div></div>
+      <div class="stile"><div class="v num">🔔 ${n24}</div><div class="l">alertas hoy</div></div>
+    </div>
+    <div class="secttl2">🎯 Mejores cuentas <span class="sub3">por dinero ganado · toca una para ver su perfil</span></div>
+    ${showWs.map(walletCard).join('')}
+    ${ws.length > 6 ? `<button class="expbtn" data-rtoggle="all">${radarOpen.all ? 'Ver menos ↑' : `Ver las ${ws.length} cuentas ↓`}</button>` : ''}
+    <button class="secttl2 tgl" data-rtoggle="alerts">🔔 Alertas en vivo${n24 ? ` (${n24} hoy)` : ''} <span class="caret">${radarOpen.alerts ? '▴' : '▾'}</span></button>
+    ${showAl.map(alertRow).join('') || '<div class="lempty2">Sin movimientos todavía — el vigía revisa cada 5 minutos.</div>'}
+    ${groups.length > 3 && !radarOpen.alerts ? `<button class="expbtn" data-rtoggle="alerts">Ver todas ↓</button>` : ''}
+    <button class="secttl2 tgl" data-rtoggle="top">🏆 Top jugadas del mes <span class="caret">${radarOpen.top ? '▴' : '▾'}</span></button>
+    ${showTt.map(ttRow).join('') || '<div class="lempty2">Se publican con cada análisis (cada 2 horas).</div>'}
+    ${tts.length > 5 && !radarOpen.top ? `<button class="expbtn" data-rtoggle="top">Ver las ${tts.length} ↓</button>` : ''}`;
 }
 // enlace al perfil PÚBLICO real de la wallet en Polymarket (pestaña nueva)
 const pmLink = (w, cls) => `<a class="pml ${cls || ''}" data-ext="1" href="https://polymarket.com/profile/${esc(w)}" target="_blank" rel="noopener" title="Ver el perfil real en Polymarket">↗</a>`;

@@ -172,7 +172,7 @@ async function polyWatch(env) {
     const oldRaw = await env.AA_LATEST.get('poly:alerts');
     let old; try { old = oldRaw ? JSON.parse(oldRaw) : { alerts: [] }; } catch (e) { old = { alerts: [] }; }
     const seen = new Set((old.alerts || []).map((a) => a.tx).filter(Boolean));
-    const fresh = found.filter((a) => !a.tx || !seen.has(a.tx)).sort((a, b) => b.ts - a.ts);
+    const fresh = found.filter((a) => polyAlertWorthy(a) && (!a.tx || !seen.has(a.tx))).sort((a, b) => b.ts - a.ts);
     if (fresh.length) {
       const merged = [...fresh, ...(old.alerts || [])].slice(0, 100);
       await env.AA_LATEST.put('poly:alerts', JSON.stringify({ updated_at: new Date().toISOString(), alerts: merged }));
@@ -202,6 +202,9 @@ export function polyFreshTrades(acts, sinceTs) {
     })),
   };
 }
+// anti-ruido (exportado para tests): las compras de centavos (< $50) no son
+// señal de nada — no ameritan alerta.
+export const polyAlertWorthy = (a) => a.usd == null || a.usd >= 50;
 export function polyMaxTs(acts) {
   const ts = (Array.isArray(acts) ? acts : []).map((a) => +a.timestamp).filter(isFinite);
   return ts.length ? Math.max(...ts) : null;
