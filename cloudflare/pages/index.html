@@ -249,7 +249,36 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .tag.gema{background:rgba(255,197,61,.12);color:var(--amber)}
 .tag.fijo{background:rgba(25,222,159,.1);color:var(--volt)}
 .tag.oro{background:rgba(255,197,61,.12);color:var(--amber)}
+.tag.plata{background:rgba(148,163,184,.14);color:#cbd5e1}
 .tag.muted{opacity:.32;filter:grayscale(.6)}
+/* Boleto del día */
+.boleto{padding:10px 12px 0}
+.boleto-in{border:1px solid var(--hair);border-radius:14px;background:linear-gradient(180deg,rgba(255,197,61,.06),rgba(255,255,255,.02));padding:12px 13px}
+.bolhead{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.boltt{font-size:13.5px;font-weight:800;letter-spacing:.01em;color:var(--text)}
+.boln{font-size:11px;font-weight:800;color:var(--amber);background:rgba(255,197,61,.14);border-radius:999px;padding:1px 8px}
+.bollegs{display:flex;flex-direction:column;gap:6px}
+.bleg{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--hair);border-radius:11px;padding:8px 10px;cursor:pointer;font:inherit;color:inherit;transition:background .15s,border-color .15s,transform .12s}
+.bleg:hover{background:var(--panel-2);border-color:var(--hair-2,var(--hair));transform:translateY(-1px)}
+.blteam{display:flex;align-items:center;gap:9px;min-width:0}
+.blteam img{width:22px;height:22px;flex:none}
+.blnm{display:flex;flex-direction:column;line-height:1.25;min-width:0;font-size:13px}
+.blnm b{font-weight:700}
+.blmu{font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blright{display:flex;align-items:center;gap:9px;flex:none}
+.blpct{font-size:13px;font-weight:800;color:var(--volt)}
+.bltags{display:flex;align-items:center;gap:5px}
+.bolrisk{font-size:10px;font-weight:700;color:var(--dim);border:1px solid var(--hair);border-radius:4px;padding:2px 6px;white-space:nowrap}
+.bolrec{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:9px;font-size:11.5px;color:var(--dim)}
+.bolrec-l{color:var(--faint)}
+.bolrec-i b{color:var(--volt);font-weight:800}
+.bolrec-i b.lo{color:var(--red)}
+.bolnote{margin-top:8px;font-size:11px;line-height:1.5;color:var(--faint)}
+.bolempty{font-size:12.5px;line-height:1.5;color:var(--dim);padding:2px 0 4px}
+@media(max-width:420px){
+  .bleg{flex-direction:column;align-items:flex-start;gap:6px}
+  .blright{align-self:stretch;justify-content:space-between}
+}
 .bigpick.muted,.bigprob.muted{opacity:.4;filter:grayscale(.5)}
 .skel{height:58px;border-top:1px solid var(--hair);background:linear-gradient(90deg,transparent,rgba(255,255,255,.03),transparent);background-size:200% 100%;animation:sh 1.4s infinite}
 @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -1160,6 +1189,9 @@ const T = {
     notif_live: 'En vivo', notif_final: 'Final', notif_live_b: 'Empezó un juego que sigues ⭐', notif_final_b: 'Terminó un juego que sigues ⭐',
     r_search_ph: 'Buscar cualquier wallet (0x… o link)', r_search_go: 'Buscar', r_ws_bad: 'Dirección no válida. Pega una wallet 0x… o el link de un perfil de Polymarket.', r_ws_empty: 'Sin movimientos recientes.', r_ws_moves: 'movimientos', r_ws_vol: 'volumen', r_ws_recent: 'Movimientos recientes', r_ws_note: 'Consulta en vivo de la actividad reciente de esta wallet — datos crudos, sin nuestro filtro anti-trampa. Para el historial completo, abre su perfil en Polymarket ↗.',
     r_cat_all: 'Todas', r_no_cat: 'Ninguna cuenta en esta categoría.', r_share: 'Compartir', r_share_txt: 'Mira esta wallet en el Radar AA', r_copied: 'Link copiado ✓', track_measuring: 'midiendo hace', track_days: 'días',
+    bol_title: 'Boleto del día', bol_win: 'Gana', bol_none: 'Hoy el algoritmo no marca ninguna jugada de máxima confianza. No inventamos un boleto cuando no hay valor claro.',
+    bol_rec: 'Cómo le ha ido a estos niveles', bol_note: 'Resumen de las mejores selecciones AA de hoy · no es recomendación de apuesta · tú decides.',
+    bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1216,6 +1248,9 @@ const T = {
     notif_live: 'Live', notif_final: 'Final', notif_live_b: 'A game you follow ⭐ just started', notif_final_b: 'A game you follow ⭐ just ended',
     r_search_ph: 'Search any wallet (0x… or link)', r_search_go: 'Search', r_ws_bad: 'Invalid address. Paste a 0x… wallet or a Polymarket profile link.', r_ws_empty: 'No recent moves.', r_ws_moves: 'moves', r_ws_vol: 'volume', r_ws_recent: 'Recent moves', r_ws_note: 'Live lookup of this wallet\'s recent activity — raw data, without our anti-manipulation filter. For the full history, open its Polymarket profile ↗.',
     r_cat_all: 'All', r_no_cat: 'No accounts in this category.', r_share: 'Share', r_share_txt: 'Check this wallet on the AA Radar', r_copied: 'Link copied ✓', track_measuring: 'measuring for', track_days: 'days',
+    bol_title: 'Ticket of the day', bol_win: 'Take', bol_none: "Today the model flags no top-confidence play. We don't fake a ticket when there's no clear value.",
+    bol_rec: 'How these tiers have done', bol_note: "A summary of today's best AA picks · not a betting recommendation · you decide.",
+    bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
       <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
@@ -1380,6 +1415,7 @@ function injuryRows(sportKey, code){
 
 /* ── estado ──────────────────────────────────────────────── */
 let events = [], liveByKey = new Map();
+let todayRecord = null; // récord AA por nivel del doc de hoy (para el Boleto del día)
 let injuriesDoc = null; // bajas por equipo (mlb/nba), del robot cada hora
 async function loadInjuries(){
   try{
@@ -1609,6 +1645,43 @@ function renderMlbStandings(){
   const html = standingsHtml();
   $('list').innerHTML = html || `<div class="lempty">${standingsCache.has('mlb') ? t('st_none') : t('st_loading')}</div>`;
 }
+// Boleto del día: junta las mejores selecciones AA de hoy (fijos ORO/PLATA +
+// gemas) en una tarjeta compacta arriba de la lista. Honesto: número calibrado,
+// riesgo, récord real de cada nivel y microcopy de "no es recomendación". Si el
+// algoritmo no marca ninguna jugada de máxima confianza, se dice tal cual.
+const BOL_RANK = { oro: 3, gema: 2, plata: 1 };
+function boletoTier(ev){
+  const b = ev.badges || [];
+  return b.includes('oro') ? 'oro' : b.includes('gema') ? 'gema' : b.includes('plata') ? 'plata' : b.includes('fijo') ? 'fijo' : null;
+}
+function boletoLegs(){
+  return events
+    .filter(ev => { const b = ev.badges || []; return (b.includes('fijo') || b.includes('gema')) && (ev.prediction && ev.prediction.pick); })
+    .map(ev => ({ ev, tier: boletoTier(ev), pct: ev.prediction.prob_pct }))
+    .sort((a, b) => (BOL_RANK[b.tier] || 0) - (BOL_RANK[a.tier] || 0) || (b.pct || 0) - (a.pct || 0))
+    .slice(0, 4);
+}
+function boletoHtml(){
+  const legs = boletoLegs();
+  const recLine = (name, r) => {
+    if (!r || r.wins == null) return '';
+    const under = (r.win_rate ?? r.wins / Math.max(1, r.wins + r.losses)) < 0.5;
+    return `<span class="bolrec-i">${name} <b class="${under ? 'lo' : ''}">${r.wins}-${r.losses}</b></span>`;
+  };
+  const rec = todayRecord ? [recLine('Fijos', todayRecord.locks), recLine('Gemas', todayRecord.gems)].filter(Boolean).join('') : '';
+  const head = `<div class="bolhead"><span class="boltt">🎫 ${t('bol_title')}</span>${legs.length ? `<span class="boln num">${legs.length}</span>` : ''}</div>`;
+  if (!legs.length) return `<div class="boleto"><div class="boleto-in">${head}<div class="bolempty">${t('bol_none')}</div></div></div>`;
+  const tierTxt = tr => tr === 'gema' ? '💎 Gema' : tr;
+  const rows = legs.map(({ ev, tier, pct }) => {
+    const rk = ev.risk && ev.risk.level ? `<span class="bolrisk">${t('bol_risk')}: ${t('risk_' + ev.risk.level) || esc(ev.risk.level)}</span>` : '';
+    return `<button class="bleg" data-id="${esc(ev.event_id)}">
+      <span class="blteam">${logoImg(ev.prediction.pick)}<span class="blnm">${t('bol_win')} <b>${esc(tNick(ev.prediction.pick))}</b><span class="blmu">${esc(tNick(ev.away.code))} @ ${esc(tNick(ev.home.code))}</span></span></span>
+      <span class="blright">${pct != null ? `<span class="blpct num">AA ${pct}%</span>` : ''}<span class="bltags"><span class="tag ${esc(tier)}">${tierTxt(tier)}</span>${rk}</span></span>
+    </button>`;
+  }).join('');
+  const recBlk = rec ? `<div class="bolrec"><span class="bolrec-l">${t('bol_rec')}:</span>${rec}</div>` : '';
+  return `<div class="boleto"><div class="boleto-in">${head}<div class="bollegs">${rows}</div>${recBlk}<div class="bolnote">${t('bol_note')}</div></div></div>`;
+}
 function renderList(){
   if (sport !== 'mlb'){ renderOtherList(); return; }
   if (listTab === 'hist'){ renderHistList(); return; }
@@ -1627,7 +1700,9 @@ function renderList(){
   // así no parece que la app "no se actualiza" — es que no hay béisbol.
   const mlbBanner = (!viewDate && docStale && listTab !== 'favs' && events.length)
     ? '<div class="recentnote">Sin juegos de MLB hoy · mostrando los últimos resultados</div>' : '';
-  $('list').innerHTML = rows.length ? mlbBanner + rows.map((ev, i) => rowHtml(ev, i)).join('')
+  // Boleto del día: solo en la vista por defecto de HOY (sin filtro/pestaña ni día archivado).
+  const boleto = (!viewDate && !docStale && listTab === 'all' && filter === 'all' && events.length) ? boletoHtml() : '';
+  $('list').innerHTML = rows.length ? boleto + mlbBanner + rows.map((ev, i) => rowHtml(ev, i)).join('')
     : `<div class="lempty">${listTab === 'favs' ? 'Marca partidos con ⭐ para verlos aquí.' : 'Sin partidos en este filtro.'}</div>`;
   if (flipState){
     window.Flip.from(flipState, {
@@ -2442,6 +2517,7 @@ async function loadToday(){
     const r = await fetch(API + '/v1/mlb/today');
     const d = await r.json();
     events = d.events || [];
+    todayRecord = d.record || null;
     todayDate = d.date || todayDate;
     // Fecha REAL (reloj, horario del Este) vs la fecha del doc: si el doc es de
     // un día pasado (p. ej. no hay juegos hoy — receso del Juego de Estrellas o
