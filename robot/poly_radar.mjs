@@ -93,21 +93,26 @@ console.log(`Con ≥${MIN_MARKETS} mercados: ${scored.length} · calificadas tra
 // ── 🏆 Top 10 transacciones de la ventana (ganancia REAL en $) ───────────────
 // La mejor COMPRA individual: pagó p, el mercado resolvió a su favor → ganó
 // (1−p)×acciones en USD. Se excluyen compras a >97% (redenciones/ruido) y
-// apuestas de menos de $10.
-const topTrades = [];
+// apuestas de menos de $10. DEDUPE por wallet+mercado: 10 historias DISTINTAS,
+// no la misma wallet repetida con el mismo partido.
+let topTrades = [];
 for (const m of uni) {
+  const bestInMkt = new Map(); // wallet → su mejor compra EN ESTE mercado
   for (const t of m.trades) {
     if (t.s !== 'BUY' || !(t.p <= 0.97)) continue;
     const usd = t.p * t.sz;
     if (usd < 10) continue;
     const profit = (t.o === m.win ? 1 - t.p : -t.p) * t.sz;
     if (profit <= 0) continue;
-    if (topTrades.length < 10 || profit > topTrades[topTrades.length - 1].profit) {
-      const id = identities.get(t.w) || {};
-      topTrades.push({ w: t.w, who: id.pseudonym || id.name || null, q: (m.q || '').slice(0, 90), cat: m.cat, prob: +t.p.toFixed(2), usd: Math.round(usd), profit: Math.round(profit), ts: t.ts, timing: m.gs ? (t.ts < m.gs ? 'antes' : 'vivo') : null });
-      topTrades.sort((a, b) => b.profit - a.profit);
-      if (topTrades.length > 10) topTrades.pop();
-    }
+    const prev = bestInMkt.get(t.w);
+    if (!prev || profit > prev.profit) bestInMkt.set(t.w, { t, profit, usd });
+  }
+  for (const [w, x] of bestInMkt) {
+    if (topTrades.length >= 10 && x.profit <= topTrades[topTrades.length - 1].profit) continue;
+    const id = identities.get(w) || {};
+    topTrades.push({ w, who: id.pseudonym || id.name || null, q: (m.q || '').slice(0, 90), cat: m.cat, prob: +x.t.p.toFixed(2), usd: Math.round(x.usd), profit: Math.round(x.profit), ts: x.t.ts, timing: m.gs ? (x.t.ts < m.gs ? 'antes' : 'vivo') : null });
+    topTrades.sort((a, b) => b.profit - a.profit);
+    if (topTrades.length > 10) topTrades.length = 10;
   }
 }
 console.log(`🏆 Top transacciones: ${topTrades.length} · mayor: $${topTrades[0] ? topTrades[0].profit.toLocaleString() : 0} (${topTrades[0] ? (topTrades[0].who || topTrades[0].w.slice(0, 8)) : '—'})`);
@@ -187,7 +192,8 @@ function profileOf(r) {
     last_trades: p.trades.sort((a, b) => b.ts - a.ts).slice(0, 10),
   };
 }
-const profiles = profRows.map(profileOf);
+// orden VISIBLE por dinero ganado (lo que un humano espera ver primero)
+const profiles = profRows.map(profileOf).sort((a, b) => b.pnl_usd - a.pnl_usd);
 const watchlist = profiles.filter((p) => p.watch)
   .sort((a, b) => b.insider_score - a.insider_score)
   .map((p) => ({ w: p.w, pseudonym: p.pseudonym, name: p.name, insider_score: p.insider_score, win_rate: p.win_rate }));
