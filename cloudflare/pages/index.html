@@ -501,6 +501,13 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .cmprow .cv:last-child{text-align:left}
 .cmprow .cv.win{color:var(--volt)}
 .cmprow .cl{color:var(--dim);font-size:11px;text-align:center;white-space:nowrap}
+/* v7 PR A: buscador de wallet on-demand */
+.wsearch{display:flex;gap:6px;margin:8px 12px 4px}
+.wsearch input{flex:1;min-width:0;background:var(--inner);border:1px solid var(--hair);border-radius:10px;padding:8px 11px;color:var(--text);font:inherit;font-size:13px}
+.wsearch input:focus{outline:none;border-color:var(--sky)}
+.wsearch input::placeholder{color:var(--faint)}
+.wsearchb{flex:none;background:var(--sky);color:#04121f;border:0;border-radius:10px;padding:8px 14px;font:inherit;font-weight:800;font-size:13px;cursor:pointer}
+.wsnote{margin:8px 12px;padding:8px 10px;border:1px solid var(--hair);border-radius:10px;background:var(--inner);color:var(--dim);font-size:11.5px;line-height:1.5}
 .rhead{display:flex;align-items:center;gap:12px;padding:14px 12px 2px}
 .rhead .av{width:44px;height:44px;border-radius:50%;background:var(--inner);border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;font-weight:800;overflow:hidden;flex:none}
 .rhead .av img{width:100%;height:100%;object-fit:cover}
@@ -1144,6 +1151,7 @@ const T = {
     r_comparing: 'Comparando', r_pick_second: 'elige otra', r_close_cmp: 'Cerrar', r_compare_title: 'Comparación', r_cmp_won: 'Ganó', r_cmp_hits: 'Aciertos', r_cmp_markets: 'Mercados', r_cmp_type: 'Tipo', r_cmp_when: 'Cuándo entra', r_cmp_bet: 'Apuesta típica', r_cmp_cat: 'Dónde', r_cmp_beforew: 'antes',
     tab_standings: 'Posiciones', st_title: 'Tabla de posiciones', st_rank_title: 'Ranking mundial', st_team: 'Equipo', st_player: 'Jugador', st_points: 'Puntos', st_gp: 'PJ', st_w: 'G', st_d: 'E', st_l: 'P', st_gd: 'DG', st_pts: 'Pts', st_pct: '%', st_gb: 'Dif', st_loading: 'Cargando posiciones…', st_none: 'Posiciones no disponibles ahora.',
     notif_live: 'En vivo', notif_final: 'Final', notif_live_b: 'Empezó un juego que sigues ⭐', notif_final_b: 'Terminó un juego que sigues ⭐',
+    r_search_ph: 'Buscar cualquier wallet (0x… o link)', r_search_go: 'Buscar', r_ws_bad: 'Dirección no válida. Pega una wallet 0x… o el link de un perfil de Polymarket.', r_ws_empty: 'Sin movimientos recientes.', r_ws_moves: 'movimientos', r_ws_vol: 'volumen', r_ws_recent: 'Movimientos recientes', r_ws_note: 'Consulta en vivo de la actividad reciente de esta wallet — datos crudos, sin nuestro filtro anti-trampa. Para el historial completo, abre su perfil en Polymarket ↗.',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1198,6 +1206,7 @@ const T = {
     r_comparing: 'Comparing', r_pick_second: 'pick another', r_close_cmp: 'Close', r_compare_title: 'Comparison', r_cmp_won: 'Won', r_cmp_hits: 'Hits', r_cmp_markets: 'Markets', r_cmp_type: 'Type', r_cmp_when: 'When it enters', r_cmp_bet: 'Typical bet', r_cmp_cat: 'Where', r_cmp_beforew: 'before',
     tab_standings: 'Standings', st_title: 'Standings', st_rank_title: 'World ranking', st_team: 'Team', st_player: 'Player', st_points: 'Points', st_gp: 'GP', st_w: 'W', st_d: 'D', st_l: 'L', st_gd: 'GD', st_pts: 'Pts', st_pct: '%', st_gb: 'GB', st_loading: 'Loading standings…', st_none: 'Standings unavailable right now.',
     notif_live: 'Live', notif_final: 'Final', notif_live_b: 'A game you follow ⭐ just started', notif_final_b: 'A game you follow ⭐ just ended',
+    r_search_ph: 'Search any wallet (0x… or link)', r_search_go: 'Search', r_ws_bad: 'Invalid address. Paste a 0x… wallet or a Polymarket profile link.', r_ws_empty: 'No recent moves.', r_ws_moves: 'moves', r_ws_vol: 'volume', r_ws_recent: 'Recent moves', r_ws_note: 'Live lookup of this wallet\'s recent activity — raw data, without our anti-manipulation filter. For the full history, open its Polymarket profile ↗.',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
       <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
@@ -2281,8 +2290,12 @@ document.addEventListener('click', e => {
   if (e.target.closest('a[data-ext]')) return; // links externos (perfil Polymarket): navegación normal
   const rl = e.target.closest('#radarlegal');
   if (rl){ e.preventDefault(); $('legaldlg').showModal(); return; }
+  const wsb = e.target.closest('[data-wsearch]');
+  if (wsb){ e.preventDefault(); const inp = document.getElementById('wsearchi'); loadWalletSearch(inp ? inp.value : ''); return; }
+  const wsbk = e.target.closest('[data-wsback]');
+  if (wsbk){ e.preventDefault(); walletSearch = null; walletSearchLoading = false; renderRadarDetail(); renderRadarList(); return; }
   const rb = e.target.closest('[data-rback]');
-  if (rb){ e.preventDefault(); radarSel = null; renderRadarDetail(); renderRadarList(); return; }
+  if (rb){ e.preventDefault(); walletSearch = null; radarSel = null; renderRadarDetail(); renderRadarList(); return; }
   const rd = e.target.closest('[data-rdash]');
   if (rd){
     radarSel = null; renderRadarDetail(); renderRadarList();
@@ -2537,7 +2550,51 @@ let pfollow = new Set(JSON.parse(localStorage.getItem('aa_poly_follow') || '[]')
 let followOnly = false;              // filtro "solo seguidas" en el dashboard
 let compareSel = [];                 // hasta 2 wallets seleccionadas para comparar
 let notifiedTs = +(localStorage.getItem('aa_poly_notified') || 0); // último ts avisado
+let walletSearch = null, walletSearchLoading = false; // buscador de wallet on-demand
 const savePfollow = () => localStorage.setItem('aa_poly_follow', JSON.stringify([...pfollow]));
+const openRadarOverlay = () => { if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; } };
+// Busca CUALQUIER wallet en vivo (Data API vía Worker). Acepta dirección 0x… o
+// una URL de perfil de Polymarket pegada.
+async function loadWalletSearch(q){
+  const m = String(q || '').trim().match(/0x[0-9a-fA-F]{40}/);
+  radarSel = null; compareSel = [];
+  if (!m){ walletSearch = { ok: false }; walletSearchLoading = false; renderRadarDetail(); openRadarOverlay(); return; }
+  walletSearchLoading = true; walletSearch = null; renderRadarDetail(); openRadarOverlay();
+  try{
+    const r = await fetch(`${API}/v1/poly/wallet?addr=${encodeURIComponent(m[0])}`);
+    const d = await r.json();
+    walletSearch = (d && d.ok) ? d : { ok: false };
+  }catch(e){ walletSearch = { ok: false }; }
+  walletSearchLoading = false;
+  renderRadarDetail();
+}
+// Perfil en vivo de la wallet buscada (actividad reciente + resumen; sin nuestro filtro).
+function walletSearchHtml(){
+  const d = walletSearch;
+  const back = `<div class="rback"><a href="#" data-wsback="1">${t('r_back')}</a></div>`;
+  if (walletSearchLoading) return radarWarnHtml() + back + `<div class="dempty">${t('r_loading')}</div>`;
+  if (!d || !d.ok) return radarWarnHtml() + back + `<div class="dempty">${t('r_ws_bad')}</div>`;
+  const s = d.summary || {}, short = d.addr.slice(0, 6) + '…' + d.addr.slice(-4);
+  const ini = (d.name ? d.name.slice(0, 2) : '0x').toUpperCase();
+  const rows = (d.trades || []).map(tr => `<div class="alrow">
+    <span class="when num">${esc(agoTxt(tr.ts))}</span>
+    <span class="what ${tr.side === 'BUY' ? 'buy' : 'sell'}">${tr.side === 'BUY' ? t('r_buy').toUpperCase() : t('r_sell').toUpperCase()} ${esc(String(tr.outcome ?? ''))}${tr.usd != null ? ` · $${(+tr.usd).toLocaleString(LOCALE())}` : ''}${tr.price != null ? ` · ${(100 * tr.price).toFixed(0)}%` : ''}</span>
+    <span class="q" title="${esc(tr.title || '')}">${esc(tr.title || '')}</span>
+  </div>`).join('') || `<div class="lempty2">${t('r_ws_empty')}</div>`;
+  return radarWarnHtml() + `
+    <div class="rback"><a href="#" data-wsback="1">${t('r_back')}</a> ${pmLink(d.addr)}</div>
+    <div class="rhead"><span class="av">${esc(ini)}</span>
+      <span><span class="nm2">${esc(d.name || short)} ${pmLink(d.addr)}</span><br><span class="wd">${esc(d.addr)}</span></span></div>
+    <div class="rchips">
+      <span class="rchip">${s.n} ${t('r_ws_moves')}</span>
+      <span class="rchip">${s.buys} ${t('r_buy')} · ${s.sells} ${t('r_sell')}</span>
+      <span class="rchip">${s.markets} ${t('r_mercados')}</span>
+      <span class="rchip">$${(+s.usd || 0).toLocaleString(LOCALE())} ${t('r_ws_vol')}</span>
+    </div>
+    <div class="wsnote">${t('r_ws_note')}</div>
+    <div class="secttl">${t('r_ws_recent')}</div>
+    <div class="rtrades">${rows}</div>`;
+}
 // Pide permiso de notificaciones del navegador (una vez, al seguir la primera wallet).
 function ensureNotifyPerm(){
   try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
@@ -2728,8 +2785,10 @@ function renderRadarList(){
   const showTt = radarOpen.top ? tts : tts.slice(0, 5);
   const cmpNames = compareSel.map(cw => rName(ws.find(x => x.w === cw) || { w: cw }));
   const cmpTray = compareSel.length ? `<div class="cmptray">⚖ <b>${t('r_comparing')}:</b> ${cmpNames.map(esc).join(' · ')}${compareSel.length < 2 ? ` — ${t('r_pick_second')}` : ''} <button class="cmpx" data-pcmpclear="1">✕</button></div>` : '';
+  const _si = document.getElementById('wsearchi'); const _sv = _si ? _si.value : ''; const _sf = document.activeElement === _si;
   $('list').innerHTML = `
     <div class="lwarn">${radarWarnHtml()}</div>
+    <div class="wsearch"><input id="wsearchi" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="${t('r_search_ph')}" onkeydown="if(event.key==='Enter'){event.preventDefault();loadWalletSearch(this.value)}"><button class="wsearchb" data-wsearch="1">${t('r_search_go')}</button></div>
     <div class="stats3">
       <div class="stile"><div class="v num">${ws[0] ? '+' + rUsd(ws[0].pnl_usd) : '—'}</div><div class="l">${t('r_stat_best')}</div></div>
       <div class="stile"><div class="v num">🎯 ${nWatch}</div><div class="l">${t('r_stat_watch')}</div></div>
@@ -2745,6 +2804,7 @@ function renderRadarList(){
     <button class="secttl2 tgl" data-rtoggle="top">${t('r_top_plays')} <span class="caret">${radarOpen.top ? '▴' : '▾'}</span></button>
     ${showTt.map(ttRow).join('') || `<div class="lempty2">${t('r_top_empty')}</div>`}
     ${tts.length > 5 && !radarOpen.top ? `<button class="expbtn" data-rtoggle="top">${t('r_see_all')}</button>` : ''}`;
+  if (_sv || _sf){ const ni = document.getElementById('wsearchi'); if (ni){ ni.value = _sv; if (_sf){ ni.focus(); try { ni.setSelectionRange(_sv.length, _sv.length); } catch (e) {} } } }
 }
 // enlace al perfil PÚBLICO real de la wallet en Polymarket (pestaña nueva)
 const pmLink = (w, cls) => `<a class="pml ${cls || ''}" data-ext="1" href="https://polymarket.com/profile/${esc(w)}" target="_blank" rel="noopener" title="${t('r_pm_title')}">↗</a>`;
@@ -2826,6 +2886,11 @@ function compareHtml(ws){
 function renderRadarDetail(){
   if (sport !== 'radar') return;
   const dc = $('dcard');
+  if (walletSearch !== null || walletSearchLoading){
+    const ak = 'radar|ws|' + (walletSearch && walletSearch.addr ? walletSearch.addr : 'x');
+    dc.classList.toggle('enter', ak !== lastAnimKey); lastAnimKey = ak;
+    dc.innerHTML = walletSearchHtml(); return;
+  }
   const ws = (radarDoc && radarDoc.wallets) || [];
   const w = ws.find(x => x.w === radarSel);
   const cmp2 = compareSel.length === 2;

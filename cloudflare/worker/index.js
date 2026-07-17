@@ -98,6 +98,7 @@ export default {
       if (path === '/v1/poly/radar') return await polyRadar(env, origin);
       if (path === '/v1/poly/alerts') return await polyAlerts(env, origin);
       if (path === '/v1/poly/track') return await polyTrack(env, origin);
+      if (path === '/v1/poly/wallet') return await polyWallet(url, ctx, origin);
 
       // ── cuentas opcionales (Fase 5) ──
       if (path === '/v1/auth/google') return authStart(url, env);
@@ -147,6 +148,43 @@ async function polyAlerts(env, origin) {
     status: 200,
     headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=60' },
   });
+}
+
+// Buscador de wallet on-demand: consulta la Data API pública en vivo y devuelve
+// la actividad reciente + un resumen ligero de CUALQUIER wallet (no solo el top).
+// Honesto: datos crudos, sin el filtro anti-trampa del Radar. Caché 2 min/wallet.
+async function polyWallet(url, ctx, origin) {
+  let addr = (url.searchParams.get('addr') || '').trim().toLowerCase();
+  const m = addr.match(/0x[0-9a-f]{40}/); if (m) addr = m[0]; // acepta también una URL de perfil pegada
+  if (!/^0x[0-9a-f]{40}$/.test(addr)) return json({ ok: false, error: 'bad_addr' }, 400, origin);
+  const cache = caches.default;
+  const cacheKey = new Request('https://aa-sports.cache/poly/wallet/' + addr, { method: 'GET' });
+  const cached = await cache.match(cacheKey);
+  if (cached) return withCors(await cached.text(), origin, 120);
+
+  let acts = [];
+  try {
+    const r = await fetch(`https://data-api.polymarket.com/activity?user=${addr}&limit=30`, { headers: { Accept: 'application/json' } });
+    if (r.ok) acts = await r.json();
+  } catch (e) { /* wallet sin actividad o API caída → lista vacía */ }
+  const rows = (Array.isArray(acts) ? acts : []).filter((a) => !a.type || a.type === 'TRADE').slice(0, 20).map((a) => ({
+    ts: isFinite(+a.timestamp) ? +a.timestamp : null,
+    title: String(a.title || '').slice(0, 90),
+    side: a.side || null,
+    outcome: a.outcome != null ? String(a.outcome) : null,
+    price: isFinite(+a.price) ? +a.price : null,
+    usd: a.usdcSize != null && isFinite(+a.usdcSize) ? Math.round(+a.usdcSize)
+      : (isFinite(+a.price) && isFinite(+a.size) ? Math.round(+a.price * +a.size) : null),
+    pseudonym: a.pseudonym || a.name || null,
+  }));
+  const buys = rows.filter((r) => r.side === 'BUY').length;
+  const usd = rows.reduce((s, r) => s + (r.usd || 0), 0);
+  const markets = new Set(rows.map((r) => r.title).filter(Boolean)).size;
+  const name = (rows.find((r) => r.pseudonym) || {}).pseudonym || null;
+  const payload = JSON.stringify({ ok: true, addr, name, summary: { n: rows.length, buys, sells: rows.length - buys, markets, usd: Math.round(usd) }, trades: rows, updated_at: new Date().toISOString() });
+  const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=120' } });
+  ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
+  return withCors(payload, origin, 120);
 }
 
 // Persistencia viva + wallets nuevas en el top (lo calcula el cron diario a KV
