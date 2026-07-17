@@ -480,7 +480,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .rcard .h{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
 .rcard .big{font-size:20px;font-weight:800;margin-bottom:4px}
 .rrow{display:flex;align-items:center;gap:8px;font-size:12px;margin:5px 0;min-width:0}
-.rrow .lbl{flex:0 0 68px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rrow .lbl{flex:0 0 96px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rrow .lbl2{color:var(--faint);font-size:11px}
 .rrow .val{flex:0 0 40px;text-align:right}
 .rbar{flex:1;height:8px;border-radius:4px;background:var(--hair);overflow:hidden}
@@ -500,6 +500,13 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 @media (max-width:640px){.alrow{flex-wrap:wrap}.alrow .q{flex:1 1 100%;padding-left:82px}}
 .rfilter{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;border-bottom:1px solid var(--hair)}
 .rfilter .pill{white-space:nowrap;flex:none}
+.winamt{color:var(--volt);font-weight:800}
+.ttrow{display:flex;gap:10px;align-items:center;padding:7px 14px;border-bottom:1px solid var(--hair);font-size:12px;min-width:0}
+.ttrow .rank{flex:0 0 18px;color:var(--faint);font-weight:800}
+.ttrow .mid{flex:1;min-width:0;display:flex;flex-direction:column}
+.ttrow .who2{font-weight:700}
+.ttrow .qq{color:var(--dim);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ttrow .winamt{flex:none}
 .rchip.watch{border-color:var(--amber);color:var(--amber)}
 .wkbars{display:flex;gap:10px;align-items:flex-end;height:64px;padding:4px 2px 0}
 .wkbars .wk{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px}
@@ -2218,10 +2225,10 @@ function alertsFeedHtml(){
   const as = (alertsDoc && alertsDoc.alerts) || [];
   if (!as.length) return '';
   return `<div class="recentnote">🔔 Alertas de wallets vigiladas · se refresca solo</div>` +
-    as.slice(0, 20).map(a => `<div class="alrow">
+    as.slice(0, 8).map(a => `<div class="alrow">
       <span class="when num">${esc(agoTxt(a.ts))}</span>
       <span class="who">🎯 ${esc(a.pseudonym || (a.wallet || '').slice(0, 8))}</span>
-      <span class="what ${a.side === 'BUY' ? 'buy' : 'sell'}">${a.side === 'BUY' ? 'COMPRA' : 'VENDE'} ${esc(String(a.outcome ?? ''))} · ${a.price != null ? (100 * a.price).toFixed(0) + '¢' : ''}${a.usd != null ? ` · $${(+a.usd).toLocaleString('es')}` : ''}</span>
+      <span class="what ${a.side === 'BUY' ? 'buy' : 'sell'}">${a.side === 'BUY' ? 'COMPRA' : 'VENDE'} ${esc(String(a.outcome ?? ''))}${a.usd != null ? ` · $${(+a.usd).toLocaleString('es')}` : ''}${a.price != null ? ` · ${(100 * a.price).toFixed(0)}% prob` : ''}</span>
       <span class="q" title="${esc(a.title || '')}">${esc(a.title || '')}</span>
     </div>`).join('');
 }
@@ -2237,7 +2244,19 @@ async function loadRadar(){
   if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); }
 }
 const rName = (w) => w.pseudonym || w.name || (w.w ? w.w.slice(0, 6) + '…' + w.w.slice(-4) : '—');
-const cents = (x) => (100 * x).toFixed(1) + '¢';
+const rUsd = (x) => (x == null || !isFinite(x)) ? '—' : '$' + Math.round(+x).toLocaleString('es');
+// etiquetas humanas para las bandas de probabilidad (fuera los céntimos)
+const BAND_LABEL = { '<20¢': 'Muy arriesgadas', '20-40¢': 'Arriesgadas', '40-60¢': 'Parejas', '60-85¢': 'Favoritas', '>85¢': 'Casi seguras' };
+function topTradesHtml(){
+  const ts = (radarDoc && radarDoc.top_trades) || [];
+  if (!ts.length) return '';
+  return `<div class="recentnote">🏆 Top 10 transacciones del mes</div>` +
+    ts.map((t, i) => `<div class="ttrow">
+      <span class="rank num">${i + 1}</span>
+      <span class="mid"><span class="who2">${esc(t.who || (t.w || '').slice(0, 8))}</span><span class="qq" title="${esc(t.q || '')}">${esc(t.q || '')}</span></span>
+      <span class="winamt num">+${rUsd(t.profit)}</span>
+    </div>`).join('');
+}
 function radarWarnHtml(){
   const h = (radarDoc && radarDoc.honesty) || {};
   const rho = h.spearman != null ? (+h.spearman).toFixed(2) : '0.10';
@@ -2260,7 +2279,8 @@ function renderRadarList(){
   const nWatch = ws.filter(w => w.watch).length;
   $('list').innerHTML =
     alertsFeedHtml() +
-    `<div class="rfilter"><span class="recentnote" style="border:0;padding:9px 0 5px">Observatorio · datos públicos de Polymarket</span>
+    topTradesHtml() +
+    `<div class="rfilter"><span class="recentnote" style="border:0;padding:9px 0 5px">Mejores wallets · datos públicos de Polymarket</span>
       <button class="pill ${radarOnlyWatch ? 'on neutral' : ''}" data-rwatch="1">🎯 Vigiladas ${nWatch ? `(${nWatch})` : ''}</button></div>` +
     (shown.length ? shown.map((w, i) => {
       const cat = w.cats && w.cats[0] ? w.cats[0].cat : '—';
@@ -2268,11 +2288,11 @@ function renderRadarList(){
         <span class="mtime num">#${i + 1}</span>
         <span class="mteams">
           <span class="mt"><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num">🎯 ${w.insider_score}</span>` : ''}</span>
-          <span class="mt"><span class="nm rsub">${esc(cat)} · ${w.n_markets} mercados${w.win_rate != null ? ` · ${Math.round(100 * w.win_rate)}% aciertos` : ''}</span></span>
+          <span class="mt"><span class="nm rsub">${esc(cat)} · ${w.n_markets} mercados</span></span>
         </span>
         <span class="mscore num">
-          <span class="ms">+${cents(w.edge_sh)}</span>
-          <span class="ms rsub">${w.wins}-${w.losses}</span>
+          <span class="ms winamt">${rUsd(w.pnl_usd)}</span>
+          <span class="ms rsub">${w.win_rate != null ? Math.round(100 * w.win_rate) + '% aciertos' : `${w.wins}-${w.losses}`}</span>
         </span>
         <span></span>
       </button>`;
@@ -2292,7 +2312,7 @@ function renderRadarDetail(){
   }
   const ini = (rName(w) || '?').slice(0, 2).toUpperCase();
   const bar = (lbl, share) => `<div class="rrow"><span class="lbl">${esc(lbl)}</span><span class="rbar"><i style="width:${Math.round(100 * (share || 0))}%"></i></span><span class="val num">${Math.round(100 * (share || 0))}%</span></div>`;
-  const bandRows = (w.bands || []).map(b => bar(b.band, b.share)).join('');
+  const bandRows = (w.bands || []).map(b => bar(BAND_LABEL[b.band] || b.band, b.share)).join('');
   const catRows = (w.cats || []).slice(0, 5).map(c => bar(c.cat, c.share)).join('');
   const t = w.timing || {}, sz = w.sizing || {}, st = w.style || {};
   const flip = st.flip_share != null ? st.flip_share : 0;
@@ -2304,13 +2324,10 @@ function renderRadarDetail(){
       <span><span class="nm2">${esc(rName(w))}</span><br><span class="wd">${esc(w.w)}</span></span>
     </div>
     <div class="rchips">
-      ${w.watch ? `<span class="rchip watch">🎯 posible informado · score <b class="num">${w.insider_score}</b></span>` : ''}
-      ${w.win_rate != null ? `<span class="rchip">Aciertos <b class="num">${Math.round(100 * w.win_rate)}%</b></span>` : ''}
-      <span class="rchip">Mercados <b>${w.n_markets}</b></span>
-      <span class="rchip">Récord <b class="num">${w.wins}-${w.losses}</b></span>
-      <span class="rchip">Edge de entrada <b class="num">+${cents(w.edge_sh)}</b>/acción</span>
-      <span class="rchip">PnL est. <b class="num">${money(w.pnl_usd)}</b></span>
-      <span class="rchip">Precio medio <b class="num">${w.avg_entry != null ? cents(w.avg_entry) : '—'}</b></span>
+      ${w.watch ? `<span class="rchip watch">🎯 posible informado · puntuación <b class="num">${w.insider_score}/100</b></span>` : ''}
+      <span class="rchip">💰 Ganó <b class="num">${rUsd(w.pnl_usd)}</b> en 30 días</span>
+      <span class="rchip">✅ Acertó <b class="num">${w.wins} de ${w.wins + w.losses}</b>${w.win_rate != null ? ` (${Math.round(100 * w.win_rate)}%)` : ''}</span>
+      <span class="rchip">Movió <b class="num">${rUsd(w.sizing && w.sizing.total_usd)}</b> en ${w.n_markets} mercados</span>
     </div>
     <div class="rcards">
       <div class="rcard"><div class="h">⏱ Cuándo entra</div>
@@ -2322,7 +2339,7 @@ function renderRadarDetail(){
         <div class="big num">${money(sz.median_usd)}</div>
         <div class="rrow"><span class="lbl2">por trade (mediana) · p90 ${esc(money(sz.p90_usd))} · total ${esc(money(sz.total_usd))}</span></div>
       </div>
-      <div class="rcard"><div class="h">🎯 A qué precio compra</div>${bandRows || '<div class="rrow"><span class="lbl2">sin compras en la ventana</span></div>'}</div>
+      <div class="rcard"><div class="h">🎯 Qué tipo de apuestas hace</div>${bandRows || '<div class="rrow"><span class="lbl2">sin compras en la ventana</span></div>'}</div>
       <div class="rcard"><div class="h">🗂 En qué mercados</div>${catRows || '<div class="rrow"><span class="lbl2">—</span></div>'}</div>
       <div class="rcard"><div class="h">♟ Estilo</div>
         <div class="big">${flip < 0.15 ? 'Aguanta hasta el final' : flip < 0.5 ? 'Mixto' : 'Voltea posiciones'}</div>
@@ -2343,7 +2360,7 @@ function renderRadarDetail(){
       ${(w.last_trades || []).map(x => `<div class="tr">
         <span class="when num">${esc(dt(x.ts))}</span>
         <span class="q" title="${esc(x.q)}">${esc(x.q)}</span>
-        <span class="px num">${x.side === 'BUY' ? 'Compra' : 'Vende'} ${esc(String(x.outcome))} · ${cents(x.p)} · $${(x.usd || 0).toLocaleString('es')}</span>
+        <span class="px num">${x.side === 'BUY' ? 'Compra' : 'Vende'} ${esc(String(x.outcome))} · $${(x.usd || 0).toLocaleString('es')} · ${Math.round(100 * x.p)}% prob</span>
       </div>`).join('') || '<div class="rrow"><span class="lbl2">sin movimientos recientes</span></div>'}
       <p class="dnote">${esc((radarDoc && radarDoc.attribution) || 'Datos públicos de Polymarket')} · actualizado ${radarDoc && radarDoc.ran_at ? esc(dt(Date.parse(radarDoc.ran_at) / 1000)) : '—'} · AA informa, no apuesta.</p>
     </div>`;

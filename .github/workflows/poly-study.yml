@@ -1,11 +1,13 @@
 # AA Sports — Polymarket: piloto de medición + Radar de wallets.
-# - Radar (poly_radar.mjs): 2×/día por cron → publica KV poly:radar (pestaña Radar).
-# - Estudio (poly_study.mjs): solo a mano/poke (el gate ya corrió; ver docs/POLY_STUDY.md).
+# - Radar (poly_radar.mjs): cada 2 HORAS por cron → re-analiza los mercados
+#   resueltos y publica KV poly:radar (ranking, vigiladas, top transacciones).
+#   La capa de 5 MINUTOS es el vigía del Worker (alertas de trades nuevos).
+# - Estudio (poly_study.mjs): solo a mano/poke (el gate ya corrió).
 # Sin dinero, sin copiar: solo lectura de datos públicos.
 name: poly-study
 on:
   schedule:
-    - cron: '23 5,17 * * *'
+    - cron: '13 */2 * * *'
   workflow_dispatch: {}
   push:
     branches: [main]
