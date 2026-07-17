@@ -69,7 +69,7 @@ export default {
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
         return await recentGames(ctx, origin, 'soccer:' + lg, `${ESPN_BASE}/soccer/${lg}/scoreboard`);
       }
-      if (path === '/v1/mlb/standings') return await standings(ctx, origin, 'mlb', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings');
+      if (path === '/v1/mlb/standings') return await standings(ctx, origin, 'mlb', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings?level=3', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings');
       if (path === '/v1/nba/standings') return await standings(ctx, origin, 'nba', 'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings');
       if (path === '/v1/soccer/standings') {
         const lg = url.searchParams.get('league') || 'fifa.world';
@@ -820,15 +820,11 @@ async function tennisRankings(ctx, origin) {
 
 // Tabla de posiciones (NBA por conferencia; soccer tabla de liga o grupos).
 // En off-season ESPN devuelve la última temporada — justo lo que queremos.
-async function standings(ctx, origin, cacheTag, upstream) {
+async function standings(ctx, origin, cacheTag, upstream, altUpstream) {
   const cache = caches.default;
   const cacheKey = new Request('https://aa-sports.cache/' + cacheTag + '/standings', { method: 'GET' });
   const cached = await cache.match(cacheKey);
   if (cached) return withCors(await cached.text(), origin, 600);
-
-  const res = await fetch(upstream, { headers: { 'user-agent': 'aa-sports/1.0' } });
-  if (!res.ok) return json({ sections: [], note: 'standings upstream ' + res.status }, 200, origin, 120);
-  const data = await res.json();
 
   const mapEntries = (entries) => (entries || []).map((e) => {
     const stat = (n) => { const x = (e.stats || []).find((t) => t.name === n || t.type === n); return x ? (x.displayValue ?? x.value ?? null) : null; };
@@ -844,18 +840,30 @@ async function standings(ctx, origin, cacheTag, upstream) {
     };
   });
   // Recolecta secciones de forma recursiva: NBA/soccer traen las entradas en el
-  // primer nivel de children; MLB las anida (Liga → División), así que si un nodo
-  // no tiene entradas propias, bajamos a sus hijos.
+  // primer nivel de children; si un nodo no tiene entradas propias, baja a sus hijos.
   const collect = (node) => (node.standings && node.standings.entries && node.standings.entries.length)
     ? [{ name: node.name || node.abbreviation || '', rows: mapEntries(node.standings.entries) }]
     : (node.children || []).flatMap(collect);
-  let sections = (data.children || []).flatMap(collect).filter((s) => s.rows.length);
-  if (!sections.length && data.standings && data.standings.entries) {
-    sections = [{ name: data.name || '', rows: mapEntries(data.standings.entries) }];
-  }
-  for (const s of sections) s.rows.sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
+  const parse = (data) => {
+    let sections = (data.children || []).flatMap(collect).filter((s) => s.rows.length);
+    if (!sections.length && data.standings && data.standings.entries) {
+      sections = [{ name: data.name || '', rows: mapEntries(data.standings.entries) }];
+    }
+    for (const s of sections) s.rows.sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
+    return { season: (data.season && (data.season.displayName || data.season.year)) || null, sections };
+  };
+  const grab = async (url) => {
+    try { const r = await fetch(url, { headers: { 'user-agent': 'aa-sports/1.0' } }); if (!r.ok) return null; return parse(await r.json()); }
+    catch (e) { return null; }
+  };
 
-  const payload = JSON.stringify({ updated_at: new Date().toISOString(), season: (data.season && (data.season.displayName || data.season.year)) || null, sections });
+  // Se prefiere el desglose con MÁS secciones (p.ej. las divisiones de MLB con
+  // ?level=3) y se cae al principal si el alterno falla o trae menos → cero regresión.
+  let best = await grab(upstream);
+  if (altUpstream) { const alt = await grab(altUpstream); if (alt && (!best || alt.sections.length > best.sections.length)) best = alt; }
+  if (!best) return json({ sections: [], note: 'standings upstream' }, 200, origin, 120);
+
+  const payload = JSON.stringify({ updated_at: new Date().toISOString(), season: best.season, sections: best.sections });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=3600' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin, 600);
