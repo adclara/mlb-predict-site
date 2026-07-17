@@ -454,7 +454,10 @@ function confFromProb(p) {
 //   2) gema: su `prob` YA es p_final (calibrada) — se usa tal cual.
 //   3) fallback (sin prob_v2 y no-gema): encoger la clásica hacia 0.5 para quitar
 //      la sobre-confianza medida (pendiente ~0.35 de la curva de calibración).
-//   4) sin pick: pickProb (model_p base, ya calibrado, ECE ~0.005 en backtest).
+//   4) sin pick: pickProb es la MISMA prob clásica sobre-confiada (ECE 0.108 en
+//      learning.json: ~70% mostrado → ~57% real). Como los juegos se ordenan por
+//      prob desc, estos no-pick encabezan la lista, así que TAMBIÉN hay que
+//      encogerlos hacia 0.5 — si no, se muestra el número inflado (bug de honestidad).
 const CAL_SHRINK = 0.35;
 const calShrink = (p) => (p == null ? null : 0.5 + (p - 0.5) * CAL_SHRINK);
 function calibratedProb(pickInfo, pp) {
@@ -463,7 +466,7 @@ function calibratedProb(pickInfo, pp) {
     if (pickInfo.badge === 'gema' && typeof pickInfo.prob === 'number') return pickInfo.prob;
     if (typeof pickInfo.prob === 'number') return calShrink(pickInfo.prob);
   }
-  return pp;
+  return calShrink(pp);
 }
 
 // Indexa plays/locks/gems del daily por game_pk para enriquecer cada juego.
