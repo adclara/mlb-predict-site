@@ -775,6 +775,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .rdbag .n .big{font-weight:800;font-size:14px;color:var(--red)}
 .rdbag .n .sm{font-size:10.5px;color:var(--faint);margin-top:1px}
 .deadtag{font-size:8px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--red);background:rgba(255,70,85,.16);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:1.5px}
+.rdbag .m .o .deadtag{margin-left:0}
 .rdriskbanner{display:flex;gap:10px;align-items:center;padding:11px 13px;border-radius:14px;margin-bottom:10px;
   background:linear-gradient(150deg,rgba(255,70,85,.08),var(--inner));border:1px solid rgba(255,70,85,.22)}
 .rdriskbanner.clean{background:linear-gradient(150deg,rgba(25,222,159,.07),var(--inner));border-color:rgba(25,222,159,.22)}
@@ -3513,7 +3514,7 @@ function openRiskHtml(o, wl){
     ? `<div class="rdsecth" style="margin:12px 0 8px"><span class="t" style="color:var(--faint)">${t('rr_worst')}</span></div>` +
       o.worst.map(b => `<div class="rdbag${b.dead ? ' dead' : ''}">
         <span class="ic">${b.dead ? '☠️' : '▼'}</span>
-        <span class="m"><span class="t">${esc(b.q || '—')}${b.dead ? `<span class="deadtag">${t('rr_dead')}</span>` : ''}</span><span class="o">${b.outcome ? esc(b.outcome) + ' · ' : ''}${t('rr_bought')} ${rUsd(b.cost)} → ${t('rr_now')} ${rUsd(b.now)}</span></span>
+        <span class="m"><span class="t">${esc(b.q || '—')}</span><span class="o">${b.dead ? `<span class="deadtag">${t('rr_dead')}</span> ` : ''}${b.outcome ? esc(b.outcome) + ' · ' : ''}${t('rr_bought')} ${rUsd(b.cost)} → ${t('rr_now')} ${rUsd(b.now)}</span></span>
         <span class="n"><span class="big num">${rMoney(b.pnl)}</span><span class="sm num">${b.pct != null ? Math.round(100 * b.pct) + '%' : ''}</span></span>
       </div>`).join('')
     : '';
