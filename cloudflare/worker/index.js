@@ -97,6 +97,7 @@ export default {
       if (path === '/v1/injuries') return await injuries(env, origin);
       if (path === '/v1/poly/radar') return await polyRadar(env, origin);
       if (path === '/v1/mlb/learning') return await mlbLearning(env, origin);
+      if (path === '/v1/mlb/simulation') return await mlbSimulation(env, origin);
       if (path === '/v1/poly/alerts') return await polyAlerts(env, origin);
       if (path === '/v1/poly/track') return await polyTrack(env, origin);
       if (path === '/v1/poly/wallet') return await polyWallet(url, ctx, origin);
@@ -298,6 +299,17 @@ async function mlbLearning(env, origin) {
   return new Response(raw, {
     status: 200,
     headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=600' },
+  });
+}
+
+// 🔬 Validación out-of-sample del modelo MLB (KV mlb:simulation), la publica
+// robot/simulate.mjs semanalmente (walk-forward sobre todo el histórico).
+async function mlbSimulation(env, origin) {
+  const raw = await env.AA_LATEST.get('mlb:simulation');
+  if (!raw) return json({ note: 'aún sin simulación publicada' }, 200, origin, 300);
+  return new Response(raw, {
+    status: 200,
+    headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=3600' },
   });
 }
 
