@@ -77,6 +77,7 @@ export default {
         return await standings(ctx, origin, 'soccer:' + lg, `https://site.api.espn.com/apis/v2/sports/soccer/${lg}/standings`);
       }
       if (path === '/v1/soccer/leagues') return json({ leagues: SOCCER_LEAGUES }, 200, origin, 3600);
+      if (path === '/v1/soccer/today') return await soccerToday(env, origin);
 
       // Detalle de partido (alineaciones + estadísticas + eventos) — proxy con
       // caché del endpoint summary de ESPN. Descriptivo, sin predicciones.
@@ -296,6 +297,17 @@ async function polyRadar(env, origin) {
 async function mlbLearning(env, origin) {
   const raw = await env.AA_LATEST.get('mlb:learning');
   if (!raw) return json({ note: 'aún sin diario de aprendizaje' }, 200, origin, 300);
+  return new Response(raw, {
+    status: 200,
+    headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=600' },
+  });
+}
+
+// ⚽ Predicciones públicas de soccer (KV soccer:today) — pick calibrado + récord
+// en vivo + evidencia del backtest. Publicado por robot/soccer_shadow.mjs.
+async function soccerToday(env, origin) {
+  const raw = await env.AA_LATEST.get('soccer:today');
+  if (!raw) return json({ by_id: {}, note: 'pronto' }, 200, origin, 300);
   return new Response(raw, {
     status: 200,
     headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=600' },
