@@ -174,7 +174,9 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 
 /* ═════════ LEFT: LIST ═════════ */
 .listpane{overflow:hidden}
-.ltop{display:flex;align-items:center;gap:4px;padding:12px 14px 0}
+.ltop{display:flex;align-items:center;gap:4px;padding:12px 14px 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ltop::-webkit-scrollbar{display:none}
+.ltop>.ltab,.ltop>.datebox{flex:none}
 .ltab{font-size:14.5px;font-weight:700;color:var(--dim);padding:6px 12px 10px;border-bottom:2px solid transparent;transition:color .15s}
 .ltab:hover{color:var(--text)}
 .ltab.on{color:var(--sky);border-bottom-color:var(--sky)}
@@ -238,8 +240,8 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .reschip{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:6px;margin-left:8px;vertical-align:1px}
 .reschip.won{background:rgba(25,222,159,.14);color:var(--volt);border:1px solid rgba(25,222,159,.35)}
 .reschip.lost{background:rgba(255,70,85,.12);color:var(--red);border:1px solid rgba(255,70,85,.3)}
-.mscore{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
-.ms{font-size:14px;font-weight:700;color:var(--dim);line-height:20px}
+.mscore{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.ms{font-size:17px;font-weight:800;color:var(--text);line-height:20px;min-width:16px;text-align:right}
 .ms.win{color:var(--text)} .ms.lv{color:var(--red)}
 .mstar{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;color:var(--faint);transition:color .15s,background .15s}
 .mstar:hover{background:var(--inner);color:var(--amber)}
@@ -870,6 +872,10 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 }
 @media (max-width:900px){
   .layout{display:flex;flex-direction:column;padding:12px 12px 60px}
+  /* En columna, un hijo ancho (ticker, pestañas, fecha) NO debe ensanchar la
+     columna y cortar el contenido por la derecha: se encogen al ancho del móvil
+     y reflujan/scrollean por dentro. */
+  .layout > *{min-width:0;max-width:100%}
   .search{display:none}
   .record{display:none}
   .detail{display:none;position:fixed;inset:0;z-index:200;background:var(--page);overflow-y:auto;padding:0 10px 40px;max-height:none;border-radius:0}
