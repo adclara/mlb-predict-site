@@ -620,12 +620,12 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .rtrades .q{flex:1;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .rtrades .px{flex:none;text-align:right}
 @media (max-width:640px){.rtrades .tr{flex-wrap:wrap}.rtrades .px{flex:1 1 100%;text-align:left;padding-left:102px}}
-.alrow{display:flex;gap:8px;align-items:baseline;padding:7px 14px;border-bottom:1px solid var(--hair);font-size:12px;min-width:0}
+.alrow{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline;padding:7px 14px;border-bottom:1px solid var(--hair);font-size:12px;min-width:0}
 .alrow .when{flex:0 0 74px;color:var(--faint);font-size:11px}
 .alrow .who{flex:0 0 auto;font-weight:700}
 .alrow .what{flex:0 0 auto;font-size:11px;font-weight:800}
 .alrow .what.buy{color:var(--volt)} .alrow .what.sell{color:var(--red)}
-.alrow .q{flex:1;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:11px}
+.alrow .q{flex:1 1 100%;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:11px}
 @media (max-width:640px){.alrow{flex-wrap:wrap}.alrow .q{flex:1 1 100%;padding-left:82px}}
 .rfilter{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;border-bottom:1px solid var(--hair)}
 .rfilter .pill{white-space:nowrap;flex:none}
@@ -710,6 +710,134 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
   .rfilter{padding:0 8px;flex-wrap:wrap}
   .alrow,.ttrow{padding:7px 8px}
 }
+/* ═══════ 📡 RADAR — rediseño premium (liquid glass · veredicto primero) ═══════ */
+/* — Tira de honestidad slim (ADN: siempre visible, pero sin muro de texto) — */
+.rdhon{display:flex;flex-wrap:wrap;align-items:center;gap:5px 8px;margin:12px;padding:9px 13px;border-radius:13px;
+  background:linear-gradient(160deg,rgba(255,197,61,.06),var(--inner));border:1px solid rgba(255,197,61,.20);
+  font-size:11.5px;color:var(--dim);line-height:1.5}
+.rdhon .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);flex:none;box-shadow:0 0 8px rgba(255,197,61,.7)}
+.rdhon b{color:var(--amber);font-weight:700}
+.rdhon a{color:var(--sky);text-decoration:none;white-space:nowrap}
+.rdhon .meter{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;color:var(--faint);font-size:11px;margin-top:1px}
+.rdhon .meter .newchip{margin-left:auto}
+/* — Veredicto héroe: la "lectura inteligente" — */
+.rdhero{--vc:var(--sky);position:relative;margin:12px;padding:15px 16px;border-radius:20px;overflow:hidden;
+  background:linear-gradient(158deg,rgba(255,255,255,.055),rgba(255,255,255,.015) 62%);
+  border:1px solid var(--hair-2);box-shadow:var(--shadow);
+  backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass)}
+.rdhero::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 92% at 100% 0%,var(--vc),transparent 58%);opacity:.15}
+.rdhero>*{position:relative}
+.rdhero .top{display:flex;align-items:center;gap:12px;min-width:0}
+.rdhero .av{width:46px;height:46px;border-radius:14px;flex:none;overflow:hidden;background:var(--inner);
+  border:1px solid var(--hair-2);display:grid;place-items:center;font-weight:800;font-size:15px;color:var(--dim)}
+.rdhero .av img{width:100%;height:100%;object-fit:cover}
+.rdhero .nm{display:block;font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rdhero .nm .pml{vertical-align:1px}
+.rdhero .hd{flex:1;min-width:0}
+.rdhero .ring{flex:none}
+.rdverdict{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:11px}
+.rdvbadge{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:800;color:var(--vc);
+  background:rgba(255,255,255,.05);border:1px solid var(--hair-2);border-radius:999px;padding:5px 12px}
+.rdvbadge .em{font-size:15px;line-height:1}
+.rdflag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;border-radius:999px;padding:4px 10px;white-space:nowrap}
+.rdflag.risk{color:var(--red);background:rgba(255,70,85,.11);border:1px solid rgba(255,70,85,.32)}
+.rdflag.good{color:var(--volt);background:rgba(25,222,159,.1);border:1px solid rgba(25,222,159,.3)}
+.rdwhy{color:var(--dim);font-size:13px;line-height:1.55;margin-top:11px}
+.rdwhy b{color:var(--text);font-weight:700}
+.rdwd{font-size:10px;color:var(--faint);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;margin-top:9px}
+/* — Anillo de score inline — */
+.rdring{position:relative;width:54px;height:54px}
+.rdring .n{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:15px;line-height:1}
+.rdring .n small{display:block;font-size:7.5px;font-weight:800;letter-spacing:.06em;color:var(--faint);text-transform:uppercase;margin-top:-1px}
+/* — Tiles héroe (lo que importa de un vistazo) — */
+.rdtiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 12px 4px}
+.rdtile{position:relative;background:var(--inner);border:1px solid var(--hair);border-radius:16px;padding:11px 12px;overflow:hidden;min-width:0}
+.rdtile .k{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:4px}
+.rdtile .v{font-size:18px;font-weight:800;margin-top:6px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rdtile .s{font-size:10px;color:var(--dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rdtile.pos .v{color:var(--volt)} .rdtile.neg .v{color:var(--red)} .rdtile.warn .v{color:var(--amber)} .rdtile.info .v{color:var(--sky)}
+.rdtile .spark{position:absolute;right:7px;bottom:6px;opacity:.55;pointer-events:none}
+/* — Capítulos (secciones con aire) — */
+.rdsect{margin:16px 12px 0}
+.rdsecth{display:flex;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.rdsecth .t{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text)}
+.rdsecth .sub{font-size:11px;color:var(--faint);font-weight:600}
+/* — Bolsas abiertas (riesgo real) — */
+.rdbag{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--inner);border:1px solid var(--hair);margin-bottom:8px;min-width:0}
+.rdbag.dead{border-color:rgba(255,70,85,.32);background:rgba(255,70,85,.055)}
+.rdbag .ic{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;background:rgba(255,70,85,.13)}
+.rdbag.dead .ic{background:rgba(255,70,85,.2)}
+.rdbag .m{flex:1;min-width:0;display:flex;flex-direction:column}
+.rdbag .m .t{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rdbag .m .o{font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.rdbag .n{flex:none;text-align:right;white-space:nowrap}
+.rdbag .n .big{font-weight:800;font-size:14px;color:var(--red)}
+.rdbag .n .sm{font-size:10.5px;color:var(--faint);margin-top:1px}
+.deadtag{font-size:8px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--red);background:rgba(255,70,85,.16);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:1.5px}
+.rdriskbanner{display:flex;gap:10px;align-items:center;padding:11px 13px;border-radius:14px;margin-bottom:10px;
+  background:linear-gradient(150deg,rgba(255,70,85,.08),var(--inner));border:1px solid rgba(255,70,85,.22)}
+.rdriskbanner.clean{background:linear-gradient(150deg,rgba(25,222,159,.07),var(--inner));border-color:rgba(25,222,159,.22)}
+.rdriskbanner .rv{font-size:19px;font-weight:800;color:var(--red);white-space:nowrap}
+.rdriskbanner.clean .rv{color:var(--volt)}
+.rdriskbanner .rt{font-size:12px;color:var(--dim);line-height:1.45;min-width:0}
+.rdriskbanner .rt b{color:var(--text)}
+/* — Jugadas ganadoras (línea de tiempo compacta) — */
+.rdplay{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--hair);min-width:0}
+.rdplay:first-child{border-top:0}
+.rdplay .m{flex:1;min-width:0;display:flex;flex-direction:column}
+.rdplay .m .t{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rdplay .m .w{font-size:10.5px;color:var(--faint);margin-top:2px}
+.rdplay .amt{flex:none;text-align:right;white-space:nowrap;font-size:12px;color:var(--dim)}
+.rdplay .amt b{color:var(--volt);font-weight:800;font-size:14px}
+/* — Estilo en detalle (plegable) — */
+.rdmore{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 12px 0;width:calc(100% - 24px);
+  padding:10px;border:1px solid var(--hair);border-radius:12px;background:var(--inner);color:var(--sky);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.rdmore:hover{border-color:var(--sky)}
+/* — Portada: historia del día — */
+.rdstories{display:grid;grid-template-columns:1fr;gap:10px;margin:12px}
+@media(min-width:560px){.rdstories{grid-template-columns:1fr 1fr}.rdstories .storyc.wide{grid-column:1/-1}}
+.storyc{--sc:var(--sky);position:relative;border-radius:18px;padding:14px 15px;cursor:pointer;overflow:hidden;min-width:0;
+  border:1px solid var(--hair-2);background:linear-gradient(152deg,rgba(255,255,255,.05),rgba(255,255,255,.012) 58%);
+  transition:transform .15s,border-color .18s}
+.storyc:hover{transform:translateY(-2px)}
+.storyc::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(92% 82% at 100% 0,var(--sc),transparent 60%);opacity:.14}
+.storyc>*{position:relative}
+.storyc .tag{display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--sc)}
+.storyc .nm{font-size:16px;font-weight:800;margin:8px 0 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.storyc .sub{color:var(--dim);font-size:12.5px;line-height:1.5}
+.storyc .sub b{color:var(--text)}
+.storyc .big{font-size:22px;font-weight:800;margin-top:7px}
+.storyc .foot{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:11px;color:var(--faint);flex-wrap:wrap}
+/* — Mini leaderboard (portada) — */
+.rdmini{margin:4px 12px 0}
+.mbrow{display:flex;align-items:center;gap:9px;padding:10px 4px;border-top:1px solid var(--hair);cursor:pointer;min-width:0}
+.mbrow:first-child{border-top:0}
+.mbrow .rk{flex:none;width:18px;font-weight:800;color:var(--faint);font-size:12px;text-align:center}
+.mbrow .nm{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.mbrow .amt{flex:none;font-weight:800;color:var(--volt);font-size:14px}
+/* — Punto de riesgo (chip) — */
+.riskdot{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;white-space:nowrap;flex:none}
+.riskdot.clean{color:var(--volt);background:rgba(25,222,159,.1)}
+.riskdot.warn{color:var(--amber);background:rgba(255,197,61,.1)}
+.riskdot.hot{color:var(--red);background:rgba(255,70,85,.11)}
+/* — Tarjeta héroe del #1 en la lista — */
+.lhero{position:relative;margin:10px 12px 8px;padding:14px;border-radius:18px;cursor:pointer;overflow:hidden;
+  border:1px solid rgba(255,197,61,.30);background:linear-gradient(150deg,rgba(255,197,61,.09),rgba(255,255,255,.012) 55%)}
+.lhero::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(90% 80% at 100% 0,var(--amber),transparent 62%);opacity:.1}
+.lhero>*{position:relative}
+.lhero .crown{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--amber);display:flex;align-items:center;gap:5px}
+.lhero .row{display:flex;align-items:center;gap:10px;margin-top:8px;min-width:0}
+.lhero .nm{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.lhero .amt{flex:none;font-size:19px;font-weight:800;color:var(--volt)}
+.lhero .sub{margin-top:7px;font-size:12px;color:var(--dim);display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+@media(max-width:400px){
+  .rdhero,.rdhon,.rdstories,.lhero{margin-left:8px;margin-right:8px}
+  .rdtiles{margin-left:8px;margin-right:8px;gap:6px}
+  .rdsect{margin-left:8px;margin-right:8px}
+  .rdtile .v{font-size:16px}
+}
+@media(max-width:520px){.rdtiles{grid-template-columns:1fr 1fr}}
 .sthead{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:12px 0 6px}
 .sttbl{width:100%;border-collapse:collapse;font-size:12.5px}
 .sttbl th{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);text-align:right;padding:5px 6px;border-bottom:1px solid var(--hair)}
@@ -1265,6 +1393,25 @@ const T = {
     notif_live: 'En vivo', notif_final: 'Final', notif_live_b: 'Empezó un juego que sigues ⭐', notif_final_b: 'Terminó un juego que sigues ⭐',
     r_search_ph: 'Buscar cualquier wallet (0x… o link)', r_search_go: 'Buscar', r_ws_bad: 'Dirección no válida. Pega una wallet 0x… o el link de un perfil de Polymarket.', r_ws_empty: 'Sin movimientos recientes.', r_ws_moves: 'movimientos', r_ws_vol: 'volumen', r_ws_recent: 'Movimientos recientes', r_ws_note: 'Consulta en vivo de la actividad reciente de esta wallet — datos crudos, sin nuestro filtro anti-trampa. Para el historial completo, abre su perfil en Polymarket ↗.',
     r_cat_all: 'Todas', r_no_cat: 'Ninguna cuenta en esta categoría.', r_share: 'Compartir', r_share_txt: 'Mira esta wallet en el Radar AA', r_copied: 'Link copiado ✓', track_measuring: 'midiendo hace', track_days: 'días',
+    // ── Radar rediseño premium (veredicto + riesgo real + historia del día) ──
+    rh_short: '«Posible informado» es un patrón, no una acusación.', rh_study: 'el estudio midió que el pasado apenas predice el futuro',
+    vd_insider: 'Posible informado', vd_hot: 'En racha caliente', vd_luck: 'Un golpe de suerte', vd_solid: 'Ganador consistente', vd_flat: 'Cuenta observada',
+    vd_flag_bags: 'carga bolsas perdiendo', vd_flag_clean: 'cartera en verde',
+    tile_won: 'Ganó · 30d', tile_hits: 'Acierto', tile_open: 'Cartera abierta', tile_bags: 'Bolsas rojas', tile_score: 'score', tile_clean: 'limpio', tile_unreal: 's/realizar', tile_none_open: 'sin abrir', tile_of10: 'de 10',
+    cw_title: '📈 Cómo gana', cw_sub: 'sus mejores jugadas del mes',
+    rr_title: '⚠️ Riesgo real', rr_sub: 'lo que el récord de ganancias no te dice',
+    rr_has: 'Tiene', rr_open_pos: 'posiciones abiertas', rr_paid: 'pagó', rr_today: 'hoy valen',
+    rr_losing: 'va perdiendo', rr_gaining: 'va ganando', rr_unreal: 'sin realizar',
+    rr_worst: 'Sus peores bolsas abiertas', rr_bought: 'compró', rr_now: 'hoy', rr_dead: 'muerta',
+    rr_failed_a: 'Se equivocó en', rr_failed_b: 'de', rr_failed_c: 'mercados ya resueltos',
+    rr_clean: 'No arrastra bolsas perdedoras ahora mismo — su cartera abierta está en verde.',
+    rr_none: 'Sin posiciones abiertas visibles en Polymarket ahora mismo.',
+    sty_more: 'Ver todo su estilo en detalle ↓', sty_less: 'Ocultar el detalle ↑',
+    sd_title: '📡 Historia del día', sd_sub: 'lo más interesante del Radar ahora mismo · toca para explorar',
+    story_account: '🏆 Cuenta del día', story_play: '🎯 Jugada del día', story_bag: '⚠️ Bolsa del día',
+    story_see: 'ver perfil →', story_bag_none: 'Ninguna cuenta top arrastra bolsas perdedoras hoy 👏',
+    sd_board: '🏅 Tabla de líderes', sd_board_sub: 'por dinero ganado · toca una para ver su perfil', sd_where: '🗂 Dónde juegan los mejores',
+    r_open_now: 'abiertas',
     bol_title: 'Boleto del día', bol_win: 'Gana', bol_none: 'Hoy el algoritmo no marca ninguna jugada de máxima confianza. No inventamos un boleto cuando no hay valor claro.',
     bol_rec: 'Cómo le ha ido a estos niveles', bol_note: 'Resumen de las mejores selecciones AA de hoy · no es recomendación de apuesta · tú decides.',
     bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto',
@@ -1349,6 +1496,25 @@ const T = {
     notif_live: 'Live', notif_final: 'Final', notif_live_b: 'A game you follow ⭐ just started', notif_final_b: 'A game you follow ⭐ just ended',
     r_search_ph: 'Search any wallet (0x… or link)', r_search_go: 'Search', r_ws_bad: 'Invalid address. Paste a 0x… wallet or a Polymarket profile link.', r_ws_empty: 'No recent moves.', r_ws_moves: 'moves', r_ws_vol: 'volume', r_ws_recent: 'Recent moves', r_ws_note: 'Live lookup of this wallet\'s recent activity — raw data, without our anti-manipulation filter. For the full history, open its Polymarket profile ↗.',
     r_cat_all: 'All', r_no_cat: 'No accounts in this category.', r_share: 'Share', r_share_txt: 'Check this wallet on the AA Radar', r_copied: 'Link copied ✓', track_measuring: 'measuring for', track_days: 'days',
+    // ── Radar premium redesign (verdict + real risk + story of the day) ──
+    rh_short: '"Possible insider" is a pattern, not an accusation.', rh_study: 'our study measured that the past barely predicts the future',
+    vd_insider: 'Possible insider', vd_hot: 'On a hot streak', vd_luck: 'A lucky hit', vd_solid: 'Consistent winner', vd_flat: 'Watched account',
+    vd_flag_bags: 'holding losing bags', vd_flag_clean: 'book in the green',
+    tile_won: 'Won · 30d', tile_hits: 'Hit rate', tile_open: 'Open book', tile_bags: 'Red bags', tile_score: 'score', tile_clean: 'clean', tile_unreal: 'unrealized', tile_none_open: 'none open', tile_of10: 'of 10',
+    cw_title: '📈 How it wins', cw_sub: 'its best plays this month',
+    rr_title: '⚠️ Real risk', rr_sub: "what the win record doesn't tell you",
+    rr_has: 'Holds', rr_open_pos: 'open positions', rr_paid: 'paid', rr_today: 'today worth',
+    rr_losing: 'down', rr_gaining: 'up', rr_unreal: 'unrealized',
+    rr_worst: 'Its worst open bags', rr_bought: 'bought', rr_now: 'now', rr_dead: 'dead',
+    rr_failed_a: 'Was wrong on', rr_failed_b: 'of', rr_failed_c: 'resolved markets',
+    rr_clean: "It's not dragging any losing bags right now — its open book is in the green.",
+    rr_none: 'No open positions visible on Polymarket right now.',
+    sty_more: 'See its full style in detail ↓', sty_less: 'Hide the detail ↑',
+    sd_title: '📡 Story of the day', sd_sub: 'the most interesting on the Radar right now · tap to explore',
+    story_account: '🏆 Account of the day', story_play: '🎯 Play of the day', story_bag: '⚠️ Bag of the day',
+    story_see: 'see profile →', story_bag_none: 'No top account is holding losing bags today 👏',
+    sd_board: '🏅 Leaderboard', sd_board_sub: 'by money won · tap one to see its profile', sd_where: '🗂 Where the best ones play',
+    r_open_now: 'open',
     bol_title: 'Ticket of the day', bol_win: 'Take', bol_none: "Today the model flags no top-confidence play. We don't fake a ticket when there's no clear value.",
     bol_rec: 'How these tiers have done', bol_note: "A summary of today's best AA picks · not a betting recommendation · you decide.",
     bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high',
@@ -2654,7 +2820,7 @@ document.addEventListener('click', e => {
     return;
   }
   const rt = e.target.closest('[data-rtoggle]');
-  if (rt){ radarOpen[rt.dataset.rtoggle] = !radarOpen[rt.dataset.rtoggle]; renderRadarList(); return; }
+  if (rt){ radarOpen[rt.dataset.rtoggle] = !radarOpen[rt.dataset.rtoggle]; renderRadarList(); renderRadarDetail(); return; }
   const pstar = e.target.closest('[data-pstar]');
   if (pstar){
     e.stopPropagation();
@@ -3028,7 +3194,8 @@ function walletSearchHtml(){
       <span class="rchip">$${(+s.usd || 0).toLocaleString(LOCALE())} ${t('r_ws_vol')}</span>
     </div>
     <div class="wsnote">${t('r_ws_note')}</div>
-    <div class="secttl">${t('r_ws_recent')}</div>
+    ${d.open ? openRiskHtml(d.open, null) : ''}
+    <div class="secttl" style="margin:16px 12px 9px">${t('r_ws_recent')}</div>
     <div class="rtrades">${rows}</div>`;
 }
 // Pide permiso de notificaciones del navegador (una vez, al seguir la primera wallet).
@@ -3177,8 +3344,11 @@ const ttRow = (tt, i) => `<div class="ttrow">
 function radarWarnHtml(){
   const h = (radarDoc && radarDoc.honesty) || {};
   const rho = h.spearman != null ? (+h.spearman).toFixed(2) : '0.10';
-  const rep = h.still_pos != null ? Math.round(100 * h.still_pos) : 40;
-  return `<div class="radarwarn"><b>${t('warn_desc')}</b> ${t('warn_body')} <b>${t('warn_notproof')}</b>${t('warn_delay')} ${esc(rho)}; ${t('warn_repeat')} ${rep}% ${t('warn_repeat2')} <a href="#" id="radarlegal">${t('warn_legal')}</a>${trackLiveHtml()}</div>`;
+  return `<div class="rdhon">
+    <span class="dot"></span>
+    <span style="flex:1;min-width:0"><b>${t('warn_desc')}</b> ${t('rh_short')} <a href="#" id="radarlegal">${t('warn_legal')} ↗</a></span>
+    <span class="meter">${trackLiveHtml()} <span>· ${t('rh_study')} (ρ ${esc(rho)})</span></span>
+  </div>`;
 }
 // Medidor de persistencia VIVO (nuestra propia lista, no el estudio estático) +
 // contador de wallets nuevas en el top esta semana. Degradado honesto mientras
@@ -3189,18 +3359,18 @@ function trackLiveHtml(){
     ? `📈 ${t('track_pre')} <b>${p.then_n}</b> ${t('track_ago')} <b>${p.stayed}</b> ${t('track_still')} (${Math.round(100 * p.overlap)}%).`
     : `📈 ${t('track_wait')}`;
   const nw = trackDoc && Array.isArray(trackDoc.new_wallets) ? trackDoc.new_wallets.length : 0;
-  const chip = nw ? ` <span class="newchip num">🆕 ${nw} ${t('track_new')}</span>` : '';
+  const chip = nw ? `<span class="newchip num">🆕 ${nw} ${t('track_new')}</span>` : '';
   const days = trackDoc && Array.isArray(trackDoc.history) ? trackDoc.history.length : 0;
-  const rec = days >= 2 ? ` <span class="trec">📊 ${t('track_measuring')} ${days} ${t('track_days')}</span>` : '';
-  return `<div class="tracklive">${meter}${chip}${rec}</div>`;
+  const rec = days >= 2 ? `<span class="trec">📊 ${t('track_measuring')} ${days} ${t('track_days')}</span>` : '';
+  return `<span>${meter}</span> ${chip}${rec}`;
 }
 // estado de las secciones plegables del dashboard
-let radarOpen = { alerts: false, top: false, all: false };
+let radarOpen = { alerts: false, top: false, all: false, pstyle: false };
 // ⭐ seguir + ⚖️ comparar (spans clicables; la delegación los atiende antes que data-rw)
 const pStar = (w) => `<span class="pstar${pfollow.has(w) ? ' on' : ''}" data-pstar="${esc(w)}" role="button" title="${t('r_follow')}">${pfollow.has(w) ? '★' : '☆'}</span>`;
 const pCmp = (w) => `<span class="pcmp${compareSel.includes(w) ? ' on' : ''}" data-pcmp="${esc(w)}" role="button" title="${t('r_compare')}">⚖</span>`;
 const walletCard = (w, i) => `<div class="wcard" data-rw="${esc(w.w)}" role="button" style="--i:${i}">
-  <span class="row1"><span class="wctl">${pStar(w.w)}${pCmp(w.w)}</span><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}<span class="spkw">${svgSpark(w.equity_curve)}</span><span class="gan num">+${rUsd(w.pnl_usd)}</span></span>
+  <span class="row1"><span class="wctl">${pStar(w.w)}${pCmp(w.w)}</span><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}${riskDot(w)}<span class="spkw">${svgSpark(w.equity_curve)}</span><span class="gan num">+${rUsd(w.pnl_usd)}</span></span>
   <span class="row2">${w.win_rate != null ? `${t('r_acierta')} ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(rCat(w.cats[0].cat)) : '—'} · ${w.n_markets} ${t('r_mercados')}${w.portfolio_usd > 0 ? ` · 💼 ${esc(rUsd(w.portfolio_usd))}` : ''}<span class="ver">${t('r_ver_perfil')}</span></span>
 </div>`;
 function renderRadarList(){
@@ -3243,7 +3413,7 @@ function renderRadarList(){
     </div>
     <div class="secttl2">${t('r_best')} <span class="sub3">${t('r_best_sub')}</span><button class="ffilter${followOnly ? ' on' : ''}" data-pfilter="1">⭐ ${t('r_myfollowed')}${pfollow.size ? ` (${pfollow.size})` : ''}</button></div>
     ${cmpTray}
-    ${showWs.length ? showWs.map(walletCard).join('') : `<div class="lempty2">${catFilter ? t('r_no_cat') : followOnly ? t('r_no_follow') : t('r_prep')}</div>`}
+    ${!showWs.length ? `<div class="lempty2">${catFilter ? t('r_no_cat') : followOnly ? t('r_no_follow') : t('r_prep')}</div>` : (catFilter || followOnly || radarOpen.all) ? showWs.map(walletCard).join('') : heroCard(showWs[0]) + showWs.slice(1).map((w, i) => walletCard(w, i + 1)).join('')}
     ${baseWs.length > 6 ? `<button class="expbtn" data-rtoggle="all">${radarOpen.all ? t('r_see_less') : t('r_see_all').replace('↓', `${baseWs.length} ↓`)}</button>` : ''}
     <button class="secttl2 tgl" data-rtoggle="alerts">${t('r_live_alerts')}${n24 ? ` (${n24} ${t('r_hoy')})` : ''} <span class="caret">${radarOpen.alerts ? '▴' : '▾'}</span></button>
     ${showAl.map(alertRow).join('') || `<div class="lempty2">${t('r_no_moves')}</div>`}
@@ -3275,34 +3445,193 @@ const timingBadge = (tg) => tg === 'antes' ? `<span class="tbadge antes">${t('tb
   : tg === 'vivo' ? `<span class="tbadge vivo">${t('tb_live')}</span>`
   : `<span class="tbadge nohora">${t('tb_nohour')}</span>`;
 
-// 📊 Dashboard (vista por defecto): quiénes, dónde, qué y CUÁNDO ganaron
+// ── Helpers del rediseño premium (veredicto · tiles · riesgo real · bolsas) ──
+// Dinero con signo, para pérdidas: −$1,240 / +$300.
+function rMoney(x){ return (x == null || !isFinite(x)) ? '—' : (x < 0 ? '−$' : '$') + Math.abs(Math.round(+x)).toLocaleString(LOCALE()); }
+// Anillo de score inline ($0, tema oscuro) — el medidor de "posible informado".
+function svgScoreRing(score, col){
+  const s = Math.max(0, Math.min(100, Math.round(+score || 0)));
+  const R = 23, C = 27, circ = 2 * Math.PI * R, dash = (s / 100 * circ).toFixed(1);
+  return `<div class="rdring"><svg viewBox="0 0 54 54" width="54" height="54" aria-hidden="true">
+    <circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="var(--panel-2)" stroke-width="5"/>
+    <circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${dash} ${circ.toFixed(1)}" transform="rotate(-90 ${C} ${C})"/>
+  </svg><span class="n" style="color:${col}">${s}<small>${t('tile_score')}</small></span></div>`;
+}
+// Veredicto: la "lectura inteligente" de una wallet (cómo gana + bandera de riesgo).
+function verdictOf(w){
+  const o = w.open || {};
+  const netDown = (o.unrealized ?? 0) < 0;
+  const hasRisk = o.n && ((o.dead || 0) >= 1 || (o.losers >= 1 && netDown));
+  let icon = '📡', label = t('vd_flat'), tone = 'var(--sky)';
+  if (w.watch && (w.insider_score ?? 0) >= 55){ icon = '🎯'; label = t('vd_insider'); tone = 'var(--sky)'; }
+  else if (w.kind === 'racha'){ icon = '🔥'; label = t('vd_hot'); tone = 'var(--volt)'; }
+  else if (w.kind === 'golpe'){ icon = '⚡'; label = t('vd_luck'); tone = 'var(--amber)'; }
+  else if (w.kind === 'consistente'){ icon = '🧊'; label = t('vd_solid'); tone = 'var(--sky)'; }
+  const flag = o.n ? (hasRisk ? `<span class="rdflag risk">⚠️ ${t('vd_flag_bags')}</span>` : `<span class="rdflag good">✓ ${t('vd_flag_clean')}</span>`) : '';
+  return { icon, label, tone, flag };
+}
+// Punto de riesgo compacto (filas/mini): rojo=bolsa muerta, ámbar=perdiendo, verde=limpio.
+function riskDot(w){
+  const o = w.open; if (!o || !o.n) return '';
+  if ((o.dead || 0) >= 1) return `<span class="riskdot hot" title="${t('rr_dead')}">☠ ${o.dead}</span>`;
+  if (o.losers >= 1 && (o.unrealized ?? 0) < 0) return `<span class="riskdot warn" title="${t('rr_losing')}">▼ ${o.losers}</span>`;
+  return `<span class="riskdot clean">✓</span>`;
+}
+// Tiles héroe: lo que importa de un vistazo (ganó · acierto · cartera · bolsas rojas).
+function heroTiles(w){
+  const o = w.open || {};
+  const openTile = (w.portfolio_usd > 0)
+    ? `<div class="rdtile info"><div class="k">💼 ${t('tile_open')}</div><div class="v num">${rUsd(w.portfolio_usd)}</div><div class="s">${(o.n || w.positions_open || 0)} ${t('r_open_now')}</div></div>`
+    : `<div class="rdtile"><div class="k">💼 ${t('tile_open')}</div><div class="v" style="color:var(--faint)">—</div><div class="s">${t('tile_none_open')}</div></div>`;
+  let bagsTile;
+  if (o.n && o.losers >= 1) bagsTile = `<div class="rdtile neg"><div class="k">⚠️ ${t('tile_bags')}</div><div class="v num">${o.losers}<span style="color:var(--faint);font-size:13px"> / ${o.n}</span></div><div class="s num">${(o.unrealized ?? 0) < 0 ? rMoney(o.unrealized) + ' ' + t('tile_unreal') : t('tile_clean')}</div></div>`;
+  else if (o.n) bagsTile = `<div class="rdtile pos"><div class="k">✓ ${t('tile_bags')}</div><div class="v">0</div><div class="s">${t('tile_clean')}</div></div>`;
+  else bagsTile = `<div class="rdtile"><div class="k">⚠️ ${t('tile_bags')}</div><div class="v" style="color:var(--faint)">—</div><div class="s">${t('tile_none_open')}</div></div>`;
+  return `<div class="rdtiles">
+    <div class="rdtile pos"><div class="k">💰 ${t('tile_won')}</div><div class="v num">+${rUsd(w.pnl_usd)}</div><div class="s">${w.n_markets} ${t('r_mercados')}</div></div>
+    <div class="rdtile"><div class="k">🎯 ${t('tile_hits')}</div><div class="v num">${w.win_rate != null ? Math.round(100 * w.win_rate) + '%' : '—'}</div><div class="s num">${w.wins} ${t('r_chip_of')} ${w.wins + w.losses}</div></div>
+    ${openTile}
+    ${bagsTile}
+  </div>`;
+}
+// Sección "Riesgo real": banner + peores bolsas + cuántas veces falló. El lado honesto.
+function openRiskHtml(o, wl){
+  const head = `<div class="rdsecth"><span class="t">${t('rr_title')}</span><span class="sub">${t('rr_sub')}</span></div>`;
+  const fail = (wl && ((wl.losses || 0) + (wl.wins || 0))) ? `<div class="rdwhy" style="font-size:12px;margin-top:10px">🧾 ${t('rr_failed_a')} <b class="num">${wl.losses || 0}</b> ${t('rr_failed_b')} <b class="num">${(wl.wins || 0) + (wl.losses || 0)}</b> ${t('rr_failed_c')}.</div>` : '';
+  // o indefinido = KV aún sin el campo `open` (ventana tras deploy) → no afirmamos
+  // nada de posiciones; o === null = medido y sin posiciones; o.n > 0 = con bolsas.
+  if (!o || !o.n){
+    const body = (o === null) ? `<div class="rdriskbanner clean"><span class="rt">${t('rr_none')}</span></div>` : '';
+    return (body || fail) ? `<div class="rdsect">${head}${body}${fail}</div>` : '';
+  }
+  const down = (o.unrealized ?? 0) < 0;
+  const banner = `<div class="rdriskbanner${down ? '' : ' clean'}">
+    <span class="rv num">${rMoney(o.unrealized)}</span>
+    <span class="rt">${t('rr_has')} <b>${o.n}</b> ${t('rr_open_pos')} · ${t('rr_paid')} <b class="num">${rUsd(o.cost)}</b>, ${t('rr_today')} <b class="num">${rUsd(o.value)}</b> — ${down ? t('rr_losing') : t('rr_gaining')} <b class="num">${rUsd(Math.abs(o.unrealized || 0))}</b> ${t('rr_unreal')}.</span>
+  </div>`;
+  const bags = (o.worst || []).length
+    ? `<div class="rdsecth" style="margin:12px 0 8px"><span class="t" style="color:var(--faint)">${t('rr_worst')}</span></div>` +
+      o.worst.map(b => `<div class="rdbag${b.dead ? ' dead' : ''}">
+        <span class="ic">${b.dead ? '☠️' : '▼'}</span>
+        <span class="m"><span class="t">${esc(b.q || '—')}${b.dead ? `<span class="deadtag">${t('rr_dead')}</span>` : ''}</span><span class="o">${b.outcome ? esc(b.outcome) + ' · ' : ''}${t('rr_bought')} ${rUsd(b.cost)} → ${t('rr_now')} ${rUsd(b.now)}</span></span>
+        <span class="n"><span class="big num">${rMoney(b.pnl)}</span><span class="sm num">${b.pct != null ? Math.round(100 * b.pct) + '%' : ''}</span></span>
+      </div>`).join('')
+    : '';
+  return `<div class="rdsect">${head}${banner}${bags}${fail}</div>`;
+}
+// "Cómo gana": curva de ganancia acumulada + sus mejores jugadas del mes.
+function bestPlaysHtml(w){
+  const bt = w.best_trades || [];
+  const eq = (Array.isArray(w.equity_curve) && w.equity_curve.length >= 2)
+    ? `<div class="rcard eqcard" style="margin:0 0 10px"><div class="h">${t('r_equity_card')}</div><div class="big num" style="color:${(w.cum_now ?? 0) >= 0 ? 'var(--volt)' : 'var(--red)'}">${(w.cum_now ?? 0) >= 0 ? '+' : ''}${rUsd(w.cum_now)}</div>${svgEquity(w.equity_curve)}</div>`
+    : '';
+  if (!bt.length && !eq) return '';
+  return `<div class="rdsect"><div class="rdsecth"><span class="t">${t('cw_title')}</span><span class="sub">${t('cw_sub')}</span></div>${eq}
+    ${bt.map(b => `<div class="rdplay">${timingBadge(b.timing)}<span class="m"><span class="t">${esc(b.q)}</span><span class="w">${esc(rdt(b.ts))} · ${t('r_puso')} ${rUsd(b.usd)}</span></span><span class="amt">→ <b>+${rUsd(b.profit)}</b></span></div>`).join('')}
+  </div>`;
+}
+// Barra superior del perfil (volver + seguir/comparar/compartir).
+function backBar(w){
+  return `<div class="rback"><a href="#" data-rback="1">${t('r_back')}</a>
+    <span class="rbtns"><span class="pfbtn${pfollow.has(w.w) ? ' on' : ''}" data-pstar="${esc(w.w)}" role="button">${pfollow.has(w.w) ? '★ ' + t('r_following') : '☆ ' + t('r_follow')}</span><span class="pfbtn${compareSel.includes(w.w) ? ' on' : ''}" data-pcmp="${esc(w.w)}" role="button">⚖ ${t('r_compare')}</span><span class="pfbtn" data-pshare="${esc(w.w)}" role="button">↗ ${t('r_share')}</span></span>
+  </div>`;
+}
+// Veredicto héroe (cabecera del perfil): avatar · nombre · badge · medidor · por qué.
+function verdictHero(w){
+  const vd = verdictOf(w);
+  const ini = (rName(w) || '?').slice(0, 2).toUpperCase();
+  return `<div class="rdhero" style="--vc:${vd.tone}">
+    <div class="top">
+      <span class="av">${w.img ? `<img src="${esc(w.img)}" alt="" onerror="this.parentNode.textContent='${ini}'">` : ini}</span>
+      <span class="hd"><span class="nm">${esc(rName(w))} ${pmLink(w.w)}</span></span>
+      ${w.watch ? `<span class="ring">${svgScoreRing(w.insider_score, vd.tone)}</span>` : ''}
+    </div>
+    <div class="rdverdict"><span class="rdvbadge"><span class="em">${vd.icon}</span>${vd.label}</span>${w.kind ? kindBadge(w.kind, w.streak) : ''}${vd.flag}</div>
+    <div class="rdwhy">${esc(fraseDe(w))}</div>
+    <div class="rdwd">${esc(w.w)}</div>
+  </div>`;
+}
+// Estilo en detalle (plegable): cuándo · cuánto · bandas · dónde · estilo · semanal · movimientos.
+function styleDetail(w){
+  const openb = radarOpen.pstyle;
+  const btn = `<button class="rdmore" data-rtoggle="pstyle">${openb ? t('sty_less') : t('sty_more')}</button>`;
+  if (!openb) return btn;
+  const bar = (lbl, share) => `<div class="rrow"><span class="lbl">${esc(lbl)}</span><span class="rbar"><i style="width:${Math.round(100 * (share || 0))}%"></i></span><span class="val num">${Math.round(100 * (share || 0))}%</span></div>`;
+  const tm = w.timing || {}, sz = w.sizing || {}, st = w.style || {}; const flip = st.flip_share != null ? st.flip_share : 0;
+  const bandRows = (w.bands || []).map(b => bar(bandLabel(b.band), b.share)).join('');
+  const weekly = Array.isArray(w.pnl_weeks) ? (() => { const mx = Math.max(1, ...w.pnl_weeks.map(v => Math.abs(v))); return `<div class="rcard"><div class="h">${t('r_weekly')}</div><div class="wkbars">${w.pnl_weeks.map((v, k) => `<span class="wk" title="$${(+v).toLocaleString(LOCALE())}"><i class="${v >= 0 ? 'pos' : 'neg'}" style="height:${Math.max(6, Math.round(46 * Math.abs(v) / mx))}%"></i><em>S${k + 1}</em></span>`).join('')}</div><div class="rrow"><span class="lbl2">${t('r_weekly_sub_a')} ${w.consistency != null ? Math.round(100 * w.consistency) + '%' : '—'} ${t('r_weekly_sub_b')}</span></div></div>`; })() : '';
+  return btn + `<div class="rcards" style="margin-top:10px">
+    <div class="rcard"><div class="h">${t('r_when')}</div><div class="big num">${tm.median_hours_before != null ? '~' + tm.median_hours_before + ' ' + t('r_hbefore') : '—'}</div><div class="rrow"><span class="lbl2">${t('r_before_close')}</span></div>${bar(t('r_lastday'), tm.last24h_share)}</div>
+    <div class="rcard"><div class="h">${t('r_risk')}</div><div class="big num">${rUsd(sz.median_usd)}</div><div class="rrow"><span class="lbl2">${t('r_per_play')} · ${t('r_maxbet')} ${esc(rUsd(sz.p90_usd))} · ${t('r_month_total')} ${esc(rUsd(sz.total_usd))}</span></div></div>
+    <div class="rcard"><div class="h">${t('r_bet_type')}</div>${bandRows || `<div class="rrow"><span class="lbl2">—</span></div>`}</div>
+    <div class="rcard"><div class="h">${t('r_which')}</div>${(w.cats && w.cats.length) ? svgDonut(w.cats) : '<div class="rrow"><span class="lbl2">—</span></div>'}</div>
+    <div class="rcard"><div class="h">${t('r_style')}</div><div class="big">${flip < 0.15 ? t('r_hold') : flip < 0.5 ? t('r_mixed') : t('r_flips')}</div>${bar(t('r_sells_before'), flip)}</div>
+    ${weekly}
+  </div>
+  <div class="rtrades"><div class="secttl">${t('r_last_moves')}</div>
+    ${(w.last_trades || []).map(x => `<div class="tr"><span class="when num">${esc(rdt(x.ts))}</span><span class="q" title="${esc(x.q)}">${esc(x.q)}</span><span class="px num">${x.side === 'BUY' ? t('r_buy') : t('r_sell')} ${esc(String(x.outcome))} · $${(x.usd || 0).toLocaleString(LOCALE())} · ${Math.round(100 * x.p)}% ${t('r_prob')}</span></div>`).join('') || `<div class="rrow"><span class="lbl2">${t('r_no_recent')}</span></div>`}
+  </div>`;
+}
+// Fila del mini leaderboard (portada).
+function miniRow(w, i){
+  return `<div class="mbrow" data-rw="${esc(w.w)}">
+    <span class="rk num">${i + 1}</span>
+    <span class="nm">${esc(rName(w))} ${w.watch ? `<span class="rankchip num">🎯 ${w.insider_score}</span>` : ''} ${riskDot(w)}</span>
+    ${svgSpark(w.equity_curve)}
+    <span class="amt num">+${rUsd(w.pnl_usd)}</span>
+  </div>`;
+}
+// Tarjeta héroe del #1 (lista): la cuenta que más ganó del mes.
+function heroCard(w){
+  return `<div class="lhero" data-rw="${esc(w.w)}">
+    <div class="crown">👑 ${t('r_stat_best')}</div>
+    <div class="row"><span class="nm">${esc(rName(w))} ${w.watch ? `<span class="rankchip num">🎯 ${w.insider_score}</span>` : ''}</span><span class="amt num">+${rUsd(w.pnl_usd)}</span></div>
+    <div class="sub">${svgSpark(w.equity_curve)} <span>${w.win_rate != null ? Math.round(100 * w.win_rate) + '% ' + t('r_acierta') : `${w.wins}-${w.losses}`}</span> · <span>${w.n_markets} ${t('r_mercados')}</span> ${riskDot(w)} <span class="ver" style="margin-left:auto;color:var(--sky)">${t('r_ver_perfil')}</span></div>
+  </div>`;
+}
+
+// 📡 Portada: HISTORIA DEL DÍA — auto-elige lo más interesante del Radar.
 function radarDashHtml(ws){
+  const top = ws[0];
+  const tt = ((radarDoc && radarDoc.top_trades) || [])[0];
+  // Bolsa del día: la peor bolsa abierta (más $ perdido) entre las cuentas top.
+  let worstBag = null;
+  for (const w of ws) for (const b of ((w.open && w.open.worst) || [])) if (!worstBag || b.pnl < worstBag.b.pnl) worstBag = { w, b };
   const catAgg = new Map();
   for (const w of ws) for (const c of (w.cats || [])) catAgg.set(c.cat, (catAgg.get(c.cat) || 0) + c.share * (w.sizing && w.sizing.total_usd || 0));
   const catTot = [...catAgg.values()].reduce((a, b) => a + b, 0) || 1;
   const catBars = [...catAgg].sort((a, b) => b[1] - a[1]).slice(0, 4)
     .map(([cat, usd]) => `<div class="rrow"><span class="lbl">${esc(rCat(cat))}</span><span class="rbar"><i style="width:${Math.round(100 * usd / catTot)}%"></i></span><span class="val num">${Math.round(100 * usd / catTot)}%</span></div>`).join('');
+  const accountStory = top ? `<div class="storyc" style="--sc:var(--amber)" data-rw="${esc(top.w)}">
+    <span class="tag">${t('story_account')}</span>
+    <div class="nm">${esc(rName(top))} ${top.watch ? `<span class="rankchip num">🎯 ${top.insider_score}</span>` : ''}</div>
+    <div class="big num" style="color:var(--volt)">+${rUsd(top.pnl_usd)}</div>
+    <div class="sub">${esc(fraseDe(top))}</div>
+    <div class="foot">${svgSpark(top.equity_curve)} ${riskDot(top)} <span style="margin-left:auto;color:var(--sky)">${t('story_see')}</span></div>
+  </div>` : '';
+  const playStory = tt ? `<div class="storyc" style="--sc:var(--volt)" data-rw="${esc(tt.w)}">
+    <span class="tag">${t('story_play')}</span>
+    <div class="nm">${esc(tt.who || (tt.w || '').slice(0, 8))} ${tt.timing ? (tt.timing === 'antes' ? `<span class="tbadge antes">${t('tb_before_s')}</span>` : `<span class="tbadge vivo">${t('tb_live')}</span>`) : ''}</div>
+    <div class="sub">${esc(tt.q || '')}</div>
+    <div class="big num" style="color:var(--volt)">+${rUsd(tt.profit)}</div>
+    <div class="foot"><span>${t('r_puso')} ${rUsd(tt.usd)} · ${Math.round(100 * (tt.prob || 0))}%</span><span style="margin-left:auto;color:var(--sky)">${t('story_see')}</span></div>
+  </div>` : '';
+  const bagStory = worstBag ? `<div class="storyc wide" style="--sc:var(--red)" data-rw="${esc(worstBag.w.w)}">
+    <span class="tag">${t('story_bag')}</span>
+    <div class="nm">${esc(rName(worstBag.w))}</div>
+    <div class="sub"><b>${esc(worstBag.b.q || '—')}</b>${worstBag.b.dead ? ` <span class="deadtag">${t('rr_dead')}</span>` : ''} — ${t('rr_bought')} ${rUsd(worstBag.b.cost)} → ${t('rr_now')} ${rUsd(worstBag.b.now)}</div>
+    <div class="big num" style="color:var(--red)">${rMoney(worstBag.b.pnl)} <span style="font-size:12px;color:var(--faint);font-weight:700">${worstBag.b.pct != null ? Math.round(100 * worstBag.b.pct) + '%' : ''} ${t('rr_unreal')}</span></div>
+    <div class="foot"><span style="margin-left:auto;color:var(--sky)">${t('story_see')}</span></div>
+  </div>` : `<div class="storyc wide" style="--sc:var(--volt)"><span class="tag">${t('story_bag')}</span><div class="sub" style="margin-top:8px">${t('story_bag_none')}</div></div>`;
   return radarWarnHtml() + `
-    <div class="rhead"><span><span class="nm2">${t('r_dash_title')}</span><br><span class="lbl2">${t('r_dash_sub')}</span></span></div>
-    <div class="rcards" style="grid-template-columns:1fr">
-      <div class="rcard"><div class="h">${t('r_where')}</div>${catBars || '<div class="rrow"><span class="lbl2">—</span></div>'}</div>
+    <div class="rhead" style="padding:14px 12px 2px"><span><span class="nm2">${t('sd_title')}</span><br><span class="lbl2">${t('sd_sub')}</span></span></div>
+    <div class="rdstories">${accountStory}${playStory}${bagStory}</div>
+    <div class="rdsect"><div class="rdsecth"><span class="t">${t('sd_board')}</span><span class="sub">${t('sd_board_sub')}</span></div>
+      <div class="rdmini">${ws.slice(0, 6).map(miniRow).join('')}</div>
     </div>
-    ${ws.slice(0, 5).map((w, i) => `
-      <div class="dashcard" data-rw="${esc(w.w)}">
-        <div class="dtop">
-          <span class="rank num">#${i + 1}</span>
-          <span class="nm">${esc(rName(w))}</span>
-          ${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}
-          ${pmLink(w.w)}
-        </div>
-        <div class="frase">${esc(fraseDe(w))}</div>
-        ${(w.best_trades || []).map(b => `<div class="btr">
-          ${timingBadge(b.timing)}
-          <span class="q" title="${esc(b.q)}">${esc(b.q)}</span>
-          <span class="amt num">${t('r_puso')} ${rUsd(b.usd)} → ${t('r_gano')} <b>${rUsd(b.profit)}</b></span>
-          <span class="when num">${esc(rdt(b.ts))}</span>
-        </div>`).join('')}
-      </div>`).join('')}
+    <div class="rdsect"><div class="rdsecth"><span class="t">${t('sd_where')}</span></div>
+      <div class="rcard">${catBars || '<div class="rrow"><span class="lbl2">—</span></div>'}</div>
+    </div>
     <p class="dnote">${t('r_attr')} · ${t('r_updated')} ${radarDoc && radarDoc.ran_at ? esc(rdt(Date.parse(radarDoc.ran_at) / 1000)) : '—'} · ${t('r_aa_informs')}</p>`;
 }
 
@@ -3351,72 +3680,15 @@ function renderRadarDetail(){
   }
   if (cmp2){ dc.innerHTML = compareHtml(ws); return; }
   if (!w){ dc.innerHTML = radarDashHtml(ws); return; }
-  const ini = (rName(w) || '?').slice(0, 2).toUpperCase();
-  const bar = (lbl, share) => `<div class="rrow"><span class="lbl">${esc(lbl)}</span><span class="rbar"><i style="width:${Math.round(100 * (share || 0))}%"></i></span><span class="val num">${Math.round(100 * (share || 0))}%</span></div>`;
-  const bandRows = (w.bands || []).map(b => bar(bandLabel(b.band), b.share)).join('');
-  const catRows = (w.cats || []).slice(0, 5).map(c => bar(rCat(c.cat), c.share)).join('');
-  const tm = w.timing || {}, sz = w.sizing || {}, st = w.style || {};
-  const flip = st.flip_share != null ? st.flip_share : 0;
-  dc.innerHTML = radarWarnHtml() + `
-    <div class="rback"><a href="#" data-rback="1">${t('r_back')}</a>
-      <span class="rbtns"><span class="pfbtn${pfollow.has(w.w) ? ' on' : ''}" data-pstar="${esc(w.w)}" role="button">${pfollow.has(w.w) ? '★ ' + t('r_following') : '☆ ' + t('r_follow')}</span><span class="pfbtn${compareSel.includes(w.w) ? ' on' : ''}" data-pcmp="${esc(w.w)}" role="button">⚖ ${t('r_compare')}</span><span class="pfbtn" data-pshare="${esc(w.w)}" role="button">↗ ${t('r_share')}</span></span>
-    </div>
-    <div class="rhead">
-      <span class="av">${w.img ? `<img src="${esc(w.img)}" alt="" onerror="this.parentNode.textContent='${ini}'">` : ini}</span>
-      <span><span class="nm2">${esc(rName(w))} ${pmLink(w.w)}</span><br>
-        <span class="frase">${esc(fraseDe(w))}</span><br><span class="wd">${esc(w.w)}</span></span>
-    </div>
-    <div class="rchips">
-      ${w.watch ? `<span class="rchip watch">🎯 ${t('r_informed')} <b class="num">${w.insider_score}/100</b></span>` : ''}
-      ${w.kind ? kindBadge(w.kind, w.streak) : ''}
-      <span class="rchip">${t('r_chip_won')} <b class="num">${rUsd(w.pnl_usd)}</b> ${t('r_chip_in30')}</span>
-      <span class="rchip">${t('r_chip_hit')} <b class="num">${w.wins} ${t('r_chip_of')} ${w.wins + w.losses}</b>${w.win_rate != null ? ` (${Math.round(100 * w.win_rate)}%)` : ''}</span>
-      <span class="rchip">${t('r_chip_moved')} <b class="num">${rUsd(sz.total_usd)}</b> ${lang === 'en' ? 'across' : 'en'} ${w.n_markets} ${t('r_mercados')}</span>
-      ${w.portfolio_usd > 0 ? `<span class="rchip">💼 ${t('r_chip_portfolio')} <b class="num">${rUsd(w.portfolio_usd)}</b>${w.positions_open != null ? ` · ${w.positions_open} ${t('r_positions')}` : ''}</span>` : ''}
-      ${w.pre_win_share != null ? `<span class="rchip">${t('r_chip_early')} <b class="num">${Math.round(100 * w.pre_win_share)}%</b> ${t('r_chip_times')}</span>` : ''}
-    </div>
-    ${(w.best_trades || []).length ? `<div class="rtrades"><div class="secttl">${t('r_best_plays')}</div>
-      ${w.best_trades.map(b => `<div class="btr">${timingBadge(b.timing)}<span class="q" title="${esc(b.q)}">${esc(b.q)}</span><span class="amt num">${t('r_puso')} ${rUsd(b.usd)} → ${t('r_gano')} <b>${rUsd(b.profit)}</b></span><span class="when num">${esc(rdt(b.ts))}</span></div>`).join('')}
-    </div>` : ''}
-    <div class="rcards">
-      ${Array.isArray(w.equity_curve) && w.equity_curve.length >= 2 ? `<div class="rcard eqcard"><div class="h">${t('r_equity_card')}</div>
-        <div class="big num" style="color:${(w.cum_now ?? 0) >= 0 ? 'var(--volt)' : 'var(--red)'}">${(w.cum_now ?? 0) >= 0 ? '+' : ''}${rUsd(w.cum_now)}</div>
-        ${svgEquity(w.equity_curve)}
-      </div>` : ''}
-      <div class="rcard"><div class="h">${t('r_when')}</div>
-        <div class="big num">${tm.median_hours_before != null ? '~' + tm.median_hours_before + ' ' + t('r_hbefore') : '—'}</div>
-        <div class="rrow"><span class="lbl2">${t('r_before_close')}</span></div>
-        ${bar(t('r_lastday'), tm.last24h_share)}
-      </div>
-      <div class="rcard"><div class="h">${t('r_risk')}</div>
-        <div class="big num">${rUsd(sz.median_usd)}</div>
-        <div class="rrow"><span class="lbl2">${t('r_per_play')} · ${t('r_maxbet')} ${esc(rUsd(sz.p90_usd))} · ${t('r_month_total')} ${esc(rUsd(sz.total_usd))}</span></div>
-      </div>
-      <div class="rcard"><div class="h">${t('r_bet_type')}</div>${bandRows || `<div class="rrow"><span class="lbl2">—</span></div>`}</div>
-      <div class="rcard"><div class="h">${t('r_which')}</div>${(w.cats && w.cats.length) ? svgDonut(w.cats) : '<div class="rrow"><span class="lbl2">—</span></div>'}</div>
-      <div class="rcard"><div class="h">${t('r_style')}</div>
-        <div class="big">${flip < 0.15 ? t('r_hold') : flip < 0.5 ? t('r_mixed') : t('r_flips')}</div>
-        ${bar(t('r_sells_before'), flip)}
-      </div>
-      ${Array.isArray(w.pnl_weeks) ? (() => {
-        const mx = Math.max(1, ...w.pnl_weeks.map(v => Math.abs(v)));
-        return `<div class="rcard"><div class="h">${t('r_weekly')}</div>
-          <div class="wkbars">${w.pnl_weeks.map((v, k) => `<span class="wk" title="$${(+v).toLocaleString(LOCALE())}">
-            <i class="${v >= 0 ? 'pos' : 'neg'}" style="height:${Math.max(6, Math.round(46 * Math.abs(v) / mx))}%"></i>
-            <em>S${k + 1}</em></span>`).join('')}</div>
-          <div class="rrow"><span class="lbl2">${t('r_weekly_sub_a')} ${w.consistency != null ? Math.round(100 * w.consistency) + '%' : '—'} ${t('r_weekly_sub_b')}</span></div>
-        </div>`;
-      })() : ''}
-    </div>
-    <div class="rtrades">
-      <div class="secttl">${t('r_last_moves')}</div>
-      ${(w.last_trades || []).map(x => `<div class="tr">
-        <span class="when num">${esc(rdt(x.ts))}</span>
-        <span class="q" title="${esc(x.q)}">${esc(x.q)}</span>
-        <span class="px num">${x.side === 'BUY' ? t('r_buy') : t('r_sell')} ${esc(String(x.outcome))} · $${(x.usd || 0).toLocaleString(LOCALE())} · ${Math.round(100 * x.p)}% ${t('r_prob')}</span>
-      </div>`).join('') || `<div class="rrow"><span class="lbl2">${t('r_no_recent')}</span></div>`}
-      <p class="dnote">${t('r_attr')} · ${t('r_updated')} ${radarDoc && radarDoc.ran_at ? esc(rdt(Date.parse(radarDoc.ran_at) / 1000)) : '—'} · ${t('r_aa_informs')}</p>
-    </div>`;
+  // ── Perfil premium: veredicto → tiles → cómo gana → riesgo real → estilo ──
+  dc.innerHTML = radarWarnHtml()
+    + backBar(w)
+    + verdictHero(w)
+    + heroTiles(w)
+    + bestPlaysHtml(w)
+    + openRiskHtml(w.open, { wins: w.wins, losses: w.losses })
+    + styleDetail(w)
+    + `<p class="dnote" style="margin:16px 12px 0">${t('r_attr')} · ${t('r_updated')} ${radarDoc && radarDoc.ran_at ? esc(rdt(Date.parse(radarDoc.ran_at) / 1000)) : '—'} · ${t('r_aa_informs')}</p>`;
 }
 
 const shortDate = (s) => { try{ return new Date(s + 'T12:00Z').toLocaleDateString(LOCALE(), { day: 'numeric', month: 'short' }); }catch(e){ return s; } };

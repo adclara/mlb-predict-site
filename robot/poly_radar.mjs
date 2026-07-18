@@ -218,26 +218,51 @@ const profiles = profRows.map(profileOf).sort((a, b) => b.pnl_usd - a.pnl_usd);
 try {
   await pool(profiles, 6, async (pr) => {
     try {
-      // La cartera = suma del currentValue de las posiciones abiertas (dato fiable
-      // de /positions; el endpoint /value devolvía 0 para wallets con posiciones).
+      // Posiciones ABIERTAS ahora mismo (Data API pública). De aquí salen dos cosas:
+      //  1) el tamaño real de la cuenta hoy (cartera = Σ valor actual), y
+      //  2) el lado HONESTO que el récord de ganancias oculta: las bolsas que
+      //     compró y hoy van PERDIENDO (o valen ~$0) y aún no ha vendido.
       const pos = await get(`https://data-api.polymarket.com/positions?user=${pr.w}&sizeThreshold=1&limit=500`);
       if (Array.isArray(pos)) {
         pr.positions_open = pos.length;
         // Valor actual por posición = mark-to-market (acciones × precio actual).
         // Más fiable que currentValue, que la Data API reporta 0 en posiciones
         // GANADAS-redimibles (curPrice=1 → valen ~$1/acción hasta que se cobran).
-        const worth = (p) => {
-          const mtm = (+p.size || 0) * (+p.curPrice || 0);
-          return mtm > 0 ? mtm : (+p.currentValue || 0);
-        };
-        const val = pos.reduce((s, p) => s + worth(p), 0);
+        const mtm = (p) => { const v = (+p.size || 0) * (+p.curPrice || 0); return v > 0 ? v : (+p.currentValue || 0); };
+        // Costo = lo que pagó por la posición (initialValue = size×avgPrice).
+        const costOf = (p) => { const c = +p.initialValue; return isFinite(c) && c > 0 ? c : (+p.size || 0) * (+p.avgPrice || 0); };
+        const items = pos.map((p) => {
+          const cost = costOf(p), now = mtm(p);
+          // P&L NO realizado: cashPnl de la API si viene; si no, valor − costo.
+          const pnl = (p.cashPnl != null && isFinite(+p.cashPnl)) ? +p.cashPnl : (now - cost);
+          const cur = +p.curPrice;
+          return {
+            q: String(p.title || '').slice(0, 90), outcome: p.outcome != null ? String(p.outcome) : null,
+            cost: Math.round(cost), now: Math.round(now), pnl: Math.round(pnl),
+            pct: cost > 0 ? +(pnl / cost).toFixed(2) : 0,
+            // "bolsa muerta": pagó dinero real y hoy vale casi nada (≤5¢) sin ser redimible-ganadora.
+            dead: isFinite(cur) && cur <= 0.05 && cost >= 5 && !p.redeemable,
+          };
+        }).filter((it) => it.cost >= 1); // fuera el polvo
+        const losers = items.filter((it) => it.pnl < 0);
+        const val = items.reduce((s, it) => s + it.now, 0);
         pr.portfolio_usd = Math.round(val);
-      } else { pr.positions_open = null; pr.portfolio_usd = null; }
-    } catch (e) { pr.portfolio_usd = pr.portfolio_usd ?? null; pr.positions_open = pr.positions_open ?? null; }
+        pr.open = {
+          value: Math.round(val),
+          cost: Math.round(items.reduce((s, it) => s + it.cost, 0)),
+          unrealized: Math.round(items.reduce((s, it) => s + it.pnl, 0)),
+          n: items.length, winners: items.filter((it) => it.pnl > 0).length, losers: losers.length,
+          dead: items.filter((it) => it.dead).length,
+          // Las peores bolsas: primero por dinero perdido (el "riesgo real").
+          worst: losers.sort((a, b) => a.pnl - b.pnl).slice(0, 4),
+        };
+      } else { pr.positions_open = null; pr.portfolio_usd = null; pr.open = null; }
+    } catch (e) { pr.portfolio_usd = pr.portfolio_usd ?? null; pr.positions_open = pr.positions_open ?? null; pr.open = pr.open ?? null; }
   });
   const withPf = profiles.filter((p) => p.portfolio_usd != null).length;
+  const underwater = profiles.filter((p) => p.open && p.open.losers > 0).length;
   const t1 = profiles[0];
-  console.log(`💼 Cartera (valor actual) resuelta para ${withPf}/${profiles.length} wallets` + (t1 ? ` · top1 $${(t1.portfolio_usd || 0).toLocaleString()} en ${t1.positions_open ?? 0} posiciones` : ''));
+  console.log(`💼 Cartera resuelta para ${withPf}/${profiles.length} wallets · ${underwater} con bolsas perdiendo` + (t1 ? ` · top1 $${(t1.portfolio_usd || 0).toLocaleString()} en ${t1.positions_open ?? 0} posiciones` : ''));
 } catch (e) { console.log('⚠️ no se pudo resolver cartera:', e.message); }
 const watchlist = profiles.filter((p) => p.watch)
   .sort((a, b) => b.insider_score - a.insider_score)
