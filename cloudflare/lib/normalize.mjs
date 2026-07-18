@@ -158,6 +158,7 @@ function pitchersFor(g, pitcherNames) {
     fatigue: (r && r.fatigue) || (b && b.fatigue) || null,
     fip: b && typeof b.fip === 'number' ? Math.round(b.fip * 100) / 100 : null, // FIP de temporada del abridor
     hand: (b && b.hand) || handFallback || null, // L/R
+    k9: b && typeof b.k9 === 'number' ? b.k9 : null, // ponches por 9 entradas (props de ponches, descriptivo)
   } : null;
   const home = side(names.hn, names.h, rec.home, bp.home, aux2.home_sp_hand);
   const away = side(names.an, names.a, rec.away, bp.away, aux2.away_sp_hand);

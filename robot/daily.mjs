@@ -125,7 +125,8 @@ async function fetchSeasonFip(id, season) {
     const ip = ipToFloat(st.inningsPitched)
     if (!ip || ip < 5) return // too few innings to say anything
     const hr = +st.homeRuns || 0, bb = +st.baseOnBalls || 0, hbp = +st.hitByPitch || 0, k = +st.strikeOuts || 0
-    _freshFip.set(id, { fip: Math.round(((13 * hr + 3 * (bb + hbp) - 2 * k) / ip + 3.1) * 100) / 100, ip })
+    // K/9 = ponches por 9 entradas — el dato base para props de ponches (descriptivo).
+    _freshFip.set(id, { fip: Math.round(((13 * hr + 3 * (bb + hbp) - 2 * k) / ip + 3.1) * 100) / 100, ip, k9: Math.round((k / ip * 9) * 10) / 10 })
   } catch { /* prior alone */ }
 }
 // Pitcher throwing hand — the schedule's probablePitcher hydrate does NOT carry
@@ -227,8 +228,8 @@ function buildBrief(a, prediction, f5, priors, g, homeHand, awayHand, hitters) {
     reasons: reasons.slice(0, 5),
     lineups: { home: lineupSide(g.home_lineup, g.home_team_id), away: lineupSide(g.away_lineup, g.away_team_id) },
     pitchers: {
-      home: { name: g.home_probable_pitcher_name || null, fip: rr(f.home_sp_fip), hand: homeHand, era: pr.home?.recent?.era ?? null, n: pr.home?.recent?.n ?? null, fatigue: pr.home?.fatigue?.level ?? null },
-      away: { name: g.away_probable_pitcher_name || null, fip: rr(f.away_sp_fip), hand: awayHand, era: pr.away?.recent?.era ?? null, n: pr.away?.recent?.n ?? null, fatigue: pr.away?.fatigue?.level ?? null },
+      home: { name: g.home_probable_pitcher_name || null, fip: rr(f.home_sp_fip), hand: homeHand, era: pr.home?.recent?.era ?? null, n: pr.home?.recent?.n ?? null, fatigue: pr.home?.fatigue?.level ?? null, k9: _freshFip.get(g.home_probable_pitcher_id)?.k9 ?? null },
+      away: { name: g.away_probable_pitcher_name || null, fip: rr(f.away_sp_fip), hand: awayHand, era: pr.away?.recent?.era ?? null, n: pr.away?.recent?.n ?? null, fatigue: pr.away?.fatigue?.level ?? null, k9: _freshFip.get(g.away_probable_pitcher_id)?.k9 ?? null },
     },
     bullpen: { home_fip: rr(f.home_pen_fip), away_fip: rr(f.away_pen_fip) },
     offense: {
