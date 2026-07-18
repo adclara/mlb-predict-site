@@ -287,6 +287,32 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .prop .pval b{color:var(--text);font-weight:800;font-size:14px}
 .prop .pval.hot b{color:var(--amber)}
 .propnote{margin-top:7px;font-size:11px;line-height:1.5;color:var(--faint)}
+/* 🧠 Cerebro AA */
+.brain{padding:12px 14px 22px}
+.brainhead{font-size:17px;font-weight:800;display:flex;align-items:center;gap:7px}
+.bsubtle{font-size:12px;color:var(--dim);line-height:1.5;margin:6px 0 12px}
+.braintiles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.btile{background:var(--inner);border:1px solid var(--hair);border-radius:12px;padding:10px 9px;text-align:center;min-width:0}
+.btile .bl{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.btile .bv{font-size:19px;font-weight:800;color:var(--volt);margin-top:3px}
+.btile .bs{font-size:10px;color:var(--faint);margin-top:2px;line-height:1.3}
+.bsect{font-size:12px;font-weight:800;color:var(--amber);letter-spacing:.03em;margin:16px 0 8px}
+.blearns{display:flex;flex-direction:column;gap:7px}
+.blearn{background:var(--inner);border:1px solid var(--hair);border-left:3px solid var(--sky);border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.5;color:var(--text)}
+.bsigs{display:flex;flex-direction:column;gap:8px}
+.bsig{display:grid;grid-template-columns:1fr 90px auto;gap:9px;align-items:center;font-size:12px}
+.bsig .bsl{color:var(--dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bsig .bsw{height:8px;background:var(--hair);border-radius:5px;overflow:hidden}
+.bsig .bsw i{display:block;height:100%;background:var(--volt);border-radius:5px}
+.bsig .bse{font-weight:800;color:var(--volt);flex:none}
+.calsvg{display:block;width:100%;height:90px;margin-top:2px}
+.bcaphint{font-size:10.5px;color:var(--faint);margin-top:4px;text-align:center}
+.blog{display:flex;flex-direction:column;gap:6px}
+.blogr{display:flex;gap:9px;font-size:12px;color:var(--dim);align-items:baseline}
+.blogr .bd{flex:none;color:var(--faint);font-size:11px}
+.bempty{font-size:12px;color:var(--faint);padding:6px 0}
+.bnote{margin-top:16px;font-size:11px;line-height:1.5;color:var(--faint);border-top:1px solid var(--hair);padding-top:10px}
+@media(max-width:400px){.brain{padding:10px 8px 20px}.bsig{grid-template-columns:1fr 60px auto}}
 @media(max-width:420px){
   .bleg{flex-direction:column;align-items:flex-start;gap:6px}
   .blright{align-self:stretch;justify-content:space-between}
@@ -960,6 +986,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       <button class="ltab" data-lt="favs" data-i18n="tab_favs">Favoritos</button>
       <button class="ltab" data-lt="pos" data-i18n="tab_standings">Posiciones</button>
       <button class="ltab" data-lt="hist" data-i18n="tab_hist">Historial</button>
+      <button class="ltab" data-lt="brain" data-i18n="tab_brain">🧠 Cerebro</button>
       <div class="datebox">
         <button class="arrow" id="dPrev" aria-label="Día anterior"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
         <button class="today" id="dlabel" aria-label="Elegir fecha" data-i18n="today">Hoy</button>
@@ -1210,6 +1237,13 @@ const T = {
     bol_rec: 'Cómo le ha ido a estos niveles', bol_note: 'Resumen de las mejores selecciones AA de hoy · no es recomendación de apuesta · tú decides.',
     bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto',
     props_title: '🎯 Props a seguir', props_hr: 'Jonrones (más poder)', props_k: 'Ponches (K/9 del abridor)', props_note: 'Datos que informan estas props — no es una predicción AA.',
+    tab_brain: '🧠 Cerebro', brain_title: 'Cerebro AA — qué aprende con el tiempo',
+    brain_sub: 'El modelo se re-ajusta cada día con sus propios aciertos y errores. Esto es lo que ha aprendido — medido, no inventado. El algoritmo sigue siendo privado.',
+    brain_measured: 'Predicciones medidas', brain_since: 'desde', brain_cal: 'Calibración (hueco)', brain_cal_sub: 'lo que digo vs lo que ocurre', brain_acc: 'Acierto AA', brain_mkt: 'mercado',
+    brain_learning: 'Qué estoy aprendiendo', brain_signals: '📶 Señales que aprendí que sí predicen',
+    brain_caltime: '📉 Mi calibración en el tiempo (menos hueco = mejor)', brain_accum: 'Acumulando historial — la tendencia aparece en unos días.',
+    brain_log: '🗓 Bitácora de cambios', brain_note: 'Aprendizaje del propio modelo; ilustra cómo mejora, no es garantía de resultados.',
+    brain_soon: 'El Cerebro AA está preparando su primer diario de aprendizaje.',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1271,6 +1305,13 @@ const T = {
     bol_rec: 'How these tiers have done', bol_note: "A summary of today's best AA picks · not a betting recommendation · you decide.",
     bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high',
     props_title: '🎯 Props to watch', props_hr: 'Home runs (most power)', props_k: 'Strikeouts (starter K/9)', props_note: 'Data that informs these props — not an AA prediction.',
+    tab_brain: '🧠 Brain', brain_title: 'AA Brain — what it learns over time',
+    brain_sub: 'The model re-tunes itself every day from its own hits and misses. This is what it has learned — measured, not made up. The algorithm stays private.',
+    brain_measured: 'Measured predictions', brain_since: 'since', brain_cal: 'Calibration (gap)', brain_cal_sub: 'what I say vs what happens', brain_acc: 'AA accuracy', brain_mkt: 'market',
+    brain_learning: "What I'm learning", brain_signals: '📶 Signals I learned truly predict',
+    brain_caltime: '📉 My calibration over time (smaller gap = better)', brain_accum: 'Building history — the trend shows up in a few days.',
+    brain_log: '🗓 Change log', brain_note: "The model's own learning; it shows how it improves, not a guarantee of results.",
+    brain_soon: 'AA Brain is preparing its first learning journal.',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
       <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
@@ -1659,6 +1700,65 @@ function renderHistList(){
   $('list').innerHTML = html;
 }
 
+// 🧠 Cerebro AA: qué aprende el modelo con el tiempo (de mlb:learning).
+let learningDoc = null, learningLoading = false;
+async function loadLearning(){
+  if (learningDoc){ renderBrain(); return; }
+  if (learningLoading) return;
+  learningLoading = true;
+  try { const r = await fetch(API + '/v1/mlb/learning'); learningDoc = await r.json(); }
+  catch (e) { learningDoc = { note: 'err' }; }
+  learningLoading = false;
+  if (sport === 'mlb' && listTab === 'brain') renderBrain();
+}
+function calChart(hist){
+  const h = (hist || []).filter(x => x.gap != null);
+  if (h.length < 2) return `<div class="bsect">${t('brain_caltime')}</div><div class="bempty">${t('brain_accum')}</div>`;
+  const W = 320, H = 90, pad = 6;
+  const xs = h.map((_, i) => pad + i / (h.length - 1) * (W - 2 * pad));
+  const gaps = h.map(x => x.gap);
+  const mx = Math.max(...gaps), mn = Math.min(...gaps), rng = (mx - mn) || 1;
+  const ys = gaps.map(g => pad + (g - mn) / rng * (H - 2 * pad)); // gap alto = abajo? invertimos: menor gap arriba (mejor)
+  const yInv = gaps.map(g => H - pad - (g - mn) / rng * (H - 2 * pad));
+  const line = xs.map((x, i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${yInv[i].toFixed(1)}`).join(' ');
+  const area = `M${xs[0]},${H - pad} ` + xs.map((x, i) => `L${x.toFixed(1)},${yInv[i].toFixed(1)}`).join(' ') + ` L${xs[xs.length - 1]},${H - pad} Z`;
+  const trend = gaps[gaps.length - 1] <= gaps[0]; // bajó el hueco = aprendió/mejoró
+  const col = trend ? 'var(--volt)' : 'var(--amber)';
+  return `<div class="bsect">${t('brain_caltime')}</div>
+    <svg class="calsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${t('brain_caltime')}">
+      <path d="${area}" fill="${col}" opacity="0.14"/>
+      <path d="${line}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>
+    </svg>
+    <div class="bcaphint num">${h[0].date} · ${gaps[0]}% → ${h[h.length - 1].date} · ${gaps[gaps.length - 1]}%</div>`;
+}
+function renderBrain(){
+  $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
+  $('lgcount').innerHTML = '';
+  const d = learningDoc;
+  if (!d || d.note){ $('list').innerHTML = `<div class="lempty">${t('brain_soon')}</div>`; return; }
+  const cal = d.cal || {};
+  const learns = ((lang === 'en' ? d.state_en : d.state_es) || []);
+  const sigs = d.signals || [];
+  const sigBar = (s) => { const w = Math.max(4, Math.min(100, Math.round((s.edge_pp || 0) / 15 * 100)));
+    return `<div class="bsig"><span class="bsl">${esc(s.label)}</span><span class="bsw"><i style="width:${w}%"></i></span><span class="bse num">+${s.edge_pp} pts</span></div>`; };
+  const logRows = (d.log || []).slice(0, 8).map(e => `<div class="blogr"><span class="bd num">${esc(e.date)}</span><span>${esc(lang === 'en' ? e.en : e.es)}</span></div>`).join('');
+  $('list').innerHTML = `
+    <div class="brain">
+      <div class="brainhead">🧠 <b>${t('brain_title')}</b></div>
+      <div class="bsubtle">${t('brain_sub')}</div>
+      <div class="braintiles">
+        <div class="btile"><div class="bl">${t('brain_measured')}</div><div class="bv num">${d.n_graded ?? '—'}</div><div class="bs">${t('brain_since')} ${esc(d.first_date || '')}</div></div>
+        <div class="btile"><div class="bl">${t('brain_cal')}</div><div class="bv num">${cal.gap ?? '—'}%</div><div class="bs">${t('brain_cal_sub')}</div></div>
+        ${d.market ? `<div class="btile"><div class="bl">${t('brain_acc')}</div><div class="bv num">${d.market.model_acc}%</div><div class="bs">${t('brain_mkt')} ${d.market.market_acc}%</div></div>` : ''}
+      </div>
+      <div class="bsect">💡 ${t('brain_learning')}</div>
+      <div class="blearns">${learns.map(s => `<div class="blearn">${esc(s)}</div>`).join('') || `<div class="bempty">${t('brain_accum')}</div>`}</div>
+      ${sigs.length ? `<div class="bsect">${t('brain_signals')}</div><div class="bsigs">${sigs.map(sigBar).join('')}</div>` : ''}
+      ${calChart(d.history)}
+      ${logRows ? `<div class="bsect">${t('brain_log')}</div><div class="blog">${logRows}</div>` : ''}
+      <div class="bnote">${esc(d.attribution || '')} · ${t('brain_note')}</div>
+    </div>`;
+}
 function renderMlbStandings(){
   $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
   $('lgcount').innerHTML = '';
@@ -1706,6 +1806,7 @@ function renderList(){
   if (sport !== 'mlb'){ renderOtherList(); return; }
   if (listTab === 'hist'){ renderHistList(); return; }
   if (listTab === 'pos'){ renderMlbStandings(); return; }
+  if (listTab === 'brain'){ renderBrain(); return; }
   const n = counts();
   $('nAll').textContent = n.all || '';
   $('nLive').textContent = n.live || '';
@@ -2481,9 +2582,10 @@ document.addEventListener('click', e => {
   if (lt){
     listTab = lt.dataset.lt;
     document.querySelectorAll('.ltab').forEach(c => c.classList.toggle('on', c === lt));
-    document.getElementById('pills').style.display = (listTab === 'hist' || listTab === 'pos') ? 'none' : '';
+    document.getElementById('pills').style.display = (listTab === 'hist' || listTab === 'pos' || listTab === 'brain') ? 'none' : '';
     if (listTab === 'hist') loadHistory();
     if (listTab === 'pos') loadStandings();
+    if (listTab === 'brain') loadLearning();
     renderList(); renderDetail(); return;
   }
   const f = e.target.closest('.pill[data-f]');
