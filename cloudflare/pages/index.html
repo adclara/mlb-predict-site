@@ -2897,7 +2897,7 @@ const pStar = (w) => `<span class="pstar${pfollow.has(w) ? ' on' : ''}" data-pst
 const pCmp = (w) => `<span class="pcmp${compareSel.includes(w) ? ' on' : ''}" data-pcmp="${esc(w)}" role="button" title="${t('r_compare')}">⚖</span>`;
 const walletCard = (w, i) => `<div class="wcard" data-rw="${esc(w.w)}" role="button" style="--i:${i}">
   <span class="row1"><span class="wctl">${pStar(w.w)}${pCmp(w.w)}</span><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}<span class="spkw">${svgSpark(w.equity_curve)}</span><span class="gan num">+${rUsd(w.pnl_usd)}</span></span>
-  <span class="row2">${w.win_rate != null ? `${t('r_acierta')} ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(rCat(w.cats[0].cat)) : '—'} · ${w.n_markets} ${t('r_mercados')}${w.portfolio_usd != null ? ` · 💼 ${esc(rUsd(w.portfolio_usd))}` : ''}<span class="ver">${t('r_ver_perfil')}</span></span>
+  <span class="row2">${w.win_rate != null ? `${t('r_acierta')} ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(rCat(w.cats[0].cat)) : '—'} · ${w.n_markets} ${t('r_mercados')}${w.portfolio_usd > 0 ? ` · 💼 ${esc(rUsd(w.portfolio_usd))}` : ''}<span class="ver">${t('r_ver_perfil')}</span></span>
 </div>`;
 function renderRadarList(){
   if (sport !== 'radar') return;
@@ -3068,7 +3068,7 @@ function renderRadarDetail(){
       <span class="rchip">${t('r_chip_won')} <b class="num">${rUsd(w.pnl_usd)}</b> ${t('r_chip_in30')}</span>
       <span class="rchip">${t('r_chip_hit')} <b class="num">${w.wins} ${t('r_chip_of')} ${w.wins + w.losses}</b>${w.win_rate != null ? ` (${Math.round(100 * w.win_rate)}%)` : ''}</span>
       <span class="rchip">${t('r_chip_moved')} <b class="num">${rUsd(sz.total_usd)}</b> ${lang === 'en' ? 'across' : 'en'} ${w.n_markets} ${t('r_mercados')}</span>
-      ${w.portfolio_usd != null ? `<span class="rchip">💼 ${t('r_chip_portfolio')} <b class="num">${rUsd(w.portfolio_usd)}</b>${w.positions_open != null ? ` · ${w.positions_open} ${t('r_positions')}` : ''}</span>` : ''}
+      ${w.portfolio_usd > 0 ? `<span class="rchip">💼 ${t('r_chip_portfolio')} <b class="num">${rUsd(w.portfolio_usd)}</b>${w.positions_open != null ? ` · ${w.positions_open} ${t('r_positions')}` : ''}</span>` : ''}
       ${w.pre_win_share != null ? `<span class="rchip">${t('r_chip_early')} <b class="num">${Math.round(100 * w.pre_win_share)}%</b> ${t('r_chip_times')}</span>` : ''}
     </div>
     ${(w.best_trades || []).length ? `<div class="rtrades"><div class="secttl">${t('r_best_plays')}</div>
