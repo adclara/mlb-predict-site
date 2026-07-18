@@ -7,7 +7,7 @@
 // (persistencia) — el pasado aquí apenas predice el futuro y la UI lo dice.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { fetchUniverse, fetchTrades, walletMarketStats, stats, spearman, median, quantile, fmt, pct } from './lib/poly.mjs';
+import { fetchUniverse, fetchTrades, walletMarketStats, stats, spearman, median, quantile, fmt, pct, get, pool } from './lib/poly.mjs';
 
 const TAGS = ['mlb', 'nba', 'nfl', 'soccer', 'tennis', 'sports', 'politics', 'crypto', 'pop-culture', 'business', 'science'];
 const WINDOW_DAYS = 30, MIN_VOL = 20000, MAX_MARKETS = 400;
@@ -210,6 +210,24 @@ function profileOf(r) {
 }
 // orden VISIBLE por dinero ganado (lo que un humano espera ver primero)
 const profiles = profRows.map(profileOf).sort((a, b) => b.pnl_usd - a.pnl_usd);
+
+// Tamaño de CARTERA: valor actual de las posiciones abiertas de cada wallet, en
+// vivo desde la Data API pública de Polymarket (/value + /positions). Es el
+// "tamaño real" de la cuenta ahora mismo, distinto del volumen movido (total_usd).
+// Null-safe: si la API no responde para una wallet, se omite y la UI la esconde.
+try {
+  await pool(profiles, 6, async (pr) => {
+    try {
+      const v = await get(`https://data-api.polymarket.com/value?user=${pr.w}`);
+      const raw = Array.isArray(v) ? (v[0] && (v[0].value ?? v[0].balance)) : (v && (v.value ?? v.balance));
+      pr.portfolio_usd = (raw != null && isFinite(+raw)) ? Math.round(+raw) : null;
+      const pos = await get(`https://data-api.polymarket.com/positions?user=${pr.w}&sizeThreshold=1&limit=500`);
+      pr.positions_open = Array.isArray(pos) ? pos.length : null;
+    } catch (e) { pr.portfolio_usd = pr.portfolio_usd ?? null; pr.positions_open = pr.positions_open ?? null; }
+  });
+  const withPf = profiles.filter((p) => p.portfolio_usd != null).length;
+  console.log(`💼 Cartera (valor actual) resuelta para ${withPf}/${profiles.length} wallets`);
+} catch (e) { console.log('⚠️ no se pudo resolver cartera:', e.message); }
 const watchlist = profiles.filter((p) => p.watch)
   .sort((a, b) => b.insider_score - a.insider_score)
   .map((p) => ({ w: p.w, pseudonym: p.pseudonym, name: p.name, insider_score: p.insider_score, win_rate: p.win_rate }));
