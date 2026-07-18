@@ -218,15 +218,19 @@ const profiles = profRows.map(profileOf).sort((a, b) => b.pnl_usd - a.pnl_usd);
 try {
   await pool(profiles, 6, async (pr) => {
     try {
-      const v = await get(`https://data-api.polymarket.com/value?user=${pr.w}`);
-      const raw = Array.isArray(v) ? (v[0] && (v[0].value ?? v[0].balance)) : (v && (v.value ?? v.balance));
-      pr.portfolio_usd = (raw != null && isFinite(+raw)) ? Math.round(+raw) : null;
+      // La cartera = suma del currentValue de las posiciones abiertas (dato fiable
+      // de /positions; el endpoint /value devolvía 0 para wallets con posiciones).
       const pos = await get(`https://data-api.polymarket.com/positions?user=${pr.w}&sizeThreshold=1&limit=500`);
-      pr.positions_open = Array.isArray(pos) ? pos.length : null;
+      if (Array.isArray(pos)) {
+        pr.positions_open = pos.length;
+        const val = pos.reduce((s, p) => s + (+p.currentValue || 0), 0);
+        pr.portfolio_usd = Math.round(val);
+      } else { pr.positions_open = null; pr.portfolio_usd = null; }
     } catch (e) { pr.portfolio_usd = pr.portfolio_usd ?? null; pr.positions_open = pr.positions_open ?? null; }
   });
   const withPf = profiles.filter((p) => p.portfolio_usd != null).length;
-  console.log(`💼 Cartera (valor actual) resuelta para ${withPf}/${profiles.length} wallets`);
+  const t1 = profiles[0];
+  console.log(`💼 Cartera (valor actual) resuelta para ${withPf}/${profiles.length} wallets` + (t1 ? ` · top1 $${(t1.portfolio_usd || 0).toLocaleString()} en ${t1.positions_open ?? 0} posiciones` : ''));
 } catch (e) { console.log('⚠️ no se pudo resolver cartera:', e.message); }
 const watchlist = profiles.filter((p) => p.watch)
   .sort((a, b) => b.insider_score - a.insider_score)
