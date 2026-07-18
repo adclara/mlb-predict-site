@@ -1,0 +1,26 @@
+# AA Sports — conecta radar.aasport.net a la app (Pages) vía la API de Cloudflare.
+# Se dispara con poke (.github/poke-subdomain) o a mano. Idempotente + verifica.
+name: subdomain
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['.github/poke-subdomain']
+permissions:
+  contents: read
+concurrency:
+  group: subdomain
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Conectar subdominio radar.aasport.net
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/subdomain_radar.mjs
