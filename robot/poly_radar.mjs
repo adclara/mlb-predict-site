@@ -264,6 +264,28 @@ try {
   const t1 = profiles[0];
   console.log(`💼 Cartera resuelta para ${withPf}/${profiles.length} wallets · ${underwater} con bolsas perdiendo` + (t1 ? ` · top1 $${(t1.portfolio_usd || 0).toLocaleString()} en ${t1.positions_open ?? 0} posiciones` : ''));
 } catch (e) { console.log('⚠️ no se pudo resolver cartera:', e.message); }
+
+// ── BALANCE REAL + validación de honestidad de cartera ───────────────────────
+// El número que un humano cree ("ganó $100k") IGNORA las bolsas abiertas que
+// arrastra perdiendo. Neto real = realizado (mercados cerrados) + no-realizado
+// (posiciones abiertas, marcado a mercado). Y castigamos el score de quien
+// "DEVUELVE" sus ganancias en bolsas perdedoras (give_back) o carga bolsas
+// muertas (pagó real, hoy ~$0) — para que la puntuación premie lo honesto, no lo
+// que engaña. give_back = fracción de lo ganado que las bolsas abiertas se comen.
+for (const pr of profiles) {
+  const realized = pr.pnl_usd || 0;
+  const unreal = pr.open ? (pr.open.unrealized || 0) : 0;
+  pr.net_real = Math.round(realized + unreal);
+  pr.give_back = (realized > 0 && unreal < 0) ? +Math.min(1, -unreal / realized).toFixed(2) : 0;
+  if (pr.open) {
+    const deadPen = Math.min(1, (pr.open.dead || 0) / 3);
+    pr.insider_score = Math.max(0, pr.insider_score - Math.round(100 * (0.20 * pr.give_back + 0.05 * deadPen)));
+  }
+}
+// Orden VISIBLE por el BALANCE REAL (no por la ganancia bruta que engaña).
+profiles.sort((a, b) => b.net_real - a.net_real);
+console.log(`⚖️  Balance real: ${profiles.filter((p) => p.give_back >= 0.25).length} cuentas devuelven ≥25% en bolsas · ${profiles.filter((p) => p.net_real < (p.pnl_usd || 0)).length} con neto < bruto · top1 neto $${(profiles[0] ? profiles[0].net_real : 0).toLocaleString()} (bruto $${(profiles[0] ? (profiles[0].pnl_usd || 0) : 0).toLocaleString()})`);
+
 const watchlist = profiles.filter((p) => p.watch)
   .sort((a, b) => b.insider_score - a.insider_score)
   .map((p) => ({ w: p.w, pseudonym: p.pseudonym, name: p.name, insider_score: p.insider_score, win_rate: p.win_rate }));
