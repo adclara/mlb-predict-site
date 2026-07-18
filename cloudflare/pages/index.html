@@ -312,7 +312,18 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .blogr .bd{flex:none;color:var(--faint);font-size:11px}
 .bempty{font-size:12px;color:var(--faint);padding:6px 0}
 .bnote{margin-top:16px;font-size:11px;line-height:1.5;color:var(--faint);border-top:1px solid var(--hair);padding-top:10px}
-@media(max-width:400px){.brain{padding:10px 8px 20px}.bsig{grid-template-columns:1fr 60px auto}}
+.simcard{margin-top:18px;border-top:1px solid var(--hair);padding-top:6px}
+.bsubtle{font-size:11.5px;line-height:1.5;color:var(--faint);margin-bottom:10px}
+.simlearn{background:var(--inner);border:1px solid var(--hair);border-left:3px solid var(--volt);border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.5;color:var(--text);margin-top:4px}
+.simtab{width:100%;border-collapse:collapse;font-size:12px}
+.simtab th{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);text-align:right;padding:4px 6px;border-bottom:1px solid var(--hair)}
+.simtab th:last-child{text-align:left}
+.simtab td{padding:5px 6px;text-align:right;color:var(--dim);border-bottom:1px solid var(--hair)}
+.simtab td:last-child{text-align:left;color:var(--faint);font-size:11px}
+.simtab tr.simedge td{color:var(--text)}
+.simtab .up{color:var(--volt);font-weight:700}.simtab .dn{color:var(--red);font-weight:700}
+.simmkt{margin-top:10px;font-size:12px;line-height:1.5;color:var(--dim)}
+@media(max-width:400px){.brain{padding:10px 8px 20px}.bsig{grid-template-columns:1fr 60px auto}.simtab{font-size:11px}.simtab td,.simtab th{padding:4px 3px}}
 @media(max-width:420px){
   .bleg{flex-direction:column;align-items:flex-start;gap:6px}
   .blright{align-self:stretch;justify-content:space-between}
@@ -1244,6 +1255,12 @@ const T = {
     brain_caltime: '📉 Mi calibración en el tiempo (menos hueco = mejor)', brain_accum: 'Acumulando historial — la tendencia aparece en unos días.',
     brain_log: '🗓 Bitácora de cambios', brain_note: 'Aprendizaje del propio modelo; ilustra cómo mejora, no es garantía de resultados.',
     brain_soon: 'El Cerebro AA está preparando su primer diario de aprendizaje.',
+    sim_title: '🔬 Validación out-of-sample', sim_sub: 'Cada día se entrena solo con el pasado y predice ese día — nunca ve el futuro. Esto es lo que mide sobre todo el histórico.',
+    sim_games: 'Juegos validados', sim_acc: 'Acierto (fuera de muestra)', sim_ece: 'Calibración (ECE)', sim_ece_sub: 'menos es mejor',
+    sim_learns: 'El aprendizaje mejora la probabilidad de forma medible (intervalo bajo cero).', sim_learns_tie: 'El aprendizaje empata al modelo base (sin diferencia significativa).',
+    sim_sel: '🎯 Selección a −110 (equilibrio 52.4%)', sim_thr: 'confianza', sim_picks: 'jugadas', sim_hit: 'acierto', sim_roi: 'ROI',
+    sim_edge: 'ventaja real', sim_mkt: 'Acierto global: AA {m}% vs mercado {k}% — la ventaja vive en la selección, no en el promedio.',
+    sim_note: 'Todo out-of-sample; se reporta tal cual, gane o pierda. No es recomendación de apuesta.',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1311,6 +1328,12 @@ const T = {
     brain_learning: "What I'm learning", brain_signals: '📶 Signals I learned truly predict',
     brain_caltime: '📉 My calibration over time (smaller gap = better)', brain_accum: 'Building history — the trend shows up in a few days.',
     brain_log: '🗓 Change log', brain_note: "The model's own learning; it shows how it improves, not a guarantee of results.",
+    sim_title: '🔬 Out-of-sample validation', sim_sub: 'Each day it trains only on the past and predicts that day — it never sees the future. This is what it measures across the whole history.',
+    sim_games: 'Games validated', sim_acc: 'Accuracy (out-of-sample)', sim_ece: 'Calibration (ECE)', sim_ece_sub: 'lower is better',
+    sim_learns: 'Learning improves the probability measurably (interval below zero).', sim_learns_tie: 'Learning ties the base model (no significant difference).',
+    sim_sel: '🎯 Selection at −110 (break-even 52.4%)', sim_thr: 'confidence', sim_picks: 'picks', sim_hit: 'hit', sim_roi: 'ROI',
+    sim_edge: 'real edge', sim_mkt: 'Overall accuracy: AA {m}% vs market {k}% — the edge lives in selection, not the average.',
+    sim_note: 'All out-of-sample; reported as-is, win or lose. Not betting advice.',
     brain_soon: 'AA Brain is preparing its first learning journal.',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
@@ -1700,16 +1723,48 @@ function renderHistList(){
   $('list').innerHTML = html;
 }
 
-// 🧠 Cerebro AA: qué aprende el modelo con el tiempo (de mlb:learning).
-let learningDoc = null, learningLoading = false;
+// 🧠 Cerebro AA: qué aprende el modelo con el tiempo (de mlb:learning) +
+// 🔬 validación out-of-sample (de mlb:simulation).
+let learningDoc = null, simDoc = null, learningLoading = false;
 async function loadLearning(){
   if (learningDoc){ renderBrain(); return; }
   if (learningLoading) return;
   learningLoading = true;
-  try { const r = await fetch(API + '/v1/mlb/learning'); learningDoc = await r.json(); }
-  catch (e) { learningDoc = { note: 'err' }; }
+  const [lr, sr] = await Promise.allSettled([
+    fetch(API + '/v1/mlb/learning').then(r => r.json()),
+    fetch(API + '/v1/mlb/simulation').then(r => r.json()),
+  ]);
+  learningDoc = lr.status === 'fulfilled' ? lr.value : { note: 'err' };
+  simDoc = sr.status === 'fulfilled' ? sr.value : null;
   learningLoading = false;
   if (sport === 'mlb' && listTab === 'brain') renderBrain();
+}
+// 🔬 Tarjeta de validación out-of-sample (walk-forward sobre todo el histórico).
+function simCard(){
+  const s = simDoc;
+  if (!s || s.note || !s.oos) return '';
+  const co = s.oos.combined || {};
+  const helps = s.delta_ll && s.delta_ll.helps;
+  const sel = (s.selection || []).filter(r => r.n >= 30);
+  const selRows = sel.map(r => `<tr${r.edge ? ' class="simedge"' : ''}>
+      <td class="num">≥${r.thr}%</td><td class="num">${r.n}</td><td class="num">${r.rate}%</td>
+      <td class="num ${r.roi >= 0 ? 'up' : 'dn'}">${r.roi >= 0 ? '+' : ''}${r.roi}%</td>
+      <td>${r.edge ? '✅ ' + t('sim_edge') : '—'}</td></tr>`).join('');
+  const mkt = s.market ? `<div class="simmkt">${t('sim_mkt').replace('{m}', s.market.model_acc).replace('{k}', s.market.market_acc)}</div>` : '';
+  return `<div class="simcard">
+    <div class="bsect">${t('sim_title')}</div>
+    <div class="bsubtle">${t('sim_sub')}</div>
+    <div class="braintiles">
+      <div class="btile"><div class="bl">${t('sim_games')}</div><div class="bv num">${s.n_games ?? '—'}</div><div class="bs">${esc(s.first_date || '')} → ${esc(s.last_date || '')}</div></div>
+      <div class="btile"><div class="bl">${t('sim_acc')}</div><div class="bv num">${co.acc ?? '—'}%</div><div class="bs">n=${s.n_oos ?? '—'}</div></div>
+      <div class="btile"><div class="bl">${t('sim_ece')}</div><div class="bv num">${s.ece ?? '—'}%</div><div class="bs">${t('sim_ece_sub')}</div></div>
+    </div>
+    <div class="simlearn">${helps ? '✅ ' + t('sim_learns') : t('sim_learns_tie')}</div>
+    ${selRows ? `<div class="bsect">${t('sim_sel')}</div>
+      <table class="simtab"><thead><tr><th>${t('sim_thr')}</th><th>${t('sim_picks')}</th><th>${t('sim_hit')}</th><th>${t('sim_roi')}</th><th></th></tr></thead><tbody>${selRows}</tbody></table>` : ''}
+    ${mkt}
+    <div class="bnote">${t('sim_note')}</div>
+  </div>`;
 }
 function calChart(hist){
   const h = (hist || []).filter(x => x.gap != null);
@@ -1755,6 +1810,7 @@ function renderBrain(){
       <div class="blearns">${learns.map(s => `<div class="blearn">${esc(s)}</div>`).join('') || `<div class="bempty">${t('brain_accum')}</div>`}</div>
       ${sigs.length ? `<div class="bsect">${t('brain_signals')}</div><div class="bsigs">${sigs.map(sigBar).join('')}</div>` : ''}
       ${calChart(d.history)}
+      ${simCard()}
       ${logRows ? `<div class="bsect">${t('brain_log')}</div><div class="blog">${logRows}</div>` : ''}
       <div class="bnote">${esc(d.attribution || '')} · ${t('brain_note')}</div>
     </div>`;

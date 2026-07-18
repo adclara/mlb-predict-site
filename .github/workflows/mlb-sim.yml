@@ -1,0 +1,29 @@
+# AA Sports — validación out-of-sample del modelo MLB (walk-forward sobre todo
+# el histórico). Publica el blob KV `mlb:simulation` que muestra el Cerebro AA.
+# Semanal (domingo) + poke (.github/poke-sim) + a mano. Datos ya en el repo.
+name: mlb-sim
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '17 8 * * 0'   # domingos ~4am ET
+  push:
+    branches: [main]
+    paths: ['.github/poke-sim']
+permissions:
+  contents: read
+concurrency:
+  group: mlb-sim
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Simulación walk-forward + publicar KV (mlb:simulation)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/simulate.mjs

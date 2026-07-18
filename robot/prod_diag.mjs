@@ -28,6 +28,15 @@ try {
   console.log('máx prob_pct:', maxP, maxP > 66 ? '→ ⚠️ AÚN INFLADA (no calibrada)' : '→ ✅ en rango calibrado');
 } catch (e) { console.log('no-json / error:', t.status, t.text.slice(0, 200)); }
 
+console.log('\n== /v1/mlb/simulation (¿validación OOS publicada?) ==');
+const sim = await get(`${API}/v1/mlb/simulation`);
+try {
+  const s = JSON.parse(sim.text);
+  if (s.note) console.log('nota:', s.note, '(aún sin publicar; corre poke-sim)');
+  else console.log('juegos:', s.n_games, '| acierto OOS combinado:', s.oos && s.oos.combined && s.oos.combined.acc, '% | ECE:', s.ece,
+    '% | aprende:', s.delta_ll && s.delta_ll.helps, '| selección filas:', (s.selection || []).length, '| cache:', sim.cc);
+} catch (e) { console.log('no-json / error:', sim.status, sim.text.slice(0, 200)); }
+
 console.log('\n== /v1/mlb/live (¿en vivo + win_prob_home?) ==');
 const lv = await get(`${API}/v1/mlb/live`);
 let liveDoc = null;

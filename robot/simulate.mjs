@@ -19,6 +19,9 @@ const DATA = process.env.DATA_DIR || join(process.cwd(), 'data');
 const GAMES = join(DATA, 'history', 'games');
 const LEARN = join(DATA, 'history', 'learning.json');
 const OUT = join(process.cwd(), 'docs', 'MLB_SIMULATION.md');
+const ACCOUNT_ID = 'f02574feb7272a1da2818e35e0ff4342';
+const KV_NAMESPACE_ID = '683aa2f8846643bf8a6a8b606e5bf0b7';
+const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN || null;
 
 const pctf = (x) => (x == null ? '—' : (x * 100).toFixed(1) + '%');
 const r3 = (x) => (x == null ? '—' : x.toFixed(3));
@@ -116,3 +119,30 @@ ${mvm ? `Acierto global: modelo ${pctf(mvm.model.acc)} vs mercado ${pctf(mvm.mar
 *Honesto por diseño: todo out-of-sample, nada de sobreajuste; se muestra lo que hay, gane o pierda. Generado por robot/simulate.mjs.*
 `;
 try { fs.mkdirSync(join(process.cwd(), 'docs'), { recursive: true }); fs.writeFileSync(OUT, md); console.log(`\n📄 Reporte: docs/MLB_SIMULATION.md`); } catch (e) { console.log('no pude escribir el reporte:', e.message); }
+
+// ── publicar blob compacto a KV `mlb:simulation` (para el Cerebro AA) ─────────
+const p1 = (x) => (x == null ? null : Math.round(x * 1000) / 10);   // fracción → % 1 decimal
+const doc = {
+  updated_at: new Date().toISOString(),
+  first_date: run.first_date, last_date: run.last_date,
+  n_games: graded.length, n_oos: run.n,
+  oos: {
+    classic: { acc: p1(run.classic.acc), ll: run.classic.logloss, brier: run.classic.brier },
+    learned: { acc: p1(run.learned.acc), ll: run.learned.logloss, brier: run.learned.brier },
+    combined: { acc: p1(run.combined.acc), ll: run.combined.logloss, brier: run.combined.brier },
+  },
+  delta_ll: dLL ? { mean: dLL.mean, lo: dLo, hi: dHi, helps: dHi != null && dHi < 0 } : null,
+  ece: p1(ece),
+  selection: selRows.map((s) => ({ thr: Math.round(s.thr * 100), n: s.n, rate: p1(s.rate),
+    units: Math.round(s.units * 10) / 10, roi: p1(s.roi), lo: p1(s.lo), hi: p1(s.hi),
+    edge: s.n >= 30 && s.lo != null && s.lo > BE })),
+  market: mvm ? { model_acc: p1(mvm.model.acc), market_acc: p1(mvm.market.acc), verdict: mvm.verdict || null } : null,
+  attribution: 'Validación out-of-sample del propio modelo AA sobre todo el histórico. Cada día se entrena solo con el pasado. El algoritmo es privado.',
+};
+if (!API_TOKEN) console.log('Sin CLOUDFLARE_API_TOKEN; no publico a KV (reporte local generado).');
+else {
+  const res = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${KV_NAMESPACE_ID}/values/${encodeURIComponent('mlb:simulation')}`,
+    { method: 'PUT', headers: { Authorization: `Bearer ${API_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(doc) });
+  console.log(res.ok ? '✅ KV mlb:simulation publicado (REST)' : `⚠️ KV falló: ${res.status} ${(await res.text()).slice(0, 200)}`);
+}
