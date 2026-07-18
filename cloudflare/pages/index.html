@@ -839,6 +839,20 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .warnchip{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);background:rgba(255,197,61,.1);border:1px solid rgba(255,197,61,.3);border-radius:5px;padding:2px 8px}
 .dempty{padding:80px 24px;text-align:center;color:var(--faint);font-size:14px}
 .dnote{font-size:11.5px;color:var(--faint);line-height:1.6;margin-top:16px;padding-top:12px;border-top:1px solid var(--hair)}
+.aachip{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;color:var(--dim);background:var(--inner);border:1px solid var(--hair);border-radius:999px;padding:2px 7px;white-space:nowrap}
+.aachip b{color:var(--volt);font-weight:800}
+.scpred{background:var(--inner);border:1px solid var(--hair);border-radius:14px;padding:12px 13px;margin-bottom:12px}
+.scph{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.scph .q{font-size:14px;font-weight:800}.scph .eng{font-size:10px;color:var(--faint)}
+.scho{border-radius:14px;padding:12px 13px;margin-bottom:14px;border:1px solid var(--hair)}
+.schh{font-size:12px;font-weight:800;color:var(--amber);margin-bottom:4px}
+.schsub{font-size:11.5px;color:var(--dim);line-height:1.5}
+.scbts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.scbt{font-size:11px;color:var(--faint);background:var(--card,rgba(255,255,255,.03));border:1px solid var(--hair);border-radius:8px;padding:3px 8px}
+.scbt b{color:var(--text)}
+.schrec{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:10px;font-size:12px;color:var(--dim)}
+.schrec .l{color:var(--faint)}.scsince{color:var(--faint);font-size:10.5px}.schrec .lo{color:var(--red)}
+.schnote{font-size:10.5px;color:var(--faint);line-height:1.5;margin-top:9px;border-top:1px solid var(--hair);padding-top:8px}
 .dback{display:none;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--dim);padding:12px 6px}
 
 /* ═════════ RIGHT: WIDGETS ═════════ */
@@ -1197,6 +1211,11 @@ const T = {
     detail_empty: 'Elige un partido para ver el análisis completo del algoritmo AA.',
     w_perf: 'Rendimiento del algoritmo', w_train: '🧪 Modelo AA en entrenamiento',
     w_train_p: 'Ya te mostramos los marcadores en vivo de este deporte. Las <b>predicciones AA</b> llegarán cuando el modelo pase nuestra validación con datos históricos (walk-forward, intervalos de confianza). No publicamos números que no estén medidos.',
+    sc_pickttl: 'Predicción AA · probabilidad calibrada', sc_title: '⚽ Predicción AA', sc_eng: 'Motor AA · privado', sc_win: 'Gana',
+    sc_val_title: 'Validación', sc_val_sub: 'Modelo validado en {n} partidos (backtest walk-forward). Acierto real por nivel de confianza:',
+    sc_live: 'Récord EN VIVO', sc_since: 'desde', sc_rec_none: 'aún sin resultados (arranca la temporada)',
+    sc_market: 'El número es la probabilidad del mercado des-vigada, ya calibrada (predicho ≈ real en el backtest). AA no promete ganarle al cierre: da probabilidad honesta + contexto para que decidas. Juego responsable 18/21+.',
+    sc_train_p: 'Marcadores en vivo activos. Las predicciones de {sport} se publicarán cuando el modelo pase la validación con datos históricos — el mismo estándar de honestidad de MLB. Sin números inventados.',
     w_gems: '💎 Gemas de hoy', w_locks: '🔒 Fijos del día', w_resp: 'Juego responsable',
     w_resp_p: '<b>AA Sports informa, no facilita apuestas.</b> Te damos los datos y nuestra lectura; la decisión es tuya. 18/21+ según tu jurisdicción. Los datos no garantizan resultados.',
     how_link: '¿Cómo funciona el algoritmo AA? →', legal_link2: 'Aviso legal y términos de uso →',
@@ -1271,6 +1290,11 @@ const T = {
     detail_empty: 'Pick a game to see the full AA algorithm analysis.',
     w_perf: 'Algorithm performance', w_train: '🧪 AA model in training',
     w_train_p: 'We already show live scores for this sport. <b>AA predictions</b> arrive once the model passes our validation on historical data (walk-forward, confidence intervals). We don\'t publish numbers we haven\'t measured.',
+    sc_pickttl: 'AA prediction · calibrated probability', sc_title: '⚽ AA prediction', sc_eng: 'AA engine · private', sc_win: 'Wins',
+    sc_val_title: 'Validation', sc_val_sub: 'Model validated on {n} matches (walk-forward backtest). Real hit rate by confidence level:',
+    sc_live: 'LIVE record', sc_since: 'since', sc_rec_none: 'no results yet (season starting)',
+    sc_market: 'The number is the market probability de-vigged and calibrated (predicted ≈ actual in the backtest). AA does not promise to beat the closing line: it gives honest probability + context so you decide. Gamble responsibly 18/21+.',
+    sc_train_p: 'Live scores active. {sport} predictions publish once the model passes validation on historical data — the same honesty standard as MLB. No made-up numbers.',
     w_gems: '💎 Today\'s gems', w_locks: '🔒 Locks of the day', w_resp: 'Responsible gaming',
     w_resp_p: '<b>AA Sports informs, it does not facilitate betting.</b> We give you the data and our read; the decision is yours. 18/21+ per your jurisdiction. Data does not guarantee results.',
     how_link: 'How does the AA algorithm work? →', legal_link2: 'Legal notice & terms of use →',
@@ -2783,7 +2807,58 @@ async function loadOther(){
   }catch(err){ otherGames = []; otherRecent = false; }
   otherLoading = false;
   loadStandings();
+  if (sport === 'soccer') loadSoccerPreds();
   if (sport !== 'mlb') renderAll();
+}
+
+// ⚽ Predicciones AA de soccer (KV soccer:today): número calibrado por partido +
+// récord en vivo + evidencia del backtest. Se une a los juegos por espn_id.
+let soccerPreds = null, soccerPredsLoading = false;
+async function loadSoccerPreds(){
+  if (soccerPreds || soccerPredsLoading) { if (soccerPreds && sport === 'soccer'){ renderOtherList(); renderOtherDetail(); } return; }
+  soccerPredsLoading = true;
+  try { const r = await fetch(`${API}/v1/soccer/today`); soccerPreds = await r.json(); }
+  catch (e) { soccerPreds = { by_id: {} }; }
+  soccerPredsLoading = false;
+  if (sport === 'soccer'){ renderOtherList(); renderOtherDetail(); updateTrainWidget(); }
+}
+// El widget "modelo en entrenamiento" se oculta para soccer si ya hay predicciones.
+function updateTrainWidget(){
+  const soccerLive = sport === 'soccer' && soccerPreds && soccerPreds.by_id && Object.keys(soccerPreds.by_id).length > 0;
+  $('wTrain').hidden = sport === 'mlb' || sport === 'radar' || soccerLive;
+}
+// pred del partido g (o null); resuelve el lado favorecido para mostrar
+function predFor(g){
+  const p = soccerPreds && soccerPreds.by_id && g ? soccerPreds.by_id[String(g.espn_id)] : null;
+  if (!p || !p.pick) return null;
+  const homePick = p.pick === g.home.code;
+  return { ...p, side: homePick ? 'home' : 'away', pct: p.prob != null ? Math.round(p.prob * 100) : null };
+}
+const SC_TIER_LBL = { t55: '≥55%', t60: '≥60%', t65: '≥65%', t70: '≥70%', open: '—' };
+// Tarjeta de PREDICCIÓN AA de soccer: número calibrado + caja de honestidad
+// (evidencia del backtest de 16k partidos + récord EN VIVO real + nota ≈mercado).
+function soccerPredCard(g){
+  const pr = predFor(g); if (!pr || pr.pct == null) return '';
+  const s = soccerPreds || {};
+  const homePct = pr.side === 'home' ? pr.pct : 100 - pr.pct;
+  const awayPct = 100 - homePct;
+  const bt = (s.backtest || []).filter(b => b.tier !== 'open')
+    .map(b => `<span class="scbt"><b class="num">${SC_TIER_LBL[b.tier] || b.tier}</b> <span class="num">${b.hit}%</span></span>`).join('');
+  const rec = s.record || {};
+  const recTxt = rec.n ? `<b class="num ${rec.wr != null && rec.wr < 0.5 ? 'lo' : ''}">${rec.w}-${rec.l}</b>${rec.wr != null ? ` · <span class="num">${Math.round(rec.wr * 100)}%</span>` : ''}` : t('sc_rec_none');
+  return `<div class="scpred">
+      <div class="scph"><span class="q">${t('sc_title')}</span><span class="eng">${t('sc_eng')}</span></div>
+      <div class="probhead num"><span>${esc(tNick(g.away.code))} ${awayPct}%</span><span>${homePct}% ${esc(tNick(g.home.code))}</span></div>
+      <div class="probtrack"><span class="aw" style="width:${awayPct}%"></span><span class="hm" style="width:${homePct}%"></span></div>
+      <div class="ww-pick"><span class="bigpick">${t('sc_win')} ${esc(tNick(pr.pick))}</span><span class="bigprob num">${pr.pct}%</span>${pr.tier && pr.tier !== 'open' ? `<span class="confpill">${SC_TIER_LBL[pr.tier]}</span>` : ''}</div>
+    </div>
+    <div class="scho glass-in">
+      <div class="schh">🔬 ${t('sc_val_title')}</div>
+      <div class="schsub">${t('sc_val_sub').replace('{n}', (s.n_test || 16059).toLocaleString(LOCALE()))}</div>
+      ${bt ? `<div class="scbts">${bt}</div>` : ''}
+      <div class="schrec"><span class="l">${t('sc_live')} <span class="scsince">(${t('sc_since')} ${esc(s.since || '')})</span></span>${recTxt}</div>
+      <div class="schnote">${t('sc_market')}</div>
+    </div>`;
 }
 
 async function loadStandings(){
@@ -3383,6 +3458,7 @@ function renderOtherList(){
   rows = [...rows].sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3));
   const banner = otherRecent && rows.length
     ? '<div class="recentnote">Sin juegos hoy · mostrando los últimos resultados</div>' : '';
+  const pickTtl = t('sc_pickttl');   // (t global; dentro del map se sombrea con la hora)
   $('list').innerHTML = otherLoading && !rows.length
     ? '<div class="skel"></div><div class="skel"></div><div class="skel"></div>'
     : rows.length ? banner + rows.map((g, i) => {
@@ -3392,6 +3468,9 @@ function renderOtherList(){
         : (g.start ? new Date(g.start).toLocaleTimeString('es', {hour: '2-digit', minute: '2-digit'}) : 'Hoy');
       const setsA = sport === 'tennis' && g.away.sets ? ` <span class="stdet num">(${g.away.sets.join('-')})</span>` : '';
       const setsH = sport === 'tennis' && g.home.sets ? ` <span class="stdet num">(${g.home.sets.join('-')})</span>` : '';
+      const pr = sport === 'soccer' ? predFor(g) : null;
+      const aachip = pr && pr.pct != null
+        ? `<span class="aachip" title="${esc(pickTtl)}">AA <b>${esc(tNick(pr.pick))}</b> ${pr.pct}%</span>` : '';
       return `<button class="mrow" data-oid="${esc(g.espn_id)}" style="--i:${i}">
         <span class="mtime num">${t}</span>
         <span class="mteams">
@@ -3402,7 +3481,7 @@ function renderOtherList(){
           <span class="ms ${g.status === 'live' ? 'lv' : ''}">${scored ? g.away.score : ''}</span>
           <span class="ms ${g.status === 'live' ? 'lv' : ''}">${scored ? g.home.score : ''}</span>
         </span>
-        <span></span>
+        <span>${aachip}</span>
       </button>`;
     }).join('') : `<div class="lempty">Sin eventos ahora mismo en ${esc(SPORT_LABEL[sport] || sport)}.</div>`;
 }
@@ -3498,6 +3577,7 @@ function renderOtherDetail(){
       </div>
     </div>
     <div class="dbody">
+      ${sport === 'soccer' ? soccerPredCard(g) : ''}
       ${otherH2H}
       ${summaryHtml}
       ${(g.away.form || g.home.form) ? `
@@ -3535,11 +3615,9 @@ function renderOtherDetail(){
         <div class="formside"><div class="fh">${oLogo(g.away)}${esc(oName(g.away))}</div>${injuryRows('nba', g.away.code)}</div>
         <div class="formside"><div class="fh">${oLogo(g.home)}${esc(oName(g.home))}</div>${injuryRows('nba', g.home.code)}</div>
       </div>` : ''}
-      <div class="verdict"><span class="ic">🧪</span>
-        <p><span class="vt">Modelo AA en entrenamiento</span>Marcadores en vivo activos. Las predicciones de
-        ${esc(SPORT_LABEL[sport] || sport)} se publicarán cuando el modelo pase la validación con datos históricos
-        — el mismo estándar de honestidad de MLB. Sin números inventados.</p>
-      </div>
+      ${(sport === 'soccer' && predFor(g)) ? '' : `<div class="verdict"><span class="ic">🧪</span>
+        <p><span class="vt">${t('w_train')}</span>${t('sc_train_p').replace('{sport}', esc(SPORT_LABEL[sport] || sport))}</p>
+      </div>`}
       ${standingsHtml()}
       <p class="dnote">Datos en vivo vía AA Sports API. Actualización automática cada 45s.</p>
     </div>`;
@@ -3563,7 +3641,7 @@ function setSport(sp2){
   document.querySelector('.ltop').style.display = sport === 'mlb' ? '' : 'none';
   document.querySelectorAll('.wmlb').forEach(w => w.style.display = sport === 'mlb' ? '' : 'none');
   $('wRecord').style.display = sport === 'mlb' ? '' : 'none';
-  $('wTrain').hidden = sport === 'mlb' || sport === 'radar';
+  updateTrainWidget();
   $('ticker').hidden = sport !== 'mlb' || !$('tk').children.length;
   document.querySelector('.lghead .ttl').textContent = sport === 'mlb' ? 'MLB' : (SPORT_LABEL[sport] || sport);
   document.querySelector('.lghead .sub').textContent = sport === 'mlb' ? t('season')

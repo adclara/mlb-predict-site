@@ -16,9 +16,12 @@
 // Uso: node robot/soccer_shadow.mjs
 
 import { probs3way } from './lib/espn_odds.mjs';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const ACCOUNT_ID = 'f02574feb7272a1da2818e35e0ff4342';
 const D1_DATABASE_ID = 'ed0969d8-050a-4987-ab98-b047c30f76c9';
+const KV_NAMESPACE_ID = '683aa2f8846643bf8a6a8b606e5bf0b7';
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
 // Mundial ahora; las ligas de clubes entran solas cuando arranquen (agosto).
@@ -151,6 +154,51 @@ async function main() {
     "SELECT confidence, COUNT(*) n, SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) w FROM predictions WHERE sport = 'soccer' AND result IS NOT NULL GROUP BY confidence",
   );
   console.log('Track record sombra por tier:', JSON.stringify(rec));
+
+  /* ── 4) publicar el blob PÚBLICO soccer:today (predicciones + honestidad) ── */
+  await publishPublic(dates, rec);
+}
+
+// Publica KV `soccer:today`: predicciones de hoy/mañana (número calibrado ≈
+// mercado, tier), + récord EN VIVO real (de D1) + evidencia del backtest (16k
+// partidos) para la caja de honestidad. El navegador nunca ve el modelo.
+async function publishPublic(dates, tierRec) {
+  // predicciones de hoy/mañana (todas, no solo las pre recién bajadas → el pick
+  // sigue visible cuando el partido pasa a en-vivo/final)
+  const rows = await d1(
+    `SELECT event_id, league, home, away, pick, prob, confidence, start_time, date
+     FROM predictions WHERE sport = 'soccer' AND pick IS NOT NULL AND date IN (${dates.map(() => '?').join(',')})`,
+    dates,
+  );
+  const by_id = {};
+  for (const r of rows) {
+    by_id[String(r.event_id)] = {
+      pick: r.pick, prob: r.prob, tier: r.confidence, home: r.home, away: r.away,
+      league: r.league, start: r.start_time || null,
+    };
+  }
+  // récord EN VIVO agregado (overall + por tier) de todo lo gradeado
+  let w = 0, n = 0;
+  const tiers = (tierRec || []).map((t) => { w += t.w; n += t.n; return { tier: t.confidence, n: t.n, w: t.w }; });
+  const record = { n, w, l: n - w, wr: n ? Math.round((w / n) * 1000) / 1000 : null, tiers };
+  // evidencia del backtest (validación histórica)
+  let backtest = [];
+  try {
+    const bt = JSON.parse(readFileSync(join(process.cwd(), 'data', 'fase2', 'soccer', 'soccer_backtest.json'), 'utf8'));
+    const T = (bt.overall && bt.overall.tiers) || {};
+    backtest = Object.keys(T).map((k) => ({ tier: k, n: T[k].n, hit: T[k].hit_pct }));
+    var n_test = bt.overall && bt.overall.n_test;
+  } catch { /* sin backtest local */ }
+  const doc = {
+    updated_at: new Date().toISOString(), date: dates[0], engine: ENGINE, since: '2026-07-11',
+    by_id, record, backtest, n_test: typeof n_test === 'number' ? n_test : 16059,
+    attribution: 'Probabilidad calibrada (≈ mercado, des-vigada) validada en backtest walk-forward. Modelo privado. AA informa, no apuesta.',
+  };
+  if (!API_TOKEN) { console.log('Sin token; no publico soccer:today'); return; }
+  const res = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${KV_NAMESPACE_ID}/values/${encodeURIComponent('soccer:today')}`,
+    { method: 'PUT', headers: { Authorization: `Bearer ${API_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(doc) });
+  console.log(res.ok ? `✅ KV soccer:today publicado (${Object.keys(by_id).length} predicciones, récord vivo ${w}-${n - w})` : `⚠️ KV soccer:today falló: ${res.status}`);
 }
 
 await main();
