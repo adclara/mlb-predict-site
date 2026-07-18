@@ -795,6 +795,20 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .rdmore{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 12px 0;width:calc(100% - 24px);
   padding:10px;border:1px solid var(--hair);border-radius:12px;background:var(--inner);color:var(--sky);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
 .rdmore:hover{border-color:var(--sky)}
+/* — Balance real: la ecuación honesta (ganado en cerrados − bolsas abiertas = neto) — */
+.rbal{margin:12px;padding:14px 16px;border-radius:18px;border:1px solid var(--hair-2);box-shadow:var(--shadow);
+  background:linear-gradient(158deg,rgba(255,255,255,.05),rgba(255,255,255,.012) 60%)}
+.rbal .k{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.rbal .k span{font-weight:600;letter-spacing:0;text-transform:none}
+.rbal .net{font-size:27px;font-weight:800;line-height:1.1;margin:5px 0 2px}
+.gbbar{height:10px;border-radius:999px;background:var(--panel-2);overflow:hidden;display:flex;margin:9px 0 10px}
+.gbbar i{display:block;height:100%}
+.gbbar .keep{background:var(--volt)} .gbbar .back{background:var(--red)}
+.rbal .eq{display:flex;flex-wrap:wrap;gap:5px 14px;font-size:12.5px;align-items:baseline}
+.rbal .eq .pos,.rbal .eq .up{color:var(--volt);font-weight:700}
+.rbal .eq .neg{color:var(--red);font-weight:700}
+.rbal .why{margin-top:9px;font-size:12.5px;line-height:1.5;color:var(--dim)}
+.rbal .why b{color:var(--text)}
 /* — Portada: historia del día — */
 .rdstories{display:grid;grid-template-columns:1fr;gap:10px;margin:12px}
 @media(min-width:560px){.rdstories{grid-template-columns:1fr 1fr}.rdstories .storyc.wide{grid-column:1/-1}}
@@ -1411,8 +1425,13 @@ const T = {
     sd_title: '📡 Historia del día', sd_sub: 'lo más interesante del Radar ahora mismo · toca para explorar',
     story_account: '🏆 Cuenta del día', story_play: '🎯 Jugada del día', story_bag: '⚠️ Bolsa del día',
     story_see: 'ver perfil →', story_bag_none: 'Ninguna cuenta top arrastra bolsas perdedoras hoy 👏',
-    sd_board: '🏅 Tabla de líderes', sd_board_sub: 'por dinero ganado · toca una para ver su perfil', sd_where: '🗂 Dónde juegan los mejores',
+    sd_board: '🏅 Tabla de líderes', sd_board_sub: 'por balance real · toca una para ver su perfil', sd_where: '🗂 Dónde juegan los mejores',
     r_open_now: 'abiertas',
+    // ── Balance real (ganado en cerrados − perdido en abiertas = neto) + validación ──
+    bal_title: 'Balance real', bal_sub: 'si cerrara todo hoy', bal_realized: 'ganado en mercados cerrados', bal_in: 'en', bal_bags: 'bolsas abiertas', bal_favor: 'a favor en abiertas',
+    bal_gives: 'Devuelve el', bal_gives2: 'de lo que ganó, en apuestas que aún no cierran.', bal_score_note: 'Por eso su score de informado baja.',
+    bal_ate: 'Las bolsas abiertas ya se comieron los', bal_ate2: 'ganados y', bal_ate3: 'más: hoy está en rojo.', bal_clean: 'Sus posiciones abiertas no le restan al balance.',
+    bal_of: 'de', bal_gross: 'bruto',
     bol_title: 'Boleto del día', bol_win: 'Gana', bol_none: 'Hoy el algoritmo no marca ninguna jugada de máxima confianza. No inventamos un boleto cuando no hay valor claro.',
     bol_rec: 'Cómo le ha ido a estos niveles', bol_note: 'Resumen de las mejores selecciones AA de hoy · no es recomendación de apuesta · tú decides.',
     bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto',
@@ -1514,8 +1533,13 @@ const T = {
     sd_title: '📡 Story of the day', sd_sub: 'the most interesting on the Radar right now · tap to explore',
     story_account: '🏆 Account of the day', story_play: '🎯 Play of the day', story_bag: '⚠️ Bag of the day',
     story_see: 'see profile →', story_bag_none: 'No top account is holding losing bags today 👏',
-    sd_board: '🏅 Leaderboard', sd_board_sub: 'by money won · tap one to see its profile', sd_where: '🗂 Where the best ones play',
+    sd_board: '🏅 Leaderboard', sd_board_sub: 'by real balance · tap one to see its profile', sd_where: '🗂 Where the best ones play',
     r_open_now: 'open',
+    // ── Real balance (won in settled − losing in open = net) + validation ──
+    bal_title: 'Real balance', bal_sub: 'if it closed everything today', bal_realized: 'won in settled markets', bal_in: 'across', bal_bags: 'open bags', bal_favor: 'ahead on open',
+    bal_gives: 'Gives back', bal_gives2: 'of what it won, on bets not yet settled.', bal_score_note: 'That is why its insider score drops.',
+    bal_ate: 'Its open bags already ate the', bal_ate2: 'it won plus', bal_ate3: 'more — in the red today.', bal_clean: 'Its open positions do not subtract from the balance.',
+    bal_of: 'of', bal_gross: 'gross',
     bol_title: 'Ticket of the day', bol_win: 'Take', bol_none: "Today the model flags no top-confidence play. We don't fake a ticket when there's no clear value.",
     bol_rec: 'How these tiers have done', bol_note: "A summary of today's best AA picks · not a betting recommendation · you decide.",
     bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high',
@@ -3371,12 +3395,12 @@ let radarOpen = { alerts: false, top: false, all: false, pstyle: false };
 const pStar = (w) => `<span class="pstar${pfollow.has(w) ? ' on' : ''}" data-pstar="${esc(w)}" role="button" title="${t('r_follow')}">${pfollow.has(w) ? '★' : '☆'}</span>`;
 const pCmp = (w) => `<span class="pcmp${compareSel.includes(w) ? ' on' : ''}" data-pcmp="${esc(w)}" role="button" title="${t('r_compare')}">⚖</span>`;
 const walletCard = (w, i) => `<div class="wcard" data-rw="${esc(w.w)}" role="button" style="--i:${i}">
-  <span class="row1"><span class="wctl">${pStar(w.w)}${pCmp(w.w)}</span><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}${riskDot(w)}<span class="spkw">${svgSpark(w.equity_curve)}</span><span class="gan num">+${rUsd(w.pnl_usd)}</span></span>
-  <span class="row2">${w.win_rate != null ? `${t('r_acierta')} ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(rCat(w.cats[0].cat)) : '—'} · ${w.n_markets} ${t('r_mercados')}${w.portfolio_usd > 0 ? ` · 💼 ${esc(rUsd(w.portfolio_usd))}` : ''}<span class="ver">${t('r_ver_perfil')}</span></span>
+  <span class="row1"><span class="wctl">${pStar(w.w)}${pCmp(w.w)}</span><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}${riskDot(w)}<span class="spkw">${svgSpark(w.equity_curve)}</span>${netTag(w)}</span>
+  <span class="row2">${w.win_rate != null ? `${t('r_acierta')} ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(rCat(w.cats[0].cat)) : '—'} · ${w.n_markets} ${t('r_mercados')}${giveBack(w) >= 0.15 ? ` · <span style="color:var(--red)">${t('bal_of')} +${esc(rUsd(w.pnl_usd))} ${t('bal_gross')}</span>` : (w.portfolio_usd > 0 ? ` · 💼 ${esc(rUsd(w.portfolio_usd))}` : '')}<span class="ver">${t('r_ver_perfil')}</span></span>
 </div>`;
 function renderRadarList(){
   if (sport !== 'radar') return;
-  const ws = (radarDoc && radarDoc.wallets) || [];
+  const ws = ((radarDoc && radarDoc.wallets) || []).slice().sort((a, b) => netReal(b) - netReal(a));
   $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
   $('lgcount').innerHTML = ws.length ? `<b>${ws.length}</b>` : '';
   if (!ws.length){
@@ -3402,7 +3426,7 @@ function renderRadarList(){
     <div class="lwarn">${radarWarnHtml()}</div>
     <div class="wsearch"><input id="wsearchi" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="${t('r_search_ph')}" onkeydown="if(event.key==='Enter'){event.preventDefault();loadWalletSearch(this.value)}"><button class="wsearchb" data-wsearch="1">${t('r_search_go')}</button></div>
     <div class="stats3">
-      <div class="stile"><div class="v num">${ws[0] ? '+' + rUsd(ws[0].pnl_usd) : '—'}</div><div class="l">${t('r_stat_best')}</div></div>
+      <div class="stile"><div class="v num" style="color:${ws[0] && netReal(ws[0]) < 0 ? 'var(--red)' : 'var(--volt)'}">${ws[0] ? (netReal(ws[0]) >= 0 ? '+' : '') + rUsd(netReal(ws[0])) : '—'}</div><div class="l">${t('r_stat_best')}</div></div>
       <div class="stile"><div class="v num">🎯 ${nWatch}</div><div class="l">${t('r_stat_watch')}</div></div>
       <div class="stile"><div class="v num">🔔 ${n24}</div><div class="l">${t('r_stat_alerts')}</div></div>
     </div>
@@ -3449,6 +3473,36 @@ const timingBadge = (tg) => tg === 'antes' ? `<span class="tbadge antes">${t('tb
 // ── Helpers del rediseño premium (veredicto · tiles · riesgo real · bolsas) ──
 // Dinero con signo, para pérdidas: −$1,240 / +$300.
 function rMoney(x){ return (x == null || !isFinite(x)) ? '—' : (x < 0 ? '−$' : '$') + Math.abs(Math.round(+x)).toLocaleString(LOCALE()); }
+// Balance REAL = ganado en cerrados (realizado) + no-realizado de las abiertas. El
+// número honesto. Fallback al vuelo si la KV vieja aún no trae net_real (solo display).
+function netReal(w){ return (w && w.net_real != null) ? w.net_real : (((w && w.pnl_usd) || 0) + ((w && w.open) ? (w.open.unrealized || 0) : 0)); }
+// Fracción de lo ganado que las bolsas abiertas se están comiendo (0–1).
+function giveBack(w){ if (w && w.give_back != null) return w.give_back; const r = (w && w.pnl_usd) || 0, u = (w && w.open) ? (w.open.unrealized || 0) : 0; return (r > 0 && u < 0) ? Math.min(1, -u / r) : 0; }
+// Balance con signo y color (leaderboard): verde si va arriba, rojo si en realidad no.
+function netTag(w, cls){ const n = netReal(w); return `<span class="${cls || 'gan'} num" style="color:${n >= 0 ? 'var(--volt)' : 'var(--red)'}">${n >= 0 ? '+' : ''}${rUsd(n)}</span>`; }
+// 💰 Bloque "Balance real": la ecuación honesta + barra de cuánto DEVUELVE en bolsas.
+function balanceBlock(w){
+  if (!w.open || !w.open.n) return ''; // sin posiciones abiertas → no hay ajuste que mostrar
+  const realized = w.pnl_usd || 0, unreal = w.open.unrealized || 0, net = netReal(w), gb = giveBack(w);
+  const clawback = unreal < 0 ? -unreal : 0;
+  const base = Math.max(realized, Math.abs(net) + clawback, 1);
+  const keepW = Math.max(0, Math.min(100, 100 * Math.max(0, net) / base));
+  const backW = Math.max(0, Math.min(100 - keepW, 100 * clawback / base));
+  const bar = `<div class="gbbar">${keepW > 0.5 ? `<i class="keep" style="width:${keepW.toFixed(1)}%"></i>` : ''}${backW > 0.5 ? `<i class="back" style="width:${backW.toFixed(1)}%"></i>` : ''}</div>`;
+  const openLine = unreal < 0
+    ? `<span class="neg num">▼ ${rUsd(clawback)} ${t('bal_in')} ${w.open.losers} ${t('bal_bags')}</span>`
+    : (unreal > 0 ? `<span class="up num">▲ +${rUsd(unreal)} ${t('bal_favor')}</span>` : '');
+  const why = (net < 0)
+    ? `${t('bal_ate')} <b>${rUsd(realized)}</b> ${t('bal_ate2')} <b>${rUsd(Math.abs(net))}</b> ${t('bal_ate3')}`
+    : (gb >= 0.1 ? `${t('bal_gives')} <b>${Math.round(100 * gb)}%</b> ${t('bal_gives2')}${gb >= 0.25 ? ` ${t('bal_score_note')}` : ''}` : t('bal_clean'));
+  return `<div class="rbal">
+    <div class="k">💰 ${t('bal_title')} <span>· ${t('bal_sub')}</span></div>
+    <div class="net num" style="color:${net >= 0 ? 'var(--volt)' : 'var(--red)'}">${net >= 0 ? '+' : ''}${rUsd(net)}</div>
+    ${bar}
+    <div class="eq"><span class="pos num">✅ +${rUsd(realized)} ${t('bal_realized')}</span>${openLine}</div>
+    <div class="why">${why}</div>
+  </div>`;
+}
 // Anillo de score inline ($0, tema oscuro) — el medidor de "posible informado".
 function svgScoreRing(score, col){
   const s = Math.max(0, Math.min(100, Math.round(+score || 0)));
@@ -3579,20 +3633,22 @@ function miniRow(w, i){
     <span class="rk num">${i + 1}</span>
     <span class="nm">${esc(rName(w))} ${w.watch ? `<span class="rankchip num">🎯 ${w.insider_score}</span>` : ''} ${riskDot(w)}</span>
     ${svgSpark(w.equity_curve)}
-    <span class="amt num">+${rUsd(w.pnl_usd)}</span>
+    ${netTag(w, 'amt')}
   </div>`;
 }
 // Tarjeta héroe del #1 (lista): la cuenta que más ganó del mes.
 function heroCard(w){
+  const gross = giveBack(w) >= 0.15 ? ` · <span style="color:var(--red)">${t('bal_of')} +${esc(rUsd(w.pnl_usd))} ${t('bal_gross')}</span>` : '';
   return `<div class="lhero" data-rw="${esc(w.w)}">
     <div class="crown">👑 ${t('r_stat_best')}</div>
-    <div class="row"><span class="nm">${esc(rName(w))} ${w.watch ? `<span class="rankchip num">🎯 ${w.insider_score}</span>` : ''}</span><span class="amt num">+${rUsd(w.pnl_usd)}</span></div>
-    <div class="sub">${svgSpark(w.equity_curve)} <span>${w.win_rate != null ? Math.round(100 * w.win_rate) + '% ' + t('r_acierta') : `${w.wins}-${w.losses}`}</span> · <span>${w.n_markets} ${t('r_mercados')}</span> ${riskDot(w)} <span class="ver" style="margin-left:auto;color:var(--sky)">${t('r_ver_perfil')}</span></div>
+    <div class="row"><span class="nm">${esc(rName(w))} ${w.watch ? `<span class="rankchip num">🎯 ${w.insider_score}</span>` : ''}</span>${netTag(w, 'amt')}</div>
+    <div class="sub">${svgSpark(w.equity_curve)} <span>${w.win_rate != null ? Math.round(100 * w.win_rate) + '% ' + t('r_acierta') : `${w.wins}-${w.losses}`}</span> · <span>${w.n_markets} ${t('r_mercados')}</span>${gross} ${riskDot(w)} <span class="ver" style="margin-left:auto;color:var(--sky)">${t('r_ver_perfil')}</span></div>
   </div>`;
 }
 
 // 📡 Portada: HISTORIA DEL DÍA — auto-elige lo más interesante del Radar.
 function radarDashHtml(ws){
+  ws = ws.slice().sort((a, b) => netReal(b) - netReal(a));
   const top = ws[0];
   const tt = ((radarDoc && radarDoc.top_trades) || [])[0];
   // Bolsa del día: la peor bolsa abierta (más $ perdido) entre las cuentas top.
@@ -3606,7 +3662,7 @@ function radarDashHtml(ws){
   const accountStory = top ? `<div class="storyc" style="--sc:var(--amber)" data-rw="${esc(top.w)}">
     <span class="tag">${t('story_account')}</span>
     <div class="nm">${esc(rName(top))} ${top.watch ? `<span class="rankchip num">🎯 ${top.insider_score}</span>` : ''}</div>
-    <div class="big num" style="color:var(--volt)">+${rUsd(top.pnl_usd)}</div>
+    <div class="big num" style="color:${netReal(top) >= 0 ? 'var(--volt)' : 'var(--red)'}">${netReal(top) >= 0 ? '+' : ''}${rUsd(netReal(top))}${giveBack(top) >= 0.15 ? ` <span style="font-size:12px;color:var(--faint);font-weight:700">${t('bal_of')} +${esc(rUsd(top.pnl_usd))} ${t('bal_gross')}</span>` : ''}</div>
     <div class="sub">${esc(fraseDe(top))}</div>
     <div class="foot">${svgSpark(top.equity_curve)} ${riskDot(top)} <span style="margin-left:auto;color:var(--sky)">${t('story_see')}</span></div>
   </div>` : '';
@@ -3685,6 +3741,7 @@ function renderRadarDetail(){
   dc.innerHTML = radarWarnHtml()
     + backBar(w)
     + verdictHero(w)
+    + balanceBlock(w)
     + heroTiles(w)
     + bestPlaysHtml(w)
     + openRiskHtml(w.open, { wins: w.wins, losses: w.losses })
