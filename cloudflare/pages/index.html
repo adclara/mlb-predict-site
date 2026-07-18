@@ -275,6 +275,16 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .bolrec-i b.lo{color:var(--red)}
 .bolnote{margin-top:8px;font-size:11px;line-height:1.5;color:var(--faint)}
 .bolempty{font-size:12.5px;line-height:1.5;color:var(--dim);padding:2px 0 4px}
+/* Props a seguir (descriptivo) */
+.propsub{font-size:12px;font-weight:800;color:var(--dim);margin:8px 0 5px}
+.propgrid{display:flex;flex-direction:column;gap:5px}
+.prop{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--inner);border:1px solid var(--hair);border-radius:9px;padding:6px 10px}
+.prop .pnm{display:flex;align-items:center;gap:7px;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prop .pnm img{width:19px;height:19px;flex:none}
+.prop .pval{flex:none;font-size:12.5px;color:var(--dim)}
+.prop .pval b{color:var(--text);font-weight:800;font-size:14px}
+.prop .pval.hot b{color:var(--amber)}
+.propnote{margin-top:7px;font-size:11px;line-height:1.5;color:var(--faint)}
 @media(max-width:420px){
   .bleg{flex-direction:column;align-items:flex-start;gap:6px}
   .blright{align-self:stretch;justify-content:space-between}
@@ -1168,6 +1178,7 @@ const T = {
     r_chip_hit: '✅ Acertó', r_chip_of: 'de', r_chip_moved: 'Movió', r_chip_early: '⏱ Gana entrando antes:', r_chip_times: 'de las veces',
     r_best_plays: 'Sus mejores jugadas', r_when: '⏱ Cuándo entra', r_hbefore: 'h antes', r_before_close: 'del cierre del mercado (lo típico)',
     r_lastday: 'a último día', r_risk: '💵 Cuánto arriesga', r_per_play: 'por jugada (lo típico)', r_maxbet: 'apuesta máxima habitual', r_month_total: 'total del mes',
+    r_chip_portfolio: 'Cartera ahora', r_positions: 'posiciones abiertas', r_cmp_portfolio: 'Cartera actual',
     r_bet_type: '🎯 Qué tipo de apuestas hace', r_which: '🗂 En qué mercados', r_style: '♟ Estilo',
     r_hold: 'Aguanta hasta el final', r_mixed: 'Mixto', r_flips: 'Vende antes de que termine', r_sells_before: 'vende antes',
     r_weekly: '📈 Ganancia semana a semana', r_weekly_sub_a: 'verde = ganó, rojo = perdió (izq = hace 5 semanas) · ganó en', r_weekly_sub_b: 'de sus semanas activas',
@@ -1192,6 +1203,7 @@ const T = {
     bol_title: 'Boleto del día', bol_win: 'Gana', bol_none: 'Hoy el algoritmo no marca ninguna jugada de máxima confianza. No inventamos un boleto cuando no hay valor claro.',
     bol_rec: 'Cómo le ha ido a estos niveles', bol_note: 'Resumen de las mejores selecciones AA de hoy · no es recomendación de apuesta · tú decides.',
     bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto',
+    props_title: '🎯 Props a seguir', props_hr: 'Jonrones (más poder)', props_k: 'Ponches (K/9 del abridor)', props_note: 'Datos que informan estas props — no es una predicción AA.',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1227,6 +1239,7 @@ const T = {
     r_chip_hit: '✅ Hit', r_chip_of: 'of', r_chip_moved: 'Moved', r_chip_early: '⏱ Wins entering early:', r_chip_times: 'of the time',
     r_best_plays: 'Its best plays', r_when: '⏱ When it enters', r_hbefore: 'h before', r_before_close: 'before market close (typical)',
     r_lastday: 'on the last day', r_risk: '💵 How much it risks', r_per_play: 'per play (typical)', r_maxbet: 'usual max bet', r_month_total: 'month total',
+    r_chip_portfolio: 'Portfolio now', r_positions: 'open positions', r_cmp_portfolio: 'Current portfolio',
     r_bet_type: '🎯 What kind of bets it makes', r_which: '🗂 Which markets', r_style: '♟ Style',
     r_hold: 'Holds to the end', r_mixed: 'Mixed', r_flips: 'Sells before it ends', r_sells_before: 'sells before',
     r_weekly: '📈 Weekly profit', r_weekly_sub_a: 'green = won, red = lost (left = 5 weeks ago) · won in', r_weekly_sub_b: 'of its active weeks',
@@ -1251,6 +1264,7 @@ const T = {
     bol_title: 'Ticket of the day', bol_win: 'Take', bol_none: "Today the model flags no top-confidence play. We don't fake a ticket when there's no clear value.",
     bol_rec: 'How these tiers have done', bol_note: "A summary of today's best AA picks · not a betting recommendation · you decide.",
     bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high',
+    props_title: '🎯 Props to watch', props_hr: 'Home runs (most power)', props_k: 'Strikeouts (starter K/9)', props_note: 'Data that informs these props — not an AA prediction.',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
       <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
@@ -2174,6 +2188,20 @@ function renderDetail(){
       <div class="formside"><div class="fh">${logoImg(ev.home.code)}${esc(tNick(ev.home.code))}</div>${injuryRows('mlb', ev.home.code)}</div>
     </div>
     <p style="font-size:11px;color:var(--faint);padding-top:6px">★ = jugador clave (buenas estadísticas esta temporada). Informativo: el modelo AA no se altera con esto sin re-validación.</p>` : '';
+  // Props a seguir: DESCRIPTIVO (no predicción AA). Jonrones = bates de más poder
+  // (HR/OPS de temporada); Ponches = K/9 del abridor. Datos reales que informan
+  // props comunes; el modelo AA no las predice (respeta el ADN: nada sin validar).
+  const propsBlk = (() => {
+    const pit = snap.pitchers || {}, hit = snap.hitters || {};
+    const bats = [...((hit.away || []).map(h => ({ ...h, code: ev.away.code }))), ...((hit.home || []).map(h => ({ ...h, code: ev.home.code })))]
+      .filter(h => h.hr != null).sort((a, b) => (b.hr - a.hr) || ((b.ops || 0) - (a.ops || 0))).slice(0, 4);
+    const kPit = [{ p: pit.away, code: ev.away.code }, { p: pit.home, code: ev.home.code }].filter(x => x.p && x.p.k9 != null);
+    if (!bats.length && !kPit.length) return '';
+    const maxK = kPit.length ? Math.max(...kPit.map(x => x.p.k9)) : 0;
+    const hrBlk = bats.length ? `<div class="propsub">🏟 ${t('props_hr')}</div><div class="propgrid">${bats.map(b => `<div class="prop"><span class="pnm">${logoImg(b.code)}${esc(b.name)}</span><span class="pval num"><b>${b.hr}</b> HR · ${b.ops != null ? (+b.ops).toFixed(3) : '—'} OPS</span></div>`).join('')}</div>` : '';
+    const kBlk = kPit.length ? `<div class="propsub">🔥 ${t('props_k')}</div><div class="propgrid">${kPit.map(x => `<div class="prop"><span class="pnm">${logoImg(x.code)}${esc(x.p.name || '?')}</span><span class="pval num ${x.p.k9 === maxK ? 'hot' : ''}"><b>${x.p.k9}</b> K/9</span></div>`).join('')}</div>` : '';
+    return `<div class="secttl">${t('props_title')}</div>${hrBlk}${kBlk}<div class="propnote">${t('props_note')}</div>`;
+  })();
   const equipos = `
     ${h2h}
     ${snap.pitchers ? `<div class="secttl">Abridores probables</div>
@@ -2187,6 +2215,7 @@ function renderDetail(){
     <div class="formgrid">${lineupSide('away', ev.away.code)}${lineupSide('home', ev.home.code)}</div>` : ''}
     ${snap.hitters ? `<div class="secttl">Mejores bateadores</div>
     <div class="formgrid">${hitSide('away', ev.away.code)}${hitSide('home', ev.home.code)}</div>` : ''}
+    ${propsBlk}
     ${bajas}
     ${duel}
     ${ctxCards.length ? `<div class="secttl">Contexto del juego</div>
@@ -2868,7 +2897,7 @@ const pStar = (w) => `<span class="pstar${pfollow.has(w) ? ' on' : ''}" data-pst
 const pCmp = (w) => `<span class="pcmp${compareSel.includes(w) ? ' on' : ''}" data-pcmp="${esc(w)}" role="button" title="${t('r_compare')}">⚖</span>`;
 const walletCard = (w, i) => `<div class="wcard" data-rw="${esc(w.w)}" role="button" style="--i:${i}">
   <span class="row1"><span class="wctl">${pStar(w.w)}${pCmp(w.w)}</span><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}<span class="spkw">${svgSpark(w.equity_curve)}</span><span class="gan num">+${rUsd(w.pnl_usd)}</span></span>
-  <span class="row2">${w.win_rate != null ? `${t('r_acierta')} ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(rCat(w.cats[0].cat)) : '—'} · ${w.n_markets} ${t('r_mercados')}<span class="ver">${t('r_ver_perfil')}</span></span>
+  <span class="row2">${w.win_rate != null ? `${t('r_acierta')} ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(rCat(w.cats[0].cat)) : '—'} · ${w.n_markets} ${t('r_mercados')}${w.portfolio_usd != null ? ` · 💼 ${esc(rUsd(w.portfolio_usd))}` : ''}<span class="ver">${t('r_ver_perfil')}</span></span>
 </div>`;
 function renderRadarList(){
   if (sport !== 'radar') return;
@@ -2994,6 +3023,7 @@ function compareHtml(ws){
       ${row(t('r_cmp_type'), esc(kindTxt(a)), esc(kindTxt(b)))}
       ${row(t('r_cmp_when'), esc(preTxt(a)), esc(preTxt(b)))}
       ${row(t('r_cmp_bet'), rUsd(a.sizing && a.sizing.median_usd), rUsd(b.sizing && b.sizing.median_usd))}
+      ${(a.portfolio_usd != null || b.portfolio_usd != null) ? row(t('r_cmp_portfolio'), rUsd(a.portfolio_usd), rUsd(b.portfolio_usd), gt(a.portfolio_usd, b.portfolio_usd), gt(b.portfolio_usd, a.portfolio_usd)) : ''}
       ${row(t('r_cmp_cat'), esc(cat(a)), esc(cat(b)))}
     </div>`;
 }
@@ -3038,6 +3068,7 @@ function renderRadarDetail(){
       <span class="rchip">${t('r_chip_won')} <b class="num">${rUsd(w.pnl_usd)}</b> ${t('r_chip_in30')}</span>
       <span class="rchip">${t('r_chip_hit')} <b class="num">${w.wins} ${t('r_chip_of')} ${w.wins + w.losses}</b>${w.win_rate != null ? ` (${Math.round(100 * w.win_rate)}%)` : ''}</span>
       <span class="rchip">${t('r_chip_moved')} <b class="num">${rUsd(sz.total_usd)}</b> ${lang === 'en' ? 'across' : 'en'} ${w.n_markets} ${t('r_mercados')}</span>
+      ${w.portfolio_usd != null ? `<span class="rchip">💼 ${t('r_chip_portfolio')} <b class="num">${rUsd(w.portfolio_usd)}</b>${w.positions_open != null ? ` · ${w.positions_open} ${t('r_positions')}` : ''}</span>` : ''}
       ${w.pre_win_share != null ? `<span class="rchip">${t('r_chip_early')} <b class="num">${Math.round(100 * w.pre_win_share)}%</b> ${t('r_chip_times')}</span>` : ''}
     </div>
     ${(w.best_trades || []).length ? `<div class="rtrades"><div class="secttl">${t('r_best_plays')}</div>
