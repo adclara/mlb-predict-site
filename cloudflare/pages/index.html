@@ -3688,7 +3688,9 @@ loadToday(); loadLive(); loadInjuries(); loadMe();
 // PWA: registra el service worker (instalable + arranque offline; solo cachea el shell).
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 // Deep-link ?w=<0x…>: abre esa wallet en el Radar al cargar (perfil compartido).
-{ const _wp = (new URLSearchParams(location.search).get('w') || '').match(/0x[0-9a-fA-F]{40}/); if (_wp){ try { setSport('radar'); loadWalletSearch(_wp[0]); } catch (e) {} } }
+{ const _wp = (new URLSearchParams(location.search).get('w') || '').match(/0x[0-9a-fA-F]{40}/); if (_wp){ try { setSport('radar'); loadWalletSearch(_wp[0]); } catch (e) {} }
+  // subdominio radar.aasport.net (o ?tab=radar) → arranca en la pestaña Radar
+  else if (/^radar\./i.test(location.hostname) || new URLSearchParams(location.search).get('tab') === 'radar'){ try { setSport('radar'); } catch (e) {} } }
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
 setInterval(() => { sport === 'mlb' ? loadLive() : sport === 'radar' ? loadAlerts() : loadOther(); }, 45 * 1000);
 setInterval(loadInjuries, 30 * 60 * 1000);
