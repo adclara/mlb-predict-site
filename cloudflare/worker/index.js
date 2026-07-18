@@ -96,6 +96,7 @@ export default {
       }
       if (path === '/v1/injuries') return await injuries(env, origin);
       if (path === '/v1/poly/radar') return await polyRadar(env, origin);
+      if (path === '/v1/mlb/learning') return await mlbLearning(env, origin);
       if (path === '/v1/poly/alerts') return await polyAlerts(env, origin);
       if (path === '/v1/poly/track') return await polyTrack(env, origin);
       if (path === '/v1/poly/wallet') return await polyWallet(url, ctx, origin);
@@ -283,6 +284,17 @@ async function tgNotify(env, alerts) {
 async function polyRadar(env, origin) {
   const raw = await env.AA_LATEST.get('poly:radar');
   if (!raw) return json({ wallets: [], note: 'radar en preparación' }, 200, origin, 120);
+  return new Response(raw, {
+    status: 200,
+    headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=600' },
+  });
+}
+
+// 🧠 Cerebro AA: diario de aprendizaje del modelo MLB (KV mlb:learning), lo
+// publica robot/learning_journal.mjs en la corrida diaria.
+async function mlbLearning(env, origin) {
+  const raw = await env.AA_LATEST.get('mlb:learning');
+  if (!raw) return json({ note: 'aún sin diario de aprendizaje' }, 200, origin, 300);
   return new Response(raw, {
     status: 200,
     headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=600' },

@@ -39,6 +39,13 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
       - name: Compute + grade + learn
         run: DATA_DIR="$PWD/data" node robot/daily.mjs
+      # 🧠 Cerebro AA: traduce el aprendizaje medido (learning.json) a diario simple
+      # + histórico, y lo publica a KV mlb:learning. Se ejecuta tras el re-ajuste.
+      - name: Diario de aprendizaje (Cerebro AA)
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: DATA_DIR="$PWD/data" node robot/learning_journal.mjs || echo "journal falló (no bloquea)"
       - name: Commit picks/history
         run: |
           git add data/history data/elo.json data/elo_state.json 2>/dev/null || git add data/history
