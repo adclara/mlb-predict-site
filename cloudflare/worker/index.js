@@ -167,10 +167,15 @@ async function polyWallet(url, ctx, origin) {
   const cached = await cache.match(cacheKey);
   if (cached) return withCors(await cached.text(), origin, 120);
 
-  let acts = [];
+  let acts = [], pos = [];
   try {
-    const r = await fetch(`https://data-api.polymarket.com/activity?user=${addr}&limit=30`, { headers: { Accept: 'application/json' } });
-    if (r.ok) acts = await r.json();
+    // Actividad reciente + posiciones ABIERTAS en paralelo (una sola espera).
+    const [ra, rp] = await Promise.all([
+      fetch(`https://data-api.polymarket.com/activity?user=${addr}&limit=30`, { headers: { Accept: 'application/json' } }),
+      fetch(`https://data-api.polymarket.com/positions?user=${addr}&sizeThreshold=1&limit=200`, { headers: { Accept: 'application/json' } }),
+    ]);
+    if (ra.ok) acts = await ra.json();
+    if (rp.ok) pos = await rp.json();
   } catch (e) { /* wallet sin actividad o API caída → lista vacía */ }
   const rows = (Array.isArray(acts) ? acts : []).filter((a) => !a.type || a.type === 'TRADE').slice(0, 20).map((a) => ({
     ts: isFinite(+a.timestamp) ? +a.timestamp : null,
@@ -186,10 +191,39 @@ async function polyWallet(url, ctx, origin) {
   const usd = rows.reduce((s, r) => s + (r.usd || 0), 0);
   const markets = new Set(rows.map((r) => r.title).filter(Boolean)).size;
   const name = (rows.find((r) => r.pseudonym) || {}).pseudonym || null;
-  const payload = JSON.stringify({ ok: true, addr, name, summary: { n: rows.length, buys, sells: rows.length - buys, markets, usd: Math.round(usd) }, trades: rows, updated_at: new Date().toISOString() });
+  const payload = JSON.stringify({ ok: true, addr, name, summary: { n: rows.length, buys, sells: rows.length - buys, markets, usd: Math.round(usd) }, open: polyOpen(pos), trades: rows, updated_at: new Date().toISOString() });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=120' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin, 120);
+}
+
+// Resumen de posiciones ABIERTAS (mismo cálculo que robot/poly_radar.mjs): la
+// cartera actual + el lado honesto que el récord de ganancias oculta (bolsas que
+// van perdiendo o valen ~$0 y no ha vendido). Exportado para tests. null si vacío.
+export function polyOpen(pos) {
+  if (!Array.isArray(pos) || !pos.length) return null;
+  const mtm = (p) => { const v = (+p.size || 0) * (+p.curPrice || 0); return v > 0 ? v : (+p.currentValue || 0); };
+  const costOf = (p) => { const c = +p.initialValue; return isFinite(c) && c > 0 ? c : (+p.size || 0) * (+p.avgPrice || 0); };
+  const items = pos.map((p) => {
+    const cost = costOf(p), now = mtm(p);
+    const pnl = (p.cashPnl != null && isFinite(+p.cashPnl)) ? +p.cashPnl : (now - cost);
+    const cur = +p.curPrice;
+    return {
+      q: String(p.title || '').slice(0, 90), outcome: p.outcome != null ? String(p.outcome) : null,
+      cost: Math.round(cost), now: Math.round(now), pnl: Math.round(pnl), pct: cost > 0 ? +(pnl / cost).toFixed(2) : 0,
+      dead: isFinite(cur) && cur <= 0.05 && cost >= 5 && !p.redeemable,
+    };
+  }).filter((it) => it.cost >= 1);
+  if (!items.length) return null;
+  const losers = items.filter((it) => it.pnl < 0);
+  return {
+    value: Math.round(items.reduce((s, it) => s + it.now, 0)),
+    cost: Math.round(items.reduce((s, it) => s + it.cost, 0)),
+    unrealized: Math.round(items.reduce((s, it) => s + it.pnl, 0)),
+    n: items.length, winners: items.filter((it) => it.pnl > 0).length, losers: losers.length,
+    dead: items.filter((it) => it.dead).length,
+    worst: losers.sort((a, b) => a.pnl - b.pnl).slice(0, 4),
+  };
 }
 
 // Persistencia viva + wallets nuevas en el top (lo calcula el cron diario a KV
