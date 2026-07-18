@@ -346,6 +346,8 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .dtop{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--hair);font-size:13px;color:var(--faint)}
 .dtop .crumb b{color:var(--dim);font-weight:600}
 .dtop .crumb .sep{margin:0 6px;opacity:.5}
+.sharebtn{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9px;background:var(--inner);border:1px solid var(--hair);color:var(--dim);cursor:pointer;flex:none;transition:color .15s,border-color .15s}
+.sharebtn:hover{color:var(--volt);border-color:var(--volt)}
 .dclose{margin-left:auto;width:30px;height:30px;display:none;place-items:center;border-radius:9px;color:var(--dim)}
 .dclose:hover{background:var(--panel-2)}
 .dhero{padding:20px 22px 18px;text-align:center}
@@ -1280,6 +1282,9 @@ const T = {
     sim_sel: '🎯 Selección a −110 (equilibrio 52.4%)', sim_thr: 'confianza', sim_picks: 'jugadas', sim_hit: 'acierto', sim_roi: 'ROI',
     sim_edge: 'ventaja real', sim_mkt: 'Acierto global: AA {m}% vs mercado {k}% — la ventaja vive en la selección, no en el promedio.',
     sim_note: 'Todo out-of-sample; se reporta tal cual, gane o pierda. No es recomendación de apuesta.',
+    tr_units: '📈 Unidades de fijos en el tiempo', tr_units_h: 'Ganancia acumulada (fijos a −110)', tr_units_soon: 'Acumulando fijos calificados — la curva aparece pronto.',
+    tr_locks: 'Fijos', tr_gems: 'Gemas', tr_locks_n: 'fijos medidos', tr_at110: 'a −110', tr_measured: 'medidas',
+    share: 'Compartir', share_txt: 'Mira este partido en AA Sports',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1358,6 +1363,9 @@ const T = {
     sim_sel: '🎯 Selection at −110 (break-even 52.4%)', sim_thr: 'confidence', sim_picks: 'picks', sim_hit: 'hit', sim_roi: 'ROI',
     sim_edge: 'real edge', sim_mkt: 'Overall accuracy: AA {m}% vs market {k}% — the edge lives in selection, not the average.',
     sim_note: 'All out-of-sample; reported as-is, win or lose. Not betting advice.',
+    tr_units: '📈 Lock units over time', tr_units_h: 'Cumulative return (locks at −110)', tr_units_soon: 'Building graded locks — the curve shows up soon.',
+    tr_locks: 'Locks', tr_gems: 'Gems', tr_locks_n: 'locks measured', tr_at110: 'at −110', tr_measured: 'measured',
+    share: 'Share', share_txt: 'Check out this game on AA Sports',
     brain_soon: 'AA Brain is preparing its first learning journal.',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
@@ -1607,6 +1615,7 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('#langbtn')) setLang(lang === 'en' ? 'es' : 'en');
 });
 let selectedId = null, filter = 'all', listTab = 'all', query = '', dtab = 'analisis';
+let pendingGame = null, pendingOther = null;   // deep-links de links compartidos
 let firstLoad = true, lastAnimKey = null;
 let favs = new Set(JSON.parse(localStorage.getItem('aa_favs') || '[]'));
 const $ = id => document.getElementById(id);
@@ -1939,6 +1948,35 @@ function renderHistDash(){
     byConf[c] = byConf[c] || { w: 0, n: 0 };
     byConf[c].n++; if (r.result === 'win') byConf[c].w++;
   }
+  // ── récord por nivel + curva de unidades de FIJOS (transparencia total) ──
+  const isLock = (c) => c === 'oro' || c === 'plata' || c === 'fijo';
+  const lockPicks = g.filter(x => isLock(x.confidence)).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const gemPicks = g.filter(x => x.confidence === 'gema');
+  const lw = lockPicks.filter(x => x.result === 'win').length, ll = lockPicks.length - lw;
+  const gw = gemPicks.filter(x => x.result === 'win').length, gl = gemPicks.length - gw;
+  let acc = 0; const upts = lockPicks.map(x => { acc += x.result === 'win' ? 0.909 : -1; return { date: x.date, u: Math.round(acc * 100) / 100 }; });
+  const finalU = Math.round(acc * 100) / 100;
+  const unitsCurve = (() => {
+    if (upts.length < 2) return `<div class="secttl">${t('tr_units')}</div><div class="bempty">${t('tr_units_soon')}</div>`;
+    const W = 320, H = 96, pad = 8;
+    const us = upts.map(p => p.u), mx = Math.max(0, ...us), mn = Math.min(0, ...us), rng = (mx - mn) || 1;
+    const xs = upts.map((_, i) => pad + i / (upts.length - 1) * (W - 2 * pad));
+    const ys = upts.map(p => pad + (mx - p.u) / rng * (H - 2 * pad));
+    const zeroY = pad + (mx - 0) / rng * (H - 2 * pad);
+    const line = xs.map((x, i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+    const area = `M${xs[0].toFixed(1)},${zeroY.toFixed(1)} ` + xs.map((x, i) => `L${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ') + ` L${xs[xs.length - 1].toFixed(1)},${zeroY.toFixed(1)} Z`;
+    const col = finalU >= 0 ? 'var(--volt)' : 'var(--red)';
+    return `<div class="secttl">${t('tr_units')}</div>
+      <div class="wpcard">
+        <div class="wphead"><span>${t('tr_units_h')}</span><span class="num" style="color:${col}"><b>${finalU > 0 ? '+' : ''}${finalU}u</b></span></div>
+        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${t('tr_units')}" style="width:100%;height:96px;display:block">
+          <line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${W - pad}" y2="${zeroY.toFixed(1)}" stroke="rgba(255,255,255,.18)" stroke-dasharray="3 4"/>
+          <path d="${area}" fill="${col}" opacity="0.13"/>
+          <path d="${line}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+        <div class="bcaphint num">${esc(upts[0].date)} → ${esc(upts[upts.length - 1].date)} · ${lockPicks.length} ${t('tr_locks_n')}</div>
+      </div>`;
+  })();
   const byDay = new Map();
   for (const r of g){ if (!byDay.has(r.date)) byDay.set(r.date, { w: 0, l: 0 }); const d2 = byDay.get(r.date); r.result === 'win' ? d2.w++ : d2.l++; }
   const days = [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-14);
@@ -1956,7 +1994,10 @@ function renderHistDash(){
         <div class="dtile"><div class="lb">Récord</div><div class="vl num"><span style="color:var(--volt)">${w}</span>–<span style="color:var(--faint)">${l}</span></div><div class="sub2">ganados–perdidos</div></div>
         <div class="dtile"><div class="lb">Acierto</div><div class="vl num" style="color:var(--volt)">${pct}%</div><div class="sub2">todo medido, nada oculto</div></div>
         <div class="dtile"><div class="lb">Racha actual</div><div class="vl num">${streak > 0 ? 'G' + streak : '—'}</div><div class="sub2">picks seguidos ganados</div></div>
+        ${lockPicks.length ? `<div class="dtile"><div class="lb">${t('tr_locks')}</div><div class="vl num"><span style="color:var(--volt)">${lw}</span>–<span style="color:var(--faint)">${ll}</span></div><div class="sub2 num" style="color:${finalU < 0 ? 'var(--red)' : 'var(--volt)'}">${finalU > 0 ? '+' : ''}${finalU}u ${t('tr_at110')}</div></div>` : ''}
+        ${gemPicks.length ? `<div class="dtile"><div class="lb">${t('tr_gems')}</div><div class="vl num"><span style="color:var(--volt)">${gw}</span>–<span style="color:var(--faint)">${gl}</span></div><div class="sub2">${gw + gl} 💎 ${t('tr_measured')}</div></div>` : ''}
       </div>
+      ${unitsCurve}
       <div class="secttl">Por día (últimos 14)</div>
       <div class="wpcard"><div class="daybars">${bars || '<span class="wempty">Sin días calificados aún.</span>'}</div></div>
       <div class="secttl">Por nivel de confianza</div>
@@ -2515,7 +2556,7 @@ function renderDetail(){
   dc.innerHTML = `
     <div class="dtop">
       <span class="crumb">USA<span class="sep">›</span><b>MLB</b><span class="sep">›</span><b>${esc(ev.matchup)}</b></span>
-      <span style="margin-left:auto"></span>
+      <button class="sharebtn" data-share="mlb" data-shid="${esc(ev.event_id)}" title="${t('share')}" aria-label="${t('share')}">${SHARE_SVG}</button>
     </div>
     <div class="dhero">
       <span class="dwhen num">${esc(ev.start || '')}${ev.result ? `<span class="reschip ${ev.result === 'win' ? 'won' : 'lost'}">${ev.result === 'win' ? '✓ pick acertado' : '✗ pick fallado'}</span>` : ''}</span>
@@ -2583,6 +2624,8 @@ function select(id, openMobile){
 document.addEventListener('click', e => {
   const sp3 = e.target.closest('.sp[data-sport]');
   if (sp3){ if (sp3.dataset.sport !== sport) setSport(sp3.dataset.sport); return; }
+  const shb = e.target.closest('[data-share]');
+  if (shb){ e.preventDefault(); e.stopPropagation(); shareGame(shb.dataset.share, shb.dataset.shid); return; }
   const lg2 = e.target.closest('[data-lg]');
   if (lg2){ soccerLeague = lg2.dataset.lg; otherGames = []; renderLeagueChips();
     document.querySelector('.lghead .sub').textContent = SOCCER_LEAGUES[soccerLeague] || '';
@@ -2768,7 +2811,10 @@ async function loadToday(){
       firstLoad = false;
       killBootAnim();
       setTimeout(() => $('listpane').classList.remove('boot'), 1400);
-      const pick = events.find(e => e.badges?.includes('gema')) || events.find(e => e.badges?.includes('fijo')) || events[0];
+      // link compartido ?g=<id> tiene prioridad; si no, la mejor jugada del día
+      const shared = pendingGame && events.find(e => String(e.event_id) === String(pendingGame));
+      pendingGame = null;
+      const pick = shared || events.find(e => e.badges?.includes('gema')) || events.find(e => e.badges?.includes('fijo')) || events[0];
       selectedId = pick.event_id;
     }
     renderAll();
@@ -2806,6 +2852,8 @@ async function loadOther(){
     }
   }catch(err){ otherGames = []; otherRecent = false; }
   otherLoading = false;
+  // link compartido ?sc=<id>: selecciona ese partido si está en la lista
+  if (pendingOther){ const hit = otherGames.find(x => String(x.espn_id) === String(pendingOther)); if (hit){ otherSel = hit.espn_id; } pendingOther = null; }
   loadStandings();
   if (sport === 'soccer') loadSoccerPreds();
   if (sport !== 'mlb') renderAll();
@@ -2920,6 +2968,13 @@ function polyToast(msg){
 async function shareWallet(addr){
   const url = `${location.origin}/?w=${addr}`;
   try { if (navigator.share){ await navigator.share({ title: 'AA Radar', text: t('r_share_txt'), url }); return; } } catch (e) { return; }
+  try { await navigator.clipboard.writeText(url); polyToast(t('r_copied')); } catch (e) { polyToast(url); }
+}
+// Compartir un partido (tarjeta con OpenGraph vía /share/<kind>/<id>).
+const SHARE_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>';
+async function shareGame(kind, id){
+  const url = `${location.origin}/share/${kind}/${encodeURIComponent(id)}`;
+  try { if (navigator.share){ await navigator.share({ title: 'AA Sports', text: t('share_txt'), url }); return; } } catch (e) { return; }
   try { await navigator.clipboard.writeText(url); polyToast(t('r_copied')); } catch (e) { polyToast(url); }
 }
 const savePfollow = () => localStorage.setItem('aa_poly_follow', JSON.stringify([...pfollow]));
@@ -3564,7 +3619,7 @@ function renderOtherDetail(){
   }
 
   dc.innerHTML = `
-    <div class="dtop"><span class="crumb">${esc(SPORT_LABEL[sport] || sport)}${g.league ? `<span class="sep">›</span><b>${esc(g.league)}</b>` : ''}</span></div>
+    <div class="dtop"><span class="crumb">${esc(SPORT_LABEL[sport] || sport)}${g.league ? `<span class="sep">›</span><b>${esc(g.league)}</b>` : ''}</span>${sport === 'soccer' && predFor(g) ? `<button class="sharebtn" data-share="soccer" data-shid="${esc(g.espn_id)}" title="${t('share')}" aria-label="${t('share')}">${SHARE_SVG}</button>` : ''}</div>
     <div class="dhero">
       <span class="dwhen num">${g.start ? esc(new Date(g.start).toLocaleString('es', {dateStyle: 'medium', timeStyle: 'short'})) : ''}</span>
       <div class="dgrid">
@@ -3821,10 +3876,16 @@ applyI18n(); // pinta el idioma guardado antes de cargar datos
 loadToday(); loadLive(); loadInjuries(); loadMe();
 // PWA: registra el service worker (instalable + arranque offline; solo cachea el shell).
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-// Deep-link ?w=<0x…>: abre esa wallet en el Radar al cargar (perfil compartido).
-{ const _wp = (new URLSearchParams(location.search).get('w') || '').match(/0x[0-9a-fA-F]{40}/); if (_wp){ try { setSport('radar'); loadWalletSearch(_wp[0]); } catch (e) {} }
-  // subdominio radar.aasport.net (o ?tab=radar) → arranca en la pestaña Radar
-  else if (/^radar\./i.test(location.hostname) || new URLSearchParams(location.search).get('tab') === 'radar'){ try { setSport('radar'); } catch (e) {} } }
+// Deep-links (links compartidos): ?w=<0x…> wallet · ?g=<id> juego MLB ·
+// ?tab=soccer&sc=<id> partido de fútbol · ?tab=radar Radar.
+{ const qp = new URLSearchParams(location.search);
+  const _wp = (qp.get('w') || '').match(/0x[0-9a-fA-F]{40}/);
+  const gid = qp.get('g'), tab = qp.get('tab'), scid = qp.get('sc');
+  if (_wp){ try { setSport('radar'); loadWalletSearch(_wp[0]); } catch (e) {} }
+  else if (tab === 'soccer'){ try { setSport('soccer'); if (scid) pendingOther = scid; } catch (e) {} }
+  else if (/^radar\./i.test(location.hostname) || tab === 'radar'){ try { setSport('radar'); } catch (e) {} }
+  else if (gid){ pendingGame = gid; }   // se aplica cuando cargan los eventos
+}
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
 setInterval(() => { sport === 'mlb' ? loadLive() : sport === 'radar' ? loadAlerts() : loadOther(); }, 45 * 1000);
 setInterval(loadInjuries, 30 * 60 * 1000);
