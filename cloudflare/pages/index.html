@@ -1285,6 +1285,8 @@ const T = {
     tr_units: '📈 Unidades de fijos en el tiempo', tr_units_h: 'Ganancia acumulada (fijos a −110)', tr_units_soon: 'Acumulando fijos calificados — la curva aparece pronto.',
     tr_locks: 'Fijos', tr_gems: 'Gemas', tr_locks_n: 'fijos medidos', tr_at110: 'a −110', tr_measured: 'medidas',
     share: 'Compartir', share_txt: 'Mira este partido en AA Sports',
+    future_note: '📅 Próximos enfrentamientos · la predicción AA se publica el día del juego',
+    future_detail: 'Partido por jugar. La predicción AA (número calibrado + análisis) se publica el mismo día, cuando corre el modelo con lineups y datos frescos.',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1366,6 +1368,8 @@ const T = {
     tr_units: '📈 Lock units over time', tr_units_h: 'Cumulative return (locks at −110)', tr_units_soon: 'Building graded locks — the curve shows up soon.',
     tr_locks: 'Locks', tr_gems: 'Gems', tr_locks_n: 'locks measured', tr_at110: 'at −110', tr_measured: 'measured',
     share: 'Share', share_txt: 'Check out this game on AA Sports',
+    future_note: '📅 Upcoming matchups · the AA prediction publishes on game day',
+    future_detail: 'Game not played yet. The AA prediction (calibrated number + analysis) publishes the same day, once the model runs with lineups and fresh data.',
     brain_soon: 'AA Brain is preparing its first learning journal.',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
@@ -1699,6 +1703,7 @@ function rowHtml(ev, idx){
   if (st === 'live') timeCol = `<span class="lv">${esc(shortDetail(lv) || 'LIVE')}</span>`;
   else if (st === 'final') timeCol = 'Final';
   else if (lv && /postpon/i.test(lv.status_detail || '')) timeCol = `<span class="pp">Pospuesto</span>`;
+  else if (viewDate && ev.start && String(ev.start).includes('T')) timeCol = new Date(ev.start).toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' });
   else timeCol = 'Hoy';
 
   const pickA = p.pick && canon(p.pick) === canon(ev.away.code);
@@ -1908,7 +1913,9 @@ function renderList(){
   const flipState = canFlip ? window.Flip.getState('#list .mrow') : null;
   // Aviso claro cuando no hay juegos de MLB hoy (el doc es de un día pasado):
   // así no parece que la app "no se actualiza" — es que no hay béisbol.
-  const mlbBanner = (!viewDate && docStale && listTab !== 'favs' && events.length)
+  const mlbBanner = viewFuture
+    ? `<div class="recentnote">${t('future_note')}</div>`
+    : (!viewDate && docStale && listTab !== 'favs' && events.length)
     ? '<div class="recentnote">Sin juegos de MLB hoy · mostrando los últimos resultados</div>' : '';
   // Boleto del día: solo en la vista por defecto de HOY (sin filtro/pestaña ni día archivado).
   const boleto = (!viewDate && !docStale && listTab === 'all' && filter === 'all' && events.length) ? boletoHtml() : '';
@@ -2266,6 +2273,7 @@ function renderDetail(){
     <ul class="whylist">${snap.reasons.map(r2 => `<li>${esc(r2)}</li>`).join('')}</ul>` : '';
 
   const analisis = `
+    ${viewFuture ? `<div class="verdict"><span class="ic">📅</span><p><span class="vt">${t('today') === 'Hoy' ? 'Por jugar' : 'Upcoming'}</span>${t('future_detail')}</p></div>` : ''}
     ${verdictBox}
     ${homePct != null ? `
     <div class="whowin">
@@ -2559,7 +2567,7 @@ function renderDetail(){
       <button class="sharebtn" data-share="mlb" data-shid="${esc(ev.event_id)}" title="${t('share')}" aria-label="${t('share')}">${SHARE_SVG}</button>
     </div>
     <div class="dhero">
-      <span class="dwhen num">${esc(ev.start || '')}${ev.result ? `<span class="reschip ${ev.result === 'win' ? 'won' : 'lost'}">${ev.result === 'win' ? '✓ pick acertado' : '✗ pick fallado'}</span>` : ''}</span>
+      <span class="dwhen num">${esc(ev.start && String(ev.start).includes('T') ? new Date(ev.start).toLocaleString(LOCALE(), { dateStyle: 'medium', timeStyle: 'short' }) : (ev.start || ''))}${ev.result ? `<span class="reschip ${ev.result === 'win' ? 'won' : 'lost'}">${ev.result === 'win' ? '✓ pick acertado' : '✗ pick fallado'}</span>` : ''}</span>
       <div class="dgrid">
         <div class="dteam">${logoImg(ev.away.code)}<span class="nm">${esc(CITY[canon(ev.away.code)] || '')}<br>${esc(tNick(ev.away.code))}</span>${recA}</div>
         <div class="dmid">${mid}</div>
@@ -2727,17 +2735,19 @@ document.addEventListener('click', e => {
     return;
   }
   if (e.target.closest('#dNext')){
-    if (sport !== 'mlb' || !viewDate) return;
-    const nx = shiftDate(viewDate, 1);
-    (todayDate && nx >= todayDate) ? backToToday() : loadDay(nx);
+    if (sport !== 'mlb') return;
+    const base = viewDate || realToday();       // desde hoy también se puede ir al futuro
+    const nx = shiftDate(base, 1);
+    if (nx > maxFutureDate()) return;
+    (nx === realToday()) ? backToToday() : loadDay(nx);
     return;
   }
   if (e.target.closest('#dToday')){ backToToday(); return; }
   if (e.target.closest('#dlabel')){
     if (sport !== 'mlb') return;
     const pk = $('dPick');
-    pk.max = todayDate || '';
-    pk.value = viewDate || todayDate || '';
+    pk.max = maxFutureDate();                    // hasta 2 semanas adelante
+    pk.value = viewDate || realToday() || '';
     pk.showPicker ? pk.showPicker() : pk.click();
     return;
   }
@@ -2754,7 +2764,7 @@ $('q').addEventListener('input', e => { query = e.target.value.trim(); renderLis
 $('dPick').addEventListener('change', e => {
   const v = e.target.value;
   if (!v) return;
-  (todayDate && v >= todayDate) ? backToToday() : loadDay(v);
+  (v === realToday()) ? backToToday() : loadDay(v);
 });
 
 /* ── datos ───────────────────────────────────────────────── */
@@ -2783,7 +2793,7 @@ async function loadToday(){
     // un día pasado (p. ej. no hay juegos hoy — receso del Juego de Estrellas o
     // día libre), no lo etiquetamos "Hoy" y mostramos un aviso claro.
     docStale = !!(d.date && d.date !== etTodayClient());
-    $('dNext').disabled = true;
+    $('dNext').disabled = realToday() >= maxFutureDate();
     $('cntMLB').hidden = !events.length;
     $('cntMLB').textContent = events.length;
     if (d.date) $('dlabel').textContent = humanDate(d.date, !docStale);
@@ -3718,8 +3728,12 @@ function setSport(sp2){
 }
 
 /* ── navegación por fechas (historial navegable) ─────────────────────── */
-let viewDate = null;           // null = HOY (KV mlb:today); 'YYYY-MM-DD' = día archivado
+let viewDate = null;           // null = HOY (KV mlb:today); 'YYYY-MM-DD' = día archivado o futuro
+let viewFuture = false;        // true = viendo un día FUTURO (calendario de enfrentamientos)
 let todayDate = null;          // fecha del doc de hoy (la fija loadToday)
+const realToday = () => (typeof etTodayClient === 'function' ? etTodayClient() : (todayDate || '')); // día calendario ET real
+const maxFutureDate = () => shiftDate(realToday(), 14);   // hasta 2 semanas adelante
+const isFutureDate = (d) => d && realToday() && d > realToday();
 let docStale = false;          // true si el doc publicado es de un día pasado (sin juegos hoy)
 const dayFmt = (d) => d; // ya viene YYYY-MM-DD
 function shiftDate(d, delta){
@@ -3728,17 +3742,21 @@ function shiftDate(d, delta){
 }
 async function loadDay(date){
   viewDate = date;
-  document.body.classList.add('viewingpast');
+  viewFuture = isFutureDate(date);
+  document.body.classList.toggle('viewingpast', !viewFuture);
+  document.body.classList.toggle('viewingfuture', viewFuture);
   $('dlabel').textContent = humanDate(date, false);
   $('dToday').hidden = false;
-  $('dNext').disabled = todayDate && date >= todayDate;
+  $('dNext').disabled = date >= maxFutureDate();
   $('ticker').hidden = true;
   $('list').innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
   try{
-    const r = await fetch(`${API}/v1/mlb/day/${date}`);
+    // futuro → calendario de enfrentamientos (StatsAPI, sin predicción aún);
+    // pasado/hoy → doc archivado con predicciones y resultados.
+    const r = await fetch(`${API}/v1/mlb/${viewFuture ? 'schedule' : 'day'}/${date}`);
     const d = await r.json();
     events = d.events || [];
-    liveByKey = new Map(); // sin live en días pasados
+    liveByKey = new Map(); // sin live en días no-hoy
     selectedId = events.length ? events[0].event_id : null;
     renderList(); renderDetail(); renderSide();
   }catch(err){
@@ -3746,10 +3764,10 @@ async function loadDay(date){
   }
 }
 function backToToday(){
-  viewDate = null;
-  document.body.classList.remove('viewingpast');
+  viewDate = null; viewFuture = false;
+  document.body.classList.remove('viewingpast', 'viewingfuture');
   $('dToday').hidden = true;
-  $('dNext').disabled = true;
+  $('dNext').disabled = realToday() >= maxFutureDate();
   $('dlabel').textContent = todayDate || t('today');
   firstLoad = true; lastLiveSig = '[]';
   loadToday(); loadLive();

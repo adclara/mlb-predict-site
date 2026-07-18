@@ -48,6 +48,8 @@ export default {
       }
 
       if (path === '/v1/mlb/today') return await today(env, origin);
+      const sm = path.match(/^\/v1\/mlb\/schedule\/(\d{4}-\d{2}-\d{2})$/);
+      if (sm) return await schedule(sm[1], origin);
       const dm = path.match(/^\/v1\/mlb\/day\/(\d{4}-\d{2}-\d{2})$/);
       if (dm) return await day(dm[1], env, origin);
       if (path === '/v1/mlb/live') return await live(ctx, origin);
@@ -448,6 +450,43 @@ async function day(date, env, origin) {
     }
   }
   return json({ sport: 'mlb', date, events: [], note: 'sin datos para esa fecha' }, 200, origin, 120);
+}
+
+// 📅 Calendario a FUTURO: quién juega contra quién en un día venidero (sin
+// predicción — el modelo corre el día del juego). Proxy de MLB StatsAPI, que el
+// Worker sí alcanza; caché 30 min. Devuelve el MISMO shape que day() pero ligero.
+async function schedule(date, origin) {
+  let events = [];
+  try {
+    const res = await fetch(
+      `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,team`,
+      { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 1800 } },
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const games = (data.dates && data.dates[0] && data.dates[0].games) || [];
+      const teamOf = (t) => {
+        const team = (t && t.team) || {};
+        return { code: team.abbreviation || team.teamName || team.name || '?', name: team.shortName || team.teamName || team.name || '' };
+      };
+      const nameOf = (pp) => (pp && (pp.fullName || pp.lastName)) || null;
+      events = games.map((g) => {
+        const away = teamOf(g.teams && g.teams.away), home = teamOf(g.teams && g.teams.home);
+        const app = g.teams && g.teams.away && g.teams.away.probablePitcher;
+        const hpp = g.teams && g.teams.home && g.teams.home.probablePitcher;
+        return {
+          sport: 'mlb', league: 'MLB', event_id: String(g.gamePk),
+          matchup: `${away.code} @ ${home.code}`, start: g.gameDate || date, status: 'pre',
+          home, away,
+          prediction: null, metrics: [], summary_es: null,
+          snapshot: (app || hpp) ? { pitchers: { away: nameOf(app) ? { name: nameOf(app) } : null, home: nameOf(hpp) ? { name: nameOf(hpp) } : null } } : null,
+          risk: null, odds: null, badges: [], result: null, final: null, live: null, updated_at: null,
+        };
+      });
+    }
+  } catch (e) { /* upstream caído → lista vacía */ }
+
+  return json({ sport: 'mlb', league: 'MLB', date, source: 'statsapi', future: true, record: null, events }, 200, origin, 1800);
 }
 
 async function event(id, env, origin) {
