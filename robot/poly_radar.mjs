@@ -223,7 +223,14 @@ try {
       const pos = await get(`https://data-api.polymarket.com/positions?user=${pr.w}&sizeThreshold=1&limit=500`);
       if (Array.isArray(pos)) {
         pr.positions_open = pos.length;
-        const val = pos.reduce((s, p) => s + (+p.currentValue || 0), 0);
+        // Valor actual por posición = mark-to-market (acciones × precio actual).
+        // Más fiable que currentValue, que la Data API reporta 0 en posiciones
+        // GANADAS-redimibles (curPrice=1 → valen ~$1/acción hasta que se cobran).
+        const worth = (p) => {
+          const mtm = (+p.size || 0) * (+p.curPrice || 0);
+          return mtm > 0 ? mtm : (+p.currentValue || 0);
+        };
+        const val = pos.reduce((s, p) => s + worth(p), 0);
         pr.portfolio_usd = Math.round(val);
       } else { pr.positions_open = null; pr.portfolio_usd = null; }
     } catch (e) { pr.portfolio_usd = pr.portfolio_usd ?? null; pr.positions_open = pr.positions_open ?? null; }
