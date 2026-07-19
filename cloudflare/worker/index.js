@@ -263,17 +263,24 @@ async function polyWatch(env) {
       if (!bootstrap) for (const a of fresh) found.push({ ...a, wallet: w.w, pseudonym: w.pseudonym || w.name || null, score: w.insider_score ?? null });
     } catch (e) { /* una wallet fallida no tumba la ronda */ }
   }
+  // Escribe SIEMPRE checked_at (aunque no haya nuevas): así la UI puede mostrar
+  // "revisado hace X min · cada 5 min" y se prueba que el vigía está vivo.
+  const nowIso = new Date().toISOString();
+  const oldRaw = await env.AA_LATEST.get('poly:alerts');
+  let doc; try { doc = oldRaw ? JSON.parse(oldRaw) : { alerts: [] }; } catch (e) { doc = { alerts: [] }; }
+  if (!Array.isArray(doc.alerts)) doc.alerts = [];
   if (found.length) {
-    const oldRaw = await env.AA_LATEST.get('poly:alerts');
-    let old; try { old = oldRaw ? JSON.parse(oldRaw) : { alerts: [] }; } catch (e) { old = { alerts: [] }; }
-    const seen = new Set((old.alerts || []).map((a) => a.tx).filter(Boolean));
+    const seen = new Set(doc.alerts.map((a) => a.tx).filter(Boolean));
     const fresh = found.filter((a) => polyAlertWorthy(a) && (!a.tx || !seen.has(a.tx))).sort((a, b) => b.ts - a.ts);
     if (fresh.length) {
-      const merged = [...fresh, ...(old.alerts || [])].slice(0, 100);
-      await env.AA_LATEST.put('poly:alerts', JSON.stringify({ updated_at: new Date().toISOString(), alerts: merged }));
+      doc.alerts = [...fresh, ...doc.alerts].slice(0, 100);
+      doc.updated_at = nowIso;
       if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) await tgNotify(env, fresh.slice(0, 5));
     }
   }
+  doc.checked_at = nowIso;
+  doc.watching = watch.length;
+  await env.AA_LATEST.put('poly:alerts', JSON.stringify(doc));
   await env.AA_LATEST.put('poly:lastseen', JSON.stringify(lastseen));
 }
 
