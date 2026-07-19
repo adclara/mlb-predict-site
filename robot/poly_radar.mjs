@@ -7,7 +7,7 @@
 // (persistencia) — el pasado aquí apenas predice el futuro y la UI lo dice.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { fetchUniverse, fetchTrades, walletMarketStats, stats, spearman, median, quantile, fmt, pct, get, pool } from './lib/poly.mjs';
+import { fetchUniverse, fetchTrades, walletMarketStats, stats, spearman, median, quantile, fmt, pct, get, pool, wilsonLB } from './lib/poly.mjs';
 
 const TAGS = ['mlb', 'nba', 'nfl', 'soccer', 'tennis', 'sports', 'politics', 'crypto', 'pop-culture', 'business', 'science'];
 const WINDOW_DAYS = 30, MIN_VOL = 20000, MAX_MARKETS = 400;
@@ -80,6 +80,7 @@ for (const [w, ww] of wallets) {
     buyShare: (totBuySh + totSellSh) > 0 ? totBuySh / (totBuySh + totSellSh) : 0,
     w, s, avgP, washy, wins, losses,
     wr: (wins + losses) ? wins / (wins + losses) : null,
+    wrLB: wilsonLB(wins, wins + losses), // solidez estadística del win rate (anti muestra-chica)
     // longshots ganados: compró a <40¢ y el mercado terminó a su favor (señal fuerte)
     longshots: ww.mkts.filter((k) => k.avgP != null && k.avgP < 0.40 && k.pnl > 0).length,
     pnlWeeks: weeks.map((p) => Math.round(p)).reverse(), // vieja → reciente (para la UI)
@@ -95,11 +96,13 @@ const qualified = scored.filter((r) => clean(r) && r.s.mean > 0 && r.s.t >= 2).s
 const top = qualified.slice(0, TOP_K);
 // candidatas a VIGILADAS (umbral de Adrian): ≥70% de aciertos con n≥10 resueltos
 // + GANANCIA REAL SOSTENIDA (pnl>0 y mayoría de semanas activas en positivo) + filtros
+// + SOLIDEZ estadística: la cota inferior de Wilson (95%) del win rate debe superar
+// 0.50 — o sea, estamos 95% seguros de que gana MÁS que una moneda, no que fue suerte.
 const isWatch = (r) => clean(r) && r.wr != null && r.wr >= WATCH_WR && (r.wins + r.losses) >= WATCH_MIN_N
-  && r.s.pnl > 0 && r.consistency >= WATCH_CONSISTENCY;
+  && r.s.pnl > 0 && r.consistency >= WATCH_CONSISTENCY && r.wrLB >= 0.50;
 const watchCand = scored.filter(isWatch)
-  .sort((a, b) => (b.wr - a.wr) || (b.longshots - a.longshots)).slice(0, WATCH_K);
-console.log(`Con ≥${MIN_MARKETS} mercados: ${scored.length} · calificadas tras filtros: ${qualified.length} · top: ${top.length} · candidatas a vigiladas (≥${100 * WATCH_WR}% con n≥${WATCH_MIN_N}, $>0 sostenido): ${watchCand.length}`);
+  .sort((a, b) => (b.wrLB - a.wrLB) || (b.longshots - a.longshots)).slice(0, WATCH_K);
+console.log(`Con ≥${MIN_MARKETS} mercados: ${scored.length} · calificadas tras filtros: ${qualified.length} · top: ${top.length} · candidatas a vigiladas (≥${100 * WATCH_WR}%, n≥${WATCH_MIN_N}, Wilson≥0.50, $>0 sostenido): ${watchCand.length}`);
 
 // ── 🏆 Top 10 transacciones de la ventana (ganancia REAL en $) ───────────────
 // La mejor COMPRA individual: pagó p, el mercado resolvió a su favor → ganó
@@ -178,7 +181,9 @@ function profileOf(r) {
   // alto + gana entrando ANTES (o temprano-barato si no hay hora de inicio) +
   // longshots ganados + ganancia sostenida. 0-100.
   const medianH = hrs.length ? median(hrs) : null;
-  const wrC = r.wr != null ? Math.max(0, Math.min(1, (r.wr - 0.5) / 0.5)) : 0;
+  // wrC ahora premia la SOLIDEZ estadística (cota de Wilson), no el % crudo: un 8-0
+  // ya no vale más que un 40-8; la muestra chica se descuenta sola.
+  const wrC = Math.max(0, Math.min(1, (r.wrLB - 0.5) / 0.35));
   const earlyC = (preWinShare != null ? 0.6 * preWinShare
     : (medianH != null && medianH >= 24 ? 0.6 : medianH != null && medianH >= 6 ? 0.3 : 0))
     + (r.avgP != null && r.avgP <= 0.65 ? 0.4 : 0);
@@ -187,12 +192,24 @@ function profileOf(r) {
   // racha vs golpe: 'golpe' = ganó casi todo en 1 jugada (suerte, no señal) → baja;
   // 'racha' = muchas seguidas → sube.
   const kindAdj = r.kind === 'golpe' ? -0.15 : r.kind === 'racha' ? 0.10 : 0;
-  const insider = Math.max(0, Math.min(100, Math.round(100 * (0.3 * wrC + 0.25 * earlyC + 0.25 * lsC + 0.2 * consC + kindAdj))));
+  // CONVICCIÓN: ¿pone más dinero donde acierta? win rate por DÓLAR (swWR) vs por
+  // JUGADA (plainWR). Si swWR>plainWR, sube la apuesta justo en sus aciertos = skill.
+  const totBuyN = p.buys.length;
+  const swWR = totBuyN ? p.buys.reduce((s, b) => s + (b.win ? b.usd : 0), 0) / totUsd : 0;
+  const plainWR = totBuyN ? p.buys.filter((b) => b.win).length / totBuyN : 0;
+  const conviction = +(swWR - plainWR).toFixed(3);
+  const convBonus = Math.max(0, Math.min(0.08, conviction * 0.5)); // hasta +8 pts
+  const insider = Math.max(0, Math.min(100, Math.round(100 * (0.3 * wrC + 0.25 * earlyC + 0.25 * lsC + 0.2 * consC + kindAdj + convBonus))));
+  // FORMA RECIENTE (descriptiva, NO predicción): últimas 2 semanas vs las 3 previas.
+  const wk = r.pnlWeeks || [];
+  const recentWk = (wk[3] || 0) + (wk[4] || 0), earlierWk = (wk[0] || 0) + (wk[1] || 0) + (wk[2] || 0);
+  const trend = (recentWk > 50 && recentWk / 2 >= Math.max(0, earlierWk) / 3 * 1.2) ? 'hot'
+    : (earlierWk > 50 && recentWk < 0) ? 'cooling' : 'steady';
   const watch = isWatch(r);
   return {
     w: r.w, name: id.name || null, pseudonym: id.pseudonym || null, img: id.img || null,
-    win_rate: r.wr != null ? +r.wr.toFixed(3) : null, longshot_wins: r.longshots,
-    insider_score: insider, watch,
+    win_rate: r.wr != null ? +r.wr.toFixed(3) : null, win_rate_lb: +r.wrLB.toFixed(3), decided: r.wins + r.losses, longshot_wins: r.longshots,
+    insider_score: insider, watch, conviction, trend,
     pre_win_share: preWinShare != null ? +preWinShare.toFixed(2) : null,
     best_trades: bestTrades,
     equity_curve: r.equity, cum_now: r.cumNow, biggest_win_share: +r.biggestWinShare.toFixed(2), streak: r.streak, kind: r.kind,
@@ -282,6 +299,7 @@ for (const pr of profiles) {
     pr.insider_score = Math.max(0, pr.insider_score - Math.round(100 * (0.20 * pr.give_back + 0.05 * deadPen)));
   }
 }
+console.log(`🧪 Señales nuevas: ${profiles.filter((p) => p.trend === 'hot').length} calentando · ${profiles.filter((p) => p.trend === 'cooling').length} enfriando · ${profiles.filter((p) => (p.conviction || 0) >= 0.05).length} con convicción (sube apuesta en aciertos) · piso-Wilson mediano ${(median(profiles.map((p) => p.win_rate_lb || 0)) * 100 || 0).toFixed(0)}%`);
 // Orden VISIBLE por el BALANCE REAL (no por la ganancia bruta que engaña).
 profiles.sort((a, b) => b.net_real - a.net_real);
 console.log(`⚖️  Balance real: ${profiles.filter((p) => p.give_back >= 0.25).length} cuentas devuelven ≥25% en bolsas · ${profiles.filter((p) => p.net_real < (p.pnl_usd || 0)).length} con neto < bruto · top1 neto $${(profiles[0] ? profiles[0].net_real : 0).toLocaleString()} (bruto $${(profiles[0] ? (profiles[0].pnl_usd || 0) : 0).toLocaleString()})`);

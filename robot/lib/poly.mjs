@@ -131,5 +131,17 @@ export function spearman(pairs) {
   return 1 - 6 * d2 / (n * (n * n - 1));
 }
 
+// Cota inferior de Wilson (95%) del win rate: lo que podemos AFIRMAR con confianza
+// que gana, castigando la muestra chica. 8-0 (LB≈0.68) no es lo mismo que 40-8
+// (LB≈0.70); a igual %, más mercados → cota más alta. z=1.96.
+export function wilsonLB(wins, n) {
+  if (!n || n <= 0) return 0;
+  const z = 1.96, p = wins / n, z2 = z * z;
+  const denom = 1 + z2 / n;
+  const centre = p + z2 / (2 * n);
+  const margin = z * Math.sqrt((p * (1 - p) + z2 / (4 * n)) / n);
+  return Math.max(0, Math.min(1, (centre - margin) / denom));
+}
+
 export const median = (v) => { if (!v.length) return null; const s = [...v].sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 export const quantile = (v, q) => { if (!v.length) return null; const s = [...v].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor(q * s.length))]; };
