@@ -1465,7 +1465,7 @@ const T = {
     pf_caveat: 'Récord en mercados cerrados (30 días). Muestra chica: el pasado apenas predice el futuro — no es recomendación.',
     tr_hot: 'Calentando', tr_cool: 'Enfriando', tile_floor: 'piso', tile_floor_t: 'Piso con 95% de confianza (cota de Wilson) — descuenta la muestra chica: 8-0 no vale como 40-8', conv_short: 'Convicción', conv_chip: 'Apuesta más fuerte justo cuando acierta (win rate por dinero > por jugada)',
     r_live_now: 'En vivo', r_watching: 'vigilando {n} cuentas', r_every5: 'se revisa cada 5 min', r_checked: 'revisado hace {t}',
-    cons_title: '🤝 Consenso de sharps', cons_sub: '2+ vigiladas, mismo lado',
+    cons_title: '🤝 Consenso de sharps', cons_sub: '2+ vigiladas, mismo lado', cons_day: '🤝 Consenso del día', cons_agree: 'vigiladas coinciden',
     cons_caveat: 'Coincidencia reciente (7 días) de wallets vigiladas en el mismo lado — la señal más fuerte del Radar, pero descriptiva: no es recomendación y el pasado apenas predice el futuro.',
     bol_title: 'Boleto del día', bol_win: 'Gana', bol_none: 'Hoy el algoritmo no marca ninguna jugada de máxima confianza. No inventamos un boleto cuando no hay valor claro.',
     bol_rec: 'Cómo le ha ido a estos niveles', bol_note: 'Resumen de las mejores selecciones AA de hoy · no es recomendación de apuesta · tú decides.',
@@ -1580,7 +1580,7 @@ const T = {
     pf_caveat: 'Record in settled markets (30 days). Small sample: the past barely predicts the future — not a recommendation.',
     tr_hot: 'Heating up', tr_cool: 'Cooling off', tile_floor: 'floor', tile_floor_t: 'Floor at 95% confidence (Wilson bound) — discounts small samples: 8-0 is not worth 40-8', conv_short: 'Conviction', conv_chip: 'Bets bigger exactly on its wins (dollar-weighted win rate > per-play)',
     r_live_now: 'Live', r_watching: 'watching {n} accounts', r_every5: 'checked every 5 min', r_checked: 'last check {t} ago',
-    cons_title: '🤝 Sharp consensus', cons_sub: '2+ watched, same side',
+    cons_title: '🤝 Sharp consensus', cons_sub: '2+ watched, same side', cons_day: '🤝 Consensus of the day', cons_agree: 'watched agree',
     cons_caveat: 'Recent (7-day) agreement of watched wallets on the same side — the strongest signal here, but descriptive: not a recommendation, and the past barely predicts the future.',
     bol_title: 'Ticket of the day', bol_win: 'Take', bol_none: "Today the model flags no top-confidence play. We don't fake a ticket when there's no clear value.",
     bol_rec: 'How these tiers have done', bol_note: "A summary of today's best AA picks · not a betting recommendation · you decide.",
@@ -3301,7 +3301,7 @@ async function loadAlerts(force){
   const n24 = alertsDoc ? alertsDoc.alerts.filter(a => a.ts > dayAgo).length : 0;
   $('cntRadar').hidden = !n24;
   $('cntRadar').textContent = n24 > 99 ? '99+' : n24;
-  if (sport === 'radar') renderRadarList();
+  if (sport === 'radar'){ renderRadarList(); if (radarSel == null && compareSel.length < 2 && walletSearch == null && !walletSearchLoading) renderRadarDetail(); }
 }
 // agrupa alertas consecutivas de la misma wallet en el mismo mercado (anti-spam)
 function groupAlerts(as){
@@ -3780,9 +3780,16 @@ function radarDashHtml(ws){
     <div class="big num" style="color:var(--red)">${rMoney(worstBag.b.pnl)} <span style="font-size:12px;color:var(--faint);font-weight:700">${worstBag.b.pct != null ? Math.round(100 * worstBag.b.pct) + '%' : ''} ${t('rr_unreal')}</span></div>
     <div class="foot"><span style="margin-left:auto;color:var(--sky)">${t('story_see')}</span></div>
   </div>` : `<div class="storyc wide" style="--sc:var(--volt)"><span class="tag">${t('story_bag')}</span><div class="sub" style="margin-top:8px">${t('story_bag_none')}</div></div>`;
+  const topCons = (alertsDoc && Array.isArray(alertsDoc.consensus) && alertsDoc.consensus[0]) ? alertsDoc.consensus[0] : null;
+  const consStory = topCons ? `<div class="storyc wide" style="--sc:var(--volt)">
+    <span class="tag">${t('cons_day')}</span>
+    <div class="nm">🤝 ${topCons.n} ${t('cons_agree')}</div>
+    <div class="sub"><b>${esc(topCons.outcome || '')}</b> · ${esc(topCons.title || '')}${topCons.usd ? ` · ${rUsd(topCons.usd)}` : ''}</div>
+    <div class="foot" style="gap:5px">${(topCons.wallets || []).slice(0, 5).map(w => `<span class="conswal" data-rw="${esc(w.w || '')}">${esc(w.name || (w.w || '').slice(0, 6) || '0x…')}${w.score != null ? ` <b class="num">🎯${w.score}</b>` : ''}</span>`).join('')}</div>
+  </div>` : '';
   return radarWarnHtml() + `
     <div class="rhead" style="padding:14px 12px 2px"><span><span class="nm2">${t('sd_title')}</span><br><span class="lbl2">${t('sd_sub')}</span></span></div>
-    <div class="rdstories">${accountStory}${playStory}${bagStory}</div>
+    <div class="rdstories">${accountStory}${playStory}${consStory}${bagStory}</div>
     <div class="rdsect"><div class="rdsecth"><span class="t">${t('sd_board')}</span><span class="sub">${t('sd_board_sub')}</span></div>
       <div class="rdmini">${ws.slice(0, 6).map(miniRow).join('')}</div>
     </div>
