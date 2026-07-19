@@ -259,7 +259,7 @@ async function polyWatch(env) {
       // Consenso de sharps: recolecta las COMPRAS recientes (7 días) de las vigiladas.
       for (const a of (Array.isArray(acts) ? acts : [])) {
         if (a.side !== 'BUY' || !isFinite(+a.timestamp) || (nowSec - +a.timestamp) > CONS_WIN) continue;
-        recentBuys.push({ wallet: w.w, name: w.pseudonym || w.name || null, score: w.insider_score ?? null, title: String(a.title || '').slice(0, 90), outcome: a.outcome != null ? String(a.outcome) : null, ts: +a.timestamp, usd: a.usdcSize != null && isFinite(+a.usdcSize) ? Math.round(+a.usdcSize) : (isFinite(+a.price) && isFinite(+a.size) ? Math.round(+a.price * +a.size) : null) });
+        recentBuys.push({ wallet: w.w, name: w.pseudonym || w.name || null, score: w.insider_score ?? null, title: String(a.title || '').slice(0, 90), outcome: a.outcome != null ? String(a.outcome) : null, ts: +a.timestamp, price: isFinite(+a.price) ? +a.price : null, usd: a.usdcSize != null && isFinite(+a.usdcSize) ? Math.round(+a.usdcSize) : (isFinite(+a.price) && isFinite(+a.size) ? Math.round(+a.price * +a.size) : null) });
       }
       const bootstrap = lastseen[w.w] == null;
       const { fresh, maxTs } = polyFreshTrades(acts, bootstrap ? Infinity : lastseen[w.w]);
@@ -288,21 +288,27 @@ async function polyWatch(env) {
   ad.watching = watch.length;
   const cons = polyConsensus(recentBuys);
   ad.consensus = cons;
-  await env.AA_LATEST.put('poly:alerts', JSON.stringify(ad));
-  await env.AA_LATEST.put('poly:lastseen', JSON.stringify(lastseen));
-  // 🤝 Push del consenso: la señal más fuerte del Radar en el bolsillo. Avisa por
-  // Telegram cuando un consenso se FORMA (llega a 2 vigiladas) o se REFUERZA (entra
-  // otra vigilada). Estado en poly:consnotified para no repetir; el primer arranque
-  // solo siembra —no suelta de golpe los consensos ya vivos de la ventana de 7 días.
+  // 🎯 Señales del día: cruza el consenso con los perfiles completos (poly:radar)
+  // para leer "informado vs sigue tendencia", fuerza y probabilidad del mercado.
+  const byWallet = new Map((Array.isArray(doc.wallets) ? doc.wallets : []).map((p) => [p.w, p]));
+  ad.signals = polySignals(cons, byWallet, nowSec);
+  // 🤝 Push del consenso: el estado de "ya avisado" vive DENTRO de poly:alerts (que ya
+  // se escribe cada ronda) → CERO escrituras KV extra (antes gastaba un poly:consnotified
+  // aparte = +288 writes/día). Avisa cuando un consenso se FORMA o se REFUERZA; el primer
+  // arranque solo siembra. Telegram se manda DESPUÉS de persistir (si falla, no toca KV).
+  let consPush = [];
   try {
-    if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) {
-      const cnRaw = await env.AA_LATEST.get('poly:consnotified');
-      let prevCons; try { prevCons = cnRaw ? JSON.parse(cnRaw) : null; } catch (e) { prevCons = null; }
-      const { push: consPush, notified } = polyConsensusToPush(cons, prevCons);
-      await env.AA_LATEST.put('poly:consnotified', JSON.stringify(notified));
-      if (consPush.length) await tgConsensus(env, consPush.slice(0, 3));
-    }
+    const prevCons = (ad.cons_notified && typeof ad.cons_notified === 'object') ? ad.cons_notified : null;
+    const r = polyConsensusToPush(cons, prevCons);
+    ad.cons_notified = r.notified;
+    consPush = r.push;
   } catch (e) { /* el push del consenso nunca debe tumbar la ronda del vigía */ }
+  await env.AA_LATEST.put('poly:alerts', JSON.stringify(ad));
+  // lastseen: solo se reescribe si CAMBIÓ (en ventanas tranquilas no hay actividad
+  // nueva) → ahorra escrituras KV para quedarnos holgados en el free tier ($0 infra).
+  const lsAfter = JSON.stringify(lastseen);
+  if (lsAfter !== (lsRaw || '')) await env.AA_LATEST.put('poly:lastseen', lsAfter);
+  try { if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && consPush.length) await tgConsensus(env, consPush.slice(0, 3)); } catch (e) { /* Telegram caído no afecta las alertas ni KV */ }
 }
 
 // Helper puro (exportado para tests): filtra la actividad a trades más nuevos
@@ -342,16 +348,16 @@ export function polyConsensus(recentBuys, minWallets = 2, cap = 10) {
     if (!b || !b.title || !b.outcome) continue;
     const key = b.title + '|' + b.outcome;
     let g = groups.get(key);
-    if (!g) { g = { title: b.title, outcome: b.outcome, byWallet: new Map(), last_ts: 0 }; groups.set(key, g); }
+    if (!g) { g = { title: b.title, outcome: b.outcome, byWallet: new Map(), last_ts: 0, last_price: null }; groups.set(key, g); }
     const prev = g.byWallet.get(b.wallet); // una entrada por wallet (la más reciente)
-    if (!prev || (b.ts || 0) > (prev.ts || 0)) g.byWallet.set(b.wallet, { w: b.wallet, name: b.name, score: b.score, usd: b.usd, ts: b.ts });
-    g.last_ts = Math.max(g.last_ts, b.ts || 0);
+    if (!prev || (b.ts || 0) > (prev.ts || 0)) g.byWallet.set(b.wallet, { w: b.wallet, name: b.name, score: b.score, usd: b.usd, ts: b.ts, price: b.price != null ? b.price : null });
+    if ((b.ts || 0) >= g.last_ts) { g.last_ts = b.ts || 0; if (b.price != null) g.last_price = b.price; } // precio de referencia ≈ el más reciente
   }
   const out = [];
   for (const g of groups.values()) {
     if (g.byWallet.size < minWallets) continue;
     const wallets = [...g.byWallet.values()].sort((a, b) => (b.score || 0) - (a.score || 0) || (b.ts || 0) - (a.ts || 0));
-    out.push({ title: g.title, outcome: g.outcome, n: g.byWallet.size, usd: wallets.reduce((s, w) => s + (w.usd || 0), 0), last_ts: g.last_ts, wallets });
+    out.push({ title: g.title, outcome: g.outcome, n: g.byWallet.size, usd: wallets.reduce((s, w) => s + (w.usd || 0), 0), last_ts: g.last_ts, price: g.last_price, wallets });
   }
   out.sort((a, b) => (b.n - a.n) || (b.last_ts - a.last_ts));
   return out.slice(0, cap);
@@ -378,6 +384,111 @@ export function polyConsensusToPush(cons, prevNotified, minWallets = 2) {
   // los más fuertes primero (más vigiladas), y a igualdad los más recientes
   push.sort((a, b) => (b.n - a.n) || ((b.last_ts || 0) - (a.last_ts || 0)));
   return { push, notified, firstRun };
+}
+
+// 🧠 ¿Esta wallet "sabe algo" o solo "sigue el mercado"? Lectura por TRANSACCIÓN
+// (exportada para tests). Cruza el historial de la wallet (récord sólido con piso
+// Wilson, si gana entrando ANTES, longshots, convicción) con ESTE trade (entró
+// barato/temprano y por debajo del precio actual = lideró · vs · pagó caro/reactivo
+// = siguió). Devuelve {info:'informed'|'trend'|'mixed', score 0-100, reasons:[{k,t}]}.
+// Es un PATRÓN estadístico — nunca una acusación de información privilegiada.
+export function polyWalletInfo(p, entryPrice, refPrice) {
+  p = p || {};
+  const reasons = [];
+  let inf = 0, tr = 0;
+  const add = (cond, pts, k, t) => { if (!cond) return; if (t === 'bad') tr += pts; else inf += pts; reasons.push({ k, t: t || 'good' }); };
+  const pre = p.pre_win_share;
+  const hrs = p.timing ? p.timing.median_hours_before : null;
+  const r24 = p.timing ? p.timing.last24h_share : null;
+  const wrLB = p.win_rate_lb, ins = p.insider_score, ls = p.longshot_wins || 0, conv = p.conviction || 0;
+  const flip = p.style ? (p.style.flip_share || 0) : 0, washy = p.washy || 0;
+  // — señales de "sabe algo" (informado) —
+  add(pre != null && pre >= 0.6, 26, 'early', 'good');
+  add((pre == null || pre < 0.6) && hrs != null && hrs >= 24, 12, 'early', 'good');
+  add(wrLB != null && wrLB >= 0.60, 16, 'record', 'good');
+  add(wrLB != null && wrLB >= 0.52 && wrLB < 0.60, 8, 'record', 'good');
+  add(ins != null && ins >= 60, 14, 'insider', 'good');
+  add(ins != null && ins >= 45 && ins < 60, 7, 'insider', 'good');
+  add(ls >= 2, 12, 'longshot', 'good');
+  add(conv >= 0.05, 10, 'conviction', 'good');
+  add(entryPrice != null && entryPrice <= 0.45, 12, 'cheap', 'good');
+  add(entryPrice != null && refPrice != null && entryPrice <= refPrice - 0.05, 14, 'led', 'good'); // entró por debajo del precio de hoy
+  // — señales de "sigue el mercado / noticias y tendencias" —
+  add(r24 != null && r24 >= 0.6, 18, 'reactive', 'bad');
+  add(entryPrice != null && entryPrice >= 0.70, 16, 'chase', 'bad');
+  add(entryPrice != null && refPrice != null && entryPrice >= refPrice + 0.04, 10, 'chase', 'bad');
+  add(pre != null && pre <= 0.25, 12, 'late', 'bad');
+  add(flip >= 0.5 || washy >= 0.3, 8, 'churn', 'bad');
+  add(ins != null && ins < 35, 8, 'late', 'bad');
+  const score = Math.max(0, Math.min(100, Math.round(50 + inf - tr)));
+  const info = score >= 62 ? 'informed' : (score <= 42 ? 'trend' : 'mixed');
+  const seen = new Set(), top = [];
+  for (const rr of reasons) { if (!seen.has(rr.k)) { seen.add(rr.k); top.push(rr); } } // dedup, mayor peso primero
+  return { info, score, reasons: top };
+}
+
+// Fuerza de la señal (0-100, exportada para tests): cuánto "dinero listo" hay detrás.
+// Consenso (cuántas vigiladas coinciden), calidad (piso Wilson), qué tan informado,
+// tamaño y recencia. NO es probabilidad de ganar — esa la pone el mercado (el precio).
+export function polySignalStrength({ n = 1, avgWrLB = null, avgInfoScore = 50, usd = 0, info = 'mixed', last_ts = null, nowSec = 0 } = {}) {
+  let s = 0;
+  s += Math.min(35, Math.max(0, n - 1) * 18);                                            // consenso: 2→18, 3+→35
+  s += 30 * Math.max(0, Math.min(1, ((avgWrLB == null ? 0.5 : avgWrLB) - 0.5) / 0.35));  // calidad Wilson
+  s += 0.22 * Math.max(0, Math.min(100, avgInfoScore == null ? 50 : avgInfoScore));      // informado (0-22)
+  s += info === 'informed' ? 8 : (info === 'trend' ? -8 : 0);
+  s += Math.min(7, Math.log10(Math.max(1, usd || 0)) * 2);                               // tamaño (suave)
+  const ageH = (last_ts && nowSec) ? Math.max(0, (nowSec - last_ts) / 3600) : 36;
+  s *= Math.max(0.5, Math.min(1, Math.exp(-ageH / 96)));                                 // recencia (media vida ~4d), hasta −50%
+  return Math.max(0, Math.min(100, Math.round(s)));
+}
+
+// 🎯 Señales del día (exportada para tests): convierte el consenso en "fichas" con
+// lectura informado/tendencia + fuerza + probabilidad del mercado. Dos rankings:
+//  · strong → las más fuertes (más dinero listo), sin importar el precio
+//  · likely → las más probables SEGÚN EL MERCADO (precio ≥ likelyMin), pagan poco
+export function polySignals(consensus, byWallet, nowSec = 0, opts = {}) {
+  const likelyMin = opts.likelyMin != null ? opts.likelyMin : 0.70;
+  const cap = opts.cap != null ? opts.cap : 8;
+  const bw = byWallet instanceof Map ? byWallet
+    : new Map(Object.entries(byWallet && typeof byWallet === 'object' ? byWallet : {}));
+  const avg = (xs) => { const v = xs.filter((x) => x != null && isFinite(x)); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+  const out = [];
+  for (const c of (Array.isArray(consensus) ? consensus : [])) {
+    if (!c || !c.title || !c.outcome) continue;
+    const ref = c.price != null ? c.price : null;
+    const wl = (c.wallets || []).map((w) => {
+      const prof = bw.get(w.w) || {};
+      const read = polyWalletInfo(prof, w.price != null ? w.price : null, ref);
+      return {
+        w: w.w, name: w.name, score: w.score, usd: w.usd, ts: w.ts, price: w.price != null ? w.price : null,
+        wr: prof.win_rate != null ? prof.win_rate : null, wrLB: prof.win_rate_lb != null ? prof.win_rate_lb : null,
+        wins: prof.wins != null ? prof.wins : null, losses: prof.losses != null ? prof.losses : null,
+        info: read.info, info_score: read.score, reasons: read.reasons,
+      };
+    });
+    const nInf = wl.filter((x) => x.info === 'informed').length;
+    const nTr = wl.filter((x) => x.info === 'trend').length;
+    const info = nInf > nTr ? 'informed' : (nTr > nInf ? 'trend' : 'mixed');
+    const avgWrLB = avg(wl.map((x) => x.wrLB));
+    const avgInfo = avg(wl.map((x) => x.info_score));
+    const strength = polySignalStrength({ n: c.n, avgWrLB, avgInfoScore: avgInfo, usd: c.usd, info, last_ts: c.last_ts, nowSec });
+    const why = [];
+    if ((c.n || 0) >= 2) why.push({ k: 'consensus', t: 'good', n: c.n });
+    const rc = new Map();
+    for (const x of wl) for (const rr of (x.reasons || [])) if (rr.t === 'good') rc.set(rr.k, (rc.get(rr.k) || 0) + 1);
+    for (const [k, cnt] of [...rc.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3)) why.push({ k, t: 'good', n: cnt });
+    out.push({
+      title: c.title, outcome: c.outcome, n: c.n, usd: c.usd, last_ts: c.last_ts,
+      price: ref, implied: ref != null ? Math.round(100 * ref) : null,
+      info, info_score: avgInfo != null ? Math.round(avgInfo) : null, strength,
+      avg_wr_lb: avgWrLB != null ? +avgWrLB.toFixed(3) : null,
+      wallets: wl.slice(0, 6), why,
+    });
+  }
+  const strong = [...out].sort((a, b) => (b.strength - a.strength) || (b.n - a.n) || ((b.last_ts || 0) - (a.last_ts || 0))).slice(0, cap);
+  const likely = out.filter((s) => s.price != null && s.price >= likelyMin)
+    .sort((a, b) => (b.price - a.price) || (b.strength - a.strength)).slice(0, cap);
+  return { strong, likely, min_prob: likelyMin };
 }
 
 // Telegram (opcional): agrupa hasta 5 alertas en un mensaje. Sin secretos → no-op.
