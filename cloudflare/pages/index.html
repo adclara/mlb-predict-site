@@ -850,6 +850,18 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .livefresh{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;padding:8px 14px;font-size:11.5px;color:var(--dim);border-bottom:1px solid var(--hair);line-height:1.4}
 .livefresh b{color:var(--volt)}
 @media (max-width:400px){.livefresh{padding:8px}}
+/* — Consenso de sharps (2+ vigiladas, mismo lado) — */
+.consrow{padding:10px 14px;border-bottom:1px solid var(--hair)}
+.conshd{display:flex;align-items:center;gap:7px;min-width:0}
+.consn{flex:none;font-weight:800;font-size:13px;color:var(--volt);background:rgba(25,222,159,.12);border:1px solid rgba(25,222,159,.36);border-radius:999px;padding:1px 9px}
+.consout{flex:none;font-weight:800;font-size:12px;color:var(--text);background:var(--panel-2);border-radius:6px;padding:1px 7px;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.consq{flex:1;min-width:0;color:var(--dim);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.consusd{flex:none;color:var(--volt);font-weight:800;font-size:12px}
+.conswho{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.conswal{font-size:11px;color:var(--dim);background:var(--inner);border:1px solid var(--hair);border-radius:999px;padding:2px 8px;cursor:pointer;white-space:nowrap}
+.conswal:hover{border-color:var(--sky)}
+.conswal b{color:var(--sky)}
+@media(max-width:400px){.consrow{padding:10px 8px}.consout{max-width:32%}}
 .pfnote{margin:1px 12px 8px;font-size:11px;color:var(--faint);line-height:1.45}
 @media (max-width:400px){.pfnote{margin:1px 8px 8px}}
 /* — Tarjeta héroe del #1 en la lista — */
@@ -1453,6 +1465,8 @@ const T = {
     pf_caveat: 'Récord en mercados cerrados (30 días). Muestra chica: el pasado apenas predice el futuro — no es recomendación.',
     tr_hot: 'Calentando', tr_cool: 'Enfriando', tile_floor: 'piso', tile_floor_t: 'Piso con 95% de confianza (cota de Wilson) — descuenta la muestra chica: 8-0 no vale como 40-8', conv_short: 'Convicción', conv_chip: 'Apuesta más fuerte justo cuando acierta (win rate por dinero > por jugada)',
     r_live_now: 'En vivo', r_watching: 'vigilando {n} cuentas', r_every5: 'se revisa cada 5 min', r_checked: 'revisado hace {t}',
+    cons_title: '🤝 Consenso de sharps', cons_sub: '2+ vigiladas, mismo lado',
+    cons_caveat: 'Coincidencia reciente (7 días) de wallets vigiladas en el mismo lado — la señal más fuerte del Radar, pero descriptiva: no es recomendación y el pasado apenas predice el futuro.',
     bol_title: 'Boleto del día', bol_win: 'Gana', bol_none: 'Hoy el algoritmo no marca ninguna jugada de máxima confianza. No inventamos un boleto cuando no hay valor claro.',
     bol_rec: 'Cómo le ha ido a estos niveles', bol_note: 'Resumen de las mejores selecciones AA de hoy · no es recomendación de apuesta · tú decides.',
     bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto',
@@ -1566,6 +1580,8 @@ const T = {
     pf_caveat: 'Record in settled markets (30 days). Small sample: the past barely predicts the future — not a recommendation.',
     tr_hot: 'Heating up', tr_cool: 'Cooling off', tile_floor: 'floor', tile_floor_t: 'Floor at 95% confidence (Wilson bound) — discounts small samples: 8-0 is not worth 40-8', conv_short: 'Conviction', conv_chip: 'Bets bigger exactly on its wins (dollar-weighted win rate > per-play)',
     r_live_now: 'Live', r_watching: 'watching {n} accounts', r_every5: 'checked every 5 min', r_checked: 'last check {t} ago',
+    cons_title: '🤝 Sharp consensus', cons_sub: '2+ watched, same side',
+    cons_caveat: 'Recent (7-day) agreement of watched wallets on the same side — the strongest signal here, but descriptive: not a recommendation, and the past barely predicts the future.',
     bol_title: 'Ticket of the day', bol_win: 'Take', bol_none: "Today the model flags no top-confidence play. We don't fake a ticket when there's no clear value.",
     bol_rec: 'How these tiers have done', bol_note: "A summary of today's best AA picks · not a betting recommendation · you decide.",
     bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high',
@@ -3428,7 +3444,7 @@ function liveFreshHtml(){
   return `${dot} <b>${t('r_live_now')}</b> · ${t('r_watching').replace('{n}', nWatch)} · ${t('r_every5')}${checked}`;
 }
 // estado de las secciones plegables del dashboard
-let radarOpen = { alerts: false, top: false, all: false, pstyle: false, perfect: false };
+let radarOpen = { alerts: false, top: false, all: false, pstyle: false, perfect: false, cons: false };
 // ⭐ seguir + ⚖️ comparar (spans clicables; la delegación los atiende antes que data-rw)
 const pStar = (w) => `<span class="pstar${pfollow.has(w) ? ' on' : ''}" data-pstar="${esc(w)}" role="button" title="${t('r_follow')}">${pfollow.has(w) ? '★' : '☆'}</span>`;
 const pCmp = (w) => `<span class="pcmp${compareSel.includes(w) ? ' on' : ''}" data-pcmp="${esc(w)}" role="button" title="${t('r_compare')}">⚖</span>`;
@@ -3460,6 +3476,8 @@ function renderRadarList(){
   // 🏆 Casi perfectas: de TODAS las cuentas (no del filtro), ordenadas por menos derrotas y más victorias.
   const perfectWs = ws.filter(w => recordTier(w)).sort((a, b) => (a.losses - b.losses) || (b.wins - a.wins));
   const showPf = radarOpen.perfect ? perfectWs : perfectWs.slice(0, 5);
+  const cons = (alertsDoc && Array.isArray(alertsDoc.consensus)) ? alertsDoc.consensus : [];
+  const showCons = radarOpen.cons ? cons : cons.slice(0, 4);
   const cmpNames = compareSel.map(cw => rName(ws.find(x => x.w === cw) || { w: cw }));
   const cmpTray = compareSel.length ? `<div class="cmptray">⚖ <b>${t('r_comparing')}:</b> ${cmpNames.map(esc).join(' · ')}${compareSel.length < 2 ? ` — ${t('r_pick_second')}` : ''} <button class="cmpx" data-pcmpclear="1">✕</button></div>` : '';
   const _si = document.getElementById('wsearchi'); const _sv = _si ? _si.value : ''; const _sf = document.activeElement === _si;
@@ -3481,6 +3499,10 @@ function renderRadarList(){
     ${cmpTray}
     ${!showWs.length ? `<div class="lempty2">${catFilter ? t('r_no_cat') : followOnly ? t('r_no_follow') : t('r_prep')}</div>` : (catFilter || followOnly || radarOpen.all) ? showWs.map(walletCard).join('') : heroCard(showWs[0]) + showWs.slice(1).map((w, i) => walletCard(w, i + 1)).join('')}
     ${baseWs.length > 6 ? `<button class="expbtn" data-rtoggle="all">${radarOpen.all ? t('r_see_less') : t('r_see_all').replace('↓', `${baseWs.length} ↓`)}</button>` : ''}
+    ${cons.length ? `<div class="secttl2">${t('cons_title')} <span class="sub3">${t('cons_sub')}</span></div>
+    <div class="pfnote">${t('cons_caveat')}</div>
+    ${showCons.map(consensusRow).join('')}
+    ${cons.length > 4 ? `<button class="expbtn" data-rtoggle="cons">${radarOpen.cons ? t('r_see_less') : t('r_see_all').replace('↓', `${cons.length} ↓`)}</button>` : ''}` : ''}
     ${perfectWs.length ? `<div class="secttl2">${t('pf_title')} <span class="sub3">${t('pf_sub')}</span></div>
     <div class="pfnote">${t('pf_caveat')}</div>
     ${showPf.map(perfectRow).join('')}
@@ -3599,6 +3621,15 @@ function perfectRow(w){
     <span class="recbadge ${tier}">${tier === 'perfect' ? '💎' : '🏆'} ${w.wins}-${w.losses}</span>
     <span class="nm">${esc(rName(w))} ${w.watch ? `<span class="rankchip num">🎯 ${w.insider_score}</span>` : ''} ${riskDot(w)}</span>
     ${netTag(w, 'amt')}
+  </div>`;
+}
+// 🤝 Fila de consenso: cuántas vigiladas coinciden + lado + mercado + quiénes (chips clicables).
+function consensusRow(c){
+  const chips = (c.wallets || []).slice(0, 5).map(w => `<span class="conswal" data-rw="${esc(w.w || '')}">${esc(w.name || (w.w || '').slice(0, 6) || '0x…')}${w.score != null ? ` <b class="num">🎯${w.score}</b>` : ''}</span>`).join('');
+  const more = (c.wallets || []).length > 5 ? `<span class="conswal">+${c.wallets.length - 5}</span>` : '';
+  return `<div class="consrow">
+    <div class="conshd"><span class="consn num">🤝 ${c.n}</span><span class="consout" title="${esc(c.outcome || '')}">${esc(c.outcome || '')}</span><span class="consq" title="${esc(c.title || '')}">${esc(c.title || '')}</span>${c.usd ? `<span class="consusd num">${rUsd(c.usd)}</span>` : ''}</div>
+    <div class="conswho">${chips}${more}</div>
   </div>`;
 }
 // Tiles héroe: lo que importa de un vistazo (ganó · acierto · cartera · bolsas rojas).

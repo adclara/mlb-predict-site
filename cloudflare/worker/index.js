@@ -249,12 +249,18 @@ async function polyWatch(env) {
   if (!watch.length) return;
   const lsRaw = await env.AA_LATEST.get('poly:lastseen');
   let lastseen; try { lastseen = lsRaw ? JSON.parse(lsRaw) : {}; } catch (e) { lastseen = {}; }
-  const found = [];
+  const found = [], recentBuys = [];
+  const nowSec = Math.floor(Date.now() / 1000), CONS_WIN = 7 * 86400; // consenso: ventana de 7 días
   for (const w of watch) {
     try {
-      const r = await fetch(`https://data-api.polymarket.com/activity?user=${encodeURIComponent(w.w)}&limit=15&type=TRADE`, { headers: { Accept: 'application/json' } });
+      const r = await fetch(`https://data-api.polymarket.com/activity?user=${encodeURIComponent(w.w)}&limit=25&type=TRADE`, { headers: { Accept: 'application/json' } });
       if (!r.ok) continue;
       const acts = await r.json();
+      // Consenso de sharps: recolecta las COMPRAS recientes (7 días) de las vigiladas.
+      for (const a of (Array.isArray(acts) ? acts : [])) {
+        if (a.side !== 'BUY' || !isFinite(+a.timestamp) || (nowSec - +a.timestamp) > CONS_WIN) continue;
+        recentBuys.push({ wallet: w.w, name: w.pseudonym || w.name || null, score: w.insider_score ?? null, title: String(a.title || '').slice(0, 90), outcome: a.outcome != null ? String(a.outcome) : null, ts: +a.timestamp, usd: a.usdcSize != null && isFinite(+a.usdcSize) ? Math.round(+a.usdcSize) : (isFinite(+a.price) && isFinite(+a.size) ? Math.round(+a.price * +a.size) : null) });
+      }
       const bootstrap = lastseen[w.w] == null;
       const { fresh, maxTs } = polyFreshTrades(acts, bootstrap ? Infinity : lastseen[w.w]);
       const seenMax = maxTs != null ? maxTs : polyMaxTs(acts);
@@ -280,6 +286,7 @@ async function polyWatch(env) {
   }
   ad.checked_at = nowIso;
   ad.watching = watch.length;
+  ad.consensus = polyConsensus(recentBuys);
   await env.AA_LATEST.put('poly:alerts', JSON.stringify(ad));
   await env.AA_LATEST.put('poly:lastseen', JSON.stringify(lastseen));
 }
@@ -310,6 +317,30 @@ export const polyAlertWorthy = (a) => a.usd == null || a.usd >= 50;
 export function polyMaxTs(acts) {
   const ts = (Array.isArray(acts) ? acts : []).map((a) => +a.timestamp).filter(isFinite);
   return ts.length ? Math.max(...ts) : null;
+}
+
+// 🤝 Consenso de sharps (exportado para tests): agrupa las compras recientes de las
+// vigiladas por mercado+lado; devuelve donde COINCIDEN ≥2 wallets DISTINTAS. Es la
+// señal más fuerte del Radar (smart money convergiendo) — descriptivo, no recomienda.
+export function polyConsensus(recentBuys, minWallets = 2, cap = 10) {
+  const groups = new Map();
+  for (const b of (Array.isArray(recentBuys) ? recentBuys : [])) {
+    if (!b || !b.title || !b.outcome) continue;
+    const key = b.title + '|' + b.outcome;
+    let g = groups.get(key);
+    if (!g) { g = { title: b.title, outcome: b.outcome, byWallet: new Map(), last_ts: 0 }; groups.set(key, g); }
+    const prev = g.byWallet.get(b.wallet); // una entrada por wallet (la más reciente)
+    if (!prev || (b.ts || 0) > (prev.ts || 0)) g.byWallet.set(b.wallet, { w: b.wallet, name: b.name, score: b.score, usd: b.usd, ts: b.ts });
+    g.last_ts = Math.max(g.last_ts, b.ts || 0);
+  }
+  const out = [];
+  for (const g of groups.values()) {
+    if (g.byWallet.size < minWallets) continue;
+    const wallets = [...g.byWallet.values()].sort((a, b) => (b.score || 0) - (a.score || 0) || (b.ts || 0) - (a.ts || 0));
+    out.push({ title: g.title, outcome: g.outcome, n: g.byWallet.size, usd: wallets.reduce((s, w) => s + (w.usd || 0), 0), last_ts: g.last_ts, wallets });
+  }
+  out.sort((a, b) => (b.n - a.n) || (b.last_ts - a.last_ts));
+  return out.slice(0, cap);
 }
 
 // Telegram (opcional): agrupa hasta 5 alertas en un mensaje. Sin secretos → no-op.
