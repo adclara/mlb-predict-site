@@ -846,6 +846,10 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .trendb.cool{color:var(--sky);background:rgba(77,168,255,.12);border:1px solid rgba(77,168,255,.38)}
 .convchip{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap;flex:none;color:var(--volt);background:rgba(25,222,159,.1);border:1px solid rgba(25,222,159,.32)}
 .tdot{font-size:12px;flex:none;line-height:1}
+/* — Frescura en vivo del vigía (cada 5 min) — */
+.livefresh{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;padding:8px 14px;font-size:11.5px;color:var(--dim);border-bottom:1px solid var(--hair);line-height:1.4}
+.livefresh b{color:var(--volt)}
+@media (max-width:400px){.livefresh{padding:8px}}
 .pfnote{margin:1px 12px 8px;font-size:11px;color:var(--faint);line-height:1.45}
 @media (max-width:400px){.pfnote{margin:1px 8px 8px}}
 /* — Tarjeta héroe del #1 en la lista — */
@@ -1448,6 +1452,7 @@ const T = {
     pf_title: '🏆 Casi perfectas', pf_sub: '0–3 derrotas · récord del mes', pf_never: 'Sin perder',
     pf_caveat: 'Récord en mercados cerrados (30 días). Muestra chica: el pasado apenas predice el futuro — no es recomendación.',
     tr_hot: 'Calentando', tr_cool: 'Enfriando', tile_floor: 'piso', tile_floor_t: 'Piso con 95% de confianza (cota de Wilson) — descuenta la muestra chica: 8-0 no vale como 40-8', conv_short: 'Convicción', conv_chip: 'Apuesta más fuerte justo cuando acierta (win rate por dinero > por jugada)',
+    r_live_now: 'En vivo', r_watching: 'vigilando {n} cuentas', r_every5: 'se revisa cada 5 min', r_checked: 'revisado hace {t}',
     bol_title: 'Boleto del día', bol_win: 'Gana', bol_none: 'Hoy el algoritmo no marca ninguna jugada de máxima confianza. No inventamos un boleto cuando no hay valor claro.',
     bol_rec: 'Cómo le ha ido a estos niveles', bol_note: 'Resumen de las mejores selecciones AA de hoy · no es recomendación de apuesta · tú decides.',
     bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto',
@@ -1560,6 +1565,7 @@ const T = {
     pf_title: '🏆 Near-perfect', pf_sub: '0–3 losses · record this month', pf_never: 'Unbeaten',
     pf_caveat: 'Record in settled markets (30 days). Small sample: the past barely predicts the future — not a recommendation.',
     tr_hot: 'Heating up', tr_cool: 'Cooling off', tile_floor: 'floor', tile_floor_t: 'Floor at 95% confidence (Wilson bound) — discounts small samples: 8-0 is not worth 40-8', conv_short: 'Conviction', conv_chip: 'Bets bigger exactly on its wins (dollar-weighted win rate > per-play)',
+    r_live_now: 'Live', r_watching: 'watching {n} accounts', r_every5: 'checked every 5 min', r_checked: 'last check {t} ago',
     bol_title: 'Ticket of the day', bol_win: 'Take', bol_none: "Today the model flags no top-confidence play. We don't fake a ticket when there's no clear value.",
     bol_rec: 'How these tiers have done', bol_note: "A summary of today's best AA picks · not a betting recommendation · you decide.",
     bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high',
@@ -3409,6 +3415,18 @@ function trackLiveHtml(){
   const rec = days >= 2 ? `<span class="trec">📊 ${t('track_measuring')} ${days} ${t('track_days')}</span>` : '';
   return `<span>${meter}</span> ${chip}${rec}`;
 }
+// 🟢 Frescura del vigía EN VIVO: prueba honesta de que revisa cada 5 min. Usa
+// checked_at (el Worker lo escribe en cada corrida, aunque no haya novedades).
+function liveFreshHtml(){
+  const ad = alertsDoc || {};
+  const ci = ad.checked_at ? Date.parse(ad.checked_at) : NaN;
+  const mins = isFinite(ci) ? Math.max(0, Math.round((Date.now() - ci) / 60000)) : null;
+  const nWatch = (ad.watching != null) ? ad.watching : (radarDoc ? (radarDoc.wallets || []).filter(w => w.watch).length : 0);
+  const dot = (mins == null || mins > 12) ? '🟡' : '🟢';
+  const agoStr = mins == null ? '' : (mins < 1 ? '<1 ' + t('ago_min_s') : `${mins} ${t('ago_min_s')}`);
+  const checked = mins == null ? '' : ` · ${t('r_checked').replace('{t}', agoStr)}`;
+  return `${dot} <b>${t('r_live_now')}</b> · ${t('r_watching').replace('{n}', nWatch)} · ${t('r_every5')}${checked}`;
+}
 // estado de las secciones plegables del dashboard
 let radarOpen = { alerts: false, top: false, all: false, pstyle: false, perfect: false };
 // ⭐ seguir + ⚖️ comparar (spans clicables; la delegación los atiende antes que data-rw)
@@ -3468,6 +3486,7 @@ function renderRadarList(){
     ${showPf.map(perfectRow).join('')}
     ${perfectWs.length > 5 ? `<button class="expbtn" data-rtoggle="perfect">${radarOpen.perfect ? t('r_see_less') : t('r_see_all').replace('↓', `${perfectWs.length} ↓`)}</button>` : ''}` : ''}
     <button class="secttl2 tgl" data-rtoggle="alerts">${t('r_live_alerts')}${n24 ? ` (${n24} ${t('r_hoy')})` : ''} <span class="caret">${radarOpen.alerts ? '▴' : '▾'}</span></button>
+    <div class="livefresh">${liveFreshHtml()}</div>
     ${showAl.map(alertRow).join('') || `<div class="lempty2">${t('r_no_moves')}</div>`}
     ${groups.length > 3 && !radarOpen.alerts ? `<button class="expbtn" data-rtoggle="alerts">${t('r_see_all')}</button>` : ''}
     <button class="secttl2 tgl" data-rtoggle="top">${t('r_top_plays')} <span class="caret">${radarOpen.top ? '▴' : '▾'}</span></button>

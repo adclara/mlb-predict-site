@@ -40,6 +40,20 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
         run: npx --yes wrangler@4 deploy
+      - name: Verificar cron del vigía (Radar cada 5 min)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          SCHED=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            https://api.cloudflare.com/client/v4/accounts/f02574feb7272a1da2818e35e0ff4342/workers/scripts/aa-sports-api/schedules)
+          echo "schedules: $(echo "$SCHED" | head -c 300)"
+          if echo "$SCHED" | grep -q '"success":true'; then
+            echo "$SCHED" | grep -qF '*/5 * * * *' \
+              && echo "✅ Radar en vivo: cron */5 * * * * REGISTRADO — el vigía corre cada 5 min" \
+              || { echo "❌ FALTA el cron */5 — el Radar NO se actualizaría cada 5 min"; exit 1; }
+          else
+            echo "⚠️ no se pudo leer schedules (API/token); no fallo el deploy por esto"
+          fi
       - name: Telegram del vigía (secretos al Worker + mensaje de prueba)
         working-directory: cloudflare
         env:
