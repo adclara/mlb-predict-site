@@ -580,6 +580,12 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .cmprow .cv:first-child{text-align:right}
 .cmprow .cv:last-child{text-align:left}
 .cmprow .cv.win{color:var(--volt)}
+.cmprow .cv.best{font-weight:800}
+.cmprow .cv .bm{font-size:11px;color:var(--volt);vertical-align:middle;margin-left:1px}
+.cmprow.hero{padding:4px 0 12px;border-bottom:1px solid var(--hair)}
+.cmprow.hero .cv{font-size:20px;font-weight:800}
+.cmpgrp{margin:4px 12px 5px;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.cmpgrp span{color:var(--faint);font-weight:600;text-transform:none;letter-spacing:0}
 .cmprow .cl{color:var(--dim);font-size:11px;text-align:center;white-space:nowrap}
 /* v7 PR A: buscador de wallet on-demand */
 .wsearch{display:flex;gap:6px;margin:8px 12px 4px}
@@ -1432,6 +1438,7 @@ const T = {
     track_pre: 'Persistencia viva: de', track_ago: 'vigiladas hace ~7 días,', track_still: 'siguen hoy', track_wait: 'Persistencia viva: midiendo nuestra propia lista en vivo (acumulando historial).', track_new: 'nuevas en el top esta semana',
     r_follow: 'Seguir', r_following: 'Siguiendo', r_compare: 'Comparar', r_myfollowed: 'Mis seguidas', r_no_follow: 'Aún no sigues ninguna wallet. Toca ☆ en una cuenta para seguirla.',
     r_comparing: 'Comparando', r_pick_second: 'elige otra', r_close_cmp: 'Cerrar', r_compare_title: 'Comparación', r_cmp_won: 'Ganó', r_cmp_hits: 'Aciertos', r_cmp_markets: 'Mercados', r_cmp_type: 'Tipo', r_cmp_when: 'Cuándo entra', r_cmp_bet: 'Apuesta típica', r_cmp_cat: 'Dónde', r_cmp_beforew: 'antes',
+    cmp_settled: 'Ganado (cerrado)', cmp_open: 'En bolsas abiertas', cmp_giveback: 'Devuelve', cmp_dead: 'Bolsas muertas', cmp_howplay: 'Cómo juega', cmp_better: 'mejor',
     tab_standings: 'Posiciones', st_title: 'Tabla de posiciones', st_rank_title: 'Ranking mundial', st_team: 'Equipo', st_player: 'Jugador', st_points: 'Puntos', st_gp: 'PJ', st_w: 'G', st_d: 'E', st_l: 'P', st_gd: 'DG', st_pts: 'Pts', st_pct: '%', st_gb: 'Dif', st_loading: 'Cargando posiciones…', st_none: 'Posiciones no disponibles ahora.',
     notif_live: 'En vivo', notif_final: 'Final', notif_live_b: 'Empezó un juego que sigues ⭐', notif_final_b: 'Terminó un juego que sigues ⭐',
     r_search_ph: 'Buscar cualquier wallet (0x… o link)', r_search_go: 'Buscar', r_ws_bad: 'Dirección no válida. Pega una wallet 0x… o el link de un perfil de Polymarket.', r_ws_empty: 'Sin movimientos recientes.', r_ws_moves: 'movimientos', r_ws_vol: 'volumen', r_ws_recent: 'Movimientos recientes', r_ws_note: 'Consulta en vivo de la actividad reciente de esta wallet — datos crudos, sin nuestro filtro anti-trampa. Para el historial completo, abre su perfil en Polymarket ↗.',
@@ -1547,6 +1554,7 @@ const T = {
     track_pre: 'Live persistence: of', track_ago: 'watched ~7 days ago,', track_still: 'still watched today', track_wait: 'Live persistence: measuring our own list live (building history).', track_new: 'new in the top this week',
     r_follow: 'Follow', r_following: 'Following', r_compare: 'Compare', r_myfollowed: 'My followed', r_no_follow: 'You don\'t follow any wallet yet. Tap ☆ on an account to follow it.',
     r_comparing: 'Comparing', r_pick_second: 'pick another', r_close_cmp: 'Close', r_compare_title: 'Comparison', r_cmp_won: 'Won', r_cmp_hits: 'Hits', r_cmp_markets: 'Markets', r_cmp_type: 'Type', r_cmp_when: 'When it enters', r_cmp_bet: 'Typical bet', r_cmp_cat: 'Where', r_cmp_beforew: 'before',
+    cmp_settled: 'Won (settled)', cmp_open: 'On open bags', cmp_giveback: 'Gives back', cmp_dead: 'Dead bags', cmp_howplay: 'How they play', cmp_better: 'better',
     tab_standings: 'Standings', st_title: 'Standings', st_rank_title: 'World ranking', st_team: 'Team', st_player: 'Player', st_points: 'Points', st_gp: 'GP', st_w: 'W', st_d: 'D', st_l: 'L', st_gd: 'GD', st_pts: 'Pts', st_pct: '%', st_gb: 'GB', st_loading: 'Loading standings…', st_none: 'Standings unavailable right now.',
     notif_live: 'Live', notif_final: 'Final', notif_live_b: 'A game you follow ⭐ just started', notif_final_b: 'A game you follow ⭐ just ended',
     r_search_ph: 'Search any wallet (0x… or link)', r_search_go: 'Search', r_ws_bad: 'Invalid address. Paste a 0x… wallet or a Polymarket profile link.', r_ws_empty: 'No recent moves.', r_ws_moves: 'moves', r_ws_vol: 'volume', r_ws_recent: 'Recent moves', r_ws_note: 'Live lookup of this wallet\'s recent activity — raw data, without our anti-manipulation filter. For the full history, open its Polymarket profile ↗.',
@@ -3808,13 +3816,39 @@ function compareHtml(ws){
   const cat = (w) => w.cats && w.cats[0] ? rCat(w.cats[0].cat) : '—';
   const col = (w) => `<div class="cmpcol"><div class="cmpname">${esc(rName(w))} ${pmLink(w.w)}</div><div class="cmpspk">${svgSpark(w.equity_curve)}</div>${w.kind ? kindBadge(w.kind, w.streak) : ''}</div>`;
   const gt = (x, y) => (x ?? -Infinity) > (y ?? -Infinity);
+  const lt = (x, y) => (x ?? Infinity) < (y ?? Infinity); // menos es mejor (devuelve, muertas)
   const row = (label, va, vb, wa, wb) => `<div class="cmprow"><span class="cv num${wa ? ' win' : ''}">${va}</span><span class="cl">${esc(label)}</span><span class="cv num${wb ? ' win' : ''}">${vb}</span></div>`;
+  // 💰 Balance real lado a lado: lo honesto (ganado − devuelto − bolsas muertas).
+  // Signo por color (verde arriba / rojo abajo); ✓ marca a la mejor de cada fila.
+  const netA = netReal(a), netB = netReal(b);
+  const realA = a.pnl_usd || 0, realB = b.pnl_usd || 0;
+  const unreA = (a.open && a.open.unrealized) || 0, unreB = (b.open && b.open.unrealized) || 0;
+  const gbA = giveBack(a), gbB = giveBack(b);
+  const deadA = (a.open && a.open.dead) || 0, deadB = (b.open && b.open.dead) || 0;
+  const anyOpen = !!((a.open && a.open.n) || (b.open && b.open.n));
+  const anyDead = deadA > 0 || deadB > 0;
+  const netColor = (n) => n >= 0 ? 'var(--volt)' : 'var(--red)';
+  const netMoney = (n) => (n >= 0 ? '+' : '') + rMoney(n);
+  const openTxt = (u) => u < 0 ? '▼ ' + rUsd(Math.abs(u)) : (u > 0 ? '▲ +' + rUsd(u) : '—');
+  const openColor = (u) => u < 0 ? 'var(--red)' : (u > 0 ? 'var(--volt)' : '');
+  const gbColor = (g) => g >= 0.25 ? 'var(--red)' : (g >= 0.1 ? 'var(--amber)' : 'var(--dim)');
+  const bcell = (content, best, color) => `<span class="cv num${best ? ' best' : ''}"${color ? ` style="color:${color}"` : ''}>${content}${best ? ` <b class="bm" title="${t('cmp_better')}">✓</b>` : ''}</span>`;
+  const brow = (label, cA, cB, cls) => `<div class="cmprow${cls ? ' ' + cls : ''}">${cA}<span class="cl">${esc(label)}</span>${cB}</div>`;
+  const balBlock = `<div class="cmpgrp">💰 ${t('bal_title')} <span>· ${t('bal_sub')}</span></div>
+    <div class="cmptbl">
+      <div class="cmprow hero">${bcell(netMoney(netA), gt(netA, netB), netColor(netA))}<span class="cl">vs</span>${bcell(netMoney(netB), gt(netB, netA), netColor(netB))}</div>
+      ${brow(t('cmp_settled'), bcell(rMoney(realA), gt(realA, realB) && realA !== realB), bcell(rMoney(realB), gt(realB, realA) && realA !== realB))}
+      ${anyOpen ? brow(t('cmp_open'), bcell(openTxt(unreA), false, openColor(unreA)), bcell(openTxt(unreB), false, openColor(unreB))) : ''}
+      ${anyOpen ? brow(t('cmp_giveback'), bcell(Math.round(100 * gbA) + '%', lt(gbA, gbB) && gbA !== gbB, gbColor(gbA)), bcell(Math.round(100 * gbB) + '%', lt(gbB, gbA) && gbA !== gbB, gbColor(gbB))) : ''}
+      ${anyDead ? brow(t('cmp_dead'), bcell(deadA ? '☠ ' + deadA : '—', lt(deadA, deadB) && deadA !== deadB, deadA ? 'var(--red)' : ''), bcell(deadB ? '☠ ' + deadB : '—', lt(deadB, deadA) && deadA !== deadB, deadB ? 'var(--red)' : '')) : ''}
+    </div>`;
   return radarWarnHtml() + `
     <div class="rback"><a href="#" data-rback="1">${t('r_back')}</a><span class="rbtns"><span class="pfbtn" data-pcmpclear="1" role="button">✕ ${t('r_close_cmp')}</span></span></div>
     <div class="secttl">⚖ ${t('r_compare_title')}</div>
     <div class="cmphd">${col(a)}${col(b)}</div>
+    ${balBlock}
+    <div class="cmpgrp">📊 ${t('cmp_howplay')}</div>
     <div class="cmptbl">
-      ${row(t('r_cmp_won'), rUsd(a.pnl_usd), rUsd(b.pnl_usd), gt(a.pnl_usd, b.pnl_usd), gt(b.pnl_usd, a.pnl_usd))}
       ${row(t('r_cmp_hits'), a.win_rate != null ? Math.round(100 * a.win_rate) + '%' : '—', b.win_rate != null ? Math.round(100 * b.win_rate) + '%' : '—', gt(a.win_rate, b.win_rate), gt(b.win_rate, a.win_rate))}
       ${row(t('r_cmp_markets'), a.n_markets ?? '—', b.n_markets ?? '—', gt(a.n_markets, b.n_markets), gt(b.n_markets, a.n_markets))}
       ${row(t('r_cmp_type'), esc(kindTxt(a)), esc(kindTxt(b)))}
