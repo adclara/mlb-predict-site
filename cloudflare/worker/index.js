@@ -308,7 +308,18 @@ async function polyWatch(env) {
   // nueva) → ahorra escrituras KV para quedarnos holgados en el free tier ($0 infra).
   const lsAfter = JSON.stringify(lastseen);
   if (lsAfter !== (lsRaw || '')) await env.AA_LATEST.put('poly:lastseen', lsAfter);
-  try { if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && consPush.length) await tgConsensus(env, consPush.slice(0, 3)); } catch (e) { /* Telegram caído no afecta las alertas ni KV */ }
+  // 🎯 Alerta de Telegram: SOLO señales «posible informado» fuertes (no cualquier
+  // consenso) → poca frecuencia, mucho valor. Cruza los consensos nuevos/reforzados
+  // con su lectura en ad.signals (informado + fuerza) y manda el mensaje rico.
+  try {
+    if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && consPush.length) {
+      const sigByKey = new Map();
+      for (const s of [...((ad.signals && ad.signals.strong) || []), ...((ad.signals && ad.signals.likely) || [])]) sigByKey.set(s.title + '|' + s.outcome, s);
+      const alertable = consPush.map((c) => ({ ...c, sig: sigByKey.get(c.title + '|' + c.outcome) || null }))
+        .filter((c) => c.sig && c.sig.info === 'informed' && (c.sig.strength || 0) >= 55);
+      if (alertable.length) await tgSignal(env, alertable.slice(0, 3));
+    }
+  } catch (e) { /* Telegram caído no afecta las alertas ni KV */ }
 }
 
 // Helper puro (exportado para tests): filtra la actividad a trades más nuevos
@@ -503,13 +514,23 @@ async function tgNotify(env, alerts) {
   } catch (e) { /* Telegram caído no afecta las alertas de la página */ }
 }
 
-// Telegram del 🤝 Consenso: la señal más fuerte del Radar (varias vigiladas en el
-// mismo lado). Un bloque por consenso nuevo/reforzado. Sin secretos → no se llega aquí.
-async function tgConsensus(env, groups) {
-  const wl = (g) => (g.wallets || []).slice(0, 6)
-    .map((w) => `• ${w.name || (w.w || '').slice(0, 8) || '0x…'}${w.score != null ? ` (🎯${w.score})` : ''}`).join('\n');
-  const block = (g) => `🤝 ${g.n} vigiladas en el mismo lado${g.prevN ? ` (refuerzo · antes ${g.prevN})` : ''}:\n“${g.outcome}” · ${g.title}${g.usd ? `\n💰 $${g.usd} en juego` : ''}\n${wl(g)}`;
-  const text = `🤝 Consenso de sharps — Radar AA\n\n${groups.map(block).join('\n\n')}\n\nVarias wallets vigiladas coincidiendo: la señal más fuerte del Radar, pero descriptiva — no es recomendación y el pasado apenas predice el futuro. aasport.net → Radar`;
+// Telegram de la 🎯 Señal informada: la más fuerte del Radar (varias vigiladas que
+// «saben algo» en el mismo lado). Mensaje rico: mercado %, fuerza, por qué, y las
+// wallets con su win rate. Un bloque por señal nueva/reforzada. Sin secretos → no
+// se llega aquí. Cada item lleva {n, prevN, outcome, title, usd, sig} donde sig es
+// la lectura de polySignals (info, strength, implied, why, wallets con wr).
+const TG_REASONS = { consensus: 'coinciden', early: 'entra antes', led: 'entró barato', cheap: 'compra barata', record: 'récord sólido', insider: 'perfil informado', longshot: 'gana baratas', conviction: 'sube en aciertos', reactive: 'compra reactiva', chase: 'paga caro', late: 'entra tarde', churn: 'voltea mucho' };
+async function tgSignal(env, items) {
+  const block = (c) => {
+    const s = c.sig || {};
+    const mkt = s.implied != null ? ` · mercado ${s.implied}%` : '';
+    const fz = s.strength != null ? ` · fuerza ${s.strength}/100` : '';
+    const why = Array.isArray(s.why) ? s.why.filter((r) => r.t === 'good' && r.k !== 'consensus').slice(0, 3).map((r) => TG_REASONS[r.k] || r.k).join(' · ') : '';
+    const wl = ((Array.isArray(s.wallets) && s.wallets.length ? s.wallets : (c.wallets || [])).slice(0, 5))
+      .map((w) => `• ${w.name || (w.w || '').slice(0, 8) || '0x…'}${w.score != null ? ` 🎯${w.score}` : ''}${w.wr != null ? ` (${Math.round(100 * w.wr)}%)` : ''}`).join('\n');
+    return `🎯 Posible informado${c.prevN ? ` (refuerzo · antes ${c.prevN})` : ''}\n“${c.outcome}” · ${c.title}\n🤝 ${c.n} vigiladas${mkt}${fz}${why ? `\nPor qué: ${why}` : ''}\n${wl}`;
+  };
+  const text = `🎯 Señal informada — Radar AA\n\n${items.map(block).join('\n\n')}\n\nLa fuerza mide el dinero listo que coincide, NO es probabilidad de que ganes; el % es lo que pone el mercado. «Posible informado» es un patrón (entra antes/barato con buen récord), no una acusación. Descriptivo, no recomendación — el pasado apenas predice el futuro. aasport.net → Radar`;
   try {
     await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
