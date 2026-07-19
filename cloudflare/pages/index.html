@@ -490,6 +490,16 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .summary b{color:var(--text)}
 .riskbar{height:7px;border-radius:5px;background:var(--panel-2);overflow:hidden}
 .riskbar i{display:block;height:100%;border-radius:5px}
+/* 🔑 Claves del partido (why, ambos equipos) */
+.mkgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 8px}
+.mkcol{background:var(--panel);border:1px solid var(--hair);border-radius:12px;padding:9px 10px;min-width:0}
+.mkteam{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mkteam img{width:18px;height:18px;flex-shrink:0}
+.mkrow{font-size:11.5px;color:var(--dim);line-height:1.5;padding:1.5px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mkrow.mkdim{color:var(--faint)}
+.mkctx{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.mkchip{font-size:11px;font-weight:600;color:var(--text);background:var(--inner);border:1px solid var(--hair);border-radius:999px;padding:3px 9px}
+.mknote{font-size:10.5px;color:var(--faint);line-height:1.5;margin-bottom:4px}
 .riskrow{display:flex;justify-content:space-between;font-size:12px;color:var(--faint);margin-top:6px}
 .mktrow{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--hair);font-size:14px}
 .mktrow:last-child{border-bottom:0}
@@ -1566,6 +1576,22 @@ const T = {
     hd_crumb: 'Historial AA', hd_measured: 'Picks medidos', hd_30d: 'últimos 30 días', hd_record: 'Récord', hd_wl: 'ganados–perdidos', hd_acc: 'Acierto', hd_acc_sub: 'todo medido, nada oculto', hd_streak: 'Racha actual', hd_streak_sub: 'picks seguidos ganados', hd_byday: 'Por día (últimos 14)', hd_noday: 'Sin días calificados aún.', hd_byconf: 'Por nivel de confianza',
     cm_ops: 'OPS temporada', cm_rpg: 'Carreras/juego', cm_rpg5: 'C/juego últimos 5', cm_starter_fip: 'Abridor FIP', cm_form: 'Forma (V de 5)', cm_rest: 'Descanso (días)', d_set_score: 'Marcador por set',
     co_pos: 'Posición', co_pts: 'Puntos', co_gd: 'Dif. de gol', co_wins: 'Victorias', co_pos_conf: 'Posición conf.', co_winpct: '% Victorias', co_ptdiff: 'Dif. puntos', co_world_rank: 'Ranking mundial',
+    d_verdict: 'Veredicto AA', d_wp_of: 'Prob. de victoria de', d_wp_local: '(local)', d_wp_aria: 'curva de probabilidad de victoria', d_wins_of: 'gana {t}', d_wins: 'gana', d_wins_lbl: 'Gana ', d_pick_lbl: 'Pick: ',
+    d_live_prob: 'Probabilidad en vivo', d_who_wins: '¿Quién gana?', d_espn_moves: 'ESPN · se mueve con el juego', d_engine_aa: 'Motor AA · ', d_confidence: 'Confianza', d_lower_better: 'menor es mejor',
+    d_tie: 'Empate', d_nrfi: 'Sin carreras en la 1ª entrada (NRFI):', d_fip_diff: 'FIP abridores (dif)', d_park: 'Factor del parque', d_schedule: 'Horario', d_day: '☀️ Día', d_night: '🌙 Noche', d_series: 'Serie', d_series_game: 'Juego {g} de {n}',
+    d_weather_fc: 'Clima (pronóstico)', d_weather: 'Clima', d_wind: 'Viento', d_precip: 'Prob. lluvia',
+    d_team: 'Equipo', d_market: 'Mercado', d_market_lc: 'mercado', d_price: 'Precio', d_teams: 'Equipos', d_lines_by_book: 'Líneas por casa', d_books_disagree: 'las casas discrepan', d_total_runs: 'Total de carreras', d_aa_projects: 'AA proyecta', d_runs: 'carreras', d_open: 'apertura', d_current: 'actual', d_leans: 'inclina', d_value_badge: 'valor AA',
+    d_no_gems: 'Hoy no hay gemas. El algoritmo solo marca 💎 cuando el valor es real.', d_no_locks: 'Sin fijos publicados todavía.',
+    hd_note: 'Historial completo tal como quedó guardado en el momento del pick — no se reescribe. Transparencia primero: los datos no garantizan resultados.',
+    d_tbc: 'Por confirmar', d_fatigue: 'Fatiga', d_player: 'Jugador', d_subs: 'Suplentes', d_atbat: 'Al bate', d_pitching: 'Lanza', d_even: 'parejo', d_favors: 'favorece', d_streak: 'racha', d_starts_for: 'Abre por ',
+    d_sim_note: '{n} simulaciones Monte Carlo derivadas de la probabilidad publicada del modelo AA ({p}% local) y {t} carreras proyectadas. Ilustran cómo se reparte el resultado — no cambian la predicción.',
+    mk_title: '🔑 Las claves del partido',
+    mk_streak_w: '{n} victorias seguidas', mk_streak_hist: '(racha histórica)', mk_streak_l: '{n} derrotas seguidas',
+    mk_form: 'ganó {w} de sus últimos {n}', mk_close2: 'apenas ganó los últimos 2 (por 1-2 carreras)',
+    mk_bats_hot: 'bateo caliente: {r} c/j últimos 5 (vs {s} temp.)', mk_bats_cold: 'bateo frío: {r} c/j últimos 5 (vs {s} temp.)',
+    mk_pitch_edge: 'ventaja de pitcheo: el abridor de {t} ha sido más fiable (menor FIP)',
+    mk_rest: '{t} llega más descansado ({d} vs {o} días)', mk_series: 'juego {g} de {n} de la serie',
+    mk_stakes: '{r}º en su división · a {gb} juegos', mk_note: 'Claves basadas en datos reales del juego — no es recomendación; tú decides.',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1711,6 +1737,22 @@ const T = {
     hd_crumb: 'AA History', hd_measured: 'Picks tracked', hd_30d: 'last 30 days', hd_record: 'Record', hd_wl: 'won–lost', hd_acc: 'Hit rate', hd_acc_sub: 'all tracked, nothing hidden', hd_streak: 'Current streak', hd_streak_sub: 'picks won in a row', hd_byday: 'By day (last 14)', hd_noday: 'No graded days yet.', hd_byconf: 'By confidence level',
     cm_ops: 'Season OPS', cm_rpg: 'Runs/game', cm_rpg5: 'R/game last 5', cm_starter_fip: 'Starter FIP', cm_form: 'Form (W of 5)', cm_rest: 'Rest (days)', d_set_score: 'Score by set',
     co_pos: 'Position', co_pts: 'Points', co_gd: 'Goal diff', co_wins: 'Wins', co_pos_conf: 'Conf. position', co_winpct: 'Win %', co_ptdiff: 'Point diff', co_world_rank: 'World ranking',
+    d_verdict: 'AA verdict', d_wp_of: 'Win prob. for', d_wp_local: '(home)', d_wp_aria: 'win probability curve', d_wins_of: '{t} wins', d_wins: 'wins', d_wins_lbl: 'Wins ', d_pick_lbl: 'Pick: ',
+    d_live_prob: 'Live probability', d_who_wins: 'Who wins?', d_espn_moves: 'ESPN · moves with the game', d_engine_aa: 'AA engine · ', d_confidence: 'Confidence', d_lower_better: 'lower is better',
+    d_tie: 'Tie', d_nrfi: 'No runs in the 1st inning (NRFI):', d_fip_diff: 'Starter FIP (diff)', d_park: 'Park factor', d_schedule: 'Schedule', d_day: '☀️ Day', d_night: '🌙 Night', d_series: 'Series', d_series_game: 'Game {g} of {n}',
+    d_weather_fc: 'Weather (forecast)', d_weather: 'Weather', d_wind: 'Wind', d_precip: 'Rain chance',
+    d_team: 'Team', d_market: 'Market', d_market_lc: 'market', d_price: 'Price', d_teams: 'Teams', d_lines_by_book: 'Lines by book', d_books_disagree: 'books disagree', d_total_runs: 'Total runs', d_aa_projects: 'AA projects', d_runs: 'runs', d_open: 'opening', d_current: 'current', d_leans: 'leans', d_value_badge: 'AA value',
+    d_no_gems: 'No gems today. The algorithm only marks 💎 when the value is real.', d_no_locks: 'No locks published yet.',
+    hd_note: 'Full history saved exactly as it stood at pick time — never rewritten. Transparency first: data does not guarantee results.',
+    d_tbc: 'TBD', d_fatigue: 'Fatigue', d_player: 'Player', d_subs: 'Subs', d_atbat: 'At bat', d_pitching: 'Pitching', d_even: 'even', d_favors: 'favors', d_streak: 'streak', d_starts_for: 'Starts for ',
+    d_sim_note: '{n} Monte Carlo simulations from the probability published by the AA model ({p}% home) and {t} projected runs. They show how the outcome spreads out — they do not change the prediction.',
+    mk_title: '🔑 Keys to the game',
+    mk_streak_w: '{n} wins in a row', mk_streak_hist: '(historic run)', mk_streak_l: '{n} losses in a row',
+    mk_form: 'won {w} of its last {n}', mk_close2: 'barely won the last 2 (by 1-2 runs)',
+    mk_bats_hot: 'hot bats: {r} r/g last 5 (vs {s} season)', mk_bats_cold: 'cold bats: {r} r/g last 5 (vs {s} season)',
+    mk_pitch_edge: 'pitching edge: {t} has the more reliable starter (lower FIP)',
+    mk_rest: '{t} comes in more rested ({d} vs {o} days)', mk_series: 'game {g} of {n} in the series',
+    mk_stakes: '{r} in its division · {gb} games back', mk_note: 'Keys are built from the game’s real data — not a recommendation; you decide.',
     brain_soon: 'AA Brain is preparing its first learning journal.',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
@@ -2250,10 +2292,10 @@ function boletoHtml(){
     const under = (r.win_rate ?? r.wins / Math.max(1, r.wins + r.losses)) < 0.5;
     return `<span class="bolrec-i">${name} <b class="${under ? 'lo' : ''}">${r.wins}-${r.losses}</b></span>`;
   };
-  const rec = todayRecord ? [recLine('Fijos', todayRecord.locks), recLine('Gemas', todayRecord.gems)].filter(Boolean).join('') : '';
+  const rec = todayRecord ? [recLine(t('rec_locks'), todayRecord.locks), recLine(t('rec_gems'), todayRecord.gems)].filter(Boolean).join('') : '';
   const head = `<div class="bolhead"><span class="boltt">🎫 ${t('bol_title')}</span>${legs.length ? `<span class="boln num">${legs.length}</span>` : ''}</div>`;
   if (!legs.length) return `<div class="boleto"><div class="boleto-in">${head}<div class="bolempty">${t('bol_none')}</div></div></div>`;
-  const tierTxt = tr => tr === 'gema' ? '💎 Gema' : tr;
+  const tierTxt = tr => tr === 'gema' ? t('tag_gem') : tr;
   const rows = legs.map(({ ev, tier, pct }) => {
     const rk = ev.risk && ev.risk.level ? `<span class="bolrisk">${t('bol_risk')}: ${t('risk_' + ev.risk.level) || esc(ev.risk.level)}</span>` : '';
     return `<button class="bleg" data-id="${esc(ev.event_id)}">
@@ -2359,7 +2401,7 @@ function renderHistDash(){
   const u = 60 / maxN;
   const seg = (cls, n) => n ? `<i class="${cls}" style="height:${Math.max(3, Math.round(n * u))}px"></i>` : '';
   const bars = days.map(([day, v]) =>
-    `<div class="daybar" title="${day}: ${v.w}G-${v.l}P"><div class="col">${seg('w', v.w)}${seg('l', v.l)}</div><span class="dlb num">${day.slice(5)}</span></div>`
+    `<div class="daybar" title="${day}: ${v.w}${t('abbr_w')}-${v.l}${t('abbr_l')}"><div class="col">${seg('w', v.w)}${seg('l', v.l)}</div><span class="dlb num">${day.slice(5)}</span></div>`
   ).join('');
   dc.innerHTML = `
     <div class="dtop"><span class="crumb">USA<span class="sep">›</span><b>MLB</b><span class="sep">›</span><b>${t('hd_crumb')}</b></span></div>
@@ -2381,7 +2423,7 @@ function renderHistDash(){
         <span class="cbar"><i style="width:${v.n ? Math.round(v.w / v.n * 100) : 0}%"></i></span>
         <span class="cn num">${v.w}/${v.n} · ${v.n ? Math.round(v.w / v.n * 100) : 0}%</span>
       </div>`).join('')}
-      <p class="dnote">Historial completo tal como quedó guardado en el momento del pick — no se reescribe. Transparencia primero: los datos no garantizan resultados.</p>
+      <p class="dnote">${t('hd_note')}</p>
     </div>`;
 }
 
@@ -2399,7 +2441,7 @@ function aaGauge(pct, pickNick){
     <svg width="0" height="0"><defs><linearGradient id="aagrad" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#FF4D1C"/><stop offset="1" stop-color="#19DE9F"/></linearGradient></defs></svg>
   </div>
-  <div class="gaugelbl">Gana <b>${esc(pickNick)}</b></div>`;
+  <div class="gaugelbl">${t('d_wins_lbl')}<b>${esc(pickNick)}</b></div>`;
 }
 // Fila de comparación con barra divergente desde el centro. higherBetter=false
 // invierte (FIP, menor mejor). Devuelve '' si no hay datos.
@@ -2426,7 +2468,7 @@ function cmpRow(label, away, home, higherBetter = true, fmt = (x) => x){
 }
 // Tarjeta de jugador (abridor): headshot + mini-barras de FIP/ERA + mano.
 function playerCard(pl, role){
-  if (!pl) return `<div class="pcard"><div class="pcr">${esc(role)}</div><div class="pcn">Por confirmar</div></div>`;
+  if (!pl) return `<div class="pcard"><div class="pcr">${esc(role)}</div><div class="pcn">${t('d_tbc')}</div></div>`;
   const ini = (pl.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
   const face = pl.id
     ? `<img class="hs" src="https://midfield.mlbstatic.com/v1/people/${pl.id}/spots/120" alt="" loading="lazy"
@@ -2438,10 +2480,10 @@ function playerCard(pl, role){
       <span class="pbar"><i style="width:${Math.max(6, Math.min(100, (1 - Math.min(val, max) / max) * 100))}%"></i></span>
       <b class="num">${val}</b></div>`;
   return `<div class="pcard">
-    <div class="pchd">${face}<div style="min-width:0"><div class="pcn">${esc(pl.name || 'Por confirmar')}${hand}</div>
+    <div class="pchd">${face}<div style="min-width:0"><div class="pcn">${esc(pl.name || t('d_tbc'))}${hand}</div>
       <div class="pcr">${esc(role)}</div></div></div>
     ${bar('FIP', pl.fip, 7)}${bar('ERA', pl.era_recent, 9)}
-    ${pl.fatigue ? `<div class="pfat">Fatiga <b class="fat-${esc(pl.fatigue)}">${esc(pl.fatigue)}</b></div>` : ''}
+    ${pl.fatigue ? `<div class="pfat">${t('d_fatigue')} <b class="fat-${esc(pl.fatigue)}">${esc(pl.fatigue)}</b></div>` : ''}
   </div>`;
 }
 
@@ -2470,7 +2512,7 @@ function soccerLineupCard(lu){
     ${p.pos ? `<span class="lupos">${esc(p.pos)}</span>` : ''}
   </div>`).join('');
   const subs = (lu.subs || []).length
-    ? `<div class="lusubs"><span class="lusubl">Suplentes</span>${lu.subs.map(p => esc(p.name)).join(' · ')}</div>` : '';
+    ? `<div class="lusubs"><span class="lusubl">${t('d_subs')}</span>${lu.subs.map(p => esc(p.name)).join(' · ')}</div>` : '';
   return `<div class="formside soclu">
     <div class="fh">${lu.formation ? `<span class="formchip num">${esc(lu.formation)}</span>` : ''}<b>${esc(lu.code || '')}</b></div>
     ${rows || `<span class="wempty">${t('lineup_none')}</span>`}
@@ -2499,7 +2541,7 @@ function nbaBoxCard(box){
   </tr>`).join('');
   return `<div class="boxwrap">
     <div class="sthead">${esc(box.code || '')}</div>
-    <table class="sttbl boxtbl num"><thead><tr><th class="tl">Jugador</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>+/-</th></tr></thead>
+    <table class="sttbl boxtbl num"><thead><tr><th class="tl">${t('d_player')}</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>+/-</th></tr></thead>
     <tbody>${rows}</tbody></table>
   </div>`;
 }
@@ -2522,7 +2564,7 @@ function tennisSetline(g){
   </tr>`;
   return `<div class="secttl">${t('d_set_score')}</div>
     <div class="setwrap"><table class="sttbl setbl num">
-      <thead><tr><th class="tl">Jugador</th>${Array.from({ length: n }, (_, i) => `<th>S${i + 1}</th>`).join('')}</tr></thead>
+      <thead><tr><th class="tl">${t('d_player')}</th>${Array.from({ length: n }, (_, i) => `<th>S${i + 1}</th>`).join('')}</tr></thead>
       <tbody>${row(aw, hm, g.away)}${row(hm, aw, g.home)}</tbody>
     </table></div>`;
 }
@@ -2532,6 +2574,9 @@ function renderDetail(){
   if (listTab === 'hist'){ renderHistDash(); return; }
   const ev = events.find(e => e.event_id === selectedId);
   if (!ev){ $('dcard').innerHTML = `<div class="dempty">${t('detail_empty')}</div>`; return; }
+  // Calienta las posiciones UNA vez (para el bullet de "stakes" de Las claves); al
+  // resolver, re-renderiza si sigue el mismo juego. El flag evita cualquier bucle.
+  if (!standingsCache.has('mlb') && !window._stdWarmed){ window._stdWarmed = true; loadStandings().then(() => { if (sport === 'mlb' && selectedId === ev.event_id) renderDetail(); }).catch(() => {}); }
   const lv = lvOf(ev), st = effStatus(ev), p = ev.prediction || {};
 
   // Prob del local: calibrada antes del juego; EN VIVO la de ESPN (win_prob_home)
@@ -2568,8 +2613,8 @@ function renderDetail(){
             <b class="lvname">${esc(a.name || '')}</b>
             ${a.summary ? `<span class="lvsum num">${esc(a.summary)}</span>` : ''}</div>` : '';
         mid += `<div class="lvmatch">
-          ${duo('⚾', 'Al bate', s.batter)}
-          ${duo('🥎', 'Lanza', s.pitcher)}
+          ${duo('⚾', t('d_atbat'), s.batter)}
+          ${duo('🥎', t('d_pitching'), s.pitcher)}
           ${s.lastPlay ? `<div class="lvplay">${esc(s.lastPlay)}</div>` : ''}</div>`;
       }
     }
@@ -2579,12 +2624,12 @@ function renderDetail(){
     mid = (p.prob != null && p.pick)
       ? `${aaGauge(Math.round(p.prob * 1000) / 10, tNick(p.pick))}
          <div class="dsub" style="margin-top:6px">${startTime ? t('first_pitch') + ' ' + startTime : t('to_play_today')}</div>`
-      : `<div class="dscore num" style="font-size:22px;color:var(--dim);font-weight:700">${startTime || 'HOY'}</div>
-         <div class="dsub">Por jugar</div>`;
+      : `<div class="dscore num" style="font-size:22px;color:var(--dim);font-weight:700">${startTime || t('o_today')}</div>
+         <div class="dsub">${t('o_toplay')}</div>`;
   }
   const recA = lv && lv.away.rec ? `<span class="rc num">${esc(lv.away.rec)}</span>` : '';
   const recH = lv && lv.home.rec ? `<span class="rc num">${esc(lv.home.rec)}</span>` : '';
-  const tags = (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${badgeMuted ? 'muted' : ''}">${b === 'gema' ? '💎 Gema' : esc(b)}</span>`).join(' ');
+  const tags = (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${badgeMuted ? 'muted' : ''}">${b === 'gema' ? t('tag_gem') : esc(b)}</span>`).join(' ');
 
   const risk = ev.risk || {};
   const riskPct = risk.score != null ? Math.min(100, risk.score) : null;
@@ -2601,7 +2646,7 @@ function renderDetail(){
   const verdictBox = snap.verdict_es ? `
     <div class="verdict">
       <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFC53D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 8.5 22 9.3 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.3 9 8.5z"/></svg></span>
-      <p><span class="vt">Veredicto AA</span>${esc(snap.verdict_es)}</p>
+      <p><span class="vt">${t('d_verdict')}</span>${esc(snap.verdict_es)}</p>
     </div>` : '';
 
 
@@ -2620,9 +2665,9 @@ function renderDetail(){
     return `
     <div class="secttl">${t('d_moment')}</div>
     <div class="wpcard">
-      <div class="wphead"><span>Prob. de victoria de <b>${esc(tNick(ev.home.code))}</b> (local)</span>
+      <div class="wphead"><span>${t('d_wp_of')} <b>${esc(tNick(ev.home.code))}</b> ${t('d_wp_local')}</span>
         <span class="num"><b>${Math.round(last.wp * 100)}%</b>${last.half && last.inn ? ` · ${esc(last.half)}${last.inn}` : ''}</span></div>
-      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="curva de probabilidad de victoria">
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${t('d_wp_aria')}">
         <defs><linearGradient id="wpg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="rgba(25,222,159,.35)"/><stop offset="1" stop-color="rgba(25,222,159,0)"/>
         </linearGradient></defs>
@@ -2630,8 +2675,8 @@ function renderDetail(){
         <path d="${area}" fill="url(#wpg)"/>
         <path class="wppath" pathLength="1" d="${line}" fill="none" stroke="#19DE9F" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
         <circle cx="${xy[xy.length - 1][0].toFixed(1)}" cy="${xy[xy.length - 1][1].toFixed(1)}" r="3.2" fill="#19DE9F"/>
-        <text x="${PAD}" y="${PAD + 8}" font-size="8" fill="rgba(255,255,255,.35)">gana ${esc(canon(ev.home.code))}</text>
-        <text x="${PAD}" y="${H - PAD - 3}" font-size="8" fill="rgba(255,255,255,.35)">gana ${esc(canon(ev.away.code))}</text>
+        <text x="${PAD}" y="${PAD + 8}" font-size="8" fill="rgba(255,255,255,.35)">${t('d_wins_of').replace('{t}', esc(canon(ev.home.code)))}</text>
+        <text x="${PAD}" y="${H - PAD - 3}" font-size="8" fill="rgba(255,255,255,.35)">${t('d_wins_of').replace('{t}', esc(canon(ev.away.code)))}</text>
       </svg>
     </div>`;
   })();
@@ -2645,32 +2690,33 @@ function renderDetail(){
     ${verdictBox}
     ${homePct != null ? `
     <div class="whowin">
-      <div class="ww-head"><span class="q">${liveWpHome != null ? 'Probabilidad en vivo' : '¿Quién gana?'}</span><span class="eng">${liveWpHome != null ? 'ESPN · se mueve con el juego' : 'Motor AA · ' + esc(p.engine_version || 'v2')}</span></div>
+      <div class="ww-head"><span class="q">${liveWpHome != null ? t('d_live_prob') : t('d_who_wins')}</span><span class="eng">${liveWpHome != null ? t('d_espn_moves') : t('d_engine_aa') + esc(p.engine_version || 'v2')}</span></div>
       <div class="probhead num"><span>${esc(tNick(ev.away.code))} ${awayPct}%</span><span>${homePct}% ${esc(tNick(ev.home.code))}</span></div>
       <div class="probtrack"><span class="aw" style="width:${awayPct}%"></span><span class="hm" style="width:${homePct}%"></span></div>
       <div class="ww-pick">
-        ${p.pick ? `<span class="bigpick ${badgeMuted ? 'muted' : ''}">${liveWpHome != null ? 'Pick: ' : 'Gana '}${esc(tNick(p.pick))}</span>` : ''}
+        ${p.pick ? `<span class="bigpick ${badgeMuted ? 'muted' : ''}">${liveWpHome != null ? t('d_pick_lbl') : t('d_wins_lbl')}${esc(tNick(p.pick))}</span>` : ''}
         ${pickPct != null ? `<span class="bigprob num ${badgeMuted ? 'muted' : ''}">${pickPct}%</span>` : ''}
-        ${liveWpHome == null && p.confidence ? `<span class="confpill">Confianza ${esc(p.confidence)}</span>` : ''}
+        ${liveWpHome == null && p.confidence ? `<span class="confpill">${t('d_confidence')} ${esc(p.confidence)}</span>` : ''}
         ${tags}
       </div>
     </div>` : ''}
     ${wpChart}
     ${ev.metrics?.length ? `<div class="secttl">${t('d_metrics')}</div>
       <div class="mgrid">${ev.metrics.map(m => `<div class="mcard"><div class="lb">${esc(m.label)}</div><div class="vl num ${metricCls(m)}">${esc(m.value)}</div></div>`).join('')}</div>` : ''}
+    ${keysBlock(ev, lv)}
     ${whyList || (ev.summary_es ? `<div class="secttl">${t('d_based')}</div><div class="summary">${esc(ev.summary_es)}</div>` : '')}
     ${riskPct != null ? `<div class="secttl">${t('d_risk')}</div>
       <div class="riskbar"><i style="width:${riskPct}%;background:${riskColor}"></i></div>
-      <div class="riskrow num"><span>${riskPct}/100 · ${esc(risk.level || '')}</span><span>menor es mejor</span></div>` : ''}`;
+      <div class="riskrow num"><span>${riskPct}/100 · ${esc(risk.level || '')}</span><span>${t('d_lower_better')}</span></div>` : ''}`;
 
   /* ── tab EQUIPOS (snapshot para decidir) ── */
   const formSide = (side, code) => {
     const games = (snap.form && snap.form[side]) || [];
     const stk = snap.context ? snap.context['streak_' + side] : null;
-    const stkTxt = stk == null || stk === 0 ? '' : stk > 0 ? `racha G${stk}` : `racha P${-stk}`;
+    const stkTxt = stk == null || stk === 0 ? '' : stk > 0 ? `${t('d_streak')} ${t('abbr_w')}${stk}` : `${t('d_streak')} ${t('abbr_l')}${-stk}`;
     const chips = games.length ? [...games].reverse().map(g => `
       <span class="fgame" title="${g.home ? 'vs' : '@'} ${esc(g.opp)} · ${esc(g.score)} · ${g.w ? t('won_l') : t('lost_l')}">
-        <span class="fg ${g.w ? 'w' : 'l'}">${g.w ? 'G' : 'P'}</span>
+        <span class="fg ${g.w ? 'w' : 'l'}">${g.w ? t('abbr_w') : t('abbr_l')}</span>
         <span class="fo">${g.home ? 'vs' : '@'}${esc(canon(g.opp))}</span>
         <span class="fs num">${esc(g.score)}</span>
       </span>`).join('') : `<span class="wempty">${t('no_recent_games')}</span>`;
@@ -2738,7 +2784,7 @@ function renderDetail(){
       <div class="duelhead"><span>${esc(tNick(ev.away.code))}</span><span>${esc(tNick(ev.home.code))}</span></div>
       ${snap.edges.map(e2 => `<div class="drow">
         ${dots('away', e2)}
-        <span class="dl">${esc(e2.factor)}${e2.favors === 'even' ? '<br><span class="deven">parejo</span>' : ''}</span>
+        <span class="dl">${esc(e2.factor)}${e2.favors === 'even' ? `<br><span class="deven">${t('d_even')}</span>` : ''}</span>
         ${dots('home', e2)}
       </div>`).join('')}
     </div>` : '';
@@ -2761,7 +2807,7 @@ function renderDetail(){
     (ctx.elo_diff != null ? cmpRow('Elo', eloA, eloH, true, x => Math.round(x) || '·') : ''),
   ].filter(Boolean).join('');
   const h2h = h2hRows ? `<div class="secttl">${t('d_h2h')}</div>
-    <div class="cmphead"><span>${esc(tNick(ev.away.code))}</span><span class="mid">favorece →</span><span>${esc(tNick(ev.home.code))}</span></div>
+    <div class="cmphead"><span>${esc(tNick(ev.away.code))}</span><span class="mid">${t('d_favors')} →</span><span>${esc(tNick(ev.home.code))}</span></div>
     <div class="cmpbox glass-in">${h2hRows}</div>` : '';
 
   // Tarjeta de primeras 5 entradas / NRFI (mercado nuevo).
@@ -2769,22 +2815,22 @@ function renderDetail(){
   const f5card = f5 ? `<div class="secttl">${t('d_f5')}</div>
     <div class="pcard f5card glass-in">
       <div class="probhead num"><span>${esc(tNick(ev.away.code))} ${f5.away_pct}%</span>
-        <span>Empate ${f5.tie_pct}%</span><span>${f5.home_pct}% ${esc(tNick(ev.home.code))}</span></div>
+        <span>${t('d_tie')} ${f5.tie_pct}%</span><span>${f5.home_pct}% ${esc(tNick(ev.home.code))}</span></div>
       <div class="probtrack f3">
         <span class="aw" style="width:${f5.away_pct}%"></span>
         <span class="tie" style="width:${f5.tie_pct}%"></span>
         <span class="hm" style="width:${f5.home_pct}%"></span></div>
-      <div class="nrfi num">Sin carreras en la 1ª entrada (NRFI): <b>${f5.nrfi_pct}%</b></div>
+      <div class="nrfi num">${t('d_nrfi')} <b>${f5.nrfi_pct}%</b></div>
     </div>` : '';
 
   const ctxCards = [];
-  if (ctx.sp_fip_diff != null) ctxCards.push({lb: 'FIP abridores (dif)', vl: (ctx.sp_fip_diff > 0 ? '+' : '') + ctx.sp_fip_diff, cls: ''});
-  if (ctx.park_factor != null) ctxCards.push({lb: 'Factor del parque', vl: ctx.park_factor, cls: ctx.park_factor > 1.03 ? 'mid' : ''});
-  if (ctx.day_night) ctxCards.push({lb: 'Horario', vl: ctx.day_night === 'day' ? '☀️ Día' : '🌙 Noche', cls: ''});
-  if (ctx.series && ctx.series.len) ctxCards.push({lb: 'Serie', vl: `Juego ${ctx.series.game || '?'} de ${ctx.series.len}`, cls: ''});
-  if (ctx.weather && (ctx.weather.condition || ctx.weather.temp_f != null)) ctxCards.push({lb: ctx.weather.forecast ? 'Clima (pronóstico)' : 'Clima', vl: `${ctx.weather.temp_f != null ? ctx.weather.temp_f + '°F ' : ''}${ctx.weather.condition || ''}`.trim() || '—', cls: ''});
-  if (ctx.weather && ctx.weather.wind) ctxCards.push({lb: 'Viento', vl: ctx.weather.wind, cls: ''});
-  if (ctx.weather && ctx.weather.precip_pct != null) ctxCards.push({lb: 'Prob. lluvia', vl: ctx.weather.precip_pct + '%', cls: ctx.weather.precip_pct >= 40 ? 'mid' : ''});
+  if (ctx.sp_fip_diff != null) ctxCards.push({lb: t('d_fip_diff'), vl: (ctx.sp_fip_diff > 0 ? '+' : '') + ctx.sp_fip_diff, cls: ''});
+  if (ctx.park_factor != null) ctxCards.push({lb: t('d_park'), vl: ctx.park_factor, cls: ctx.park_factor > 1.03 ? 'mid' : ''});
+  if (ctx.day_night) ctxCards.push({lb: t('d_schedule'), vl: ctx.day_night === 'day' ? t('d_day') : t('d_night'), cls: ''});
+  if (ctx.series && ctx.series.len) ctxCards.push({lb: t('d_series'), vl: t('d_series_game').replace('{g}', ctx.series.game || '?').replace('{n}', ctx.series.len), cls: ''});
+  if (ctx.weather && (ctx.weather.condition || ctx.weather.temp_f != null)) ctxCards.push({lb: ctx.weather.forecast ? t('d_weather_fc') : t('d_weather'), vl: `${ctx.weather.temp_f != null ? ctx.weather.temp_f + '°F ' : ''}${ctx.weather.condition || ''}`.trim() || '—', cls: ''});
+  if (ctx.weather && ctx.weather.wind) ctxCards.push({lb: t('d_wind'), vl: ctx.weather.wind, cls: ''});
+  if (ctx.weather && ctx.weather.precip_pct != null) ctxCards.push({lb: t('d_precip'), vl: ctx.weather.precip_pct + '%', cls: ctx.weather.precip_pct >= 40 ? 'mid' : ''});
   const bajas = injuriesDoc ? `
     <div class="secttl">${t('d_injuries')}</div>
     <div class="formgrid">
@@ -2809,7 +2855,7 @@ function renderDetail(){
   const equipos = `
     ${h2h}
     ${snap.pitchers ? `<div class="secttl">${t('d_starters')}</div>
-    <div class="pgrid">${playerCard(snap.pitchers.away, 'Abre por ' + tNick(ev.away.code))}${playerCard(snap.pitchers.home, 'Abre por ' + tNick(ev.home.code))}</div>` : ''}
+    <div class="pgrid">${playerCard(snap.pitchers.away, t('d_starts_for') + tNick(ev.away.code))}${playerCard(snap.pitchers.home, t('d_starts_for') + tNick(ev.home.code))}</div>` : ''}
     ${f5card}
     ${snap.form ? `<div class="secttl">${t('d_form').replace('{n}', Math.max(snap.form.home?.length || 0, snap.form.away?.length || 0) || 5)}</div>
     <div class="formgrid">${formSide('away', ev.away.code)}${formSide('home', ev.home.code)}</div>` : ''}
@@ -2837,7 +2883,7 @@ function renderDetail(){
     if (!s) return '';
     const best = val.best_side === side;
     return `<tr class="${best ? 'best' : ''}">
-      <td>${esc(tNick(code))}${best ? ' <span class="warnchip" style="color:var(--volt);border-color:rgba(25,222,159,.35);background:rgba(25,222,159,.08)">valor AA</span>' : ''}</td>
+      <td>${esc(tNick(code))}${best ? ` <span class="warnchip" style="color:var(--volt);border-color:rgba(25,222,159,.35);background:rgba(25,222,159,.08)">${t('d_value_badge')}</span>` : ''}</td>
       <td class="num">${fmtPct(s.model_pct)}</td>
       <td class="num">${fmtPct(s.market_pct)}</td>
       <td class="num">${fmtMl(s.price)}</td>
@@ -2847,15 +2893,15 @@ function renderDetail(){
   const valueTbl = val ? `
     <div class="secttl">${t('d_value')}</div>
     <table class="valtbl">
-      <thead><tr><th>Equipo</th><th>AA</th><th>Mercado</th><th>Precio</th><th>EV</th></tr></thead>
+      <thead><tr><th>${t('d_team')}</th><th>AA</th><th>${t('d_market')}</th><th>${t('d_price')}</th><th>EV</th></tr></thead>
       <tbody>${valRow('away', ev.away.code)}${valRow('home', ev.home.code)}</tbody>
     </table>
     <p style="font-size:11.5px;color:var(--faint);padding-top:8px">${t('d_ev_note')}</p>` : (mkt && homePct != null ? `
     <div class="secttl">${t('d_vs_market')}</div>
-    <div class="mktrow num"><span class="k">${esc(tNick(ev.home.code))}</span><span style="font-size:13px;color:var(--dim)">AA <b>${homePct}%</b> · mercado <b>${mkt.p_home_pct}%</b></span></div>
-    <div class="mktrow num"><span class="k">${esc(tNick(ev.away.code))}</span><span style="font-size:13px;color:var(--dim)">AA <b>${awayPct}%</b> · mercado <b>${mkt.p_away_pct}%</b></span></div>` : '');
+    <div class="mktrow num"><span class="k">${esc(tNick(ev.home.code))}</span><span style="font-size:13px;color:var(--dim)">AA <b>${homePct}%</b> · ${t('d_market_lc')} <b>${mkt.p_home_pct}%</b></span></div>
+    <div class="mktrow num"><span class="k">${esc(tNick(ev.away.code))}</span><span style="font-size:13px;color:var(--dim)">AA <b>${awayPct}%</b> · ${t('d_market_lc')} <b>${mkt.p_away_pct}%</b></span></div>` : '');
   const booksRows = snap.books?.rows?.length ? `
-    <div class="secttl" style="display:flex;align-items:center;gap:8px">Líneas por casa ${snap.books.disagree ? '<span class="warnchip">las casas discrepan</span>' : ''}</div>
+    <div class="secttl" style="display:flex;align-items:center;gap:8px">${t('d_lines_by_book')} ${snap.books.disagree ? `<span class="warnchip">${t('d_books_disagree')}</span>` : ''}</div>
     ${snap.books.rows.map(b => `<div class="bookrow num">
       <span class="bp">${esc(b.provider)}</span>
       <span>${esc(canon(ev.away.code))} <b>${fmtMl(b.ml_away)}</b></span>
@@ -2868,17 +2914,17 @@ function renderDetail(){
     const dn = mkt.line_move != null && mkt.line_move < -0.002;
     const arrow = up ? '<span class="up">▲</span>' : dn ? '<span class="dn">▼</span>' : '<span class="dim">→</span>';
     return `<div class="mktrow num"><span class="k">${t('d_line_move')}</span>
-      <span style="font-size:13px;color:var(--dim)">${mkt.p_home_open_pct != null ? `apertura <b>${mkt.p_home_open_pct}%</b> → ` : ''}actual <b>${mkt.p_home_pct}%</b> ${arrow} <span class="dim" style="font-size:11.5px">(${esc(tNick(ev.home.code))})</span></span></div>`;
+      <span style="font-size:13px;color:var(--dim)">${mkt.p_home_open_pct != null ? `${t('d_open')} <b>${mkt.p_home_open_pct}%</b> → ` : ''}${t('d_current')} <b>${mkt.p_home_pct}%</b> ${arrow} <span class="dim" style="font-size:11.5px">(${esc(tNick(ev.home.code))})</span></span></div>`;
   })() : '';
   const spreadRow = (mkt && mkt.spread != null) ? `<div class="mktrow num"><span class="k">Run line</span><b>${mkt.spread > 0 ? '+' : ''}${mkt.spread}</b></div>` : '';
   const mercado = `
     ${valueTbl}
-    <div class="secttl" style="margin-top:16px">Total de carreras</div>
+    <div class="secttl" style="margin-top:16px">${t('d_total_runs')}</div>
     <div class="mktrow num"><span class="k">${t('d_ou')}</span><b>${o.over_under ?? tot?.line ?? '—'}</b>
-      ${tot && tot.aa_total != null ? `<span style="font-size:12.5px;color:var(--dim)">· AA proyecta <b style="color:var(--sky)">${tot.aa_total}</b> carreras</span>` : ''}
-      ${tot && tot.lean ? `<span style="font-size:12.5px;color:var(--dim)">→ inclina <b style="color:var(--sky)">${tot.lean === 'over' ? 'Over' : 'Under'}</b>${tot.prob_pct != null ? ` (${tot.prob_pct}%)` : ''}</span>` : ''}</div>
+      ${tot && tot.aa_total != null ? `<span style="font-size:12.5px;color:var(--dim)">· ${t('d_aa_projects')} <b style="color:var(--sky)">${tot.aa_total}</b> ${t('d_runs')}</span>` : ''}
+      ${tot && tot.lean ? `<span style="font-size:12.5px;color:var(--dim)">→ ${t('d_leans')} <b style="color:var(--sky)">${tot.lean === 'over' ? 'Over' : 'Under'}</b>${tot.prob_pct != null ? ` (${tot.prob_pct}%)` : ''}</span>` : ''}</div>
     ${spreadRow}
-    ${moveRow ? '<div class="secttl" style="margin-top:16px">Mercado</div>' + moveRow : ''}
+    ${moveRow ? `<div class="secttl" style="margin-top:16px">${t('d_market')}</div>` + moveRow : ''}
     ${booksRows}`;
 
   /* ── pestaña Simulación: 10,000 juegos Monte Carlo ── */
@@ -2902,9 +2948,9 @@ function renderDetail(){
     simulacion = `
       <div class="secttl">${t('sim_ntimes').replace('{n}', sim.N.toLocaleString(LOCALE()))}</div>
       <div class="simbig">
-        <div class="mcard"><div class="lb">${esc(tNick(ev.away.code))} gana</div><div class="vl num" style="font-size:19px;${!favHome ? 'color:var(--volt)' : ''}">${awPct}%</div></div>
+        <div class="mcard"><div class="lb">${esc(tNick(ev.away.code))} ${t('d_wins')}</div><div class="vl num" style="font-size:19px;${!favHome ? 'color:var(--volt)' : ''}">${awPct}%</div></div>
         <div class="mcard"><div class="lb">${t('sim_top')}</div><div class="vl num" style="font-size:19px">${esc(topScore.split('-')[0])}–${esc(topScore.split('-')[1])}<span style="font-size:11px;color:var(--faint)"> · ${pct(topN)}%</span></div></div>
-        <div class="mcard"><div class="lb">${esc(tNick(ev.home.code))} gana</div><div class="vl num" style="font-size:19px;${favHome ? 'color:var(--volt)' : ''}">${hwPct}%</div></div>
+        <div class="mcard"><div class="lb">${esc(tNick(ev.home.code))} ${t('d_wins')}</div><div class="vl num" style="font-size:19px;${favHome ? 'color:var(--volt)' : ''}">${hwPct}%</div></div>
       </div>
       <div class="secttl">${t('sim_freq')} (${esc(canon(ev.away.code))}–${esc(canon(ev.home.code))})</div>
       ${sim.top.map(([sc, n]) => `<div class="srow num">
@@ -2922,7 +2968,7 @@ function renderDetail(){
         <div class="mcard"><div class="lb">${t('sim_by4')}</div><div class="vl num">${pct(mCount(4, 99))}%</div></div>
         <div class="mcard"><div class="lb">${t('sim_loses')}</div><div class="vl num" style="color:var(--live)">${pct(mCount(-99, -1))}%</div></div>
       </div>
-      <p style="font-size:11px;color:var(--faint);padding-top:8px;line-height:1.6">${sim.N.toLocaleString(LOCALE())} simulaciones Monte Carlo derivadas de la probabilidad publicada del modelo AA (${Math.round(sim.pHomeTarget * 1000) / 10}% local) y ${sim.T} carreras proyectadas. Ilustran cómo se reparte el resultado — no cambian la predicción.</p>`;
+      <p style="font-size:11px;color:var(--faint);padding-top:8px;line-height:1.6">${t('d_sim_note').replace('{n}', sim.N.toLocaleString(LOCALE())).replace('{p}', Math.round(sim.pHomeTarget * 1000) / 10).replace('{t}', sim.T)}</p>`;
   }
 
   const dc = $('dcard');
@@ -2944,9 +2990,9 @@ function renderDetail(){
     </div>
     <div class="dtabs">
       <button class="dtab ${dtab === 'analisis' ? 'on' : ''}" data-dt="analisis">${t('tab_analysis')}</button>
-      ${ev.snapshot ? `<button class="dtab ${dtab === 'equipos' ? 'on' : ''}" data-dt="equipos">Equipos</button>` : ''}
+      ${ev.snapshot ? `<button class="dtab ${dtab === 'equipos' ? 'on' : ''}" data-dt="equipos">${t('d_teams')}</button>` : ''}
       ${p.prob != null ? `<button class="dtab ${dtab === 'sim' ? 'on' : ''}" data-dt="sim">${t('tab_sim')}</button>` : ''}
-      <button class="dtab ${dtab === 'mercado' ? 'on' : ''}" data-dt="mercado">Mercado</button>
+      <button class="dtab ${dtab === 'mercado' ? 'on' : ''}" data-dt="mercado">${t('d_market')}</button>
     </div>
     <div class="dbody">
       ${dtab === 'analisis' ? analisis : dtab === 'equipos' ? equipos : dtab === 'sim' ? simulacion : mercado}
@@ -2974,16 +3020,16 @@ function widgetRow(ev, i){
   return `<button class="wrow" data-id="${esc(ev.event_id)}">
     <span class="rk num">${i + 1}</span>
     ${logoImg(p.pick || ev.home.code)}
-    <span class="m">Gana ${esc(tNick(p.pick || ev.home.code))}<small>${esc(ev.matchup)}</small></span>
+    <span class="m">${t('d_wins_lbl')}${esc(tNick(p.pick || ev.home.code))}<small>${esc(ev.matchup)}</small></span>
     <span class="p num">${p.prob_pct != null ? p.prob_pct + '%' : ''}</span>
   </button>`;
 }
 function renderSide(){
   const gems = events.filter(e => e.badges?.includes('gema'));
   const locks = events.filter(e => e.badges?.includes('fijo'));
-  $('wGems').innerHTML = gems.length ? gems.map(widgetRow).join('') : 'Hoy no hay gemas. El algoritmo solo marca 💎 cuando el valor es real.';
+  $('wGems').innerHTML = gems.length ? gems.map(widgetRow).join('') : t('d_no_gems');
   $('wGems').className = gems.length ? '' : 'wempty';
-  $('wLocks').innerHTML = locks.length ? locks.map(widgetRow).join('') : 'Sin fijos publicados todavía.';
+  $('wLocks').innerHTML = locks.length ? locks.map(widgetRow).join('') : t('d_no_locks');
   $('wLocks').className = locks.length ? '' : 'wempty';
 }
 
@@ -3465,6 +3511,70 @@ const wCat = (w) => { const c = (w.cats && w.cats[0] && w.cats[0].cat) || ''; re
    una serie sin leyenda, un solo hue por signo, marcas finas, baseline en 0,
    tooltips nativos <title> en puntos muestreados. ─────────────────────── */
 // curva de ganancia acumulada (héroe del perfil). curve=[{ts,acc}]
+// 🔑 Claves del partido: bullets concretos y basados en datos para AMBOS equipos
+// (racha, forma, bateo, abridor, récord, stakes) + contexto (pitcheo, descanso, serie).
+// Todo sale de datos reales del evento — es el "por qué" con números, no corazonada.
+function stdRowMLB(code){
+  try { const s = standingsCache.get('mlb'); if (!s || !Array.isArray(s.sections)) return null;
+    for (const sec of s.sections) for (const r of (sec.rows || [])) if (r.code === code) return r;
+  } catch (e) {} return null;
+}
+function matchKeys(ev, lv){
+  const snap = ev.snapshot || {}, ctx = snap.context || {};
+  const forms = snap.form || {}, pit = snap.pitchers || {}, bats = snap.bats || {};
+  const nick = (code) => esc(tNick(code));
+  const margin = (s) => { const m = String(s || '').split('-').map(Number); return (m.length === 2 && isFinite(m[0]) && isFinite(m[1])) ? m[0] - m[1] : null; };
+  const sideKeys = (side, code) => {
+    const out = [];
+    const stk = ctx['streak_' + side];
+    if (stk != null && Math.abs(stk) >= 3){
+      if (stk > 0) out.push(`🔥 ${t('mk_streak_w').replace('{n}', stk)}${stk >= 10 ? ' ' + t('mk_streak_hist') : ''}`);
+      else out.push(`❄️ ${t('mk_streak_l').replace('{n}', -stk)}`);
+    }
+    const g = forms[side] || [];
+    if (g.length){
+      const last = g.slice(-Math.min(5, g.length)), w = last.filter(x => x.w).length;
+      out.push(`📅 ${t('mk_form').replace('{w}', w).replace('{n}', last.length)}`);
+      const l2 = g.slice(-2);
+      if (l2.length === 2 && l2.every(x => x.w) && l2.every(x => { const d = margin(x.score); return d != null && d >= 1 && d <= 2; }))
+        out.push(`😅 ${t('mk_close2')}`);
+    }
+    const b = bats[side];
+    if (b && b.label && b.l5_rpg != null){
+      if (b.label === 'hot') out.push(`📈 ${t('mk_bats_hot').replace('{r}', b.l5_rpg).replace('{s}', b.season_rpg != null ? b.season_rpg : '—')}`);
+      else if (b.label === 'cold') out.push(`📉 ${t('mk_bats_cold').replace('{r}', b.l5_rpg).replace('{s}', b.season_rpg != null ? b.season_rpg : '—')}`);
+    }
+    const pp = pit[side];
+    if (pp && pp.name && pp.fip != null) out.push(`⚾ ${esc(pp.name)} · FIP ${pp.fip}${pp.era_recent != null ? ` · ERA ${pp.era_recent}` : ''}`);
+    const rec = lv && lv[side] && lv[side].rec; if (rec) out.push(`📋 ${esc(rec)}`);
+    const sr = stdRowMLB(code);
+    if (sr && sr.gb != null) out.push(`🏆 ${t('mk_stakes').replace('{r}', sr.rank != null ? sr.rank : '—').replace('{gb}', String(sr.gb))}`);
+    return out;
+  };
+  const away = sideKeys('away', ev.away.code), home = sideKeys('home', ev.home.code);
+  const context = [];
+  const fa = pit.away && pit.away.fip, fh = pit.home && pit.home.fip;
+  if (fa != null && fh != null && Math.abs(fa - fh) >= 0.2)
+    context.push(`🎯 ${t('mk_pitch_edge').replace('{t}', nick(fa < fh ? ev.away.code : ev.home.code))}`);
+  if (ctx.rest_home != null && ctx.rest_away != null && ctx.rest_home !== ctx.rest_away){
+    const homeMore = ctx.rest_home > ctx.rest_away;
+    context.push(`😴 ${t('mk_rest').replace('{t}', nick(homeMore ? ev.home.code : ev.away.code)).replace('{d}', homeMore ? ctx.rest_home : ctx.rest_away).replace('{o}', homeMore ? ctx.rest_away : ctx.rest_home)}`);
+  }
+  if (ctx.series && ctx.series.game && ctx.series.len)
+    context.push(`⚔️ ${t('mk_series').replace('{g}', ctx.series.game).replace('{n}', ctx.series.len)}`);
+  return { away, home, context };
+}
+function keysBlock(ev, lv){
+  if (!ev || !ev.home || !ev.away) return '';
+  const k = matchKeys(ev, lv);
+  if (!k.away.length && !k.home.length && !k.context.length) return '';
+  const col = (code, arr) => `<div class="mkcol"><div class="mkteam">${logoImg(code)}<b>${esc(tNick(code))}</b></div>${arr.length ? arr.map(x => `<div class="mkrow">${x}</div>`).join('') : `<div class="mkrow mkdim">—</div>`}</div>`;
+  const ctxHtml = k.context.length ? `<div class="mkctx">${k.context.map(x => `<span class="mkchip">${x}</span>`).join('')}</div>` : '';
+  return `<div class="secttl">${t('mk_title')}</div>
+    <div class="mkgrid">${col(ev.away.code, k.away)}${col(ev.home.code, k.home)}</div>
+    ${ctxHtml}
+    <p class="mknote">${t('mk_note')}</p>`;
+}
 function svgEquity(curve){
   if (!Array.isArray(curve) || curve.length < 2) return `<div class="rrow"><span class="lbl2">${t('r_no_history')}</span></div>`;
   const W = 300, H = 90, PAD = 6;
@@ -4223,7 +4333,7 @@ function renderOtherDetail(){
     }
   }
   const otherH2H = h2hRows ? `<div class="secttl">${t('o_compare')}</div>
-    <div class="cmphead"><span>${esc(oName(g.away))}</span><span class="mid">favorece →</span><span>${esc(oName(g.home))}</span></div>
+    <div class="cmphead"><span>${esc(oName(g.away))}</span><span class="mid">${t('d_favors')} →</span><span>${esc(oName(g.home))}</span></div>
     <div class="cmpbox glass-in">${h2hRows}</div>` : '';
 
   // Detalle del partido (alineaciones/formación + estadísticas + eventos para
