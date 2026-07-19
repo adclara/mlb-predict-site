@@ -267,20 +267,20 @@ async function polyWatch(env) {
   // "revisado hace X min · cada 5 min" y se prueba que el vigía está vivo.
   const nowIso = new Date().toISOString();
   const oldRaw = await env.AA_LATEST.get('poly:alerts');
-  let doc; try { doc = oldRaw ? JSON.parse(oldRaw) : { alerts: [] }; } catch (e) { doc = { alerts: [] }; }
-  if (!Array.isArray(doc.alerts)) doc.alerts = [];
+  let ad; try { ad = oldRaw ? JSON.parse(oldRaw) : { alerts: [] }; } catch (e) { ad = { alerts: [] }; }
+  if (!Array.isArray(ad.alerts)) ad.alerts = [];
   if (found.length) {
-    const seen = new Set(doc.alerts.map((a) => a.tx).filter(Boolean));
+    const seen = new Set(ad.alerts.map((a) => a.tx).filter(Boolean));
     const fresh = found.filter((a) => polyAlertWorthy(a) && (!a.tx || !seen.has(a.tx))).sort((a, b) => b.ts - a.ts);
     if (fresh.length) {
-      doc.alerts = [...fresh, ...doc.alerts].slice(0, 100);
-      doc.updated_at = nowIso;
+      ad.alerts = [...fresh, ...ad.alerts].slice(0, 100);
+      ad.updated_at = nowIso;
       if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) await tgNotify(env, fresh.slice(0, 5));
     }
   }
-  doc.checked_at = nowIso;
-  doc.watching = watch.length;
-  await env.AA_LATEST.put('poly:alerts', JSON.stringify(doc));
+  ad.checked_at = nowIso;
+  ad.watching = watch.length;
+  await env.AA_LATEST.put('poly:alerts', JSON.stringify(ad));
   await env.AA_LATEST.put('poly:lastseen', JSON.stringify(lastseen));
 }
 
