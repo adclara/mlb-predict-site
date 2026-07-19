@@ -286,9 +286,23 @@ async function polyWatch(env) {
   }
   ad.checked_at = nowIso;
   ad.watching = watch.length;
-  ad.consensus = polyConsensus(recentBuys);
+  const cons = polyConsensus(recentBuys);
+  ad.consensus = cons;
   await env.AA_LATEST.put('poly:alerts', JSON.stringify(ad));
   await env.AA_LATEST.put('poly:lastseen', JSON.stringify(lastseen));
+  // 🤝 Push del consenso: la señal más fuerte del Radar en el bolsillo. Avisa por
+  // Telegram cuando un consenso se FORMA (llega a 2 vigiladas) o se REFUERZA (entra
+  // otra vigilada). Estado en poly:consnotified para no repetir; el primer arranque
+  // solo siembra —no suelta de golpe los consensos ya vivos de la ventana de 7 días.
+  try {
+    if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) {
+      const cnRaw = await env.AA_LATEST.get('poly:consnotified');
+      let prevCons; try { prevCons = cnRaw ? JSON.parse(cnRaw) : null; } catch (e) { prevCons = null; }
+      const { push: consPush, notified } = polyConsensusToPush(cons, prevCons);
+      await env.AA_LATEST.put('poly:consnotified', JSON.stringify(notified));
+      if (consPush.length) await tgConsensus(env, consPush.slice(0, 3));
+    }
+  } catch (e) { /* el push del consenso nunca debe tumbar la ronda del vigía */ }
 }
 
 // Helper puro (exportado para tests): filtra la actividad a trades más nuevos
@@ -343,10 +357,48 @@ export function polyConsensus(recentBuys, minWallets = 2, cap = 10) {
   return out.slice(0, cap);
 }
 
+// Decide qué consensos ameritan un push (exportado para tests). Devuelve:
+//  · push: los grupos NUEVOS (recién llegan a minWallets) o REFORZADOS (ahora hay
+//    más vigiladas que la última vez que avisamos) — cada uno con prevN (cuántas
+//    había antes, 0 si es nuevo).
+//  · notified: el estado a persistir (key → n actual) para la próxima ronda.
+// prevNotified == null significa "primer arranque": se siembra el estado y NO se
+// avisa nada, para no soltar de golpe los consensos que ya venían de días atrás.
+export function polyConsensusToPush(cons, prevNotified, minWallets = 2) {
+  const firstRun = !prevNotified || typeof prevNotified !== 'object';
+  const prev = firstRun ? {} : prevNotified;
+  const notified = {}, push = [];
+  for (const c of (Array.isArray(cons) ? cons : [])) {
+    if (!c || (c.n || 0) < minWallets || !c.title || !c.outcome) continue;
+    const key = c.title + '|' + c.outcome;
+    notified[key] = c.n;
+    const before = +prev[key] || 0;
+    if (!firstRun && c.n > before) push.push({ ...c, prevN: before });
+  }
+  // los más fuertes primero (más vigiladas), y a igualdad los más recientes
+  push.sort((a, b) => (b.n - a.n) || ((b.last_ts || 0) - (a.last_ts || 0)));
+  return { push, notified, firstRun };
+}
+
 // Telegram (opcional): agrupa hasta 5 alertas en un mensaje. Sin secretos → no-op.
 async function tgNotify(env, alerts) {
   const line = (a) => `🚨 ${a.pseudonym || a.wallet.slice(0, 8)}${a.score != null ? ` (score ${a.score})` : ''}: ${a.side === 'BUY' ? 'COMPRA' : 'VENDE'} "${a.outcome}" a ${a.price != null ? (100 * a.price).toFixed(0) : '?'}¢${a.usd != null ? ` ($${a.usd})` : ''} — ${a.title}`;
   const text = `📡 Radar AA — movimiento de wallets vigiladas:\n\n${alerts.map(line).join('\n\n')}\n\nDescriptivo, no recomendación. aasport.net → Radar`;
+  try {
+    await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text }),
+    });
+  } catch (e) { /* Telegram caído no afecta las alertas de la página */ }
+}
+
+// Telegram del 🤝 Consenso: la señal más fuerte del Radar (varias vigiladas en el
+// mismo lado). Un bloque por consenso nuevo/reforzado. Sin secretos → no se llega aquí.
+async function tgConsensus(env, groups) {
+  const wl = (g) => (g.wallets || []).slice(0, 6)
+    .map((w) => `• ${w.name || (w.w || '').slice(0, 8) || '0x…'}${w.score != null ? ` (🎯${w.score})` : ''}`).join('\n');
+  const block = (g) => `🤝 ${g.n} vigiladas en el mismo lado${g.prevN ? ` (refuerzo · antes ${g.prevN})` : ''}:\n“${g.outcome}” · ${g.title}${g.usd ? `\n💰 $${g.usd} en juego` : ''}\n${wl(g)}`;
+  const text = `🤝 Consenso de sharps — Radar AA\n\n${groups.map(block).join('\n\n')}\n\nVarias wallets vigiladas coincidiendo: la señal más fuerte del Radar, pero descriptiva — no es recomendación y el pasado apenas predice el futuro. aasport.net → Radar`;
   try {
     await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
