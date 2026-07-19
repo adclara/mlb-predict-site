@@ -840,6 +840,12 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .recbadge{font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;white-space:nowrap;flex:none;letter-spacing:.01em}
 .recbadge.perfect{color:var(--volt);background:rgba(25,222,159,.14);border:1px solid rgba(25,222,159,.42)}
 .recbadge.near{color:var(--amber);background:rgba(255,197,61,.12);border:1px solid rgba(255,197,61,.38)}
+/* — Forma reciente (🔥/🥶) + convicción — */
+.trendb{font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px;white-space:nowrap;flex:none}
+.trendb.hot{color:var(--blaze);background:rgba(255,77,28,.12);border:1px solid rgba(255,77,28,.42)}
+.trendb.cool{color:var(--sky);background:rgba(77,168,255,.12);border:1px solid rgba(77,168,255,.38)}
+.convchip{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap;flex:none;color:var(--volt);background:rgba(25,222,159,.1);border:1px solid rgba(25,222,159,.32)}
+.tdot{font-size:12px;flex:none;line-height:1}
 .pfnote{margin:1px 12px 8px;font-size:11px;color:var(--faint);line-height:1.45}
 @media (max-width:400px){.pfnote{margin:1px 8px 8px}}
 /* — Tarjeta héroe del #1 en la lista — */
@@ -1441,6 +1447,7 @@ const T = {
     // ── Carteras casi perfectas (récord de derrotas) ──
     pf_title: '🏆 Casi perfectas', pf_sub: '0–3 derrotas · récord del mes', pf_never: 'Sin perder',
     pf_caveat: 'Récord en mercados cerrados (30 días). Muestra chica: el pasado apenas predice el futuro — no es recomendación.',
+    tr_hot: 'Calentando', tr_cool: 'Enfriando', tile_floor: 'piso', tile_floor_t: 'Piso con 95% de confianza (cota de Wilson) — descuenta la muestra chica: 8-0 no vale como 40-8', conv_short: 'Convicción', conv_chip: 'Apuesta más fuerte justo cuando acierta (win rate por dinero > por jugada)',
     bol_title: 'Boleto del día', bol_win: 'Gana', bol_none: 'Hoy el algoritmo no marca ninguna jugada de máxima confianza. No inventamos un boleto cuando no hay valor claro.',
     bol_rec: 'Cómo le ha ido a estos niveles', bol_note: 'Resumen de las mejores selecciones AA de hoy · no es recomendación de apuesta · tú decides.',
     bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto',
@@ -1552,6 +1559,7 @@ const T = {
     // ── Near-perfect wallets (loss record) ──
     pf_title: '🏆 Near-perfect', pf_sub: '0–3 losses · record this month', pf_never: 'Unbeaten',
     pf_caveat: 'Record in settled markets (30 days). Small sample: the past barely predicts the future — not a recommendation.',
+    tr_hot: 'Heating up', tr_cool: 'Cooling off', tile_floor: 'floor', tile_floor_t: 'Floor at 95% confidence (Wilson bound) — discounts small samples: 8-0 is not worth 40-8', conv_short: 'Conviction', conv_chip: 'Bets bigger exactly on its wins (dollar-weighted win rate > per-play)',
     bol_title: 'Ticket of the day', bol_win: 'Take', bol_none: "Today the model flags no top-confidence play. We don't fake a ticket when there's no clear value.",
     bol_rec: 'How these tiers have done', bol_note: "A summary of today's best AA picks · not a betting recommendation · you decide.",
     bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high',
@@ -3407,7 +3415,7 @@ let radarOpen = { alerts: false, top: false, all: false, pstyle: false, perfect:
 const pStar = (w) => `<span class="pstar${pfollow.has(w) ? ' on' : ''}" data-pstar="${esc(w)}" role="button" title="${t('r_follow')}">${pfollow.has(w) ? '★' : '☆'}</span>`;
 const pCmp = (w) => `<span class="pcmp${compareSel.includes(w) ? ' on' : ''}" data-pcmp="${esc(w)}" role="button" title="${t('r_compare')}">⚖</span>`;
 const walletCard = (w, i) => `<div class="wcard" data-rw="${esc(w.w)}" role="button" style="--i:${i}">
-  <span class="row1"><span class="wctl">${pStar(w.w)}${pCmp(w.w)}</span><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}${riskDot(w)}<span class="spkw">${svgSpark(w.equity_curve)}</span>${netTag(w)}</span>
+  <span class="row1"><span class="wctl">${pStar(w.w)}${pCmp(w.w)}</span><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}${riskDot(w)}${trendDot(w)}<span class="spkw">${svgSpark(w.equity_curve)}</span>${netTag(w)}</span>
   <span class="row2">${w.win_rate != null ? `${t('r_acierta')} ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(rCat(w.cats[0].cat)) : '—'} · ${w.n_markets} ${t('r_mercados')}${giveBack(w) >= 0.15 ? ` · <span style="color:var(--red)">${t('bal_of')} +${esc(rUsd(w.pnl_usd))} ${t('bal_gross')}</span>` : (w.portfolio_usd > 0 ? ` · 💼 ${esc(rUsd(w.portfolio_usd))}` : '')}<span class="ver">${t('r_ver_perfil')}</span></span>
 </div>`;
 function renderRadarList(){
@@ -3561,6 +3569,10 @@ function recordTier(w){
   return null;
 }
 function recordBadge(w){ const tier = recordTier(w); if (!tier) return ''; return `<span class="recbadge ${tier}">${tier === 'perfect' ? '💎 ' + t('pf_never') + ' ' : '🏆 '}${w.wins}-${w.losses}</span>`; }
+// 🔥/🥶 Forma reciente (descriptiva) + 💪 convicción (sube la apuesta en sus aciertos).
+function trendBadge(w){ if (w.trend === 'hot') return `<span class="trendb hot">🔥 ${t('tr_hot')}</span>`; if (w.trend === 'cooling') return `<span class="trendb cool">🥶 ${t('tr_cool')}</span>`; return ''; }
+const trendDot = (w) => w.trend === 'hot' ? `<span class="tdot" title="${t('tr_hot')}">🔥</span>` : w.trend === 'cooling' ? `<span class="tdot" title="${t('tr_cool')}">🥶</span>` : '';
+function convChip(w){ return (w.conviction != null && w.conviction >= 0.05) ? `<span class="convchip" title="${t('conv_chip')}">💪 ${t('conv_short')}</span>` : ''; }
 // Fila de la sección "Casi perfectas": récord grande + nombre + score + neto.
 function perfectRow(w){
   const tier = recordTier(w);
@@ -3582,7 +3594,7 @@ function heroTiles(w){
   else bagsTile = `<div class="rdtile"><div class="k">⚠️ ${t('tile_bags')}</div><div class="v" style="color:var(--faint)">—</div><div class="s">${t('tile_none_open')}</div></div>`;
   return `<div class="rdtiles">
     <div class="rdtile pos"><div class="k">💰 ${t('tile_won')}</div><div class="v num">+${rUsd(w.pnl_usd)}</div><div class="s">${w.n_markets} ${t('r_mercados')}</div></div>
-    <div class="rdtile"><div class="k">🎯 ${t('tile_hits')}</div><div class="v num">${w.win_rate != null ? Math.round(100 * w.win_rate) + '%' : '—'}</div><div class="s num">${w.wins} ${t('r_chip_of')} ${w.wins + w.losses}</div></div>
+    <div class="rdtile"><div class="k">🎯 ${t('tile_hits')}</div><div class="v num">${w.win_rate != null ? Math.round(100 * w.win_rate) + '%' : '—'}</div><div class="s num" title="${t('tile_floor_t')}">${w.win_rate_lb != null ? `${t('tile_floor')} ${Math.round(100 * w.win_rate_lb)}% · n${w.decided ?? (w.wins + w.losses)}` : `${w.wins} ${t('r_chip_of')} ${w.wins + w.losses}`}</div></div>
     ${openTile}
     ${bagsTile}
   </div>`;
@@ -3639,7 +3651,7 @@ function verdictHero(w){
       <span class="hd"><span class="nm">${esc(rName(w))} ${pmLink(w.w)}</span></span>
       ${w.watch ? `<span class="ring">${svgScoreRing(w.insider_score, vd.tone)}</span>` : ''}
     </div>
-    <div class="rdverdict"><span class="rdvbadge"><span class="em">${vd.icon}</span>${vd.label}</span>${recordBadge(w)}${w.kind ? kindBadge(w.kind, w.streak) : ''}${vd.flag}</div>
+    <div class="rdverdict"><span class="rdvbadge"><span class="em">${vd.icon}</span>${vd.label}</span>${recordBadge(w)}${trendBadge(w)}${convChip(w)}${w.kind ? kindBadge(w.kind, w.streak) : ''}${vd.flag}</div>
     <div class="rdwhy">${esc(fraseDe(w))}</div>
     <div class="rdwd">${esc(w.w)}</div>
   </div>`;
@@ -3680,7 +3692,7 @@ function heroCard(w){
   return `<div class="lhero" data-rw="${esc(w.w)}">
     <div class="crown">👑 ${t('r_stat_best')}</div>
     <div class="row"><span class="nm">${esc(rName(w))} ${w.watch ? `<span class="rankchip num">🎯 ${w.insider_score}</span>` : ''}</span>${netTag(w, 'amt')}</div>
-    <div class="sub">${svgSpark(w.equity_curve)} <span>${w.win_rate != null ? Math.round(100 * w.win_rate) + '% ' + t('r_acierta') : `${w.wins}-${w.losses}`}</span> · <span>${w.n_markets} ${t('r_mercados')}</span>${gross} ${riskDot(w)} <span class="ver" style="margin-left:auto;color:var(--sky)">${t('r_ver_perfil')}</span></div>
+    <div class="sub">${svgSpark(w.equity_curve)} <span>${w.win_rate != null ? Math.round(100 * w.win_rate) + '% ' + t('r_acierta') : `${w.wins}-${w.losses}`}</span> · <span>${w.n_markets} ${t('r_mercados')}</span>${gross} ${riskDot(w)} ${trendDot(w)} <span class="ver" style="margin-left:auto;color:var(--sky)">${t('r_ver_perfil')}</span></div>
   </div>`;
 }
 
