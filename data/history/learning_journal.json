@@ -1,50 +1,50 @@
 {
-  "updated_at": "2026-07-21T18:20:22.242Z",
-  "n_graded": 1506,
-  "n_total": 1544,
+  "updated_at": "2026-07-21T19:28:03.543Z",
+  "n_graded": 1332,
+  "n_total": 1528,
   "first_date": "2026-03-25",
-  "last_date": "2026-07-20",
+  "last_date": "2026-07-04",
   "formula_version": "v2",
   "cal": {
-    "gap": 10.6,
-    "ece": 10.6,
-    "says": 64.6,
-    "hits": 54.1,
+    "gap": 11,
+    "ece": 11,
+    "says": 64.7,
+    "hits": 53.8,
     "curve": [
       {
         "conf": 52.3,
-        "emp": 49.4,
-        "n": 176
+        "emp": 47.8,
+        "n": 157
       },
       {
         "conf": 57.5,
-        "emp": 55.8,
-        "n": 233
+        "emp": 56.9,
+        "n": 202
       },
       {
         "conf": 62.5,
-        "emp": 50.3,
-        "n": 328
+        "emp": 51.9,
+        "n": 293
       },
       {
-        "conf": 67.4,
-        "emp": 55.2,
-        "n": 384
+        "conf": 67.5,
+        "emp": 52.8,
+        "n": 335
       },
       {
         "conf": 72.1,
-        "emp": 56.6,
-        "n": 281
+        "emp": 55.8,
+        "n": 251
       },
       {
         "conf": 77,
-        "emp": 57.7,
-        "n": 85
+        "emp": 60.3,
+        "n": 78
       },
       {
-        "conf": 81.9,
-        "emp": 61.1,
-        "n": 18
+        "conf": 81.6,
+        "emp": 60,
+        "n": 15
       },
       {
         "conf": 85.8,
@@ -64,62 +64,52 @@
     ]
   },
   "market": {
-    "model_acc": 54,
-    "market_acc": 56.4,
-    "verdict": "mercado mejor"
+    "model_acc": null,
+    "market_acc": null,
+    "verdict": "sin dato",
+    "auditable": true,
+    "n": 0,
+    "min_n": 40
   },
   "lock_gate": {
     "rule": "market_agree5_starter_v1",
-    "passes": true,
-    "cut": "2026-06-13",
-    "n": 106,
-    "wins": 76,
-    "losses": 30,
-    "rate": 71.7
+    "passes": false,
+    "cut": "2026-06-04",
+    "n": 0,
+    "wins": 0,
+    "losses": 0,
+    "rate": null
   },
   "signals": [
-    {
-      "id": "market",
-      "label": "Coincide con el favorito del mercado",
-      "label_en": "Matches the market favorite",
-      "edge_pp": 11.5,
-      "verdict": "robusto",
-      "fav_rate": 57.7
-    },
     {
       "id": "agree5",
       "label": "5+ factores de acuerdo con el pick",
       "label_en": "5+ factors agree with the pick",
-      "edge_pp": 7.2,
+      "edge_pp": 8.5,
       "verdict": "robusto",
-      "fav_rate": 59.5
-    },
-    {
-      "id": "pitcher",
-      "label": "Mejor ERA reciente del abridor",
-      "label_en": "Better recent starter ERA",
-      "edge_pp": 5.8,
-      "verdict": "robusto",
-      "fav_rate": 56.8
+      "fav_rate": 60.3
     }
   ],
   "state_es": [
-    "Ya llevo 1506 predicciones medidas (desde 2026-03-25). Todo lo que aprendo sale de mis propios aciertos y errores.",
-    "Sé que soy algo sobre-confiado: cuando digo ~65% en promedio, ocurre ~54.1% (hueco de 10.6 pts). Por eso el número que muestro ya viene calibrado hacia abajo.",
-    "Aprendí qué señales SÍ predicen de verdad: Coincide con el favorito del mercado (+11.5 pts), 5+ factores de acuerdo con el pick (+7.2 pts), Mejor ERA reciente del abridor (+5.8 pts). Cuando coinciden, mi acierto sube de forma medible.",
-    "Encontré una combinación más selectiva para ORO: favorito del mercado + 5 factores AA + mejor ERA reciente del abridor. En el replay cronológico hizo 76-30 (71.7%); ahora me abstengo si falta una de las tres.",
-    "Sigo honesto: en acierto global el mercado todavía me gana (56.4% vs 54%). Mi ventaja real vive en la SELECCIÓN (fijos y gemas), no en el promedio.",
-    "De mi último error (OAK @ AZ 5-2): me fié de momento reciente y bateo y no funcionó. Lo peso en la próxima re-calibración."
+    "Ya llevo 1332 predicciones medidas (desde 2026-03-25). Todo lo que aprendo sale de mis propios aciertos y errores.",
+    "Sé que soy algo sobre-confiado: cuando digo ~65% en promedio, ocurre ~53.8% (hueco de 11 pts). Por eso el número que muestro ya viene calibrado hacia abajo.",
+    "Estas hipótesis pasaron el filtro histórico: 5+ factores de acuerdo con el pick (+8.5 pts). Son diferencias medidas en el replay y siguen en validación forward; todavía no prueban una ventaja futura.",
+    "La comparación contra el mercado está en espera: hay 0 aperturas auditables y el gate exige 40. Los precios legacy de hora desconocida no cuentan.",
+    "De mi último error (MIL @ AZ 3-4): me fié de momento reciente y pitcheo y no funcionó. Lo peso en la próxima re-calibración."
   ],
   "state_en": [
-    "I've now measured 1506 predictions (since 2026-03-25). Everything I learn comes from my own hits and misses.",
-    "I know I run a bit overconfident: when I say ~65% on average, it happens ~54.1% (a 10.6-pt gap). That's why the number I show is already calibrated downward.",
-    "I've learned which signals truly predict: Matches the market favorite (+11.5 pts), 5+ factors agree with the pick (+7.2 pts), Better recent starter ERA (+5.8 pts). When they line up, my hit rate rises measurably.",
-    "I found a more selective GOLD combination: market favorite + 5 AA factors + the better recent starter ERA. Its chronological replay went 76-30 (71.7%); I now abstain when any of the three is missing.",
-    "Staying honest: on raw accuracy the market still beats me (56.4% vs 54%). My real edge lives in SELECTION (locks and gems), not the average.",
-    "From my latest miss (OAK @ AZ 5-2): I leaned on recent form and offense and it didn't pan out. I weigh that into the next re-calibration."
+    "I've now measured 1332 predictions (since 2026-03-25). Everything I learn comes from my own hits and misses.",
+    "I know I run a bit overconfident: when I say ~65% on average, it happens ~53.8% (a 11-pt gap). That's why the number I show is already calibrated downward.",
+    "These hypotheses passed the historical screen: 5+ factors agree with the pick (+8.5 pts). They are measured replay differences and remain under forward validation; they do not yet prove a future edge.",
+    "The market comparison is pending: there are 0 auditable openers and the gate requires 40. Legacy prices with unknown timing do not count.",
+    "From my latest miss (MIL @ AZ 3-4): I leaned on recent form and pitching and it didn't pan out. I weigh that into the next re-calibration."
   ],
   "log": [
+    {
+      "date": "2026-07-04",
+      "es": "Mi calibración se ensanchó: el hueco de confianza pasó de 10.6% a 11%.",
+      "en": "My calibration widened: the confidence gap moved from 10.6% to 11%."
+    },
     {
       "date": "2026-07-20",
       "es": "Sumé 15 predicciones medidas nuevas.",
@@ -152,6 +142,14 @@
     }
   ],
   "history": [
+    {
+      "date": "2026-07-04",
+      "n": 1332,
+      "gap": 11,
+      "ece": 11,
+      "model_acc": null,
+      "market_acc": null
+    },
     {
       "date": "2026-07-16",
       "n": 1446,
@@ -193,5 +191,5 @@
       "market_acc": 56.4
     }
   ],
-  "attribution": "Aprendizaje medido del propio modelo AA (calibración, auditoría de señales, errores). El algoritmo es privado."
+  "attribution": "Aprendizaje medido del modelo AA (calibración, hipótesis en validación y errores). El algoritmo es privado."
 }

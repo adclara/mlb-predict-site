@@ -1,51 +1,66 @@
 {
-  "updated_at": "2026-07-21T18:20:17.908Z",
-  "n_graded": 1506,
-  "n_total": 1544,
+  "updated_at": "2026-07-21T19:28:02.363Z",
+  "n_graded": 1332,
+  "n_total": 1528,
   "first_date": "2026-03-25",
-  "last_date": "2026-07-20",
+  "last_date": "2026-07-04",
   "formula_version": "v2",
+  "training_quality": {
+    "input_rows": 1544,
+    "unique_rows": 1528,
+    "duplicate_game_pk_removed": 16,
+    "accepted_training_rows": 1332,
+    "excluded": {
+      "ungraded": 23,
+      "missing_final": 0,
+      "formula_mismatch": 0,
+      "invalid_status": 0,
+      "integrity_ineligible": 173,
+      "temporal_cohort_unverified": 0
+    },
+    "temporal_policy": "ledger_eligible_verified_cohort_only"
+  },
   "ml": {
     "fit": {
       "beta": [
-        -0.05390474519988139,
-        -0.011874753321942346,
-        0.06947555717627152,
-        0.07066224438240433,
-        0.04892587299914121,
-        0.0377424199069497,
-        0.0487780566172032
+        -0.06284306299028067,
+        -0.048407879544959065,
+        0.08406403158465933,
+        0.08353520223575986,
+        -0.021789782913441007,
+        0.02605420436055454,
+        0.06043911417674491
       ],
       "mu": [
-        -0.012052191235059748,
-        -0.011852191235059784,
-        -0.004268924302788851,
-        -0.008376228419654718,
-        0.1669496679946896,
-        0.005561155378486056,
-        0.00650066401062417
+        -0.01897732732732729,
+        -0.009144594594594605,
+        -0.0029966216216216267,
+        -0.01627965465465466,
+        0.16685893393393536,
+        0.006627627627627623,
+        0.010210210210210215
       ],
       "sd": [
-        0.6407193139703729,
-        0.6910372929426905,
-        0.26445129753642127,
-        0.6859609930721905,
-        0.09525573778465626,
-        0.1805865003682864,
-        0.19713798583156572
+        0.6489620179657861,
+        0.6779261528935788,
+        0.2574914744423754,
+        0.6933029137463577,
+        0.09530260948756733,
+        0.18333555441591348,
+        0.19934943203306996
       ],
       "intercept": false,
-      "n": 1506,
+      "n": 1332,
       "features": 7
     },
     "weights": {
       "learned": {
-        "momentum": -0.0651,
-        "pitching": -0.0133,
-        "f5": 0.2032,
-        "bats": 0.0797,
-        "schedule": 0.3972,
-        "manager": 0.1616
+        "momentum": -0.0904,
+        "pitching": -0.0666,
+        "f5": 0.3046,
+        "bats": 0.1124,
+        "schedule": -0.2133,
+        "manager": 0.1326
       },
       "original": {
         "momentum": 0.22,
@@ -55,58 +70,58 @@
         "schedule": 0.08,
         "manager": 0.06
       },
-      "news_coef": 0.2474
+      "news_coef": 0.3032
     },
     "calibration": {
       "curve": [
         {
           "lo": 0.5,
           "hi": 0.55,
-          "n": 176,
-          "conf": 0.5229,
-          "emp": 0.4943
+          "n": 157,
+          "conf": 0.5233,
+          "emp": 0.4777
         },
         {
           "lo": 0.55,
           "hi": 0.6,
-          "n": 233,
-          "conf": 0.5748,
-          "emp": 0.5579
+          "n": 202,
+          "conf": 0.575,
+          "emp": 0.5693
         },
         {
           "lo": 0.6,
           "hi": 0.65,
-          "n": 328,
-          "conf": 0.625,
-          "emp": 0.503
+          "n": 293,
+          "conf": 0.6251,
+          "emp": 0.5188
         },
         {
           "lo": 0.65,
           "hi": 0.7,
-          "n": 384,
-          "conf": 0.6742,
-          "emp": 0.5521
+          "n": 335,
+          "conf": 0.6747,
+          "emp": 0.5284
         },
         {
           "lo": 0.7,
           "hi": 0.75,
-          "n": 281,
-          "conf": 0.7205,
-          "emp": 0.5658
+          "n": 251,
+          "conf": 0.7213,
+          "emp": 0.5578
         },
         {
           "lo": 0.75,
           "hi": 0.8,
-          "n": 85,
-          "conf": 0.7698,
-          "emp": 0.5765
+          "n": 78,
+          "conf": 0.7704,
+          "emp": 0.6026
         },
         {
           "lo": 0.8,
           "hi": 0.85,
-          "n": 18,
-          "conf": 0.8191,
-          "emp": 0.6111
+          "n": 15,
+          "conf": 0.8164,
+          "emp": 0.6
         },
         {
           "lo": 0.85,
@@ -130,131 +145,131 @@
           "emp": null
         }
       ],
-      "ece": 0.106,
-      "n": 1506,
+      "ece": 0.1096,
+      "n": 1332,
       "verdict": "sobre-confiado",
-      "bias": 0.1058,
+      "bias": 0.1094,
       "platt": {
-        "a": 0.2656,
-        "b": -0.0016,
-        "n": 1506
+        "a": 0.2675,
+        "b": -0.0156,
+        "n": 1332
       }
     },
     "trust": [
       {
         "factor": "momentum",
-        "trust": 0.522,
-        "lift": 0.022,
-        "n": 1440,
+        "trust": 0.5209,
+        "lift": 0.0209,
+        "n": 1278,
         "band": [
-          0.5005,
-          0.5435
+          0.498,
+          0.5437
         ]
       },
       {
         "factor": "pitching",
-        "trust": 0.5349,
-        "lift": 0.0349,
-        "n": 1461,
+        "trust": 0.5337,
+        "lift": 0.0337,
+        "n": 1290,
         "band": [
-          0.5135,
-          0.5562
+          0.511,
+          0.5564
         ]
       },
       {
         "factor": "f5",
-        "trust": 0.5292,
-        "lift": 0.0292,
-        "n": 1339,
+        "trust": 0.525,
+        "lift": 0.025,
+        "n": 1186,
         "band": [
-          0.5069,
-          0.5514
+          0.5013,
+          0.5486
         ]
       },
       {
         "factor": "bats",
-        "trust": 0.5099,
-        "lift": 0.0099,
-        "n": 1455,
+        "trust": 0.5123,
+        "lift": 0.0123,
+        "n": 1286,
         "band": [
-          0.4884,
-          0.5313
+          0.4895,
+          0.5351
         ]
       },
       {
         "factor": "schedule",
-        "trust": 0.5319,
-        "lift": 0.0319,
-        "n": 1381,
+        "trust": 0.5318,
+        "lift": 0.0318,
+        "n": 1225,
         "band": [
-          0.5099,
-          0.5538
+          0.5085,
+          0.5551
         ]
       },
       {
         "factor": "manager",
-        "trust": 0.5193,
-        "lift": 0.0193,
-        "n": 943,
+        "trust": 0.5128,
+        "lift": 0.0128,
+        "n": 844,
         "band": [
-          0.4928,
-          0.5458
+          0.4848,
+          0.5408
         ]
       }
     ],
     "oos": {
-      "n": 1398,
+      "n": 1224,
       "first_date": "2026-03-25",
-      "last_date": "2026-07-20",
+      "last_date": "2026-07-04",
       "classic": {
-        "acc": 0.5422,
-        "logloss": 0.7209,
-        "brier": 0.2621,
-        "n": 1398
+        "acc": 0.5392,
+        "logloss": 0.7234,
+        "brier": 0.2633,
+        "n": 1224
       },
       "learned": {
-        "acc": 0.5372,
-        "logloss": 0.6953,
-        "brier": 0.251,
-        "n": 1398
+        "acc": 0.531,
+        "logloss": 0.6968,
+        "brier": 0.2517,
+        "n": 1224
       },
       "delta": {
-        "acc": -0.005,
-        "logloss": -0.0256,
-        "brier": -0.0111
+        "acc": -0.0082,
+        "logloss": -0.0266,
+        "brier": -0.0116
       },
-      "se": 0.0134,
+      "se": 0.0143,
       "tie": true
     },
     "combined": {
-      "n": 1398,
+      "n": 1224,
       "first_date": "2026-03-25",
-      "last_date": "2026-07-20",
+      "last_date": "2026-07-04",
       "classic": {
-        "acc": 0.5422,
-        "logloss": 0.7209,
-        "brier": 0.2621,
-        "n": 1398
+        "acc": 0.5392,
+        "logloss": 0.7234,
+        "brier": 0.2633,
+        "n": 1224
       },
       "learned": {
-        "acc": 0.5386,
-        "logloss": 0.6949,
-        "brier": 0.2508,
-        "n": 1398
+        "acc": 0.5327,
+        "logloss": 0.6963,
+        "brier": 0.2515,
+        "n": 1224
       },
       "combined": {
-        "acc": 0.5386,
-        "logloss": 0.6941,
-        "brier": 0.2504,
-        "n": 1398
+        "acc": 0.5319,
+        "logloss": 0.6954,
+        "brier": 0.251,
+        "n": 1224
       },
       "delta": {
-        "acc": -0.0036,
-        "logloss": -0.0268,
-        "brier": -0.0117
+        "acc": -0.0073,
+        "logloss": -0.028,
+        "brier": -0.0123
       },
       "alpha": {
-        "final": 0.15,
+        "final": 0.1,
         "curve": [
           {
             "date": "2026-04-04",
@@ -709,321 +724,245 @@
           {
             "date": "2026-06-18",
             "alpha": 0.1,
-            "n_pairs": 1000,
+            "n_pairs": 999,
             "platt": true
           },
           {
             "date": "2026-06-19",
             "alpha": 0.1,
-            "n_pairs": 1008,
+            "n_pairs": 1007,
             "platt": true
           },
           {
             "date": "2026-06-20",
             "alpha": 0.1,
-            "n_pairs": 1022,
+            "n_pairs": 1021,
             "platt": true
           },
           {
             "date": "2026-06-21",
             "alpha": 0.05,
-            "n_pairs": 1036,
+            "n_pairs": 1035,
             "platt": true
           },
           {
             "date": "2026-06-22",
             "alpha": 0.05,
-            "n_pairs": 1050,
+            "n_pairs": 1049,
             "platt": true
           },
           {
             "date": "2026-06-23",
             "alpha": 0.05,
-            "n_pairs": 1062,
+            "n_pairs": 1061,
             "platt": true
           },
           {
             "date": "2026-06-24",
             "alpha": 0.05,
-            "n_pairs": 1077,
+            "n_pairs": 1076,
             "platt": true
           },
           {
             "date": "2026-06-25",
             "alpha": 0.1,
-            "n_pairs": 1093,
+            "n_pairs": 1092,
             "platt": true
           },
           {
             "date": "2026-06-26",
             "alpha": 0.1,
-            "n_pairs": 1101,
+            "n_pairs": 1100,
             "platt": true
           },
           {
             "date": "2026-06-27",
             "alpha": 0.1,
-            "n_pairs": 1116,
+            "n_pairs": 1115,
             "platt": true
           },
           {
             "date": "2026-06-28",
             "alpha": 0.1,
-            "n_pairs": 1131,
+            "n_pairs": 1130,
             "platt": true
           },
           {
             "date": "2026-06-29",
             "alpha": 0.1,
-            "n_pairs": 1146,
+            "n_pairs": 1145,
             "platt": true
           },
           {
             "date": "2026-06-30",
             "alpha": 0.1,
-            "n_pairs": 1159,
+            "n_pairs": 1158,
             "platt": true
           },
           {
             "date": "2026-07-01",
             "alpha": 0.15,
-            "n_pairs": 1174,
+            "n_pairs": 1173,
             "platt": true
           },
           {
             "date": "2026-07-02",
             "alpha": 0.15,
-            "n_pairs": 1188,
+            "n_pairs": 1187,
             "platt": true
           },
           {
             "date": "2026-07-03",
             "alpha": 0.1,
-            "n_pairs": 1197,
+            "n_pairs": 1196,
             "platt": true
           },
           {
             "date": "2026-07-04",
             "alpha": 0.1,
-            "n_pairs": 1210,
-            "platt": true
-          },
-          {
-            "date": "2026-07-05",
-            "alpha": 0.1,
-            "n_pairs": 1225,
-            "platt": true
-          },
-          {
-            "date": "2026-07-06",
-            "alpha": 0.1,
-            "n_pairs": 1240,
-            "platt": true
-          },
-          {
-            "date": "2026-07-07",
-            "alpha": 0.1,
-            "n_pairs": 1248,
-            "platt": true
-          },
-          {
-            "date": "2026-07-08",
-            "alpha": 0.15,
-            "n_pairs": 1264,
-            "platt": true
-          },
-          {
-            "date": "2026-07-09",
-            "alpha": 0.15,
-            "n_pairs": 1279,
-            "platt": true
-          },
-          {
-            "date": "2026-07-10",
-            "alpha": 0.15,
-            "n_pairs": 1292,
-            "platt": true
-          },
-          {
-            "date": "2026-07-11",
-            "alpha": 0.15,
-            "n_pairs": 1306,
-            "platt": true
-          },
-          {
-            "date": "2026-07-12",
-            "alpha": 0.15,
-            "n_pairs": 1322,
-            "platt": true
-          },
-          {
-            "date": "2026-07-16",
-            "alpha": 0.15,
-            "n_pairs": 1337,
-            "platt": true
-          },
-          {
-            "date": "2026-07-17",
-            "alpha": 0.15,
-            "n_pairs": 1338,
-            "platt": true
-          },
-          {
-            "date": "2026-07-18",
-            "alpha": 0.15,
-            "n_pairs": 1352,
-            "platt": true
-          },
-          {
-            "date": "2026-07-19",
-            "alpha": 0.15,
-            "n_pairs": 1367,
-            "platt": true
-          },
-          {
-            "date": "2026-07-20",
-            "alpha": 0.15,
-            "n_pairs": 1383,
+            "n_pairs": 1209,
             "platt": true
           }
         ]
       },
       "platt_last": {
-        "a": 0.7199,
-        "b": 0.0095,
-        "n": 1383,
-        "shrink_k": 0.4797
+        "a": 0.7148,
+        "b": 0.0179,
+        "n": 1209,
+        "shrink_k": 0.4463
       },
       "lambda_best": 3,
       "sweep": [
         {
           "lambda": 0.3,
-          "n": 1398,
-          "acc": 0.5358,
-          "logloss": 0.6944,
-          "brier": 0.2505
+          "n": 1224,
+          "acc": 0.5286,
+          "logloss": 0.6958,
+          "brier": 0.2512
         },
         {
           "lambda": 1,
-          "n": 1398,
-          "acc": 0.5386,
-          "logloss": 0.6942,
-          "brier": 0.2504
+          "n": 1224,
+          "acc": 0.5319,
+          "logloss": 0.6956,
+          "brier": 0.2511
         },
         {
           "lambda": 3,
-          "n": 1398,
-          "acc": 0.5386,
-          "logloss": 0.6941,
-          "brier": 0.2504
+          "n": 1224,
+          "acc": 0.5319,
+          "logloss": 0.6954,
+          "brier": 0.251
         }
       ],
       "stability": {
         "B": 1000,
-        "n": 1398,
+        "n": 1224,
+        "method": "date_block",
+        "n_blocks": 92,
         "models": {
           "classic": {
             "acc": {
-              "mean": 0.5386,
-              "se": 0.014,
+              "mean": 0.5391,
+              "se": 0.0162,
               "ci": [
-                0.5143,
-                0.5672
+                0.5058,
+                0.571
               ]
             },
             "logloss": {
-              "mean": 0.7265,
-              "se": 0.0097,
+              "mean": 0.7233,
+              "se": 0.0111,
               "ci": [
-                0.7068,
-                0.7434
+                0.7014,
+                0.7456
               ]
             },
             "brier": {
-              "mean": 0.2646,
-              "se": 0.0046,
+              "mean": 0.2633,
+              "se": 0.0052,
               "ci": [
-                0.2553,
-                0.2726
+                0.2531,
+                0.2737
               ]
             }
           },
           "learned": {
             "acc": {
-              "mean": 0.5293,
-              "se": 0.0133,
+              "mean": 0.5331,
+              "se": 0.0146,
               "ci": [
-                0.51,
-                0.5579
+                0.5055,
+                0.5615
               ]
             },
             "logloss": {
-              "mean": 0.6978,
+              "mean": 0.6962,
               "se": 0.0044,
               "ci": [
-                0.6885,
-                0.7053
+                0.6875,
+                0.7051
               ]
             },
             "brier": {
-              "mean": 0.2522,
-              "se": 0.0022,
+              "mean": 0.2514,
+              "se": 0.0021,
               "ci": [
-                0.2476,
-                0.2559
+                0.2472,
+                0.2557
               ]
             }
           },
           "combined": {
             "acc": {
-              "mean": 0.5316,
-              "se": 0.0153,
+              "mean": 0.5321,
+              "se": 0.0134,
               "ci": [
-                0.51,
-                0.5665
+                0.5067,
+                0.5585
               ]
             },
             "logloss": {
-              "mean": 0.6964,
-              "se": 0.0043,
+              "mean": 0.6953,
+              "se": 0.0042,
               "ci": [
-                0.6873,
-                0.7042
+                0.6867,
+                0.7036
               ]
             },
             "brier": {
-              "mean": 0.2515,
-              "se": 0.0021,
+              "mean": 0.251,
+              "se": 0.002,
               "ci": [
-                0.247,
-                0.2553
+                0.2468,
+                0.255
               ]
             }
           }
         },
         "delta": {
           "acc": {
-            "mean": -0.0071,
-            "se": 0.0111,
+            "mean": -0.007,
+            "se": 0.013,
             "ci": [
-              -0.0308,
-              0.0143
+              -0.0319,
+              0.0194
             ]
           },
           "logloss": {
-            "mean": -0.0301,
-            "se": 0.007,
+            "mean": -0.028,
+            "se": 0.0082,
             "ci": [
-              -0.0435,
-              -0.0179
+              -0.0441,
+              -0.0121
             ]
           },
           "brier": {
-            "mean": -0.0131,
-            "se": 0.0033,
+            "mean": -0.0123,
+            "se": 0.0038,
             "ci": [
-              -0.0193,
-              -0.0073
+              -0.0197,
+              -0.0049
             ]
           }
         }
@@ -1031,131 +970,450 @@
       "tie": false,
       "agree_split": {
         "agree": {
-          "n": 1111,
-          "p": 0.5509,
-          "lo": 0.5215,
-          "hi": 0.5799
+          "n": 971,
+          "p": 0.5448,
+          "lo": 0.5134,
+          "hi": 0.5759
         },
         "disagree": {
-          "n": 287,
-          "p": 0.5087,
-          "lo": 0.4511,
-          "hi": 0.5661
+          "n": 253,
+          "p": 0.5178,
+          "lo": 0.4564,
+          "hi": 0.5786
         }
       },
       "verdict": "combinado mejor"
     },
     "market_anchor": {
-      "n": 1384,
+      "n": 1211,
       "alpha": 0,
       "logloss": {
-        "model": 0.7208,
-        "market": 0.6855,
-        "blend": 0.6858
+        "model": 0.7231,
+        "market": 0.6859,
+        "blend": 0.6862
       },
       "brier": {
-        "model": 0.2621,
-        "market": 0.2462,
-        "blend": 0.2464
+        "model": 0.2632,
+        "market": 0.2464,
+        "blend": 0.2466
       },
-      "improves": true
+      "improves": false,
+      "legacy_improves_descriptive": true,
+      "cohort": "legacy_latest_market_time_unknown",
+      "auditable": false,
+      "cohorts": {
+        "auditable_open": 0,
+        "legacy_open_unverified": 0,
+        "closing_only": 0,
+        "latest_time_unknown": 1319,
+        "no_market": 13
+      },
+      "changes_public_model": false,
+      "production_chain": {
+        "status": "insufficient_data",
+        "n": 0,
+        "n_available": 0,
+        "n_dates": 0,
+        "min_forward": 300,
+        "min_dates": 30,
+        "alpha": null,
+        "logloss": {
+          "p_learn": null,
+          "market_open": null,
+          "p_final_replay": null
+        },
+        "brier": {
+          "p_learn": null,
+          "market_open": null,
+          "p_final_replay": null
+        },
+        "stability": null,
+        "calibration": {
+          "curve": [
+            {
+              "lo": 0.5,
+              "hi": 0.55,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.55,
+              "hi": 0.6,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.6,
+              "hi": 0.65,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.65,
+              "hi": 0.7,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.7,
+              "hi": 0.75,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.75,
+              "hi": 0.8,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.85,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.85,
+              "hi": 0.9,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.9,
+              "hi": 0.95,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.95,
+              "hi": 1,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            }
+          ],
+          "ece": 0,
+          "n": 0,
+          "verdict": "sin dato",
+          "bias": 0
+        },
+        "gate": {
+          "passes": false,
+          "status": "insufficient_data",
+          "reason": "muestra forward auditable insuficiente",
+          "max_ece": 0.05,
+          "requires_delta_logloss_ci_below_zero": true,
+          "requires_delta_brier_ci_not_above_zero": true
+        },
+        "cohort": "auditable_open_and_logged_p_learn",
+        "changes_public_model": false
+      }
+    },
+    "market_residual_challenger": {
+      "n": 0,
+      "n_available": 0,
+      "n_dates": 0,
+      "first_date": null,
+      "last_date": null,
+      "market": {
+        "acc": null,
+        "logloss": null,
+        "brier": null,
+        "n": 0
+      },
+      "challenger": {
+        "acc": null,
+        "logloss": null,
+        "brier": null,
+        "n": 0
+      },
+      "delta": null,
+      "shadow": true,
+      "published": false,
+      "changes_public_model": false,
+      "cohort": "auditable_open_only",
+      "cohorts": {
+        "auditable_open": 0,
+        "legacy_open_unverified": 0,
+        "closing_only": 0,
+        "latest_time_unknown": 1319,
+        "no_market": 13
+      },
+      "stability": null,
+      "calibration": {
+        "market": {
+          "curve": [
+            {
+              "lo": 0.5,
+              "hi": 0.55,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.55,
+              "hi": 0.6,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.6,
+              "hi": 0.65,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.65,
+              "hi": 0.7,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.7,
+              "hi": 0.75,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.75,
+              "hi": 0.8,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.85,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.85,
+              "hi": 0.9,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.9,
+              "hi": 0.95,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.95,
+              "hi": 1,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            }
+          ],
+          "ece": 0,
+          "n": 0,
+          "verdict": "sin dato",
+          "bias": 0
+        },
+        "challenger": {
+          "curve": [
+            {
+              "lo": 0.5,
+              "hi": 0.55,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.55,
+              "hi": 0.6,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.6,
+              "hi": 0.65,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.65,
+              "hi": 0.7,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.7,
+              "hi": 0.75,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.75,
+              "hi": 0.8,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.85,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.85,
+              "hi": 0.9,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.9,
+              "hi": 0.95,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            },
+            {
+              "lo": 0.95,
+              "hi": 1,
+              "n": 0,
+              "conf": null,
+              "emp": null
+            }
+          ],
+          "ece": 0,
+          "n": 0,
+          "verdict": "sin dato",
+          "bias": 0
+        }
+      },
+      "gate": {
+        "passes": false,
+        "status": "insufficient_data",
+        "reason": "muestra forward insuficiente",
+        "min_forward": 300,
+        "min_dates": 30,
+        "max_ece": 0.05,
+        "requires_delta_logloss_ci_below_zero": true,
+        "requires_delta_brier_ci_not_above_zero": true
+      }
     }
   },
   "total": {
     "fit": {
       "beta": [
-        -0.09533213518114216,
-        0.12005234625762724,
-        -0.03857180501687646,
-        -0.022058332339114237,
-        0.03120035932956206,
-        -0.01984237975099605,
-        0.008291855759884881,
-        0.06502036611020856
+        -0.08562986635933924,
+        0.13066130768887654,
+        -0.0354641269280889,
+        -0.026675676894043664,
+        0.04082531521224771,
+        -0.043622869563977706,
+        0.024013335030141126,
+        0.07837306271065754
       ],
       "mu": [
-        -0.03555244072524406,
-        -0.007220920502092062,
-        -0.03270711297071139,
-        -0.030629707112970788,
-        0.01066945606694562,
-        0.011297071129707124,
-        -0.007440725244072529
+        -0.037347874015748024,
+        -0.00953716535433074,
+        -0.03766062992125995,
+        -0.03412440944881899,
+        0.010157480314960643,
+        0.011338582677165367,
+        -0.007275590551181118
       ],
       "sd": [
-        0.5396254638919978,
-        0.5345669918162353,
-        0.15231607329403965,
-        0.14892297760838333,
-        0.04598038908098567,
-        0.051117139571272986,
-        0.1465286551000973
+        0.5350634372201212,
+        0.5329058338659309,
+        0.158460603244799,
+        0.1553051209242025,
+        0.04350733944723777,
+        0.05247214791346526,
+        0.14586147441713182
       ],
       "intercept": true,
-      "n": 1434,
+      "n": 1270,
       "features": 7
     },
     "weights": {
       "learned": {
-        "aStart": 0.179,
-        "hStart": -0.0581,
-        "homeContact": -0.1165,
-        "awayContact": 0.1686,
-        "aFat": -0.3473,
-        "hFat": 0.1305
+        "aStart": 0.1109,
+        "hStart": -0.0302,
+        "homeContact": -0.0764,
+        "awayContact": 0.1194,
+        "aFat": -0.4553,
+        "hFat": 0.2078
       },
-      "base_line_coef": 0.4437
+      "base_line_coef": 0.5373
     },
     "calibration": {
       "curve": [
         {
           "lo": 0.5,
           "hi": 0.55,
-          "n": 502,
+          "n": 441,
           "conf": 0.5241,
-          "emp": 0.5239
+          "emp": 0.5193
         },
         {
           "lo": 0.55,
           "hi": 0.6,
-          "n": 430,
+          "n": 389,
           "conf": 0.5738,
-          "emp": 0.507
+          "emp": 0.5193
         },
         {
           "lo": 0.6,
           "hi": 0.65,
-          "n": 270,
-          "conf": 0.6247,
-          "emp": 0.5333
+          "n": 244,
+          "conf": 0.6249,
+          "emp": 0.5369
         },
         {
           "lo": 0.65,
           "hi": 0.7,
-          "n": 154,
-          "conf": 0.6731,
-          "emp": 0.4805
+          "n": 132,
+          "conf": 0.6728,
+          "emp": 0.5
         },
         {
           "lo": 0.7,
           "hi": 0.75,
-          "n": 55,
-          "conf": 0.7229,
-          "emp": 0.5455
+          "n": 47,
+          "conf": 0.7242,
+          "emp": 0.5319
         },
         {
           "lo": 0.75,
           "hi": 0.8,
-          "n": 15,
-          "conf": 0.7653,
+          "n": 12,
+          "conf": 0.7595,
           "emp": 0.6667
         },
         {
           "lo": 0.8,
           "hi": 0.85,
-          "n": 7,
-          "conf": 0.813,
-          "emp": 0.5714
+          "n": 4,
+          "conf": 0.812,
+          "emp": 0.5
         },
         {
           "lo": 0.85,
@@ -1179,61 +1437,61 @@
           "emp": null
         }
       ],
-      "ece": 0.0676,
-      "n": 1434,
+      "ece": 0.0629,
+      "n": 1270,
       "verdict": "sobre-confiado",
-      "bias": 0.0676
+      "bias": 0.0629
     },
     "oos": {
-      "n": 1331,
+      "n": 1167,
       "first_date": "2026-03-25",
-      "last_date": "2026-07-20",
+      "last_date": "2026-07-04",
       "classic": {
-        "acc": 0.5199,
-        "logloss": 0.7101,
-        "brier": 0.2578,
-        "n": 1331
+        "acc": 0.5244,
+        "logloss": 0.7078,
+        "brier": 0.2567,
+        "n": 1167
       },
       "learned": {
-        "acc": 0.4989,
-        "logloss": 0.7046,
-        "brier": 0.2538,
-        "n": 1331
+        "acc": 0.5039,
+        "logloss": 0.7056,
+        "brier": 0.2541,
+        "n": 1167
       },
       "delta": {
-        "acc": -0.021,
-        "logloss": -0.0055,
-        "brier": -0.004
+        "acc": -0.0205,
+        "logloss": -0.0022,
+        "brier": -0.0026
       },
-      "se": 0.0137,
+      "se": 0.0146,
       "tie": false
     },
     "combined": {
-      "n": 1331,
+      "n": 1167,
       "first_date": "2026-03-25",
-      "last_date": "2026-07-20",
+      "last_date": "2026-07-04",
       "classic": {
-        "acc": 0.5199,
-        "logloss": 0.7101,
-        "brier": 0.2578,
-        "n": 1331
+        "acc": 0.5244,
+        "logloss": 0.7078,
+        "brier": 0.2567,
+        "n": 1167
       },
       "learned": {
-        "acc": 0.4989,
-        "logloss": 0.7046,
-        "brier": 0.2538,
-        "n": 1331
+        "acc": 0.5039,
+        "logloss": 0.7056,
+        "brier": 0.2541,
+        "n": 1167
       },
       "combined": {
-        "acc": 0.5192,
+        "acc": 0.5184,
         "logloss": 0.6962,
         "brier": 0.2514,
-        "n": 1331
+        "n": 1167
       },
       "delta": {
-        "acc": -0.0007,
-        "logloss": -0.0139,
-        "brier": -0.0064
+        "acc": -0.006,
+        "logloss": -0.0116,
+        "brier": -0.0053
       },
       "alpha": {
         "final": 0.4,
@@ -1789,223 +2047,147 @@
             "alpha": 0.4,
             "n_pairs": 1152,
             "platt": true
-          },
-          {
-            "date": "2026-07-05",
-            "alpha": 0.4,
-            "n_pairs": 1167,
-            "platt": true
-          },
-          {
-            "date": "2026-07-06",
-            "alpha": 0.4,
-            "n_pairs": 1182,
-            "platt": true
-          },
-          {
-            "date": "2026-07-07",
-            "alpha": 0.45,
-            "n_pairs": 1190,
-            "platt": true
-          },
-          {
-            "date": "2026-07-08",
-            "alpha": 0.45,
-            "n_pairs": 1203,
-            "platt": true
-          },
-          {
-            "date": "2026-07-09",
-            "alpha": 0.45,
-            "n_pairs": 1217,
-            "platt": true
-          },
-          {
-            "date": "2026-07-10",
-            "alpha": 0.45,
-            "n_pairs": 1230,
-            "platt": true
-          },
-          {
-            "date": "2026-07-11",
-            "alpha": 0.4,
-            "n_pairs": 1243,
-            "platt": true
-          },
-          {
-            "date": "2026-07-12",
-            "alpha": 0.4,
-            "n_pairs": 1259,
-            "platt": true
-          },
-          {
-            "date": "2026-07-16",
-            "alpha": 0.4,
-            "n_pairs": 1274,
-            "platt": true
-          },
-          {
-            "date": "2026-07-17",
-            "alpha": 0.4,
-            "n_pairs": 1275,
-            "platt": true
-          },
-          {
-            "date": "2026-07-18",
-            "alpha": 0.4,
-            "n_pairs": 1288,
-            "platt": true
-          },
-          {
-            "date": "2026-07-19",
-            "alpha": 0.4,
-            "n_pairs": 1302,
-            "platt": true
-          },
-          {
-            "date": "2026-07-20",
-            "alpha": 0.4,
-            "n_pairs": 1317,
-            "platt": true
           }
         ]
       },
       "platt_last": {
-        "a": 0.6433,
-        "b": -0.0417,
-        "n": 1317,
-        "shrink_k": 0.4675
+        "a": 0.665,
+        "b": -0.0304,
+        "n": 1152,
+        "shrink_k": 0.4344
       },
       "lambda_best": 1,
       "sweep": [
         {
           "lambda": 0.3,
-          "n": 1331,
-          "acc": 0.5192,
+          "n": 1167,
+          "acc": 0.5184,
           "logloss": 0.6963,
-          "brier": 0.2515
+          "brier": 0.2514
         },
         {
           "lambda": 1,
-          "n": 1331,
-          "acc": 0.5192,
+          "n": 1167,
+          "acc": 0.5184,
           "logloss": 0.6962,
           "brier": 0.2514
         },
         {
           "lambda": 3,
-          "n": 1331,
-          "acc": 0.5184,
+          "n": 1167,
+          "acc": 0.5176,
           "logloss": 0.6962,
           "brier": 0.2514
         }
       ],
       "stability": {
         "B": 1000,
-        "n": 1331,
+        "n": 1167,
+        "method": "date_block",
+        "n_blocks": 92,
         "models": {
           "classic": {
             "acc": {
-              "mean": 0.5199,
-              "se": 0.0196,
+              "mean": 0.5242,
+              "se": 0.0146,
               "ci": [
-                0.4929,
-                0.5672
+                0.4969,
+                0.5538
               ]
             },
             "logloss": {
-              "mean": 0.7107,
-              "se": 0.0071,
+              "mean": 0.708,
+              "se": 0.0066,
               "ci": [
-                0.6963,
-                0.7243
+                0.695,
+                0.7209
               ]
             },
             "brier": {
-              "mean": 0.258,
-              "se": 0.0034,
+              "mean": 0.2567,
+              "se": 0.0031,
               "ci": [
-                0.2508,
-                0.2644
+                0.2506,
+                0.2629
               ]
             }
           },
           "learned": {
             "acc": {
-              "mean": 0.4949,
-              "se": 0.0124,
+              "mean": 0.5031,
+              "se": 0.0152,
               "ci": [
-                0.4756,
-                0.5177
+                0.4735,
+                0.532
               ]
             },
             "logloss": {
-              "mean": 0.7059,
-              "se": 0.0044,
+              "mean": 0.7061,
+              "se": 0.007,
               "ci": [
-                0.6965,
-                0.7137
+                0.693,
+                0.7205
               ]
             },
             "brier": {
-              "mean": 0.2546,
-              "se": 0.0014,
+              "mean": 0.2542,
+              "se": 0.0024,
               "ci": [
-                0.2509,
-                0.2575
+                0.2496,
+                0.2589
               ]
             }
           },
           "combined": {
             "acc": {
-              "mean": 0.5163,
+              "mean": 0.5181,
               "se": 0.0147,
               "ci": [
-                0.4899,
-                0.553
+                0.4904,
+                0.5467
               ]
             },
             "logloss": {
-              "mean": 0.6975,
-              "se": 0.0028,
+              "mean": 0.6964,
+              "se": 0.0037,
               "ci": [
-                0.692,
-                0.7023
+                0.6895,
+                0.7039
               ]
             },
             "brier": {
-              "mean": 0.252,
-              "se": 0.0014,
+              "mean": 0.2515,
+              "se": 0.0018,
               "ci": [
-                0.2493,
-                0.2544
+                0.2481,
+                0.2551
               ]
             }
           }
         },
         "delta": {
           "acc": {
-            "mean": -0.0035,
-            "se": 0.0127,
+            "mean": -0.0061,
+            "se": 0.012,
             "ci": [
-              -0.0278,
-              0.018
+              -0.0289,
+              0.0168
             ]
           },
           "logloss": {
-            "mean": -0.0133,
-            "se": 0.0051,
+            "mean": -0.0116,
+            "se": 0.0047,
             "ci": [
-              -0.0228,
-              -0.0026
+              -0.0211,
+              -0.0024
             ]
           },
           "brier": {
-            "mean": -0.006,
-            "se": 0.0025,
+            "mean": -0.0053,
+            "se": 0.0022,
             "ci": [
-              -0.0104,
-              -0.0007
+              -0.0096,
+              -0.001
             ]
           }
         }
@@ -2013,16 +2195,16 @@
       "tie": false,
       "agree_split": {
         "agree": {
-          "n": 1044,
-          "p": 0.5249,
-          "lo": 0.4946,
-          "hi": 0.5551
+          "n": 912,
+          "p": 0.5274,
+          "lo": 0.495,
+          "hi": 0.5596
         },
         "disagree": {
-          "n": 287,
-          "p": 0.5017,
-          "lo": 0.4443,
-          "hi": 0.5592
+          "n": 255,
+          "p": 0.5137,
+          "lo": 0.4526,
+          "hi": 0.5744
         }
       },
       "verdict": "combinado mejor"
@@ -2031,142 +2213,142 @@
   "indicators": {
     "ml": {
       "baseline": {
-        "n": 1506,
-        "rate": 0.5405,
-        "lo": 0.5153,
-        "hi": 0.5655
+        "n": 1332,
+        "rate": 0.5375,
+        "lo": 0.5107,
+        "hi": 0.5642
       },
       "min_n": 40,
       "list": [
         {
           "id": "prob60",
           "label": "Prob. del pick ≥ 60%",
-          "n": 1097,
-          "rate": 0.5442,
-          "lo": 0.5146,
-          "hi": 0.5735,
-          "lift": 0.0037,
+          "n": 973,
+          "rate": 0.5406,
+          "lo": 0.5092,
+          "hi": 0.5717,
+          "lift": 0.0031,
           "active": true,
           "strong": false
         },
         {
           "id": "prob55",
           "label": "Prob. del pick ≥ 55%",
-          "n": 1330,
-          "rate": 0.5466,
-          "lo": 0.5198,
-          "hi": 0.5732,
-          "lift": 0.0061,
+          "n": 1175,
+          "rate": 0.5455,
+          "lo": 0.517,
+          "hi": 0.5738,
+          "lift": 0.008,
           "active": true,
           "strong": false
         },
         {
           "id": "agree4",
           "label": "4+ factores de acuerdo con el pick",
-          "n": 827,
-          "rate": 0.5611,
-          "lo": 0.527,
-          "hi": 0.5945,
-          "lift": 0.0206,
+          "n": 727,
+          "rate": 0.5585,
+          "lo": 0.5221,
+          "hi": 0.5942,
+          "lift": 0.021,
           "active": true,
-          "strong": true
+          "strong": false
         },
         {
           "id": "agree5",
           "label": "5+ factores de acuerdo con el pick",
-          "n": 363,
-          "rate": 0.595,
-          "lo": 0.5438,
-          "hi": 0.6443,
-          "lift": 0.0545,
+          "n": 317,
+          "rate": 0.6025,
+          "lo": 0.5477,
+          "hi": 0.6549,
+          "lift": 0.065,
           "active": true,
           "strong": true
         },
         {
           "id": "signal4",
           "label": "Señal de factores ≥ 4 pts hacia el pick",
-          "n": 1349,
-          "rate": 0.5345,
-          "lo": 0.5078,
-          "hi": 0.561,
-          "lift": -0.006,
+          "n": 1191,
+          "rate": 0.5323,
+          "lo": 0.5039,
+          "hi": 0.5605,
+          "lift": -0.0052,
           "active": true,
           "strong": false
         },
         {
           "id": "news",
           "label": "Noticias/lesiones a favor del pick",
-          "n": 843,
-          "rate": 0.5338,
+          "n": 756,
+          "rate": 0.5357,
           "lo": 0.5001,
-          "hi": 0.5673,
-          "lift": -0.0067,
+          "hi": 0.571,
+          "lift": -0.0018,
           "active": true,
           "strong": false
         },
         {
           "id": "streak3",
           "label": "El equipo del pick trae racha ≥ 3",
-          "n": 285,
-          "rate": 0.5333,
-          "lo": 0.4754,
-          "hi": 0.5904,
-          "lift": -0.0072,
+          "n": 252,
+          "rate": 0.5159,
+          "lo": 0.4544,
+          "hi": 0.5769,
+          "lift": -0.0216,
           "active": false,
           "strong": false
         },
         {
           "id": "home",
           "label": "El pick es el equipo local",
-          "n": 804,
-          "rate": 0.5597,
-          "lo": 0.5252,
-          "hi": 0.5937,
-          "lift": 0.0192,
+          "n": 714,
+          "rate": 0.5574,
+          "lo": 0.5208,
+          "hi": 0.5935,
+          "lift": 0.0199,
           "active": true,
-          "strong": true
+          "strong": false
         }
       ]
     },
     "total": {
       "baseline": {
-        "n": 1434,
-        "rate": 0.5181,
-        "lo": 0.4923,
-        "hi": 0.5439
+        "n": 1270,
+        "rate": 0.522,
+        "lo": 0.4945,
+        "hi": 0.5494
       },
       "min_n": 40,
       "list": [
         {
           "id": "tprob57",
           "label": "Prob. del lado ≥ 57%",
-          "n": 752,
-          "rate": 0.5213,
-          "lo": 0.4856,
-          "hi": 0.5568,
-          "lift": 0.0032,
+          "n": 668,
+          "rate": 0.5284,
+          "lo": 0.4905,
+          "hi": 0.566,
+          "lift": 0.0064,
           "active": false,
           "strong": false
         },
         {
           "id": "tedge05",
           "label": "Modelo vs línea ≥ 0.5 carreras",
-          "n": 763,
-          "rate": 0.519,
-          "lo": 0.4835,
-          "hi": 0.5543,
-          "lift": 0.0009,
+          "n": 677,
+          "rate": 0.5258,
+          "lo": 0.4882,
+          "hi": 0.5632,
+          "lift": 0.0038,
           "active": false,
           "strong": false
         },
         {
           "id": "tedge10",
           "label": "Modelo vs línea ≥ 1.0 carrera",
-          "n": 314,
-          "rate": 0.5318,
-          "lo": 0.4766,
-          "hi": 0.5863,
-          "lift": 0.0137,
+          "n": 272,
+          "rate": 0.5331,
+          "lo": 0.4737,
+          "hi": 0.5915,
+          "lift": 0.0111,
           "active": false,
           "strong": false
         }
@@ -2177,267 +2359,268 @@
     {
       "id": "all",
       "label": "Todos los picks",
-      "n": 1506,
-      "says": 0.6463,
-      "hits": 0.5405,
-      "lo": 0.5153,
-      "hi": 0.5655,
-      "gap": 0.1058
+      "n": 1332,
+      "says": 0.647,
+      "hits": 0.5375,
+      "lo": 0.5107,
+      "hi": 0.5642,
+      "gap": 0.1095
     },
     {
       "id": "home",
       "label": "Pick local",
-      "n": 804,
-      "says": 0.6639,
-      "hits": 0.5597,
-      "lo": 0.5252,
-      "hi": 0.5937,
-      "gap": 0.1042
+      "n": 714,
+      "says": 0.665,
+      "hits": 0.5574,
+      "lo": 0.5208,
+      "hi": 0.5935,
+      "gap": 0.1076
     },
     {
       "id": "away",
       "label": "Pick visitante",
-      "n": 702,
-      "says": 0.6262,
-      "hits": 0.5185,
-      "lo": 0.4816,
-      "hi": 0.5553,
-      "gap": 0.1077
+      "n": 618,
+      "says": 0.6261,
+      "hits": 0.5146,
+      "lo": 0.4752,
+      "hi": 0.5538,
+      "gap": 0.1115
     },
     {
       "id": "p50",
       "label": "Prob 50–55%",
-      "n": 176,
-      "says": 0.5229,
-      "hits": 0.4943,
-      "lo": 0.4214,
-      "hi": 0.5675,
-      "gap": 0.0286
+      "n": 157,
+      "says": 0.5233,
+      "hits": 0.4777,
+      "lo": 0.401,
+      "hi": 0.5554,
+      "gap": 0.0456
     },
     {
       "id": "p55",
       "label": "Prob 55–60%",
-      "n": 233,
-      "says": 0.5748,
-      "hits": 0.5579,
-      "lo": 0.4937,
-      "hi": 0.6203,
-      "gap": 0.0169
+      "n": 202,
+      "says": 0.575,
+      "hits": 0.5693,
+      "lo": 0.5004,
+      "hi": 0.6357,
+      "gap": 0.0057
     },
     {
       "id": "p60",
       "label": "Prob 60–65%",
-      "n": 328,
-      "says": 0.625,
-      "hits": 0.503,
-      "lo": 0.4492,
-      "hi": 0.5568,
-      "gap": 0.122
+      "n": 293,
+      "says": 0.6251,
+      "hits": 0.5188,
+      "lo": 0.4617,
+      "hi": 0.5754,
+      "gap": 0.1063
     },
     {
       "id": "p65",
       "label": "Prob ≥ 65%",
-      "n": 769,
-      "says": 0.7053,
-      "hits": 0.5618,
-      "lo": 0.5265,
-      "hi": 0.5964,
-      "gap": 0.1435
+      "n": 680,
+      "says": 0.7063,
+      "hits": 0.55,
+      "lo": 0.5124,
+      "hi": 0.587,
+      "gap": 0.1563
     }
   ],
   "signal_audit": {
     "baseline": {
-      "n": 1506,
-      "rate": 0.5405,
-      "lo": 0.5153,
-      "hi": 0.5655
+      "n": 1332,
+      "rate": 0.5375,
+      "lo": 0.5107,
+      "hi": 0.5642
     },
     "min_n": 60,
+    "market_cohort": "auditable_open_only",
     "list": [
-      {
-        "id": "market",
-        "label": "Coincide con el favorito del mercado",
-        "n_fav": 1009,
-        "n_unf": 483,
-        "fav_rate": 0.5768,
-        "fav_lo": 0.5461,
-        "fav_hi": 0.6069,
-        "unf_rate": 0.4617,
-        "gap": 0.1151,
-        "gap_lo": 0.0598,
-        "gap_hi": 0.1675,
-        "half1": 0.1015,
-        "half2": 0.1294,
-        "verdict": "robusto"
-      },
       {
         "id": "agree5",
         "label": "5+ factores de acuerdo con el pick",
-        "n_fav": 363,
-        "n_unf": 1143,
-        "fav_rate": 0.595,
-        "fav_lo": 0.5438,
-        "fav_hi": 0.6443,
-        "unf_rate": 0.5232,
-        "gap": 0.0718,
-        "gap_lo": 0.0118,
-        "gap_hi": 0.1309,
-        "half1": 0.0804,
-        "half2": 0.063,
+        "n_fav": 317,
+        "n_unf": 1015,
+        "fav_rate": 0.6025,
+        "fav_lo": 0.5477,
+        "fav_hi": 0.6549,
+        "unf_rate": 0.5172,
+        "gap": 0.0853,
+        "gap_lo": 0.0252,
+        "gap_hi": 0.1403,
+        "half1": 0.0894,
+        "half2": 0.0832,
         "verdict": "robusto"
       },
       {
         "id": "pitcher",
         "label": "Mejor ERA reciente del abridor",
-        "n_fav": 747,
-        "n_unf": 596,
-        "fav_rate": 0.5676,
-        "fav_lo": 0.5318,
-        "fav_hi": 0.6027,
-        "unf_rate": 0.5101,
-        "gap": 0.0575,
-        "gap_lo": 0.0009,
-        "gap_hi": 0.1095,
-        "half1": 0.0406,
-        "half2": 0.0717,
-        "verdict": "robusto"
+        "n_fav": 645,
+        "n_unf": 529,
+        "fav_rate": 0.569,
+        "fav_lo": 0.5305,
+        "fav_hi": 0.6067,
+        "unf_rate": 0.5009,
+        "gap": 0.0681,
+        "gap_lo": 0.0076,
+        "gap_hi": 0.1294,
+        "half1": 0.0021,
+        "half2": 0.1209,
+        "verdict": "frágil"
       },
       {
         "id": "aux_dens",
         "label": "Calendario más fresco (juegos últimos 7d)",
-        "n_fav": 281,
-        "n_unf": 271,
-        "fav_rate": 0.5587,
-        "fav_lo": 0.5003,
-        "fav_hi": 0.6156,
-        "unf_rate": 0.524,
-        "gap": 0.0347,
-        "gap_lo": -0.0478,
-        "gap_hi": 0.1151,
-        "half1": 0.0895,
-        "half2": -0.0244,
+        "n_fav": 247,
+        "n_unf": 241,
+        "fav_rate": 0.5709,
+        "fav_lo": 0.5085,
+        "fav_hi": 0.631,
+        "unf_rate": 0.5187,
+        "gap": 0.0522,
+        "gap_lo": -0.0316,
+        "gap_hi": 0.1284,
+        "half1": 0.0802,
+        "half2": 0.0198,
         "verdict": "ruido"
       },
       {
         "id": "aux_haf",
         "label": "Mejor forma casa/ruta específica",
-        "n_fav": 507,
-        "n_unf": 234,
-        "fav_rate": 0.5661,
-        "fav_lo": 0.5226,
-        "fav_hi": 0.6086,
-        "unf_rate": 0.5385,
-        "gap": 0.0276,
-        "gap_lo": -0.0473,
-        "gap_hi": 0.1045,
-        "half1": 0.0534,
-        "half2": 0.011,
+        "n_fav": 436,
+        "n_unf": 204,
+        "fav_rate": 0.5642,
+        "fav_lo": 0.5173,
+        "fav_hi": 0.61,
+        "unf_rate": 0.5294,
+        "gap": 0.0348,
+        "gap_lo": -0.0361,
+        "gap_hi": 0.1053,
+        "half1": 0.0446,
+        "half2": 0.0305,
         "verdict": "ruido"
       },
       {
         "id": "prob60",
         "label": "Prob. del pick ≥ 60%",
-        "n_fav": 1097,
-        "n_unf": 409,
-        "fav_rate": 0.5442,
-        "fav_lo": 0.5146,
-        "fav_hi": 0.5735,
-        "unf_rate": 0.5306,
-        "gap": 0.0136,
-        "gap_lo": -0.0409,
-        "gap_hi": 0.071,
-        "half1": 0.025,
-        "half2": 0.0036,
+        "n_fav": 973,
+        "n_unf": 359,
+        "fav_rate": 0.5406,
+        "fav_lo": 0.5092,
+        "fav_hi": 0.5717,
+        "unf_rate": 0.5292,
+        "gap": 0.0114,
+        "gap_lo": -0.0472,
+        "gap_hi": 0.0681,
+        "half1": 0.0069,
+        "half2": 0.0161,
         "verdict": "ruido"
       },
       {
         "id": "aux_pyth",
         "label": "Mejor pitagórico L20",
-        "n_fav": 787,
-        "n_unf": 321,
-        "fav_rate": 0.5553,
-        "fav_lo": 0.5204,
-        "fav_hi": 0.5896,
-        "unf_rate": 0.5452,
-        "gap": 0.0101,
-        "gap_lo": -0.0544,
-        "gap_hi": 0.073,
-        "half1": 0.0224,
-        "half2": -0.0004,
-        "verdict": "ruido"
-      },
-      {
-        "id": "streak3",
-        "label": "Racha del equipo del pick ≥ 3",
-        "n_fav": 285,
-        "n_unf": 1221,
-        "fav_rate": 0.5333,
-        "fav_lo": 0.4754,
-        "fav_hi": 0.5904,
-        "unf_rate": 0.5422,
-        "gap": -0.0089,
-        "gap_lo": -0.0741,
-        "gap_hi": 0.0565,
-        "half1": -0.0071,
-        "half2": -0.0106,
+        "n_fav": 683,
+        "n_unf": 279,
+        "fav_rate": 0.549,
+        "fav_lo": 0.5116,
+        "fav_hi": 0.586,
+        "unf_rate": 0.552,
+        "gap": -0.003,
+        "gap_lo": -0.066,
+        "gap_hi": 0.0615,
+        "half1": -0.0189,
+        "half2": 0.0111,
         "verdict": "ruido"
       },
       {
         "id": "news",
         "label": "Noticias/lesiones a favor del pick",
-        "n_fav": 843,
-        "n_unf": 663,
-        "fav_rate": 0.5338,
+        "n_fav": 756,
+        "n_unf": 576,
+        "fav_rate": 0.5357,
         "fav_lo": 0.5001,
-        "fav_hi": 0.5673,
-        "unf_rate": 0.549,
-        "gap": -0.0152,
-        "gap_lo": -0.0687,
-        "gap_hi": 0.0369,
-        "half1": -0.009,
-        "half2": -0.0219,
+        "fav_hi": 0.571,
+        "unf_rate": 0.5399,
+        "gap": -0.0042,
+        "gap_lo": -0.0544,
+        "gap_hi": 0.0514,
+        "half1": 0.0049,
+        "half2": -0.0163,
+        "verdict": "ruido"
+      },
+      {
+        "id": "streak3",
+        "label": "Racha del equipo del pick ≥ 3",
+        "n_fav": 252,
+        "n_unf": 1080,
+        "fav_rate": 0.5159,
+        "fav_lo": 0.4544,
+        "fav_hi": 0.5769,
+        "unf_rate": 0.5426,
+        "gap": -0.0267,
+        "gap_lo": -0.0954,
+        "gap_hi": 0.044,
+        "half1": 0.0035,
+        "half2": -0.0572,
         "verdict": "ruido"
       },
       {
         "id": "aux_rest",
         "label": "Ventaja de descanso real del pick (≥1 día)",
-        "n_fav": 59,
-        "n_unf": 47,
-        "fav_rate": 0.5932,
-        "fav_lo": 0.4659,
-        "fav_hi": 0.7091,
-        "unf_rate": 0.4468,
-        "gap": 0.1464,
-        "gap_lo": -0.0487,
-        "gap_hi": 0.3336,
-        "half1": 0.1452,
-        "half2": 0.1219,
+        "n_fav": 56,
+        "n_unf": 44,
+        "fav_rate": 0.6071,
+        "fav_lo": 0.4763,
+        "fav_hi": 0.7242,
+        "unf_rate": 0.4318,
+        "gap": 0.1753,
+        "gap_lo": -0.0111,
+        "gap_hi": 0.3581,
+        "half1": 0.2381,
+        "half2": 0.1184,
         "verdict": "sin dato"
       },
       {
-        "id": "platoon",
-        "label": "Ventaja de platoon (bates vs mano del abridor)",
-        "n_fav": 50,
-        "n_unf": 33,
-        "fav_rate": 0.48,
-        "fav_lo": 0.348,
-        "fav_hi": 0.6149,
-        "unf_rate": 0.5758,
-        "gap": -0.0958,
-        "gap_lo": -0.3067,
-        "gap_hi": 0.1261,
+        "id": "market",
+        "label": "Coincide con la apertura auditable",
+        "n_fav": 0,
+        "n_unf": 0,
+        "fav_rate": null,
+        "fav_lo": null,
+        "fav_hi": null,
+        "unf_rate": null,
+        "gap": null,
+        "gap_lo": null,
+        "gap_hi": null,
         "half1": null,
-        "half2": -0.0958,
+        "half2": null,
         "verdict": "sin dato"
       },
       {
         "id": "aux_tze",
         "label": "Rival viajó al ESTE ≥2 husos (PNAS)",
-        "n_fav": 47,
+        "n_fav": 42,
         "n_unf": 0,
-        "fav_rate": 0.4681,
-        "fav_lo": 0.3333,
-        "fav_hi": 0.6077,
+        "fav_rate": 0.4524,
+        "fav_lo": 0.3122,
+        "fav_hi": 0.6005,
+        "unf_rate": null,
+        "gap": null,
+        "gap_lo": null,
+        "gap_hi": null,
+        "half1": null,
+        "half2": null,
+        "verdict": "sin dato"
+      },
+      {
+        "id": "platoon",
+        "label": "Ventaja de platoon (bates vs mano del abridor)",
+        "n_fav": 0,
+        "n_unf": 0,
+        "fav_rate": null,
+        "fav_lo": null,
+        "fav_hi": null,
         "unf_rate": null,
         "gap": null,
         "gap_lo": null,
@@ -2450,163 +2633,146 @@
   },
   "lock_gate": {
     "rule": "market_agree5_starter_v1",
-    "cut": "2026-06-13",
+    "cut": "2026-06-04",
     "max_per_day": 2,
     "train": {
-      "n": 66,
-      "days": 47,
-      "wins": 47,
-      "losses": 19,
-      "p": 0.7121,
-      "lo": 0.5936,
-      "hi": 0.8073
+      "n": 0,
+      "days": 0,
+      "wins": 0,
+      "losses": 0,
+      "p": null,
+      "lo": null,
+      "hi": null
     },
     "test": {
-      "n": 40,
-      "days": 25,
-      "wins": 29,
-      "losses": 11,
-      "p": 0.725,
-      "lo": 0.5716,
-      "hi": 0.8389
+      "n": 0,
+      "days": 0,
+      "wins": 0,
+      "losses": 0,
+      "p": null,
+      "lo": null,
+      "hi": null
     },
     "all": {
-      "n": 106,
-      "days": 72,
-      "wins": 76,
-      "losses": 30,
-      "p": 0.717,
-      "lo": 0.6248,
-      "hi": 0.794
+      "n": 0,
+      "days": 0,
+      "wins": 0,
+      "losses": 0,
+      "p": null,
+      "lo": null,
+      "hi": null
     },
     "gate": {
-      "passes": true,
+      "passes": false,
       "threshold": 0.5238,
-      "reason": "pasa"
+      "reason": "muestra/intervalo insuficiente"
     }
   },
   "context": {
-    "n_with_aux": 1529,
-    "n_with_platoon": 168,
+    "n_with_aux": 1513,
+    "n_with_platoon": 165,
     "aux_stack": "probado 2026-07-07: empate OOS vs p_final (Δlogloss CI cruza 0) — no adoptado"
   },
-  "n_backfilled": 1333,
+  "n_backfilled": 1332,
   "odds": {
-    "n_with_line": 1492,
-    "n_with_curve": 1492,
+    "n_with_line": 0,
+    "n_with_curve": 1319,
     "indicators": {
       "baseline": {
-        "n": 1492,
-        "rate": 0.5643,
-        "lo": 0.539,
-        "hi": 0.5893
+        "n": 0,
+        "rate": null,
+        "lo": null,
+        "hi": null
       },
       "min_n": 40,
+      "cohort": "auditable_open_only",
       "list": [
         {
           "id": "pickem_fav",
           "label": "Favorito en juego parejo (línea ≥ −145)",
-          "n": 922,
-          "rate": 0.5477,
-          "lo": 0.5155,
-          "hi": 0.5796,
-          "lift": -0.0166,
-          "active": true,
+          "n": 0,
+          "rate": null,
+          "lo": null,
+          "hi": null,
+          "lift": null,
+          "active": false,
           "strong": false
         },
         {
           "id": "heavy_fav",
           "label": "Favorito grande (línea ≤ −190)",
-          "n": 162,
-          "rate": 0.679,
-          "lo": 0.6037,
-          "hi": 0.746,
-          "lift": 0.1147,
-          "active": true,
-          "strong": true
+          "n": 0,
+          "rate": null,
+          "lo": null,
+          "hi": null,
+          "lift": null,
+          "active": false,
+          "strong": false
         },
         {
           "id": "market_agrees",
-          "label": "Mercado y Adrian coinciden en el favorito",
-          "n": 1009,
-          "rate": 0.5768,
-          "lo": 0.5461,
-          "hi": 0.6069,
-          "lift": 0.0125,
-          "active": true,
-          "strong": true
+          "label": "Modelo y apertura auditable coinciden",
+          "n": 0,
+          "rate": null,
+          "lo": null,
+          "hi": null,
+          "lift": null,
+          "active": false,
+          "strong": false
         }
       ]
     },
     "market_vs_model": {
-      "n": 1492,
-      "market": {
-        "acc": 0.5643,
-        "logloss": 0.6845,
-        "brier": 0.2457,
-        "n": 1492
-      },
-      "model": {
-        "acc": 0.5395,
-        "logloss": 0.7201,
-        "brier": 0.2618,
-        "n": 1492
-      },
-      "delta": {
-        "mean": 0.0377,
-        "se": 0.0076,
-        "ci": [
-          0.022,
-          0.0507
-        ]
-      },
-      "tie": false,
-      "verdict": "mercado mejor",
-      "disagree": {
-        "n": 483,
-        "market_win_rate": 0.5383,
-        "lo": 0.4937,
-        "hi": 0.5823
-      }
+      "n": 0,
+      "market": null,
+      "model": null,
+      "delta": null,
+      "tie": true,
+      "verdict": "sin dato",
+      "disagree": null,
+      "auditable": true,
+      "cohort": "auditable_open_only",
+      "min_n": 40
     },
     "trailed_early": {
       "through_inn": 3,
       "any_trailer": {
-        "n": 1126,
-        "rate": 0.2584,
-        "lo": 0.2337,
-        "hi": 0.2848
+        "n": 0,
+        "rate": null,
+        "lo": null,
+        "hi": null
       },
       "fav_trailer": {
-        "n": 503,
-        "rate": 0.3042,
-        "lo": 0.2656,
-        "hi": 0.3457
+        "n": 0,
+        "rate": null,
+        "lo": null,
+        "hi": null
       },
       "pickem": {
-        "n": 321,
-        "p": 0.2866,
-        "lo": 0.2399,
-        "hi": 0.3384
+        "n": 0,
+        "p": null,
+        "lo": null,
+        "hi": null
       },
       "heavy": {
-        "n": 37,
-        "p": 0.3784,
-        "lo": 0.2406,
-        "hi": 0.539
+        "n": 0,
+        "p": null,
+        "lo": null,
+        "hi": null
       },
       "tie": true,
       "verdict": "empate"
     },
     "microstructure": {
       "min_n": 30,
+      "cohort": "auditable_open_only",
       "n_with_books": 0,
       "value": {
-        "n": 136,
-        "rate": 0.5074,
-        "lo": 0.4243,
-        "hi": 0.59,
-        "verdict": "empate"
+        "n": 0,
+        "rate": null,
+        "lo": null,
+        "hi": null,
+        "verdict": "sin dato"
       },
       "disagreement": {
         "high": {
@@ -2616,393 +2782,408 @@
           "hi": null
         },
         "low": {
-          "n": 150,
-          "p": 0.58,
-          "lo": 0.5,
-          "hi": 0.656
+          "n": 0,
+          "p": null,
+          "lo": null,
+          "hi": null
         },
         "verdict": "sin dato"
       },
       "line_move": {
-        "n": 28,
-        "rate": 0.5,
-        "lo": 0.3263,
-        "hi": 0.6737,
+        "n": 0,
+        "rate": null,
+        "lo": null,
+        "hi": null,
         "verdict": "sin dato"
       },
       "live": {
-        "n_with_live": 136
+        "n_with_live": 0
       },
       "clv": {
-        "n": 150,
-        "mean": 0.004,
-        "verdict": "neutral"
+        "n": 0,
+        "mean": null,
+        "verdict": "sin dato"
       }
     }
   },
   "misses": [
     {
-      "date": "2026-07-20",
-      "matchup": "OAK @ AZ",
-      "final": "5-2",
-      "market": "ml",
-      "prob": 0.736,
-      "misled_factors": [
-        {
-          "factor": "momentum",
-          "lean": 1.2,
-          "trust": 0.522
-        },
-        {
-          "factor": "bats",
-          "lean": 0.7314,
-          "trust": 0.5099
-        },
-        {
-          "factor": "pitching",
-          "lean": 0.6272,
-          "trust": 0.5349
-        },
-        {
-          "factor": "schedule",
-          "lean": 0.2089,
-          "trust": 0.5319
-        }
-      ]
-    },
-    {
-      "date": "2026-07-20",
-      "matchup": "CWS @ TEX",
-      "final": "10-3",
-      "market": "ml",
-      "prob": 0.739,
-      "misled_factors": [
-        {
-          "factor": "pitching",
-          "lean": 1.6229,
-          "trust": 0.5349
-        },
-        {
-          "factor": "f5",
-          "lean": 0.6045,
-          "trust": 0.5292
-        },
-        {
-          "factor": "schedule",
-          "lean": 0.1267,
-          "trust": 0.5319
-        }
-      ]
-    },
-    {
-      "date": "2026-07-20",
-      "matchup": "SF @ KC",
+      "date": "2026-07-04",
+      "matchup": "MIL @ AZ",
       "final": "3-4",
       "market": "ml",
-      "prob": 0.416,
+      "prob": 0.287,
       "misled_factors": [
         {
           "factor": "momentum",
-          "lean": -0.2182,
-          "trust": 0.522
-        }
-      ]
-    },
-    {
-      "date": "2026-07-20",
-      "matchup": "TB @ TOR",
-      "final": "7-1",
-      "market": "ml",
-      "prob": 0.676,
-      "misled_factors": [
-        {
-          "factor": "pitching",
-          "lean": 0.9019,
-          "trust": 0.5349
-        },
-        {
-          "factor": "f5",
-          "lean": 0.4815,
-          "trust": 0.5292
-        },
-        {
-          "factor": "momentum",
-          "lean": 0.3273,
-          "trust": 0.522
-        },
-        {
-          "factor": "schedule",
-          "lean": 0.0733,
-          "trust": 0.5319
-        }
-      ]
-    },
-    {
-      "date": "2026-07-20",
-      "matchup": "PIT @ NYY",
-      "final": "5-8",
-      "market": "ml",
-      "prob": 0.426,
-      "misled_factors": [
-        {
-          "factor": "bats",
-          "lean": -0.8615,
-          "trust": 0.5099
+          "lean": -0.6182,
+          "trust": 0.5209
         },
         {
           "factor": "pitching",
-          "lean": -0.4827,
-          "trust": 0.5349
-        },
-        {
-          "factor": "momentum",
-          "lean": -0.2182,
-          "trust": 0.522
-        },
-        {
-          "factor": "f5",
-          "lean": -0.2005,
-          "trust": 0.5292
-        }
-      ]
-    },
-    {
-      "date": "2026-07-20",
-      "matchup": "MIN @ CLE",
-      "final": "4-13",
-      "market": "ml",
-      "prob": 0.493,
-      "misled_factors": [
-        {
-          "factor": "pitching",
-          "lean": -0.3787,
-          "trust": 0.5349
-        },
-        {
-          "factor": "f5",
-          "lean": -0.3475,
-          "trust": 0.5292
+          "lean": -0.5296,
+          "trust": 0.5337
         },
         {
           "factor": "bats",
-          "lean": -0.0664,
-          "trust": 0.5099
-        }
-      ]
-    },
-    {
-      "date": "2026-07-19",
-      "matchup": "DET @ LAA",
-      "final": "2-3",
-      "market": "ml",
-      "prob": 0.299,
-      "misled_factors": [
-        {
-          "factor": "pitching",
-          "lean": -1.976,
-          "trust": 0.5349
-        },
-        {
-          "factor": "momentum",
-          "lean": -1.0909,
-          "trust": 0.522
-        },
-        {
-          "factor": "f5",
-          "lean": -0.77,
-          "trust": 0.5292
-        },
-        {
-          "factor": "bats",
-          "lean": -0.286,
-          "trust": 0.5099
-        }
-      ]
-    },
-    {
-      "date": "2026-07-19",
-      "matchup": "MIA @ MIL",
-      "final": "1-3",
-      "market": "ml",
-      "prob": 0.448,
-      "misled_factors": [
-        {
-          "factor": "pitching",
-          "lean": -0.2491,
-          "trust": 0.5349
-        },
-        {
-          "factor": "f5",
-          "lean": -0.244,
-          "trust": 0.5292
-        }
-      ]
-    },
-    {
-      "date": "2026-07-19",
-      "matchup": "SD @ KC",
-      "final": "19-2",
-      "market": "ml",
-      "prob": 0.645,
-      "misled_factors": [
-        {
-          "factor": "pitching",
-          "lean": 1.1685,
-          "trust": 0.5349
-        },
-        {
-          "factor": "bats",
-          "lean": 0.6488,
-          "trust": 0.5099
-        },
-        {
-          "factor": "f5",
-          "lean": 0.434,
-          "trust": 0.5292
-        },
-        {
-          "factor": "schedule",
-          "lean": 0.3,
-          "trust": 0.5319
-        }
-      ]
-    },
-    {
-      "date": "2026-07-19",
-      "matchup": "BAL @ HOU",
-      "final": "5-2",
-      "market": "ml",
-      "prob": 0.615,
-      "misled_factors": [
-        {
-          "factor": "pitching",
-          "lean": 0.3179,
-          "trust": 0.5349
-        },
-        {
-          "factor": "schedule",
-          "lean": 0.18,
-          "trust": 0.5319
-        },
-        {
-          "factor": "bats",
-          "lean": 0.0905,
-          "trust": 0.5099
-        }
-      ]
-    },
-    {
-      "date": "2026-07-19",
-      "matchup": "TEX @ ATL",
-      "final": "5-8",
-      "market": "ml",
-      "prob": 0.389,
-      "misled_factors": [
-        {
-          "factor": "pitching",
-          "lean": -0.8704,
-          "trust": 0.5349
-        },
-        {
-          "factor": "f5",
-          "lean": -0.277,
-          "trust": 0.5292
-        },
-        {
-          "factor": "momentum",
-          "lean": -0.2182,
-          "trust": 0.522
-        }
-      ]
-    },
-    {
-      "date": "2026-07-19",
-      "matchup": "LAD @ NYY",
-      "final": "1-2",
-      "market": "ml",
-      "prob": 0.45,
-      "misled_factors": [
-        {
-          "factor": "pitching",
-          "lean": -0.7285,
-          "trust": 0.5349
-        },
-        {
-          "factor": "f5",
-          "lean": -0.418,
-          "trust": 0.5292
-        }
-      ]
-    },
-    {
-      "date": "2026-07-19",
-      "matchup": "LAD @ NYY",
-      "final": "8-2",
-      "market": "ml",
-      "prob": 0.658,
-      "misled_factors": [
-        {
-          "factor": "bats",
-          "lean": 0.4379,
-          "trust": 0.5099
-        },
-        {
-          "factor": "momentum",
-          "lean": 0.3636,
-          "trust": 0.522
-        },
-        {
-          "factor": "pitching",
-          "lean": 0.3115,
-          "trust": 0.5349
-        },
-        {
-          "factor": "schedule",
-          "lean": 0.3,
-          "trust": 0.5319
-        }
-      ]
-    },
-    {
-      "date": "2026-07-18",
-      "matchup": "WSH @ OAK",
-      "final": "1-15",
-      "market": "ml",
-      "prob": 0.359,
-      "misled_factors": [
-        {
-          "factor": "bats",
-          "lean": -1.6439,
-          "trust": 0.5099
-        },
-        {
-          "factor": "momentum",
-          "lean": -0.7636,
-          "trust": 0.522
+          "lean": -0.4665,
+          "trust": 0.5123
         },
         {
           "factor": "manager",
           "lean": -0.3,
-          "trust": 0.5193
+          "trust": 0.5128
         }
       ]
     },
     {
-      "date": "2026-07-18",
-      "matchup": "SF @ SEA",
-      "final": "3-4",
+      "date": "2026-07-04",
+      "matchup": "SF @ COL",
+      "final": "6-4",
       "market": "ml",
-      "prob": 0.419,
+      "prob": 0.615,
+      "misled_factors": [
+        {
+          "factor": "bats",
+          "lean": 1.3586,
+          "trust": 0.5123
+        },
+        {
+          "factor": "momentum",
+          "lean": 0.3636,
+          "trust": 0.5209
+        },
+        {
+          "factor": "schedule",
+          "lean": 0.3,
+          "trust": 0.5318
+        },
+        {
+          "factor": "manager",
+          "lean": 0.1506,
+          "trust": 0.5128
+        }
+      ]
+    },
+    {
+      "date": "2026-07-04",
+      "matchup": "CWS @ CLE",
+      "final": "3-1",
+      "market": "ml",
+      "prob": 0.759,
+      "misled_factors": [
+        {
+          "factor": "pitching",
+          "lean": 1.2752,
+          "trust": 0.5337
+        },
+        {
+          "factor": "momentum",
+          "lean": 0.6182,
+          "trust": 0.5209
+        },
+        {
+          "factor": "f5",
+          "lean": 0.405,
+          "trust": 0.525
+        },
+        {
+          "factor": "manager",
+          "lean": 0.1558,
+          "trust": 0.5128
+        }
+      ]
+    },
+    {
+      "date": "2026-07-04",
+      "matchup": "TB @ HOU",
+      "final": "8-10",
+      "market": "ml",
+      "prob": 0.368,
       "misled_factors": [
         {
           "factor": "momentum",
-          "lean": -0.8364,
-          "trust": 0.522
+          "lean": -1.0545,
+          "trust": 0.5209
         },
         {
           "factor": "bats",
-          "lean": -0.5149,
-          "trust": 0.5099
+          "lean": -0.9493,
+          "trust": 0.5123
+        },
+        {
+          "factor": "manager",
+          "lean": -0.3,
+          "trust": 0.5128
+        }
+      ]
+    },
+    {
+      "date": "2026-07-04",
+      "matchup": "BAL @ CIN",
+      "final": "8-5",
+      "market": "ml",
+      "prob": 0.697,
+      "misled_factors": [
+        {
+          "factor": "pitching",
+          "lean": 1.1861,
+          "trust": 0.5337
+        },
+        {
+          "factor": "f5",
+          "lean": 0.459,
+          "trust": 0.525
+        },
+        {
+          "factor": "schedule",
+          "lean": 0.1053,
+          "trust": 0.5318
+        },
+        {
+          "factor": "bats",
+          "lean": 0.0812,
+          "trust": 0.5123
+        }
+      ]
+    },
+    {
+      "date": "2026-07-04",
+      "matchup": "DET @ TEX",
+      "final": "3-0",
+      "market": "ml",
+      "prob": 0.521,
+      "misled_factors": [
+        {
+          "factor": "momentum",
+          "lean": 0.5455,
+          "trust": 0.5209
+        },
+        {
+          "factor": "schedule",
+          "lean": 0.18,
+          "trust": 0.5318
+        },
+        {
+          "factor": "bats",
+          "lean": 0.0792,
+          "trust": 0.5123
+        }
+      ]
+    },
+    {
+      "date": "2026-07-04",
+      "matchup": "MIN @ NYY",
+      "final": "11-4",
+      "market": "ml",
+      "prob": 0.601,
+      "misled_factors": [
+        {
+          "factor": "schedule",
+          "lean": 0.3,
+          "trust": 0.5318
+        },
+        {
+          "factor": "manager",
+          "lean": 0.3,
+          "trust": 0.5128
+        },
+        {
+          "factor": "pitching",
+          "lean": 0.1048,
+          "trust": 0.5337
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "matchup": "TOR @ SEA",
+      "final": "2-0",
+      "market": "ml",
+      "prob": 0.635,
+      "misled_factors": [
+        {
+          "factor": "momentum",
+          "lean": 0.5818,
+          "trust": 0.5209
+        },
+        {
+          "factor": "schedule",
+          "lean": 0.18,
+          "trust": 0.5318
+        },
+        {
+          "factor": "manager",
+          "lean": 0.165,
+          "trust": 0.5128
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "matchup": "SF @ COL",
+      "final": "3-15",
+      "market": "ml",
+      "prob": 0.487,
+      "misled_factors": [
+        {
+          "factor": "pitching",
+          "lean": -1.4611,
+          "trust": 0.5337
+        },
+        {
+          "factor": "f5",
+          "lean": -0.556,
+          "trust": 0.525
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "matchup": "NYM @ ATL",
+      "final": "3-5",
+      "market": "ml",
+      "prob": 0.481,
+      "misled_factors": [
+        {
+          "factor": "pitching",
+          "lean": -0.3611,
+          "trust": 0.5337
+        },
+        {
+          "factor": "f5",
+          "lean": -0.0575,
+          "trust": 0.525
+        },
+        {
+          "factor": "momentum",
+          "lean": -0.0364,
+          "trust": 0.5209
+        },
+        {
+          "factor": "bats",
+          "lean": -0.0306,
+          "trust": 0.5123
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "matchup": "PIT @ WSH",
+      "final": "5-9",
+      "market": "ml",
+      "prob": 0.364,
+      "misled_factors": [
+        {
+          "factor": "pitching",
+          "lean": -0.6304,
+          "trust": 0.5337
+        },
+        {
+          "factor": "bats",
+          "lean": -0.2461,
+          "trust": 0.5123
+        },
+        {
+          "factor": "f5",
+          "lean": -0.1055,
+          "trust": 0.525
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "matchup": "STL @ CHC",
+      "final": "17-1",
+      "market": "ml",
+      "prob": 0.722,
+      "misled_factors": [
+        {
+          "factor": "bats",
+          "lean": 0.9241,
+          "trust": 0.5123
+        },
+        {
+          "factor": "momentum",
+          "lean": 0.8,
+          "trust": 0.5209
+        },
+        {
+          "factor": "pitching",
+          "lean": 0.7173,
+          "trust": 0.5337
+        },
+        {
+          "factor": "f5",
+          "lean": 0.288,
+          "trust": 0.525
+        }
+      ]
+    },
+    {
+      "date": "2026-07-02",
+      "matchup": "LAA @ SEA",
+      "final": "0-1",
+      "market": "ml",
+      "prob": 0.443,
+      "misled_factors": [
+        {
+          "factor": "bats",
+          "lean": -0.3839,
+          "trust": 0.5123
+        },
+        {
+          "factor": "pitching",
+          "lean": -0.1944,
+          "trust": 0.5337
+        },
+        {
+          "factor": "f5",
+          "lean": -0.174,
+          "trust": 0.525
+        }
+      ]
+    },
+    {
+      "date": "2026-07-02",
+      "matchup": "STL @ ATL",
+      "final": "11-5",
+      "market": "ml",
+      "prob": 0.71,
+      "misled_factors": [
+        {
+          "factor": "pitching",
+          "lean": 0.6344,
+          "trust": 0.5337
+        },
+        {
+          "factor": "f5",
+          "lean": 0.3535,
+          "trust": 0.525
+        },
+        {
+          "factor": "schedule",
+          "lean": 0.1267,
+          "trust": 0.5318
+        }
+      ]
+    },
+    {
+      "date": "2026-07-02",
+      "matchup": "CWS @ CLE",
+      "final": "5-6",
+      "market": "ml",
+      "prob": 0.496,
+      "misled_factors": [
+        {
+          "factor": "bats",
+          "lean": -1.0962,
+          "trust": 0.5123
+        },
+        {
+          "factor": "momentum",
+          "lean": -0.2182,
+          "trust": 0.5209
         }
       ]
     }
