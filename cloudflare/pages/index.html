@@ -228,6 +228,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .mt .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mmeta{font-size:11px;color:var(--faint);font-weight:600;padding-left:28px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmeta .vs{opacity:.6;font-size:10px;padding:0 2px}
+.mmeta.pending{color:var(--amber)}
 .mt.win{color:var(--text)}
 .mt .aapick{
   font-size:9.5px;font-weight:800;letter-spacing:.04em;color:var(--volt);
@@ -1590,8 +1591,10 @@ const T = {
     mk_form: 'ganó {w} de sus últimos {n}', mk_close2: 'apenas ganó los últimos 2 (por 1-2 carreras)',
     mk_bats_hot: 'bateo caliente: {r} c/j últimos 5 (vs {s} temp.)', mk_bats_cold: 'bateo frío: {r} c/j últimos 5 (vs {s} temp.)',
     mk_pitch_edge: 'ventaja de pitcheo: el abridor de {t} ha sido más fiable (menor FIP)',
-    mk_rest: '{t} llega más descansado ({d} vs {o} días)', mk_series: 'juego {g} de {n} de la serie',
+    mk_rest: '{t} llega más descansado ({d} vs {o} días)', mk_series: 'juego {g} de {n} de la serie', mk_series_rec: 'juego {g} de {n} · serie {hW}-{aW}',
+    mk_field: 'defensa floja: {n} errores en 10 juegos', mk_sweep: '{t} necesita ganar para evitar la barrida',
     mk_stakes: '{r}º en su división · a {gb} juegos', mk_note: 'Claves basadas en datos reales del juego — no es recomendación; tú decides.',
+    pred_pending: 'Predicción AA · se publica ~7am ET',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1751,8 +1754,10 @@ const T = {
     mk_form: 'won {w} of its last {n}', mk_close2: 'barely won the last 2 (by 1-2 runs)',
     mk_bats_hot: 'hot bats: {r} r/g last 5 (vs {s} season)', mk_bats_cold: 'cold bats: {r} r/g last 5 (vs {s} season)',
     mk_pitch_edge: 'pitching edge: {t} has the more reliable starter (lower FIP)',
-    mk_rest: '{t} comes in more rested ({d} vs {o} days)', mk_series: 'game {g} of {n} in the series',
+    mk_rest: '{t} comes in more rested ({d} vs {o} days)', mk_series: 'game {g} of {n} in the series', mk_series_rec: 'game {g} of {n} · series {hW}-{aW}',
+    mk_field: 'sloppy fielding: {n} errors in 10 games', mk_sweep: '{t} needs a win to avoid the sweep',
     mk_stakes: '{r} in its division · {gb} games back', mk_note: 'Keys are built from the game’s real data — not a recommendation; you decide.',
+    pred_pending: 'AA prediction · publishes around 7am ET',
     brain_soon: 'AA Brain is preparing its first learning journal.',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
@@ -2134,6 +2139,7 @@ function rowHtml(ev, idx){
   const ln = n => n ? esc(n.split(' ').slice(-1)[0]) : '?';
   const spLine = (st === 'pre' && sp2 && (sp2.away?.name || sp2.home?.name))
     ? `<span class="mmeta">⚾ ${ln(sp2.away?.name)} <span class="vs">vs</span> ${ln(sp2.home?.name)}</span>` : '';
+  const pendingLine = ev.pending && !p.pick ? `<span class="mmeta pending">⏳ ${t('pred_pending')}</span>` : '';
 
   return `<button class="mrow ${ev.event_id === selectedId ? 'sel' : ''}" data-id="${esc(ev.event_id)}" style="--i:${idx ?? 0}">
     <span class="mtime num">${timeCol}</span>
@@ -2141,6 +2147,7 @@ function rowHtml(ev, idx){
       <span class="mt ${aWin || (!done && pickA) ? 'win' : ''}">${logoImg(ev.away.code)}<span class="nm">${esc(tNick(ev.away.code))}</span>${pickA && sidePct('away') != null ? chip(sidePct('away'), liveWpHome != null) : ''}</span>
       <span class="mt ${hWin || (!done && pickH) ? 'win' : ''}">${logoImg(ev.home.code)}<span class="nm">${esc(tNick(ev.home.code))}</span>${pickH && sidePct('home') != null ? chip(sidePct('home'), liveWpHome != null) : ''}</span>
       ${spLine}
+      ${pendingLine}
     </span>
     <span class="mscore num">
       <span class="ms ${st === 'live' ? 'lv' : aWin ? 'win' : ''}">${scored ? as2 : ''}</span>
@@ -2625,7 +2632,7 @@ function renderDetail(){
       ? `${aaGauge(Math.round(p.prob * 1000) / 10, tNick(p.pick))}
          <div class="dsub" style="margin-top:6px">${startTime ? t('first_pitch') + ' ' + startTime : t('to_play_today')}</div>`
       : `<div class="dscore num" style="font-size:22px;color:var(--dim);font-weight:700">${startTime || t('o_today')}</div>
-         <div class="dsub">${t('o_toplay')}</div>`;
+         <div class="dsub">${ev.pending ? t('pred_pending') : t('o_toplay')}</div>`;
   }
   const recA = lv && lv.away.rec ? `<span class="rc num">${esc(lv.away.rec)}</span>` : '';
   const recH = lv && lv.home.rec ? `<span class="rc num">${esc(lv.home.rec)}</span>` : '';
@@ -3521,7 +3528,7 @@ function stdRowMLB(code){
 }
 function matchKeys(ev, lv){
   const snap = ev.snapshot || {}, ctx = snap.context || {};
-  const forms = snap.form || {}, pit = snap.pitchers || {}, bats = snap.bats || {};
+  const forms = snap.form || {}, pit = snap.pitchers || {}, bats = snap.bats || {}, fielding = snap.fielding || {};
   const nick = (code) => esc(tNick(code));
   const margin = (s) => { const m = String(s || '').split('-').map(Number); return (m.length === 2 && isFinite(m[0]) && isFinite(m[1])) ? m[0] - m[1] : null; };
   const sideKeys = (side, code) => {
@@ -3544,6 +3551,9 @@ function matchKeys(ev, lv){
       if (b.label === 'hot') out.push(`📈 ${t('mk_bats_hot').replace('{r}', b.l5_rpg).replace('{s}', b.season_rpg != null ? b.season_rpg : '—')}`);
       else if (b.label === 'cold') out.push(`📉 ${t('mk_bats_cold').replace('{r}', b.l5_rpg).replace('{s}', b.season_rpg != null ? b.season_rpg : '—')}`);
     }
+    const fld = fielding[side];
+    if (fld && fld.g === 10 && Number.isFinite(fld.err_l10) && Number.isFinite(fld.epg) && fld.epg >= 0.8)
+      out.push(`🧤 ${t('mk_field').replace('{n}', fld.err_l10)}`);
     const pp = pit[side];
     if (pp && pp.name && pp.fip != null) out.push(`⚾ ${esc(pp.name)} · FIP ${pp.fip}${pp.era_recent != null ? ` · ERA ${pp.era_recent}` : ''}`);
     const rec = lv && lv[side] && lv[side].rec; if (rec) out.push(`📋 ${esc(rec)}`);
@@ -3560,8 +3570,19 @@ function matchKeys(ev, lv){
     const homeMore = ctx.rest_home > ctx.rest_away;
     context.push(`😴 ${t('mk_rest').replace('{t}', nick(homeMore ? ev.home.code : ev.away.code)).replace('{d}', homeMore ? ctx.rest_home : ctx.rest_away).replace('{o}', homeMore ? ctx.rest_away : ctx.rest_home)}`);
   }
-  if (ctx.series && ctx.series.game && ctx.series.len)
-    context.push(`⚔️ ${t('mk_series').replace('{g}', ctx.series.game).replace('{n}', ctx.series.len)}`);
+  if (ctx.series && ctx.series.game && ctx.series.len){
+    const sg = Number(ctx.series.game), sl = Number(ctx.series.len);
+    const hw = ctx.series.home_wins, aw = ctx.series.away_wins;
+    const known = Number.isInteger(hw) && Number.isInteger(aw) && hw >= 0 && aw >= 0 && hw + aw === sg - 1;
+    if (known && sg === sl && sg > 1 && ((hw === 0) !== (aw === 0))){
+      const swept = hw === 0 ? ev.home.code : ev.away.code;
+      context.push(`⚠️ ${t('mk_sweep').replace('{t}', nick(swept))}`);
+    } else if (known) {
+      context.push(`⚔️ ${t('mk_series_rec').replace('{g}', sg).replace('{n}', sl).replace('{hW}', hw).replace('{aW}', aw)}`);
+    } else {
+      context.push(`⚔️ ${t('mk_series').replace('{g}', ctx.series.game).replace('{n}', ctx.series.len)}`);
+    }
+  }
   return { away, home, context };
 }
 function keysBlock(ev, lv){

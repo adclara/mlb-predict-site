@@ -182,8 +182,11 @@ function contextFor(g) {
     rest_home: typeof aux.rest_h === 'number' ? aux.rest_h : null,
     rest_away: typeof aux.rest_a === 'number' ? aux.rest_a : null,
     day_night: aux2.day_night || null,
-    series: (aux2.series_game != null || aux2.series_len != null)
-      ? { game: aux2.series_game ?? null, len: aux2.series_len ?? null } : null,
+    series: (aux2.series_game != null || aux2.series_len != null || aux2.series_home_wins != null || aux2.series_away_wins != null)
+      ? {
+          game: aux2.series_game ?? null, len: aux2.series_len ?? null,
+          home_wins: aux2.series_home_wins ?? null, away_wins: aux2.series_away_wins ?? null,
+        } : null,
     weather: wx,
   };
   return Object.values(ctx).some((v) => v != null) ? ctx : null;
@@ -382,6 +385,7 @@ function snapshotFor(g, formIdx, pitcherNames, prob, liveGame) {
     hitters: hittersFor(g),
     lineups: lineupsFor(g),
     bats: (batsHome || batsAway) ? { home: batsHome, away: batsAway } : null,
+    fielding: (g.brief && g.brief.fielding) || null,
     edges: edgesFor(g),
     pitchers: pitchersFor(g, pitcherNames),
     bullpen: bullpenFor(g),

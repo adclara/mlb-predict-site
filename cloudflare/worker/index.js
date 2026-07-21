@@ -13,6 +13,7 @@
 
 const ESPN_SCOREBOARD =
   'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard';
+const MLB_ABBR_FIX = { ATH: 'OAK' };
 
 // Marcadores en vivo multideporte (mismo patrón proxy+caché que MLB).
 // Las predicciones de estos deportes llegarán cuando su modelo pase la
@@ -138,11 +139,79 @@ export default {
 
 async function today(env, origin) {
   const raw = await env.AA_LATEST.get('mlb:today');
-  if (!raw) return json({ sport: 'mlb', events: [], record: null, note: 'sin datos aún' }, 200, origin, 30);
-  return new Response(raw, {
-    status: 200,
-    headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=60' },
+  let stored = null;
+  try { stored = raw ? JSON.parse(raw) : null; } catch (e) { /* blob inválido: intenta el fallback */ }
+  const date = etDate(new Date());
+  if (raw && stored && stored.date && stored.date >= date) {
+    return new Response(raw, {
+      status: 200,
+      headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=60' },
+    });
+  }
+
+  // GitHub Actions puede retrasar el cron horario. Si el blob aún es de ayer,
+  // muestra el calendario real de HOY desde StatsAPI y deja la predicción AA
+  // explícitamente pendiente. El subrequest se cachea 120 s en el edge ($0).
+  try {
+    const res = await fetch(
+      `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,team,linescore`,
+      { headers: { 'user-agent': 'aa-sports/1.0', accept: 'application/json' }, cf: { cacheTtl: 120, cacheEverything: true } },
+    );
+    if (!res.ok) throw new Error('statsapi ' + res.status);
+    const doc = mlbPendingDoc(await res.json(), date, stored && stored.record, new Date().toISOString());
+    return json(doc, 200, origin, 120);
+  } catch (err) {
+    console.error(JSON.stringify({ message: 'mlb today fallback failed', error: String(err && err.message || err), date }));
+    if (raw && stored) {
+      return new Response(raw, {
+        status: 200,
+        headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=30' },
+      });
+    }
+    return json({ sport: 'mlb', date, events: [], record: null, note: 'sin datos aún' }, 200, origin, 30);
+  }
+}
+
+// Normalización pura del schedule mínimo de respaldo (exportada para tests).
+// No calcula ni infiere una predicción: solo publica hechos del calendario.
+export function mlbPendingDoc(data, date, record = null, updatedAt = null) {
+  const games = (Array.isArray(data && data.dates) ? data.dates : [])
+    .flatMap((d) => Array.isArray(d && d.games) ? d.games : [])
+    .filter((g) => (g.gameType || 'R') === 'R');
+  const fixAbbr = (abbr) => MLB_ABBR_FIX[abbr] || abbr;
+  const teamOf = (side) => {
+    const team = (side && side.team) || {};
+    const rawCode = team.abbreviation || team.teamName || team.name || '?';
+    return { code: fixAbbr(rawCode), name: team.name || team.shortName || team.teamName || rawCode };
+  };
+  const statusOf = (g) => {
+    const s = String((g.status && (g.status.detailedState || g.status.abstractGameState)) || '').toLowerCase();
+    if (s.includes('final') || s.includes('completed') || s.includes('game over')) return 'final';
+    if (s.includes('progress') || s.includes('live') || s.includes('delayed')) return 'live';
+    return 'pre';
+  };
+  const pitcherName = (p) => (p && (p.fullName || p.lastName)) || null;
+  const events = games.map((g) => {
+    const sides = g.teams || {};
+    const away = teamOf(sides.away), home = teamOf(sides.home);
+    const awayPitcher = pitcherName(sides.away && sides.away.probablePitcher);
+    const homePitcher = pitcherName(sides.home && sides.home.probablePitcher);
+    return {
+      sport: 'mlb', league: 'MLB', event_id: String(g.gamePk),
+      matchup: `${away.code} @ ${home.code}`, start: g.gameDate || date, status: statusOf(g),
+      home, away, prediction: null, pending: true,
+      metrics: [], summary_es: null,
+      snapshot: (awayPitcher || homePitcher) ? { pitchers: {
+        away: awayPitcher ? { name: awayPitcher } : null,
+        home: homePitcher ? { name: homePitcher } : null,
+      } } : null,
+      risk: null, odds: null, badges: [], result: null, final: null, live: null, updated_at: null,
+    };
   });
+  return {
+    sport: 'mlb', league: 'MLB', date, source: 'statsapi-fallback',
+    updated_at: updatedAt, record: record || null, pending: true, events,
+  };
 }
 
 // Alertas del vigía del Radar (las escribe scheduled() cada 5 min).

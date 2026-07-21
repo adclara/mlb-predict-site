@@ -82,12 +82,23 @@ async function fetchAllRecent(beforeDate, days = 25) {
     if ((g.status || {}).abstractGameState !== 'Final') continue
     const t = g.teams || {}, hs = t.home?.score, as = t.away?.score
     if (hs == null || as == null) continue
-    for (const [id, rf, ra] of [[t.home?.team?.id, hs, as], [t.away?.team?.id, as, hs]]) {
-      if (id == null) continue; if (!byTeam.has(id)) byTeam.set(id, []); byTeam.get(id).push({ date: d.date, rf, ra, won: rf > ra ? 1 : 0 })
+    const heRaw = g.linescore?.teams?.home?.errors, aeRaw = g.linescore?.teams?.away?.errors
+    const he = heRaw == null || !Number.isFinite(Number(heRaw)) ? null : Number(heRaw)
+    const ae = aeRaw == null || !Number.isFinite(Number(aeRaw)) ? null : Number(aeRaw)
+    for (const [id, opp, rf, ra, e] of [
+      [t.home?.team?.id, t.away?.team?.id, hs, as, he],
+      [t.away?.team?.id, t.home?.team?.id, as, hs, ae],
+    ]) {
+      if (id == null) continue; if (!byTeam.has(id)) byTeam.set(id, []); byTeam.get(id).push({ date: d.date, rf, ra, won: rf > ra ? 1 : 0, opp: opp ?? null, e })
     }
   } }
   for (const rows of byTeam.values()) rows.sort((a, b) => (a.date < b.date ? 1 : -1))
   return byTeam
+}
+const fieldingFor = (rows) => {
+  const errs = rows.slice(0, 10).map((r) => r.e).filter(Number.isFinite)
+  const err_l10 = errs.length ? errs.reduce((sum, e) => sum + e, 0) : null
+  return { err_l10, epg: errs.length ? Math.round(err_l10 / errs.length * 100) / 100 : null, g: errs.length }
 }
 const startF5 = (ip, er) => (ip < 5 ? 'white' : er <= 2 ? 'green' : 'red')
 const _plog = new Map()
@@ -384,13 +395,21 @@ async function computeDay(date) {
     const awayHand = g.away_sp_hand ?? _hand.get(g.away_probable_pitcher_id) ?? null
     const platoonOf = (split, oppHand) => (split && oppHand ? (oppHand === 'L' ? split.vsL : split.vsR) : null)
     const pH = platoonOf(hSplit, awayHand), pA = platoonOf(aSplit, homeHand)
+    const priorInSeries = Number(g.series_game) - 1
+    const seriesRows = Number.isInteger(priorInSeries) && priorInSeries >= 1
+      ? rh.filter((r) => r.opp === g.away_team_id).slice(0, priorInSeries) : []
+    const seriesKnown = priorInSeries >= 1 && seriesRows.length === priorInSeries
+      && seriesRows.every((r) => r.won === 0 || r.won === 1)
+    const seriesHomeWins = seriesKnown ? seriesRows.reduce((sum, r) => sum + r.won, 0) : null
     const aux2 = {
       day_night: g.day_night ?? null, series_game: g.series_game ?? null, series_len: g.series_len ?? null,
+      series_home_wins: seriesHomeWins, series_away_wins: seriesKnown ? priorInSeries - seriesHomeWins : null,
       home_sp_hand: homeHand, away_sp_hand: awayHand,
       platoon_h: pH != null ? Math.round((pH - LG_OPS) * 1000) / 1000 : null, // home bats vs away starter's hand, vs league
       platoon_a: pA != null ? Math.round((pA - LG_OPS) * 1000) / 1000 : null,
     }
     const brief = buildBrief(a, prediction, f5, priors, g, homeHand, awayHand, { home: _hitters.get(g.home_team_id) || [], away: _hitters.get(g.away_team_id) || [] })
+    brief.fielding = { home: fieldingFor(rh), away: fieldingFor(ra) }
     rows.push({ ...analysisToRow(a), date, game_date: g.game_date, game_datetime: g.game_datetime || null, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff, weather_forecast: weather, wx_runs: a.total.components?.wx ?? 0, aux, aux2, brief, odds: null })
     return a
   })
@@ -589,7 +608,7 @@ function buildLearning(rows) {
 // MLB's officialDate is Eastern — so is the robot's "today". Running on the UTC
 // date would make the late-night crons (03:00/06:30 UTC = 11pm/2:30am ET) roll
 // over to TOMORROW and freeze half-baked picks; ET keeps every run on the right
-// slate. Before 8am ET a run is grading/odds-capture only (never posts plays).
+// slate. Before 7am ET a run is grading/odds-capture only (never posts plays).
 const ET = 'America/New_York'
 function etNow() {
   const d = new Date()
@@ -601,7 +620,7 @@ async function main() {
   fs.mkdirSync(GAMES, { recursive: true })
   const et = etNow()
   const today = process.argv[2] || et.date
-  const posting = !!process.argv[2] || et.hour >= 8 // manual runs always post
+  const posting = !!process.argv[2] || et.hour >= 7 // manual runs always post
 
   const existingToday = fs.existsSync(`${HIST}/${today}.json`) ? j(`${HIST}/${today}.json`) : null
   const day = await computeDay(today)
