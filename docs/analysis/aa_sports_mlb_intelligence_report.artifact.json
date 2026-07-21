@@ -1,0 +1,357 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "AA Sports MLB: primero integridad, luego inteligencia",
+    "description": "Auditoría técnica y plan $0 para snapshots inmutables, ingesta cada 20 minutos y aprendizaje gobernado.",
+    "generatedAt": "2026-07-21T17:49:45Z",
+    "sources": [
+      {
+        "id": "audit_snapshot",
+        "label": "MLB intelligence audit snapshot",
+        "path": "docs/analysis/mlb_intelligence_audit_snapshot.json",
+        "query": {
+          "engine": "SQLite JSON1",
+          "language": "SQL",
+          "sql": "WITH audit(doc) AS (SELECT json(readfile('docs/analysis/mlb_intelligence_audit_snapshot.json'))) SELECT doc FROM audit;",
+          "description": "Canonical bounded audit snapshot used to materialize report datasets.",
+          "executed_at": "2026-07-21T17:49:45Z",
+          "tables_used": ["docs/analysis/mlb_intelligence_audit_snapshot.json"],
+          "filters": ["Audit snapshot as of 2026-07-21", "No secrets"]
+        }
+      },
+      {
+        "id": "audit_notebook",
+        "label": "Executed MLB intelligence audit notebook",
+        "path": "docs/analysis/aa_sports_mlb_intelligence_audit.ipynb"
+      },
+      {
+        "id": "implementation_plan",
+        "label": "MLB intelligence implementation plan",
+        "path": "docs/MLB_INTELLIGENCE_PLAN.md"
+      },
+      {
+        "id": "daily_implementation",
+        "label": "Current MLB daily implementation",
+        "path": "robot/daily.mjs"
+      },
+      {
+        "id": "learning_implementation",
+        "label": "Current MLB learner and validation",
+        "path": "robot/learn.js"
+      },
+      {
+        "id": "workflow_implementation",
+        "label": "Current MLB scheduled workflow",
+        "path": ".github/workflows/adrian-daily.yml"
+      },
+      {
+        "id": "github_schedule_docs",
+        "label": "GitHub scheduled workflow behavior",
+        "href": "https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows"
+      },
+      {
+        "id": "cloudflare_worker_limits",
+        "label": "Cloudflare Workers Free limits",
+        "href": "https://developers.cloudflare.com/workers/platform/limits/"
+      },
+      {
+        "id": "cloudflare_kv_limits",
+        "label": "Cloudflare Workers KV limits",
+        "href": "https://developers.cloudflare.com/kv/platform/limits/"
+      },
+      {
+        "id": "cloudflare_d1_limits",
+        "label": "Cloudflare D1 limits and pricing",
+        "href": "https://developers.cloudflare.com/d1/platform/pricing/"
+      }
+    ],
+    "cards": [
+      {
+        "id": "history_inventory",
+        "description": "Filas disponibles; la cantidad no sustituye un corte temporal válido.",
+        "dataset": "headline",
+        "sourceId": "audit_snapshot",
+        "metrics": [
+          {"label": "Filas MLB", "field": "rows", "format": "number"},
+          {"label": "Gradadas", "field": "graded", "format": "number"}
+        ]
+      },
+      {
+        "id": "pregame_record",
+        "description": "Cohorte estrictamente publicada antes del first pitch.",
+        "dataset": "headline",
+        "sourceId": "audit_snapshot",
+        "metrics": [
+          {"label": "Picks pregame", "field": "strict_pregame_n", "format": "number"},
+          {"label": "Acierto", "field": "strict_pregame_rate", "format": "percent"}
+        ]
+      },
+      {
+        "id": "poststart_record",
+        "description": "Picks retrospectivos o reabiertos que no pertenecen al récord live.",
+        "dataset": "headline",
+        "sourceId": "audit_snapshot",
+        "metrics": [
+          {"label": "Picks post-start", "field": "poststart_n", "format": "number"}
+        ]
+      },
+      {
+        "id": "cron_reliability",
+        "description": "Separación mediana entre 100 runs programados recientes.",
+        "dataset": "headline",
+        "sourceId": "audit_snapshot",
+        "metrics": [
+          {"label": "Gap mediano", "field": "cron_gap_p50_min", "format": "number", "suffix": " min"},
+          {"label": "Gap máximo", "field": "cron_gap_max_min", "format": "number", "suffix": " min"}
+        ]
+      }
+    ],
+    "charts": [
+      {
+        "id": "reported_logloss",
+        "title": "Calidad probabilística reportada",
+        "subtitle": "Menor log-loss es mejor; estas cifras requieren reconstrucción sobre snapshots inmutables.",
+        "showDescription": true,
+        "intent": "comparison",
+        "question": "¿Cómo se comparan clásico, learner, combinado y mercado en el dataset actual?",
+        "rationale": "El gráfico hace visible que el learner reduce sobreconfianza, pero el mercado conserva el menor log-loss.",
+        "comparisonContext": {
+          "denominator": "Juegos OOS disponibles para cada comparación",
+          "grain": "Una probabilidad moneyline por juego",
+          "unit": "Log-loss",
+          "baseline": "Los inputs nativos son mutables; no es evidencia de promoción"
+        },
+        "type": "horizontalBar",
+        "dataset": "model_logloss",
+        "sourceId": "audit_snapshot",
+        "encodings": {
+          "x": {"field": "model", "type": "nominal", "label": "Modelo"},
+          "y": {"field": "logloss", "type": "quantitative", "format": "decimal", "label": "Log-loss"},
+          "tooltip": [
+            {"field": "accuracy", "type": "quantitative", "format": "percent", "label": "Acierto"},
+            {"field": "brier", "type": "quantitative", "format": "decimal", "label": "Brier"},
+            {"field": "status", "type": "text", "label": "Estado"}
+          ]
+        },
+        "valueFormat": "decimal",
+        "layout": "full",
+        "labels": {"values": "all"},
+        "palette": {"kind": "sequential", "name": "aa-probability"},
+        "settings": {"orientation": "horizontal", "sort": "none", "showValues": true, "categoryLabelPolicy": "wrap"},
+        "surface": {"surface": "card", "showControls": true, "viewMode": "both"}
+      }
+    ],
+    "tables": [
+      {
+        "id": "integrity_findings",
+        "title": "Hallazgos que bloquean un boost honesto",
+        "subtitle": "Primero causalidad temporal y precios comparables; después complejidad de modelo.",
+        "showDescription": true,
+        "dataset": "integrity_findings",
+        "sourceId": "audit_snapshot",
+        "defaultSort": {"field": "order", "direction": "asc"},
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {"field": "order", "label": "#", "format": "number"},
+          {"field": "priority", "label": "Prioridad", "type": "text"},
+          {"field": "finding", "label": "Hallazgo", "type": "text"},
+          {"field": "observed", "label": "Observado", "type": "text"},
+          {"field": "decision", "label": "Decisión", "type": "text"}
+        ]
+      },
+      {
+        "id": "cadence",
+        "title": "Cadencia propuesta",
+        "subtitle": "Capturar, inferir, aprender y promover son trabajos distintos.",
+        "showDescription": true,
+        "dataset": "cadence",
+        "sourceId": "audit_snapshot",
+        "defaultSort": {"field": "order", "direction": "asc"},
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {"field": "order", "label": "#", "format": "number"},
+          {"field": "cadence", "label": "Cadencia", "type": "text"},
+          {"field": "work", "label": "Trabajo", "type": "text"},
+          {"field": "guardrail", "label": "Guardrail", "type": "text"}
+        ]
+      },
+      {
+        "id": "experiments",
+        "title": "Challengers preregistrados",
+        "subtitle": "Los umbrales son gates propuestos; no son resultados actuales.",
+        "showDescription": true,
+        "dataset": "experiments",
+        "sourceId": "audit_snapshot",
+        "defaultSort": {"field": "id", "direction": "asc"},
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {"field": "id", "label": "ID", "type": "text"},
+          {"field": "hypothesis", "label": "Hipótesis", "type": "text"},
+          {"field": "design", "label": "Diseño sombra", "type": "text"},
+          {"field": "gate", "label": "Gate propuesto", "type": "text"}
+        ]
+      },
+      {
+        "id": "roadmap",
+        "title": "Roadmap de implementación",
+        "subtitle": "Cada fase tiene una condición de salida verificable.",
+        "showDescription": true,
+        "dataset": "roadmap",
+        "sourceId": "audit_snapshot",
+        "defaultSort": {"field": "order", "direction": "asc"},
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {"field": "order", "label": "#", "format": "number"},
+          {"field": "phase", "label": "Fase", "type": "text"},
+          {"field": "scope", "label": "Alcance", "type": "text"},
+          {"field": "exit_gate", "label": "Condición de salida", "type": "text"}
+        ]
+      }
+    ],
+    "blocks": [
+      {"id": "title", "type": "markdown", "body": "# AA Sports MLB: primero integridad, luego inteligencia"},
+      {
+        "id": "technical_summary",
+        "type": "markdown",
+        "sourceId": "audit_snapshot",
+        "body": "## Resumen técnico\n\nLa base del algoritmo es útil para experimentar, pero la auditoría encontró una fuga temporal operativa: `upsertGames()` reemplaza las features durante el día y muchas filas nativas terminan guardadas In Progress o Final. Por eso hoy no es defendible prometer un aumento de acierto ni promocionar una regla nueva.\n\n**Recomendación:** congelar una decisión oficial inmutable, separar outcomes y observaciones intradía, capturar hechos públicos cada 20 minutos en D1 mediante Cloudflare y mantener el modelo privado en GitHub Actions. El algoritmo aprende de juegos Final, recalibra una vez al día y solo promueve challengers semanalmente después de evidencia forward independiente."
+      },
+      {"id": "headline_metrics", "type": "metric-strip", "cardIds": ["history_inventory", "pregame_record", "poststart_record", "cron_reliability"]},
+      {
+        "id": "key_findings",
+        "type": "markdown",
+        "sourceId": "audit_snapshot",
+        "body": "## Hallazgos clave\n\n- El récord 26–23 mezcla 13 picks creados después del first pitch. La cohorte live estricta es 18–18, n=36.\n- En el 20 de julio, `p_final` cambió en 15/15 juegos después de publicar; `adrian_p`, `model_p` y FIP cambiaron en 14/15.\n- El gate ORO 76–30 deja de pasar al excluir las filas nativas problemáticas: el backfill as-of queda n=86 y test n=25, por debajo de sus propios mínimos.\n- La línea histórica de total difiere del O/U ESPN en 77.5% de juegos; F5 no tiene score ni precio forward explícitos.\n- El learner parece mejorar log-loss/Brier, no acierto; el mercado conserva mejores métricas globales. Todo debe repetirse con snapshots causales."
+      },
+      {"id": "model_chart", "type": "chart", "chartId": "reported_logloss", "layout": "full"},
+      {
+        "id": "scope_definitions",
+        "type": "markdown",
+        "sourceId": "audit_notebook",
+        "body": "## Alcance, datos y definiciones\n\nEl estudio perfiló los 116 archivos `games_v1`, el snapshot `learning.json`, los documentos diarios de picks y 100 runs programados recientes. `Live pregame` exige `posted_at < first_pitch`; `backfill` es análisis retrospectivo y nunca integra el récord público. `Decision snapshot` significa inputs, mercado y versión congelados antes del corte. `Outcome` significa un hecho posterior y vive fuera del hash de decisión.\n\nLas métricas probabilísticas usan log-loss, Brier y ECE. El acierto se reporta junto con cobertura/abstención. ROI y CLV solo son válidos con precio y timestamps auditables; no se asume −110 para moneylines reales."
+      },
+      {"id": "integrity_table_block", "type": "table", "tableId": "integrity_findings", "layout": "full"},
+      {
+        "id": "methodology",
+        "type": "markdown",
+        "sourceId": "audit_notebook",
+        "body": "## Metodología y robustez\n\nSe compararon versiones Git del slate del 20 de julio antes y después de los juegos, se unieron picks con `gameDate` oficial por `game_pk`, se perfilaron duplicados/cobertura y se revisó la cadena producción–replay. El bootstrap original no centraba sus medias por una multiplicación LCG fuera del rango entero exacto de JavaScript. Una repetición con RNG corregido y otra por bloques de fecha mantuvieron la mejora de log-loss, mientras el acierto siguió cruzando cero.\n\nEsto no resuelve el problema causal: ningún intervalo puede reparar features que fueron reescritas después del corte. La evaluación se repite desde cero una vez exista el snapshot inmutable."
+      },
+      {
+        "id": "architecture",
+        "type": "markdown",
+        "sourceId": "implementation_plan",
+        "body": "## Arquitectura de captura $0\n\nUn tercer Cron Trigger Cloudflare (`*/20`) realiza dos fetches agregados —StatsAPI hidratado y ESPN scoreboard— y guarda un slot idempotente en D1. Con 72 ticks diarios se estiman 144 fetches y 72–144 rows D1 por día. El payload compacto ocupa aproximadamente 22–43 MB por 30 días.\n\nEl workflow completo no debe correr cada 20 minutos: la proyección es ~1,029 writes KV/día, superior al límite gratuito de 1,000. D1 conserva snapshots append-only; Actions consume watermarks y KV solo cambia cuando cambia el hash público. Cloudflare tiene 5 Cron Triggers por cuenta y hoy se usan 2."
+      },
+      {"id": "cadence_table_block", "type": "table", "tableId": "cadence", "layout": "full"},
+      {
+        "id": "model_improvements",
+        "type": "markdown",
+        "sourceId": "implementation_plan",
+        "body": "## Cómo se busca el boost\n\nEl primer challenger limpio modela el residual sobre el mercado disponible al mismo instante: `logit(P_home) = logit(P_market_asof) + beta·X_AA`. Ridge reduce varianza y permite que AA se encoja hacia el mercado cuando no tiene señal. Después se prueban ablations, abridor/bullpen con shrinkage y un horizonte T−90m con lineup.\n\nPara maximizar acierto sin engañar sobre valor, la app separa **alta probabilidad** de **valor medido**. Un favorito caro puede acertar mucho y perder unidades; una jugada con valor puede acertar menos. El selector puede devolver cero."
+      },
+      {"id": "experiments_table_block", "type": "table", "tableId": "experiments", "layout": "full"},
+      {
+        "id": "recommended_next_steps",
+        "type": "markdown",
+        "sourceId": "implementation_plan",
+        "body": "## Próximos pasos recomendados\n\n1. Implementar ledger pregame y snapshot inmutable; congelar también cero picks.\n2. Separar features, odds opening/closing y outcome con timestamps/provenance.\n3. Corregir dedupe, postponed, total/F5 y RNG; devolver ORO a sombra.\n4. Añadir el cron ligero de 20 minutos y D1 idempotente; retirar commits intradía.\n5. Reconstruir `p_final` end-to-end y el champion limpio.\n6. Registrar challengers antes del forward y revisar promociones semanalmente.\n7. Mantener Over/F5 privados hasta tener línea, juice, F5 explícito y gate independiente."
+      },
+      {"id": "roadmap_table_block", "type": "table", "tableId": "roadmap", "layout": "full"},
+      {
+        "id": "limitations",
+        "type": "markdown",
+        "sourceId": "audit_snapshot",
+        "body": "## Limitaciones y supuestos\n\n- Las métricas actuales son diagnósticas, no evidencia causal de promoción.\n- El backfill ofrece volumen, pero no opening timestamp verificable ni el mismo set de features que live.\n- Multi-book real, opening total forward y F5 explícito forward están en n=0.\n- GitHub documenta que los schedules pueden retrasarse o descartarse bajo carga; sin un nuevo token, Cloudflare garantiza captura, no un run privado exacto a las 7am.\n- Los gates de muestra del roadmap son políticas propuestas y no resultados.\n- No se promete un aumento específico de tasa de acierto."
+      },
+      {
+        "id": "further_questions",
+        "type": "markdown",
+        "body": "## Preguntas abiertas\n\n- ¿Se autorizará más adelante un fine-grained token limitado para que Cloudflare dispare un workflow corto y haga confiable el corte privado de las 7am?\n- ¿La fuente keyless puede entregar precio/juice F5 real; si no, F5 debe permanecer descriptivo?\n- ¿Qué objetivo debe gobernar cada tarjeta: máxima probabilidad de ganar o máximo valor esperado? Deben mantenerse separados.\n- ¿Cuántas decisiones forward limpias tardará en acumular cada mercado? El tiempo depende del número real de candidatos y no se debe rellenar cupo."
+      },
+      {
+        "id": "english_summary",
+        "type": "markdown",
+        "sourceId": "audit_snapshot",
+        "body": "## English summary\n\nThe audit found that native feature rows are overwritten during and after games. The priority is an immutable pregame decision ledger, not additional complexity. Cloudflare should capture public state every 20 minutes into append-only D1 slots, while GitHub Actions remains the private compute layer. Learning happens after Final outcomes; model promotion happens weekly after independent forward gates. Current ORO, total and F5 evidence is not sufficient for a new performance claim."
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-07-21T17:49:45Z",
+    "status": "ready",
+    "datasets": {
+      "headline": [
+        {
+          "rows": 1544,
+          "graded": 1506,
+          "strict_pregame_n": 36,
+          "strict_pregame_rate": 0.5,
+          "poststart_n": 13,
+          "cron_gap_p50_min": 127.83,
+          "cron_gap_max_min": 232.2
+        }
+      ],
+      "model_logloss": [
+        {"model": "Clásico", "logloss": 0.7209, "accuracy": 0.5422, "brier": 0.2621, "status": "Diagnóstico actual"},
+        {"model": "Aprendido", "logloss": 0.6953, "accuracy": 0.5372, "brier": 0.251, "status": "Diagnóstico actual"},
+        {"model": "Combinado", "logloss": 0.6942, "accuracy": 0.5386, "brier": 0.2504, "status": "Diagnóstico actual"},
+        {"model": "Mercado", "logloss": 0.6845, "accuracy": 0.5643, "brier": 0.2457, "status": "Baseline mismo histórico"}
+      ],
+      "integrity_findings": [
+        {"order": 1, "priority": "P0", "finding": "Features mutables", "observed": "p_final cambió 15/15 después de publicar", "decision": "Snapshot oficial inmutable; outcome separado"},
+        {"order": 2, "priority": "P0", "finding": "Récord mezcla post-start", "observed": "13/49 resueltos; pregame estricto 18-18", "decision": "Separar backtest/shadow/live y congelar cero"},
+        {"order": 3, "priority": "P0", "finding": "ORO no conserva su gate", "observed": "Backfill n=86; test n=25 vs mínimos 100/30", "decision": "Volver a sombra y acumular forward limpio"},
+        {"order": 4, "priority": "P1", "finding": "Total no usa línea de book", "observed": "Difiere de ESPN en 77.5%; 50.1% contra línea ESPN", "decision": "Exigir línea y juice pregame"},
+        {"order": 5, "priority": "P1", "finding": "Opening no auditable", "observed": "p_home_open 10.9%; captured_at se sobrescribe", "decision": "Timestamps opening/closing inmutables"},
+        {"order": 6, "priority": "P1", "finding": "Grain y postponed", "observed": "16 game_pk repetidos; un outcome duplicado", "decision": "Dedupe por game_pk; contexto solo con juegos válidos"},
+        {"order": 7, "priority": "P1", "finding": "Replay no replica producción", "observed": "Ancla y lambda no se validan end-to-end/nested", "decision": "Una función compartida y nested walk-forward"}
+      ],
+      "cadence": [
+        {"order": 1, "cadence": "20 min", "work": "Schedule, estado, pitcher, lineup y mercado primario a D1", "guardrail": "No reentrena ni reescribe snapshot oficial"},
+        {"order": 2, "cadence": "5 min live", "work": "Score y win probability a D1", "guardrail": "Cero commits Git intradía"},
+        {"order": 3, "cadence": "60 min", "work": "Multi-book disponible, forecast y scratches", "guardrail": "Captura tardía nunca se llama opening"},
+        {"order": 4, "cadence": "6 h", "work": "Injuries, transactions, season FIP y splits", "guardrail": "Fuente fallida se distingue de cero eventos"},
+        {"order": 5, "cadence": "Tras Final", "work": "Outcome, F5 explícito, Elo y watermark", "guardrail": "Postgame no entra como feature pregame"},
+        {"order": 6, "cadence": "Diario", "work": "Refit, calibración y Cerebro", "guardrail": "No promociona automáticamente"},
+        {"order": 7, "cadence": "Semanal", "work": "Nested WF, block bootstrap, drift y promotion/rollback", "guardrail": "Test no se reutiliza para elegir umbrales"}
+      ],
+      "experiments": [
+        {"id": "E0", "hypothesis": "Snapshot inmutable elimina leakage", "design": "Official 7am y observaciones separadas", "gate": "100% prestart; 0 mutaciones; 0 duplicados"},
+        {"id": "E1", "hypothesis": "Residual AA añade señal al mercado", "design": "Ridge con offset de mercado y nested WF", "gate": ">=1,000 OOS + >=300 forward/60 fechas; IC bloque ΔLL <0"},
+        {"id": "E2", "hypothesis": "Quitar factores débiles reduce varianza", "design": "Máximo cinco ablations preregistradas", "gate": "Gate E1 y estabilidad por mes/precio/home-away"},
+        {"id": "E3", "hypothesis": "Abridor/bullpen detallado añade señal", "design": "K-BB%, FIP, descanso y uso real L3 con shrinkage", "gate": ">=500 OOS + >=200 forward; IC bloque ΔLL <0"},
+        {"id": "E4", "hypothesis": "Lineup T-90 mejora la mañana", "design": "Comparación pareada 7am vs T-90", "gate": ">=300 juegos con ambos snapshots"},
+        {"id": "E5", "hypothesis": "Selector price-aware concentra edge", "design": "Puede abstener y devuelve cero", "gate": ">=100 picks/60 fechas; ROI y CLV con IC positivo"},
+        {"id": "E6", "hypothesis": "Over/F5 son publicables", "design": "Línea+juice reales y F5 explícito", "gate": ">=200 forward/mercado; lower ROI CI >0"},
+        {"id": "E7", "hypothesis": "Decay maneja drift", "design": "Expanding vs decay/prior multitemporada", "gate": "Nested WF y sin deterioro mensual persistente"}
+      ],
+      "roadmap": [
+        {"order": 0, "phase": "Fase 0 · Integridad", "scope": "Snapshot, ledger, ORO sombra, totals/F5, dedupe y RNG", "exit_gate": "0 post-start training rows; 0 mutaciones; 0 outcomes duplicados"},
+        {"order": 1, "phase": "Fase 1 · Captura 20m", "scope": "Cron Worker + D1 idempotente; jobs separados", "exit_gate": "Capture age <=30m y free tier verde"},
+        {"order": 2, "phase": "Fase 2 · Champion limpio", "scope": "Replay end-to-end, nested WF, versionado y rollback", "exit_gate": "Producción reproducida desde inputs inmutables"},
+        {"order": 3, "phase": "Fase 3 · Challengers", "scope": "Residual, ablations, bullpen/abridor y T-90", "exit_gate": "Gates forward independientes"},
+        {"order": 4, "phase": "Fase 4 · Aprendizaje gobernado", "scope": "Drift, refit diario, promoción semanal y abstención", "exit_gate": "Mejora estable con guardrails operativos"}
+      ]
+    }
+  },
+  "sources": [
+    {"id": "audit_snapshot", "label": "MLB intelligence audit snapshot", "path": "docs/analysis/mlb_intelligence_audit_snapshot.json", "query": {"engine": "SQLite JSON1", "language": "SQL", "sql": "WITH audit(doc) AS (SELECT json(readfile('docs/analysis/mlb_intelligence_audit_snapshot.json'))) SELECT doc FROM audit;", "description": "Canonical bounded audit snapshot used to materialize report datasets.", "executed_at": "2026-07-21T17:49:45Z", "tables_used": ["docs/analysis/mlb_intelligence_audit_snapshot.json"], "filters": ["Audit snapshot as of 2026-07-21", "No secrets"]}},
+    {"id": "audit_notebook", "label": "Executed MLB intelligence audit notebook", "path": "docs/analysis/aa_sports_mlb_intelligence_audit.ipynb"},
+    {"id": "implementation_plan", "label": "MLB intelligence implementation plan", "path": "docs/MLB_INTELLIGENCE_PLAN.md"},
+    {"id": "daily_implementation", "label": "Current MLB daily implementation", "path": "robot/daily.mjs"},
+    {"id": "learning_implementation", "label": "Current MLB learner and validation", "path": "robot/learn.js"},
+    {"id": "workflow_implementation", "label": "Current MLB scheduled workflow", "path": ".github/workflows/adrian-daily.yml"},
+    {"id": "github_schedule_docs", "label": "GitHub scheduled workflow behavior", "href": "https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows"},
+    {"id": "cloudflare_worker_limits", "label": "Cloudflare Workers Free limits", "href": "https://developers.cloudflare.com/workers/platform/limits/"},
+    {"id": "cloudflare_kv_limits", "label": "Cloudflare Workers KV limits", "href": "https://developers.cloudflare.com/kv/platform/limits/"},
+    {"id": "cloudflare_d1_limits", "label": "Cloudflare D1 limits and pricing", "href": "https://developers.cloudflare.com/d1/platform/pricing/"}
+  ]
+}
