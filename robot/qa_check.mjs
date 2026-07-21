@@ -105,12 +105,13 @@ async function qaMlbLive() {
   else if (!noDate.length) P('todos los juegos traen el campo `date` (ET) del fix');
   else F(`${noDate.length} juegos SIN campo date → el candado de fecha del frontend no puede filtrarlos`);
 
-  // ¿algún "final" con fecha != hoy? (esos son los que colaban ayer→hoy)
-  const staleFinals = wg.filter(g => g.status === 'final' && g.date && g.date !== TODAY);
-  if (staleFinals.length) W(`${staleFinals.length} finales de fecha ≠ hoy presentes en /live (el frontend DEBE filtrarlos por date): ${staleFinals.slice(0,3).map(g=>`${g.away?.code}@${g.home?.code} ${g.date}`).join(', ')}`);
-  else if (wg.length) P('sin finales de días pasados colándose en /live');
+  // /live es el feed de HOY: cualquier fecha distinta es un fallo duro porque
+  // puede contaminar una serie que repite equipos en días consecutivos.
+  const wrongDay = wg.filter(g => g.date !== TODAY);
+  if (wrongDay.length) F(`${wrongDay.length} juegos de fecha ≠ hoy presentes en /live: ${wrongDay.slice(0,3).map(g=>`${g.away?.code}@${g.home?.code} ${g.date || 'sin-fecha'}`).join(', ')}`);
+  else if (wg.length) P('todos los juegos de /live pertenecen a hoy (ET)');
 
-  const src = await getJson(`${ESPN}/baseball/mlb/scoreboard`);
+  const src = await getJson(`${ESPN}/baseball/mlb/scoreboard?dates=${TODAY.replace(/-/g, '')}&limit=100`);
   const eg = (src.data && src.data.events) || [];
   console.log(`   (ESPN reporta ${eg.length} eventos MLB ahora)`);
   // cruce de marcadores por par de equipos
@@ -225,3 +226,4 @@ for (const fn of [qaMlbToday, qaMlbLive, qaSoccer, qaStandings, qaSummary, qaMis
 
 console.log(`\n══ RESUMEN ══\n  PASS ${pass} · FAIL ${fail} · WARN ${warn}`);
 console.log(fail === 0 ? '\n✅ QA sin fallos duros.' : `\n❌ ${fail} fallos que requieren atención.`);
+if (fail > 0) process.exitCode = 1;

@@ -21,6 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Regresión MLB — aislamiento de fechas live
+        run: node --test tests/mlb_live_date.test.mjs
       - name: Producción = main (fix de production branch)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
@@ -111,3 +113,10 @@ jobs:
             | tr ',' '\n' | grep -E '"id"|"environment"|"created_on"|"url"' | head -24
           BODY=$(curl -s https://aasport.net/)
           echo "$BODY" | grep -q 'id="authbox"' && echo "✅ aasport.net sirve la versión nueva" || echo "⚠️ aasport.net aún sirve versión vieja (ver diagnóstico)"
+          echo "$BODY" | grep -q 'AA_MLB_LIVE_DATE_GUARD_V2' \
+            && echo "✅ Pages contiene el candado MLB de fecha exacta" \
+            || { echo "❌ Pages no contiene el candado MLB nuevo"; exit 1; }
+      - name: Diagnóstico semántico de producción
+        run: node robot/prod_diag.mjs
+      - name: Gate de datos de producción
+        run: node robot/qa_check.mjs

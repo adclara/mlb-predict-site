@@ -15,6 +15,20 @@ const ESPN_SCOREBOARD =
   'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard';
 const MLB_ABBR_FIX = { ATH: 'OAK' };
 
+// ESPN, antes de que empiece la jornada, deja su scoreboard sin parámetros en
+// el último día completado. Siempre fijamos el día calendario ET que AA Sports
+// está mostrando y filtramos la respuesta: un resultado de ayer nunca debe
+// poder entrar al feed de hoy.
+export function mlbScoreboardUrl(date) {
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(String(date || '')) ? String(date) : etDate(new Date());
+  return `${ESPN_SCOREBOARD}?dates=${day.replace(/-/g, '')}&limit=100`;
+}
+
+export function mlbLiveEventsForDate(data, date) {
+  const events = Array.isArray(data && data.events) ? data.events : [];
+  return events.filter((ev) => etDate(ev && ev.date) === date);
+}
+
 // Marcadores en vivo multideporte (mismo patrón proxy+caché que MLB).
 // Las predicciones de estos deportes llegarán cuando su modelo pase la
 // validación; mientras, AA Sports ya muestra el "en vivo" estilo SofaScore.
@@ -844,19 +858,22 @@ async function history(url, env, origin) {
 // Marcadores en vivo: proxy a ESPN con caché de borde (30s) para no golpear la
 // API y sentirse SofaScore sin recalcular el modelo.
 async function live(ctx, origin) {
+  const date = etDate(new Date());
   const cache = caches.default;
-  const cacheKey = new Request('https://aa-sports.cache/mlb/live', { method: 'GET' });
+  // La fecha forma parte de la llave para que el caché de medianoche tampoco
+  // pueda servir, ni durante sus 30 s de vida, la jornada anterior.
+  const cacheKey = new Request(`https://aa-sports.cache/mlb/live/${date}`, { method: 'GET' });
   let cached = await cache.match(cacheKey);
   if (cached) {
     const body = await cached.text();
     return withCors(body, origin);
   }
 
-  const res = await fetch(ESPN_SCOREBOARD, { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 30 } });
+  const res = await fetch(mlbScoreboardUrl(date), { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 30 } });
   if (!res.ok) return json({ sport: 'mlb', games: [], note: 'live upstream ' + res.status }, 200, origin, 15);
   const data = await res.json();
 
-  const games = (data.events || []).map((ev) => {
+  const games = mlbLiveEventsForDate(data, date).map((ev) => {
     const c = (ev.competitions && ev.competitions[0]) || {};
     const comp = c.competitors || [];
     const home = comp.find((x) => x.homeAway === 'home') || {};
@@ -919,7 +936,7 @@ async function live(ctx, origin) {
     for (const g of games) { const v = wpMap.get(g.espn_id); if (v != null) g.win_prob_home = v; }
   }
 
-  const payload = JSON.stringify({ sport: 'mlb', updated_at: new Date().toISOString(), games });
+  const payload = JSON.stringify({ sport: 'mlb', date, updated_at: new Date().toISOString(), games });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=30' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin);

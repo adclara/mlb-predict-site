@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Regresión MLB — aislamiento de fechas live
+        run: node --test tests/mlb_live_date.test.mjs
       - name: Diagnóstico de producción (aasport.net + API)
         shell: /bin/bash {0}
         run: node robot/prod_diag.mjs
