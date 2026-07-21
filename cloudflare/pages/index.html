@@ -1179,6 +1179,13 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   .colside{display:block}
   .pgrid,.formgrid,.boxgrid{grid-template-columns:1fr} /* tarjetas apiladas en móvil (no se apretujan) */
 }
+@media (max-width:420px){
+  /* Inter es unos píxeles más ancho que el fallback de pruebas. Dejamos
+     espacio real para logo + idioma + acceso sin ensanchar el body. */
+  .hwrap{padding:10px 12px;gap:8px}
+  .langbtn{margin-right:0;padding-left:9px;padding-right:9px}
+  .authbtn{padding-left:11px;padding-right:11px}
+}
 .pcard{min-width:0}
 .formside{min-width:0}
 </style>
