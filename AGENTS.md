@@ -57,7 +57,9 @@ path dispara el workflow. Mapa verificado (poke → workflow):
 - `.github/poke-deploy` → **deploy.yml** (Deploy Worker + Deploy Pages + "Verificar
   y diagnosticar producción" en aasport.net) ← el deploy principal
 - `.github/poke-qa` → qa.yml (qa_check.mjs contra producción)
-- `.github/poke` → adrian-daily.yml (daily.mjs + learn + learning_journal; cron horario)
+- `.github/poke` → adrian-daily.yml (slate + gradación + publicación; cron horario)
+- `.github/poke-learn` → mlb-learning-daily.yml (refit + Cerebro AA una vez al día)
+- `.github/poke-live` → mlb-live-observer.yml (multi-book/WP en vivo; no bloquea daily)
 - `.github/poke-poly` → poly-study.yml (poly_radar.mjs; cron 2×/día)
 - `.github/poke-soccer` → soccer-shadow.yml (soccer_shadow.mjs; publica soccer:today)
 - `.github/poke-nba` → nba-shadow.yml · `.github/poke-sim` → mlb-sim.yml (semanal)
@@ -88,8 +90,9 @@ simulation, standings}`, `/v1/injuries`,
 `/v1/nba/{live, recent, standings}`,
 `/v1/tennis/{live, recent, rankings, summary}`,
 `/v1/poly/{radar, alerts, track}`, `/v1/auth/google`.
-El Worker además corre `scheduled()` cada 5 min: vigía del Radar → detecta trades
-de wallets vigiladas → escribe `poly:alerts` + manda Telegram.
+El Worker corre tres `scheduled()`: cada 5 min vigila el Radar; cada 20 min
+captura hechos públicos MLB (StatsAPI + ESPN) en `mlb_ingest_slots` de D1; y a
+las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
 
 ## Archivos clave
 - **Frontend**: `cloudflare/pages/index.html` — UN archivo HTML/JS, **SIN build,
@@ -99,8 +102,10 @@ de wallets vigiladas → escribe `poly:alerts` + manda Telegram.
   lottie vendorizados), `assets/` (og.png 1200×630, iconos PWA).
 - **Normalización** a esquema común de evento: `cloudflare/lib/normalize.mjs`.
 - **Robot** (corre en Actions, Node stdlib, sin deps):
-  - `robot/daily.mjs` — arma el MLB del día (schedule, pitchers, brief, lineups).
-  - `robot/learn.js` — re-ajuste diario + walk-forward; `FORMULA_VERSION = 'v2'`;
+  - `robot/daily.mjs` — arma/gradúa el MLB del día y congela un ledger pregame
+    inmutable. `robot/mlb_ingest_consumer.mjs` consume los slots públicos D1.
+  - `robot/learn.js` + `robot/mlb_learn_daily.mjs` — re-ajuste diario causal +
+    walk-forward; `FORMULA_VERSION = 'v2'`;
     calibración Platt → `prob_v2` (el número calibrado que se muestra).
   - `robot/adrian.js` — selección de fijos (locks/ORO/PLATA) y gemas.
   - `robot/learning_journal.mjs` — "Cerebro AA" (qué aprende; KV mlb:learning).
@@ -116,9 +121,10 @@ de wallets vigiladas → escribe `poly:alerts` + manda Telegram.
 
 ## Modelos — estado y gates de honestidad
 - **MLB** (producción): el % mostrado es **calibrado** (`prob_v2`/Platt), no el
-  clásico inflado. OOS ~53.7% acierto, ECE ~4%. El modelo NO le gana al mercado
-  en promedio; su ventaja vive en la **SELECCIÓN** (fijos/gemas). Todo eso es
-  visible en la app (Cerebro AA + track record + validación OOS).
+  clásico inflado. En la auditoría causal OOS el combinado ronda 53.2% de
+  acierto y ECE ~3.8%. El mercado histórico gana en promedio; la hipótesis de
+  mejora por selección sigue en validación forward. ORO, Over, F5 y abridor/F5
+  no se publican mientras sus gates permanezcan cerrados.
 - **Fútbol** (público): Dixon-Coles validado en **16,059 partidos** (Brier pasa
   gate, calibrado). Número = prob del mercado **des-vigada y calibrada** (≈ mercado;
   no promete ganarle al cierre). El récord EN VIVO se muestra tal cual.

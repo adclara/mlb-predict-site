@@ -7,11 +7,13 @@
 //   robot/daily.mjs (this) + adrian.js + engine.js + venues.js
 //   ../data/*.json (priors) and ../data/history/ (output)
 import fs from 'fs'
+import { createHash } from 'crypto'
+import { pathToFileURL } from 'url'
 import { analyzeGame, leagueAttempts, selectLocks, selectPlays } from './adrian.js'
 import { eloProb, expectedRuns, simulateF5, simulateGame } from './engine.js'
-import { analysisToRow, aprendeOpinion, buildSnapshot, FORMULA_VERSION, marketBlend } from './learn.js'
+import { analysisToRow, aprendeOpinion, authorizedMarketAnchor, buildSnapshot, FORMULA_VERSION, marketBlend } from './learn.js'
 import { buildMarketLab, gradeMarketLab } from './market_lab.mjs'
-import { mergeOddsBlocks, riskScore, valueEdge } from './odds.js'
+import { devigMoneyline, mergeOddsBlocks, riskScore, valueEdge } from './odds.js'
 import { buildOddsForDate } from './espn_odds.mjs'
 import { applyEloUpdates, loadEloState } from './elo_live.mjs'
 import { fetchForecasts } from './weather.mjs'
@@ -23,10 +25,166 @@ const DATA = process.env.DATA_DIR || 'data'
 const HIST = `${DATA}/history`
 const GAMES = `${HIST}/games` // per-game feature+outcome logs for Adrian Learning
 const LEAGUE_FIP = 4.2, LEAGUE_KBB = 0.13, LEAGUE_PEN_FIP = 4.05
+const FEATURE_SCHEMA_VERSION = 'mlb_features_v1_immutable'
+const FEATURE_GENERATOR_VERSION = 'daily_integrity_v1'
+const SELECTION_POLICY_VERSION = 'public_ledger_v1'
 const j = (p) => JSON.parse(fs.readFileSync(p, 'utf8'))
 const get = (u) => fetch(u).then((r) => r.json())
 const isoMinus = (iso, d) => { const x = new Date(iso + 'T00:00:00'); x.setDate(x.getDate() - d); return x.toISOString().slice(0, 10) }
 const ipToFloat = (ip) => { const s = parseFloat(ip); if (!isFinite(s)) return 0; const w = Math.trunc(s); return w + Math.round((s - w) * 10) * 10 / 30 }
+
+const VOID_STATUS_RE = /Postponed|Cancelled|Canceled/i
+const LIVE_STATUS_RE = /In Progress|Live/i
+const FINAL_STATUS_RE = /Final|Game Over|Completed/i
+const validIso = (v) => typeof v === 'string' && Number.isFinite(new Date(v).getTime())
+const beforeFirstPitch = (asOf, firstPitch) => validIso(asOf) && validIso(firstPitch) && new Date(asOf) < new Date(firstPitch)
+const stableValue = (v) => {
+  if (Array.isArray(v)) return v.map(stableValue)
+  if (!v || typeof v !== 'object') return v
+  return Object.fromEntries(Object.keys(v).sort().map((k) => [k, stableValue(v[k])]))
+}
+const sha256 = (v) => createHash('sha256').update(JSON.stringify(stableValue(v))).digest('hex')
+
+// Only outcome/post-game facts may change after a feature row is frozen.
+const FEATURE_MUTABLE_KEYS = new Set([
+  'feature_hash', 'observed', 'graded', 'home_win', 'total_runs',
+  'f5_home_score', 'f5_away_score', 'final', 'ml_result', 'total_result',
+  'f5_complete', 'f5_result', 'f5_total_runs', 'outcome_status',
+  'weather', 'live', 'invalid_reason', 'provisional_hash',
+  'integrity', 'learning_eligible', 'feature_scope',
+])
+function featurePayload(row) {
+  return Object.fromEntries(Object.entries(row || {}).filter(([k]) => !FEATURE_MUTABLE_KEYS.has(k)))
+}
+
+export function capturePhaseFor(game, capturedAt) {
+  const status = game?.status || ''
+  const isFinal = FINAL_STATUS_RE.test(status)
+  const isLive = LIVE_STATUS_RE.test(status)
+  const isVoid = VOID_STATUS_RE.test(status)
+  const pregame = !isFinal && !isLive && !isVoid
+    && beforeFirstPitch(capturedAt, game?.game_datetime)
+  return { capture_phase: pregame ? 'pregame' : isFinal ? 'postgame' : isVoid ? 'void' : 'live', is_pregame: pregame }
+}
+
+export function freezeFeatureRow(row, asOf, { eligible = true } = {}) {
+  const firstPitch = row?.first_pitch ?? row?.game_datetime ?? null
+  const causal = eligible && beforeFirstPitch(asOf, firstPitch) && !VOID_STATUS_RE.test(row?.status || '')
+  const out = {
+    ...row,
+    feature_as_of: asOf,
+    first_pitch: firstPitch,
+    decision_captured_at: causal ? asOf : null,
+    capture_phase: causal ? 'pregame' : 'post_start',
+    learning_eligible: causal,
+    feature_scope: causal ? 'pregame_immutable' : 'shadow_post_start',
+    observed: mergeObserved(null, row, asOf),
+    integrity: {
+      ledger_version: 'v2',
+      cohort: causal ? 'native_pregame_immutable' : 'native_post_start',
+      training_eligible: causal,
+      reason: causal ? 'feature_snapshot_before_first_pitch' : 'first_capture_not_before_first_pitch',
+      first_pitch: firstPitch,
+      official_date: row?.game_date ?? row?.date ?? null,
+    },
+    versions: {
+      formula: FORMULA_VERSION,
+      feature_schema: FEATURE_SCHEMA_VERSION,
+      feature_generator: FEATURE_GENERATOR_VERSION,
+      selection_policy: SELECTION_POLICY_VERSION,
+    },
+  }
+  out.feature_hash = sha256(featurePayload(out))
+  return out
+}
+
+function observedFrom(row, asOf) {
+  return {
+    ...(row?.observed || {}),
+    captured_at: asOf,
+    status: row?.status ?? null,
+    first_pitch: row?.game_datetime ?? row?.first_pitch ?? null,
+    scores: {
+      home: row?.observed?.scores?.home ?? row?.home_score ?? null,
+      away: row?.observed?.scores?.away ?? row?.away_score ?? null,
+    },
+    odds: row?.observed?.odds ?? row?.odds ?? null,
+    weather_forecast: row?.weather_forecast ?? null,
+    pitchers: row?.brief?.pitchers ?? null,
+    lineups: row?.brief?.lineups ?? null,
+  }
+}
+
+function mergeObserved(previous, row, asOf) {
+  const incoming = observedFrom(row, asOf), old = previous || {}
+  return {
+    ...old, ...incoming,
+    scores: {
+      home: incoming.scores?.home ?? old.scores?.home ?? null,
+      away: incoming.scores?.away ?? old.scores?.away ?? null,
+    },
+    odds: incoming.odds ?? old.odds ?? null,
+  }
+}
+
+export function mergeGameRows(previousRows, freshRows, { asOf, freezeFeatures = false } = {}) {
+  const prev = new Map((previousRows || []).filter((r) => r?.game_pk != null).map((r) => [String(r.game_pk), r]))
+  const out = []
+  const seen = new Set()
+  for (const fresh of freshRows || []) {
+    if (fresh?.game_pk == null || seen.has(String(fresh.game_pk))) continue
+    const key = String(fresh.game_pk); seen.add(key)
+    const old = prev.get(key)
+    if (old?.feature_hash) {
+      out.push({ ...old, observed: mergeObserved(old.observed, fresh, asOf) })
+      continue
+    }
+    // Before publication a provisional row may refresh. At the publication
+    // cutoff it becomes immutable; a first capture after the start is retained
+    // only as a non-learnable shadow fact.
+    const firstPitch = fresh.first_pitch ?? fresh.game_datetime ?? old?.first_pitch ?? old?.game_datetime ?? null
+    const pregame = beforeFirstPitch(asOf, firstPitch) && !VOID_STATUS_RE.test(fresh.status || '')
+    if (freezeFeatures || !pregame) {
+      const openingOdds = mergeOddsBlocks(old?.odds, fresh.odds)
+      const frozen = freezeFeatureRow({ ...fresh, odds: openingOdds, first_pitch: firstPitch }, asOf, { eligible: pregame })
+      if (old && !pregame) {
+        // Never replace a migrated/as-of row with a later recomputation. Seal
+        // the existing bytes, preserve its migration verdict, and append only
+        // observations. Unknown legacy timing remains excluded.
+        const migratedEligible = old.integrity?.training_eligible === true
+        const legacy = {
+          ...old,
+          first_pitch: old.first_pitch ?? firstPitch,
+          feature_as_of: old.feature_as_of ?? old.decision_captured_at ?? null,
+          learning_eligible: migratedEligible,
+          feature_scope: migratedEligible ? 'backfill_asof' : 'legacy_unverifiable',
+          integrity: old.integrity || {
+            ledger_version: 'v2', cohort: 'legacy_native_mutable', training_eligible: false,
+            reason: 'pregame_capture_time_unverifiable', first_pitch, official_date: old.game_date ?? old.date ?? null,
+          },
+          versions: old.versions || {
+            formula: old.formula_version ?? FORMULA_VERSION,
+            feature_schema: FEATURE_SCHEMA_VERSION,
+            feature_generator: 'legacy_sealed',
+            selection_policy: SELECTION_POLICY_VERSION,
+          },
+          observed: mergeObserved(old.observed, fresh, asOf),
+        }
+        legacy.feature_hash = sha256(featurePayload(legacy))
+        out.push(legacy)
+      } else out.push(frozen)
+    } else {
+      out.push({ ...fresh, odds: mergeOddsBlocks(old?.odds, fresh.odds), feature_as_of: asOf,
+        first_pitch: firstPitch, learning_eligible: false, feature_scope: 'provisional_pregame',
+        observed: mergeObserved(old?.observed, fresh, asOf),
+        provisional_hash: sha256(featurePayload(fresh)) })
+    }
+  }
+  // Preserve rows no longer returned by the schedule; never silently delete a
+  // historical event merely because an upstream response is partial.
+  for (const [key, row] of prev) if (!seen.has(key)) out.push(row)
+  return out
+}
 
 // --- priors -----------------------------------------------------------------
 const priors = { elo: j(`${DATA}/elo.json`), pitchers: j(`${DATA}/pitchers.json`), teams: j(`${DATA}/teams.json`), meta: j(`${DATA}/meta.json`) }
@@ -51,10 +209,16 @@ const teamPrior = (a) => priors.teams[a] || { pen_fip: LEAGUE_PEN_FIP, park: 1.0
 const eloOf = (a) => priors.elo[a] ?? 1500
 
 // --- live MLB fetch ---------------------------------------------------------
-function parseGame(g) {
+export function parseGame(g) {
   const t = g.teams || {}, home = t.home || {}, away = t.away || {}, hp = home.probablePitcher || {}, ap = away.probablePitcher || {}
-  const first5 = (g.linescore?.innings || []).filter((inn) => Number(inn.num) <= 5)
-  const f5Known = first5.length >= 5 && first5.every((inn) => Number.isFinite(Number(inn.home?.runs)) && Number.isFinite(Number(inn.away?.runs)))
+  const first5ByNum = new Map((g.linescore?.innings || [])
+    .filter((inn) => Number.isInteger(Number(inn.num)) && Number(inn.num) >= 1 && Number(inn.num) <= 5)
+    .map((inn) => [Number(inn.num), inn]))
+  const first5 = [1, 2, 3, 4, 5].map((n) => first5ByNum.get(n))
+  // `Number(null) === 0`; require an explicit run value for BOTH clubs in every
+  // inning so a suspended/incomplete game can never be graded as an F5 zero.
+  const f5Known = first5.every((inn) => inn && inn.home?.runs != null && inn.away?.runs != null
+    && Number.isFinite(Number(inn.home.runs)) && Number.isFinite(Number(inn.away.runs)))
   const f5Home = f5Known ? first5.reduce((s, inn) => s + Number(inn.home.runs), 0) : null
   const f5Away = f5Known ? first5.reduce((s, inn) => s + Number(inn.away.runs), 0) : null
   return {
@@ -76,16 +240,22 @@ function parseGame(g) {
 }
 async function fetchSchedule(date) {
   const data = await get(`${API}/schedule?sportId=1&date=${date}&hydrate=probablePitcher,team,linescore,venue,lineups`)
-  const games = []
-  for (const d of data.dates || []) for (const g of d.games || []) if ((g.gameType || 'R') === 'R') games.push(parseGame(g))
-  return games
+  const games = new Map()
+  for (const d of data.dates || []) for (const g of d.games || []) {
+    if ((g.gameType || 'R') !== 'R' || g.gamePk == null) continue
+    games.set(String(g.gamePk), parseGame(g))
+  }
+  return [...games.values()]
 }
 async function fetchAllRecent(beforeDate, days = 25) {
   const start = isoMinus(beforeDate, days)
   const data = await get(`${API}/schedule?sportId=1&startDate=${start}&endDate=${beforeDate}&gameType=R&hydrate=team,linescore`)
   const byTeam = new Map()
+  const seen = new Set()
   for (const d of data.dates || []) { if (d.date >= beforeDate) continue; for (const g of d.games || []) {
     if ((g.status || {}).abstractGameState !== 'Final') continue
+    if (g.gamePk == null || seen.has(String(g.gamePk))) continue
+    seen.add(String(g.gamePk))
     const t = g.teams || {}, hs = t.home?.score, as = t.away?.score
     if (hs == null || as == null) continue
     const heRaw = g.linescore?.teams?.home?.errors, aeRaw = g.linescore?.teams?.away?.errors
@@ -100,6 +270,130 @@ async function fetchAllRecent(beforeDate, days = 25) {
   } }
   for (const rows of byTeam.values()) rows.sort((a, b) => (a.date < b.date ? 1 : -1))
   return byTeam
+}
+
+const jsonObject = (value) => {
+  if (!value) return null
+  if (typeof value === 'object') return value
+  try { return JSON.parse(value) } catch { return null }
+}
+const ingestSlots = (raw) => {
+  if (Array.isArray(raw)) return raw
+  for (const key of ['slots', 'results', 'rows', 'data']) if (Array.isArray(raw?.[key])) return raw[key]
+  // Consumer contract used by Actions: one already-compacted pregame record
+  // per game, with an independently measured earliest market and latest facts.
+  if (raw?.games && !Array.isArray(raw.games) && typeof raw.games === 'object') {
+    const slots = []
+    for (const [gamePk, value] of Object.entries(raw.games)) {
+      const firstPitch = value?.first_pitch ?? null
+      const opening = value?.opening_market
+      if (opening?.captured_at_open) slots.push({
+        captured_at: opening.captured_at_open,
+        games: [{ mlb_id: gamePk, start: firstPitch, status: 'pre', home: {}, away: {}, market: {
+          provider: opening.provider, home_ml: opening.home_ml, away_ml: opening.away_ml,
+          total: opening.total, over_price: opening.over_price, under_price: opening.under_price,
+          spread: opening.spread, source_hash: opening.source_hash,
+        } }],
+      })
+      const latest = value?.latest_pregame
+      if (latest?.captured_at) slots.push({
+        captured_at: latest.captured_at,
+        games: [{ mlb_id: gamePk, start: firstPitch, status: latest.stage === 'pregame' || latest.stage === 'early' ? 'pre' : latest.stage,
+          home: latest.home || {}, away: latest.away || {}, source_hash: latest.source_hash }],
+      })
+    }
+    return slots
+  }
+  return raw && typeof raw === 'object' ? [raw] : []
+}
+const normalizedLineup = (side) => (Array.isArray(side?.lineup) ? side.lineup : [])
+  .map((p) => typeof p === 'object' ? { id: Number(p.id), name: p.name || null } : { id: Number(p), name: null })
+  .filter((p) => Number.isFinite(p.id)).slice(0, 9)
+
+// Convert the optional D1 consumer export into per-game PRE-GAME facts. A slot
+// is admissible only when its measured capture precedes that individual game's
+// first pitch and both public feeds still describe it as pre-game. Pitcher and
+// lineup facts use the latest admissible slot; the market opening uses the
+// earliest measured price. No prediction weights cross this boundary.
+export function ingestPregameFacts(raw) {
+  const facts = new Map()
+  const slots = ingestSlots(raw).map((slot) => {
+    const payload = jsonObject(slot?.payload) || slot
+    return { slot, payload, captured_at: payload?.captured_at || slot?.captured_at || payload?.scheduled_at || slot?.scheduled_at || null }
+  }).filter((x) => validIso(x.captured_at)).sort((a, b) => Date.parse(a.captured_at) - Date.parse(b.captured_at))
+  for (const { slot, payload, captured_at } of slots) for (const game of Array.isArray(payload?.games) ? payload.games : []) {
+    const rawPk = game?.mlb_id ?? game?.game_pk ?? game?.gamePk ?? game?.id
+    const pk = Number(rawPk)
+    const firstPitch = game?.start ?? game?.game_datetime ?? game?.first_pitch ?? null
+    const statuses = [game?.status, game?.espn_status].filter(Boolean).map((v) => String(v).toLowerCase())
+    if (!Number.isFinite(pk) || !beforeFirstPitch(captured_at, firstPitch)
+      || statuses.some((v) => v !== 'pre' && !/scheduled|preview|warmup/.test(v))) continue
+    const home = game?.home || {}, away = game?.away || {}
+    const current = facts.get(String(pk)) || {
+      game_pk: pk, first_pitch: firstPitch, feature_captured_at: null,
+      pitchers: { home: null, away: null }, lineups: { home: [], away: [] }, odds: null,
+    }
+    current.first_pitch = current.first_pitch || firstPitch
+    current.feature_captured_at = captured_at
+    current.feature_source_hash = game?.source_hash ?? current.feature_source_hash ?? null
+    if (home.pitcher_id != null || home.pitcher) current.pitchers.home = { id: home.pitcher_id ?? null, name: home.pitcher || null }
+    if (away.pitcher_id != null || away.pitcher) current.pitchers.away = { id: away.pitcher_id ?? null, name: away.pitcher || null }
+    const homeLineup = normalizedLineup(home), awayLineup = normalizedLineup(away)
+    if (homeLineup.length) current.lineups.home = homeLineup
+    if (awayLineup.length) current.lineups.away = awayLineup
+    const market = game?.market || game?.odds || null
+    const mlHome = market?.home_ml ?? market?.ml_home ?? null
+    const mlAway = market?.away_ml ?? market?.ml_away ?? null
+    const total = market?.total ?? market?.over_under ?? null
+    if (!current.odds && (mlHome != null || mlAway != null || total != null)) {
+      const [pHome, pAway] = devigMoneyline(mlHome, mlAway)
+      current.odds = mergeOddsBlocks(null, {
+        provider: market?.provider ?? null,
+        ml_home: mlHome, ml_away: mlAway, over_under: total,
+        over_price: market?.over_price ?? null, under_price: market?.under_price ?? null,
+        spread: market?.spread ?? null, p_home_mkt: pHome, p_away_mkt: pAway,
+        consensus: pHome == null ? null : { p_home: pHome, p_away: pAway, n_books: 1 },
+        stage: 'pregame', capture_phase: 'pregame', is_pregame: true,
+        captured_at, source: 'mlb_ingest_v1', ingest_slot_id: payload?.slot_id ?? slot?.slot_id ?? null,
+        source_hash: market?.source_hash ?? game?.source_hash ?? null,
+      })
+    }
+    facts.set(String(pk), current)
+  }
+  return facts
+}
+
+export function enrichGamesFromIngest(games, raw) {
+  const facts = ingestPregameFacts(raw)
+  const acceptedFacts = new Map()
+  const enriched = (games || []).map((game) => {
+    const fact = facts.get(String(game?.game_pk))
+    if (!fact || !beforeFirstPitch(fact.feature_captured_at, game?.game_datetime)) return game
+    acceptedFacts.set(String(game.game_pk), fact)
+    const out = { ...game }
+    const hp = fact.pitchers.home, ap = fact.pitchers.away
+    if (out.home_probable_pitcher_id == null && hp?.id != null) out.home_probable_pitcher_id = hp.id
+    if (!out.home_probable_pitcher_name && hp?.name) out.home_probable_pitcher_name = hp.name
+    if (out.away_probable_pitcher_id == null && ap?.id != null) out.away_probable_pitcher_id = ap.id
+    if (!out.away_probable_pitcher_name && ap?.name) out.away_probable_pitcher_name = ap.name
+    if (!out.home_lineup?.length && fact.lineups.home.length) out.home_lineup = fact.lineups.home
+    if (!out.away_lineup?.length && fact.lineups.away.length) out.away_lineup = fact.lineups.away
+    return out
+  })
+  return { games: enriched, facts: acceptedFacts }
+}
+
+function readIngestSnapshot() {
+  const file = process.env.AA_INGEST_SNAPSHOT
+  if (!file) return null
+  try {
+    const stat = fs.statSync(file)
+    if (!stat.isFile() || stat.size > 25 * 1024 * 1024) throw new Error('snapshot ausente o demasiado grande')
+    return j(file)
+  } catch (error) {
+    console.error(`AA_INGEST_SNAPSHOT omitido (no fatal): ${error.message}`)
+    return null
+  }
 }
 const fieldingFor = (rows) => {
   const errs = rows.slice(0, 10).map((r) => r.e).filter(Number.isFinite)
@@ -294,30 +588,21 @@ function predict(g, hf, af) {
 const f5For = (p) => simulateF5({ muHome: p._mu.muHome, muAway: p._mu.muAway, homeSp: p.features.home_sp_fip, homePen: p.features.home_pen_fip, awaySp: p.features.away_sp_fip, awayPen: p.features.away_pen_fip })
 
 // --- cerebro v2: walk-forward ensemble + market anchor -----------------------
-// The snapshot itself validated (CI-gated) that the combined model beats the
-// classic ("combinado mejor") and that anchoring to the market improves log-loss
-// ("mercado mejor" / market_anchor.improves). aprendeOpinion gives the ensemble+
-// Platt prob from YESTERDAY's snapshot; marketBlend anchors it to the de-vig
-// consensus with the walk-forward alpha. adrian_p is stored untouched, so the
-// games_v1 training rows stay valid (no FORMULA_VERSION bump).
+// aprendeOpinion applies the learned ensemble using only the prior snapshot.
+// A market anchor is an unproven challenger until the exact public chain has
+// enough forward rows with an auditable opening capture and passes its CI gate.
+// Legacy latest-price alpha has unknown timing and can never alter p_final.
+// adrian_p is stored untouched so games_v1 keeps a stable formula version.
 const round2d = (x) => Math.round(x * 100) / 100
 const round3d = (x) => Math.round(x * 1000) / 1000
-// Walk-forward-backtested split of roles (2026-07-07, n=1248 OOS):
-//   · SELECTION keeps the phase-1 rules on the CLASSIC confidence scale — the
-//     fijos criteria backtested 66.3% / ROI +4.5%; re-gating on the calibrated
-//     scale collapsed them to 0.33/day at −15.6% ROI (calibrated probs rarely
-//     clear a threshold designed for the overconfident classic scale).
-//   · p_final (ensemble+Platt anchored to the market) is the best FORECASTER
-//     (acc 55.5% vs 53.9%, logloss 0.687 vs 0.724) → it is what we DISPLAY and
-//     what gates honesty: a pick that p_final says loses (<50%) is demoted out
-//     of selection rather than posted with a made-up probability.
+// Selection rules and every challenger remain subject to their own measured
+// forward gate. p_final is displayed only from the learned chain authorized by
+// the snapshot; an unpassed market blend is never smuggled into publication.
 function applyBrainV2(a, r) {
   const op = aprendeOpinion(a, prevSnap)
-  const anch = prevSnap?.ml?.market_anchor
-  const alpha = anch?.improves && anch.alpha != null ? anch.alpha : null
-  const mkt = r.odds?.consensus?.p_home ?? r.odds?.p_home_mkt ?? null
+  const anchor = authorizedMarketAnchor(prevSnap, r)
   let pF = op?.ml?.p_comb ?? null
-  if (alpha != null && mkt != null) pF = marketBlend(pF ?? r.adrian_p, mkt, alpha)
+  if (anchor) pF = marketBlend(pF ?? r.adrian_p, anchor.market, anchor.alpha)
   r.p_learn = op?.ml?.p_comb ?? null
   r.p_final = pF != null ? r4(pF) : null
   r.p_over_learn = op?.total?.p_comb ?? null
@@ -342,12 +627,10 @@ function applyBrainV2(a, r) {
   return { ...a, ml, total, plays: [ml, total], bestPlay: total.confScore > ml.confScore ? total : ml }
 }
 
-// --- 💎 Gemas: the calibrated brain's high-probability tier -------------------
-// A gem = a game whose walk-forward p_final gives one side >= 65%. This tier is
-// EXACTLY calibrated on the season replay (says 68.5% -> hits 68.7%, n=67,
-// halves 65%/72%) and rare (~0.6/day). Honest framing: gems maximize WIN
-// probability at market prices (ROI ~ -3%, the vig) — the ROI edge lives in the
-// ORO fijos; the page says so.
+// --- 💎 Gemas: high-probability candidates from the learned chain -----------
+// A gem is a candidate whose authorized p_final gives one side >=65%. This is a
+// probability tier, not a profitability claim; its public record is measured
+// separately and every unpassed challenger remains in shadow.
 const GEM_MIN_P = 0.65
 function selectGems(rows, { max = 3 } = {}) {
   const gems = []
@@ -371,7 +654,11 @@ function selectGems(rows, { max = 3 } = {}) {
 
 // --- compute today's plays + per-game learning rows -------------------------
 async function computeDay(date) {
-  const games = await fetchSchedule(date)
+  const scheduled = await fetchSchedule(date)
+  const ingest = enrichGamesFromIngest(scheduled, readIngestSnapshot())
+  // A postponed/cancelled listing is retained for grading/audit by
+  // fetchSchedule(), but it must never become a fresh decision candidate.
+  const games = ingest.games.filter((g) => !VOID_STATUS_RE.test(g.status || ''))
   if (!games.length) return null
   const season = priors.meta?.season || new Date(date).getFullYear()
   const ids = [...new Set(games.flatMap((g) => [g.home_probable_pitcher_id, g.away_probable_pitcher_id]).filter(Boolean))]
@@ -387,7 +674,7 @@ async function computeDay(date) {
   // Simulated 2026-07-07: none of these beat p_final/the lock rule yet (the
   // market prices them), so they are LOGGED + pre-registered in signalAudit and
   // shown as context — never weighted until a CI verdict says 'robusto'.
-  const auxCtx = buildTeamContext(readAllGameRows())
+  const auxCtx = buildTeamContext(readAllGameRows({ purpose: 'context' }))
   const lgAtt = leagueAttempts(priors.teams)
   const rows = []
   const analyses = games.map((g) => {
@@ -408,10 +695,13 @@ async function computeDay(date) {
     const platoonOf = (split, oppHand) => (split && oppHand ? (oppHand === 'L' ? split.vsL : split.vsR) : null)
     const pH = platoonOf(hSplit, awayHand), pA = platoonOf(aSplit, homeHand)
     const priorInSeries = Number(g.series_game) - 1
+    // The prior games must also be the team's immediately preceding
+    // appearances. Filtering all 25 days by opponent could silently borrow a
+    // game from an older series when one current game was postponed/missing.
     const seriesRows = Number.isInteger(priorInSeries) && priorInSeries >= 1
-      ? rh.filter((r) => r.opp === g.away_team_id).slice(0, priorInSeries) : []
+      ? rh.slice(0, priorInSeries) : []
     const seriesKnown = priorInSeries >= 1 && seriesRows.length === priorInSeries
-      && seriesRows.every((r) => r.won === 0 || r.won === 1)
+      && seriesRows.every((r) => r.opp === g.away_team_id && (r.won === 0 || r.won === 1))
     const seriesHomeWins = seriesKnown ? seriesRows.reduce((sum, r) => sum + r.won, 0) : null
     const aux2 = {
       day_night: g.day_night ?? null, series_game: g.series_game ?? null, series_len: g.series_len ?? null,
@@ -422,7 +712,11 @@ async function computeDay(date) {
     }
     const brief = buildBrief(a, prediction, f5, priors, g, homeHand, awayHand, { home: _hitters.get(g.home_team_id) || [], away: _hitters.get(g.away_team_id) || [] })
     brief.fielding = { home: fieldingFor(rh), away: fieldingFor(ra) }
-    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, game_datetime: g.game_datetime || null, park_factor: f.park_factor, elo_diff: f.elo_diff, sp_fip_diff: f.sp_fip_diff, weather_forecast: weather, wx_runs: a.total.components?.wx ?? 0, aux, aux2, brief, odds: null })
+    rows.push({ ...analysisToRow(a), date, game_date: g.game_date, game_datetime: g.game_datetime || null,
+      first_pitch: g.game_datetime || null, park_factor: f.park_factor, elo_diff: f.elo_diff,
+      sp_fip_diff: f.sp_fip_diff, weather_forecast: weather, wx_runs: a.total.components?.wx ?? 0,
+      aux, aux2, brief, odds: ingest.facts.get(String(g.game_pk))?.odds || null,
+      observed: { status: g.status ?? null, scores: { home: g.home_score ?? null, away: g.away_score ?? null } } })
     return a
   })
   // Opening market line (ESPN, free) — additive, best-effort. Captured pre-game
@@ -460,6 +754,158 @@ async function computeDay(date) {
   }
 }
 
+const startTimesFor = (rows) => new Map((rows || [])
+  .filter((row) => row?.game_pk != null)
+  .map((row) => [String(row.game_pk), row.first_pitch ?? row.game_datetime ?? null]))
+
+export function annotateLedgerCandidate(play, postedAt, startByPk) {
+  const scheduledStart = play?.scheduled_start_utc
+    ?? startByPk?.get?.(String(play?.game_pk)) ?? null
+  const causal = beforeFirstPitch(postedAt, scheduledStart)
+  let scope = 'legacy_unverifiable'
+  if (causal) scope = 'public_live'
+  else if (validIso(postedAt) && validIso(scheduledStart)) {
+    scope = Date.parse(postedAt) - Date.parse(scheduledStart) > 864e5 ? 'backtest' : 'late_invalid'
+  }
+  return {
+    ...(play || {}), posted_at: postedAt, scheduled_start_utc: scheduledStart,
+    record_scope: scope, eligible_public_record: causal, ledger_version: 'v2',
+  }
+}
+
+function partitionCandidates(list, postedAt, startByPk) {
+  const publicLive = [], excluded = []
+  for (const play of list || []) {
+    const candidate = annotateLedgerCandidate(play, postedAt, startByPk)
+    ;(candidate.eligible_public_record ? publicLive : excluded).push(candidate)
+  }
+  return { publicLive, excluded }
+}
+
+const shadowCandidate = (play, postedAt, startByPk, scope) => {
+  const temporal = annotateLedgerCandidate(play, postedAt, startByPk)
+  return { ...temporal, temporal_scope: temporal.record_scope, record_scope: scope, eligible_public_record: false }
+}
+const shadowMarketLab = (lab, postedAt, startByPk) => {
+  if (!lab) return null
+  const out = { ...lab }
+  for (const key of ['over', 'f5', 'pitcher_f5']) out[key] = (lab[key] || [])
+    .map((play) => shadowCandidate(play, postedAt, startByPk, 'shadow_experiment'))
+  return out
+}
+
+// The very first publication freezes the complete slate, including an empty
+// selection. Subsequent hourly runs may append scratch warnings/observations,
+// but can never manufacture a pick. The newly redesigned ORO/F5/total markets
+// remain private until a genuine forward gate and human approval enable them.
+export function buildSlateRecord(existing, day, { date, publishedAt } = {}) {
+  const startByPk = startTimesFor(day?.rows)
+  if (existing) {
+    const frozenAt = existing.slate_frozen_at || existing.published_at || existing.generated_at || publishedAt
+    const preserve = (list) => (list || []).map((play) => play?.record_scope
+      ? play : annotateLedgerCandidate(play, frozenAt, startByPk))
+    return {
+      ...existing,
+      date: existing.date || date,
+      generated_at: existing.generated_at || frozenAt,
+      published_at: existing.published_at || frozenAt,
+      slate_frozen_at: frozenAt,
+      ledger_version: 'v2',
+      plays: preserve(existing.plays), locks: preserve(existing.locks), gems: preserve(existing.gems),
+      pitchers: existing.pitchers || {},
+      shadow: existing.shadow || {},
+    }
+  }
+  const plays = partitionCandidates(day?.plays, publishedAt, startByPk)
+  const gems = partitionCandidates(day?.gems, publishedAt, startByPk)
+  return {
+    date, generated_at: publishedAt, published_at: publishedAt, slate_frozen_at: publishedAt,
+    ledger_version: 'v2', selection_policy_version: SELECTION_POLICY_VERSION,
+    selection_snapshot_verified: true,
+    graded: false,
+    plays: plays.publicLive,
+    // No newly-created public lock until its true forward-only gate passes.
+    locks: [],
+    gems: gems.publicLive,
+    pitchers: day?.pitcherMap || {},
+    shadow: {
+      late_plays: plays.excluded,
+      late_gems: gems.excluded,
+      locks: (day?.locks || []).map((play) => shadowCandidate(play, publishedAt, startByPk, 'shadow_forward_gate')),
+      market_lab: shadowMarketLab(day?.marketLab, publishedAt, startByPk),
+    },
+  }
+}
+
+const eligiblePublicPick = (pick) => pick?.eligible_public_record === true
+  && pick.record_scope === 'public_live'
+  && beforeFirstPitch(pick.posted_at, pick.scheduled_start_utc)
+const resolvedPick = (pick) => ['win', 'loss', 'push'].includes(pick?.result)
+
+export function buildPublicIndex(dailyDocs, { updatedAt = new Date().toISOString() } = {}) {
+  let w = 0, l = 0, ps = 0, lw = 0, ll = 0, lps = 0, gw = 0, gloss = 0, units = 0, pricedN = 0
+  const tierRec = { oro: { wins: 0, losses: 0 }, plata: { wins: 0, losses: 0 } }
+  const labRec = Object.fromEntries(['over', 'f5', 'pitcher_f5'].map((key) => [key, { wins: 0, losses: 0, pushes: 0 }]))
+  const days = []
+  for (const rec of [...(dailyDocs || [])].sort((a, b) => String(a?.date).localeCompare(String(b?.date)))) {
+    const publicPlays = (rec?.plays || []).filter(eligiblePublicPick)
+    const publicLocks = (rec?.locks || []).filter(eligiblePublicPick)
+    const publicGems = (rec?.gems || []).filter(eligiblePublicPick)
+    const plays = publicPlays.filter(resolvedPick), locks = publicLocks.filter(resolvedPick), gems = publicGems.filter(resolvedPick)
+    for (const pick of plays) pick.result === 'win' ? w++ : pick.result === 'loss' ? l++ : ps++
+    for (const pick of locks) {
+      pick.result === 'win' ? lw++ : pick.result === 'loss' ? ll++ : lps++
+      const tier = pick.tier === 'plata' ? tierRec.plata : tierRec.oro
+      if (pick.result === 'win') tier.wins++
+      else if (pick.result === 'loss') tier.losses++
+      if (pick.result === 'win' || pick.result === 'loss') {
+        const price = Number(pick.price)
+        // No synthetic -110 fallback: units are measured only when an actual
+        // non-zero American price was captured with the public decision.
+        if (Number.isFinite(price) && Math.abs(price) >= 100) {
+          pricedN++
+          units += pick.result === 'win' ? (price > 0 ? price / 100 : 100 / Math.abs(price)) : -1
+        }
+      }
+    }
+    for (const pick of gems) pick.result === 'win' ? gw++ : pick.result === 'loss' ? gloss++ : null
+    const labs = [rec?.market_lab, rec?.shadow?.market_lab].filter(Boolean)
+    for (const lab of labs) for (const key of Object.keys(labRec)) for (const pick of lab[key] || []) {
+      if (pick.result === 'win') labRec[key].wins++
+      else if (pick.result === 'loss') labRec[key].losses++
+      else if (pick.result === 'push') labRec[key].pushes++
+    }
+    days.push({
+      date: rec?.date, n: publicPlays.length, graded: !!rec?.graded,
+      wins: plays.filter((p) => p.result === 'win').length,
+      losses: plays.filter((p) => p.result === 'loss').length,
+      locks_n: publicLocks.length,
+      locks_wins: locks.filter((p) => p.result === 'win').length,
+      locks_losses: locks.filter((p) => p.result === 'loss').length,
+      gems_n: publicGems.length,
+      gems_wins: gems.filter((p) => p.result === 'win').length,
+      gems_losses: gems.filter((p) => p.result === 'loss').length,
+    })
+  }
+  const rate = (wins, losses) => wins + losses ? Math.round(wins / (wins + losses) * 1000) / 1000 : null
+  return {
+    updated_at: updatedAt, ledger_version: 'v2', record_scope: 'public_live_pregame_only',
+    record: { wins: w, losses: l, pushes: ps, win_rate: rate(w, l) },
+    locks_record: {
+      wins: lw, losses: ll, pushes: lps, win_rate: rate(lw, ll),
+      priced_n: pricedN, units: pricedN ? Math.round(units * 100) / 100 : null,
+      oro: { ...tierRec.oro, win_rate: rate(tierRec.oro.wins, tierRec.oro.losses) },
+      plata: { ...tierRec.plata, win_rate: rate(tierRec.plata.wins, tierRec.plata.losses) },
+    },
+    gems_record: { wins: gw, losses: gloss, win_rate: rate(gw, gloss) },
+    // Kept in the private artifact for gate evaluation; the public normalizer
+    // does not expose experimental candidates.
+    market_lab_record: Object.fromEntries(Object.entries(labRec)
+      .map(([key, value]) => [key, { ...value, win_rate: rate(value.wins, value.losses) }])),
+    days: days.reverse(),
+  }
+}
+
 // Flag frozen picks whose game's PROBABLE STARTER changed since posting.
 function validateFrozenPitchers(rec, pitcherMap) {
   const st = rec.pitchers || {}
@@ -471,7 +917,12 @@ function validateFrozenPitchers(rec, pitcherMap) {
     if (old.h && cur.h && old.h !== cur.h) notes.push(`local: ${old.hn || old.h} → ${cur.hn || cur.h}`)
     if (old.a && cur.a && old.a !== cur.a) notes.push(`visita: ${old.an || old.a} → ${cur.an || cur.a}`)
     if (!notes.length) continue
-    for (const list of [rec.plays, rec.locks, rec.gems, rec.market_lab?.over, rec.market_lab?.f5, rec.market_lab?.pitcher_f5]) {
+    for (const list of [
+      rec.plays, rec.locks, rec.gems,
+      rec.market_lab?.over, rec.market_lab?.f5, rec.market_lab?.pitcher_f5,
+      rec.shadow?.late_plays, rec.shadow?.late_gems, rec.shadow?.locks,
+      rec.shadow?.market_lab?.over, rec.shadow?.market_lab?.f5, rec.shadow?.market_lab?.pitcher_f5,
+    ]) {
       for (const p of list || []) {
         if (String(p.game_pk) !== String(pk) || p.result || p.scratch_warning) continue
         p.scratch_warning = true
@@ -491,13 +942,25 @@ async function attachOdds(rows, games, date, stage) {
   try { m = await buildOddsForDate(date, games) } catch { return false }
   if (!m || !m.size) return false
   let added = false
+  const gameByPk = new Map((games || []).map((g) => [String(g.game_pk), g]))
   for (const r of rows) {
     const o = m.get(r.game_pk)
     if (!o) continue
-    const hadCurve = !!r.odds?.wp_curve, hadLine = r.odds?.ml_home != null
-    const fresh = { ...Object.fromEntries(Object.entries(o).filter(([, v]) => v != null)), stage, captured_at: new Date().toISOString() }
-    r.odds = mergeOddsBlocks(r.odds, fresh) // preserves the opening price + derives line_move
-    if ((!hadCurve && r.odds.wp_curve) || (!hadLine && r.odds.ml_home != null)) added = true
+    const capturedAt = new Date().toISOString()
+    const phase = capturePhaseFor(gameByPk.get(String(r.game_pk)) || r, capturedAt)
+    const before = phase.is_pregame ? r.odds : (r.observed?.odds ?? r.odds)
+    const hadCurve = !!before?.wp_curve, hadLine = before?.ml_home != null
+    const fresh = {
+      ...Object.fromEntries(Object.entries(o).filter(([, v]) => v != null)),
+      stage: phase.is_pregame ? 'pregame' : phase.capture_phase === 'postgame' ? 'final' : phase.capture_phase,
+      requested_stage: stage, capture_phase: phase.capture_phase, is_pregame: phase.is_pregame,
+      captured_at: capturedAt,
+    }
+    const merged = mergeOddsBlocks(before, fresh)
+    if (phase.is_pregame) r.odds = merged
+    else r.observed = { ...(r.observed || {}), captured_at: capturedAt,
+      status: gameByPk.get(String(r.game_pk))?.status ?? r.status ?? null, odds: merged }
+    if ((!hadCurve && merged?.wp_curve) || (!hadLine && merged?.ml_home != null)) added = true
   }
   return added
 }
@@ -512,14 +975,16 @@ async function attachOdds(rows, games, date, stage) {
 async function attachWeather(rows, byPk) {
   let added = false
   for (const r of rows) {
-    if (r.weather || !r.graded) continue
+    if (r.observed?.weather || !r.graded) continue
     const g = byPk.get(r.game_pk)
     if (!isFinal(g)) continue
     try {
       const data = await fetch(`https://statsapi.mlb.com/api/v1.1/game/${r.game_pk}/feed/live`).then((x) => x.json())
       const w = data?.gameData?.weather
       if (w && w.temp != null) {
-        r.weather = { condition: w.condition || null, temp: Number(w.temp) || null, wind: w.wind || null, source: 'mlb', stage: 'observed', captured_at: new Date().toISOString() }
+        const capturedAt = new Date().toISOString()
+        r.observed = { ...(r.observed || {}), captured_at: capturedAt,
+          weather: { condition: w.condition || null, temp: Number(w.temp) || null, wind: w.wind || null, source: 'mlb', stage: 'observed', captured_at: capturedAt } }
         added = true
       }
     } catch { /* best-effort — never break the daily run over weather */ }
@@ -530,22 +995,15 @@ async function attachWeather(rows, byPk) {
 // Merge-write the per-game log for a date, preserving any Y already graded AND
 // any previously-captured odds block (so the morning opening line survives the
 // evening re-run).
-function upsertGames(date, rows) {
+function upsertGames(date, rows, { asOf = new Date().toISOString(), freezeFeatures = false } = {}) {
   const fp = `${GAMES}/${date}.json`
-  const prev = {}
-  if (fs.existsSync(fp)) { try { for (const r of j(fp).games || []) prev[r.game_pk] = r } catch { /* rewrite */ } }
-  const merged = rows.map((r) => {
-    const p = prev[r.game_pk]
-    // Merge the fresh capture over the stored block so the morning OPENING price
-    // (p_home_open) and any win-prob curve survive the intraday/closing re-runs.
-    const withOdds = { ...r, odds: mergeOddsBlocks(p?.odds, r.odds) }
-    return p && p.graded ? {
-      ...withOdds, home_win: p.home_win, total_runs: p.total_runs,
-      f5_home_score: p.f5_home_score ?? null, f5_away_score: p.f5_away_score ?? null,
-      ml_result: p.ml_result, total_result: p.total_result, final: p.final, graded: true,
-    } : withOdds
-  })
-  fs.writeFileSync(fp, JSON.stringify({ date, generated_at: new Date().toISOString(), schema: 'games_v1', formula_version: FORMULA_VERSION, games: merged }, null, 2))
+  let previousRows = [], previousDoc = null
+  if (fs.existsSync(fp)) { try { previousDoc = j(fp); previousRows = previousDoc.games || [] } catch { /* rewrite */ } }
+  const merged = mergeGameRows(previousRows, rows, { asOf, freezeFeatures })
+  fs.writeFileSync(fp, JSON.stringify({
+    ...(previousDoc || {}), date, generated_at: asOf, schema: 'games_v1',
+    integrity_schema: 'ledger_v2', formula_version: FORMULA_VERSION, games: merged,
+  }, null, 2))
 }
 
 // --- grade a past day against final scores (given a fetched schedule) --------
@@ -555,7 +1013,10 @@ function gradeList(list, byPk) {
   let done = true
   for (const play of list || []) {
     if (play.result) continue
-    const g = byPk.get(play.game_pk)
+    const g = byPk.get(play.game_pk) ?? byPk.get(String(play.game_pk))
+    if (g && VOID_STATUS_RE.test(g.status || '')) {
+      play.result = 'void'; play.void_reason = g.status || 'void'; continue
+    }
     if (!isFinal(g)) { done = false; continue }
     const total = g.home_score + g.away_score
     if (play.market === 'ml') play.result = ((play.pick === g.home_team_abbr) === (g.home_score > g.away_score)) ? 'win' : 'loss'
@@ -569,25 +1030,45 @@ function gradePicks(rec, byPk) {
   const locksDone = gradeList(rec.locks, byPk) // fijos share the ml grading logic
   const gemsDone = gradeList(rec.gems, byPk)   // 💎 gemas too
   const marketLabDone = gradeMarketLab(rec.market_lab, byPk)
+  const latePlaysDone = gradeList(rec.shadow?.late_plays, byPk)
+  const lateGemsDone = gradeList(rec.shadow?.late_gems, byPk)
+  const shadowLocksDone = gradeList(rec.shadow?.locks, byPk)
+  const shadowLabDone = gradeMarketLab(rec.shadow?.market_lab, byPk)
   rec.graded = playsDone && locksDone && gemsDone && marketLabDone
+    && latePlaysDone && lateGemsDone && shadowLocksDone && shadowLabDone
   return rec.graded
 }
 
 // Grade EVERY logged game (not just the 3 picks) for the learning dataset.
-function gradeGames(rec, byPk) {
+export function gradeGames(rec, byPk) {
   let changed = false
   for (const row of rec.games) {
-    if (row.graded) continue
-    const g = byPk.get(row.game_pk)
+    if (row.graded || row.outcome_status === 'void') continue
+    const g = byPk.get(row.game_pk) ?? byPk.get(String(row.game_pk))
+    if (g && VOID_STATUS_RE.test(g.status || '')) {
+      row.outcome_status = 'void'
+      row.invalid_reason = g.status || 'void'
+      row.learning_eligible = false
+      row.integrity = { ...(row.integrity || {}), ledger_version: 'v2', training_eligible: false,
+        reason: 'game_not_completed', first_pitch: row.first_pitch ?? g.game_datetime ?? null }
+      changed = true
+      continue
+    }
     if (!isFinal(g)) continue
     const hs = g.home_score, as = g.away_score, tot = hs + as
     row.home_win = hs > as ? 1 : 0
     row.total_runs = tot
     row.f5_home_score = g.f5_home_score ?? null
     row.f5_away_score = g.f5_away_score ?? null
+    row.f5_complete = row.f5_home_score != null && row.f5_away_score != null
+    row.f5_total_runs = row.f5_complete ? row.f5_home_score + row.f5_away_score : null
+    row.f5_result = !row.f5_complete ? null
+      : row.f5_home_score === row.f5_away_score ? 'push'
+        : row.f5_home_score > row.f5_away_score ? 'home' : 'away'
     row.final = `${as}-${hs}`
     row.ml_result = ((row.ml_pick === g.home_team_abbr) === (hs > as)) ? 'win' : 'loss'
     row.total_result = tot === row.line ? 'push' : (tot > row.line) === (row.side === 'over') ? 'win' : 'loss'
+    row.outcome_status = 'final'
     row.graded = true
     changed = true
   }
@@ -599,26 +1080,87 @@ function gradeGames(rec, byPk) {
 function attachLiveSummary(rows, liveStore) {
   let changed = false
   for (const r of rows) {
-    if (!r.graded || r.live || (r.home_win !== 0 && r.home_win !== 1)) continue
+    if (!r.graded || r.observed?.live || r.live || (r.home_win !== 0 && r.home_win !== 1)) continue
     const g = liveStore?.games?.[String(r.game_pk)]
     const snaps = (g?.snapshots || []).filter((s) => s.cons != null)
     if (snaps.length < 2) continue
     const wps = (g.snapshots || []).map((s) => (r.home_win === 1 ? s.wp : s.wp == null ? null : 1 - s.wp)).filter((v) => v != null)
-    r.live = {
+    r.observed = { ...(r.observed || {}), live: {
       n: g.snapshots.length,
       steam: Math.round((snaps[snaps.length - 1].cons - snaps[0].cons) * 1e4) / 1e4,
       min_wp_winner: wps.length ? Math.round(Math.min(...wps) * 1e4) / 1e4 : null,
-    }
+    } }
     changed = true
   }
   return changed
 }
 
 // --- learning snapshot ------------------------------------------------------
-function readAllGameRows() {
+const rowOutcomeValid = (row) => row?.graded === true
+  && (row.home_win === 0 || row.home_win === 1)
+  && typeof row.final === 'string' && /^\d+-\d+$/.test(row.final)
+  && !VOID_STATUS_RE.test(row.status || '') && row.outcome_status !== 'void'
+
+const ledgerRowQuality = (row) => {
+  let score = 0
+  if (row?.integrity?.duplicate_of) score -= 1000
+  if (rowOutcomeValid(row)) score += 100
+  if (row?.integrity?.official_date && row.integrity.official_date === row.game_date) score += 20
+  if (row?.integrity?.training_eligible === true) score += 10
+  if (row?.feature_hash) score += 5
+  if (row?.date && row.date === row.game_date) score += 2
+  return score
+}
+
+export function dedupeLedgerRows(rows) {
+  const byPk = new Map(), noPk = []
+  for (const row of rows || []) {
+    if (!row || typeof row !== 'object') continue
+    if (row.game_pk == null) { noPk.push(row); continue }
+    const key = String(row.game_pk), old = byPk.get(key)
+    if (!old || ledgerRowQuality(row) > ledgerRowQuality(old)) byPk.set(key, row)
+  }
+  return [...byPk.values(), ...noPk]
+}
+
+export function contextRows(rows) {
+  return dedupeLedgerRows(rows).filter(rowOutcomeValid)
+}
+
+const pregameOddsOnly = (odds) => {
+  if (!odds || odds.open_provenance !== 'explicit_pregame' || !validIso(odds.captured_at_open)) return null
+  const out = { ...odds }
+  for (const key of Object.keys(out)) {
+    if (key === 'wp_curve' || key.endsWith('_close') || key === 'captured_at_close'
+      || key === 'provider_close' || key === 'line_move' || key === 'total_line_move') delete out[key]
+  }
+  return out
+}
+
+export function learningRows(rows) {
+  return dedupeLedgerRows(rows).filter((row) => {
+    if (row?.integrity?.training_eligible !== true || !rowOutcomeValid(row)) return false
+    if (row.integrity.cohort === 'backfill_asof' || row.backfilled === true) return true
+    const asOf = row.feature_as_of ?? row.decision_captured_at
+    const firstPitch = row.first_pitch ?? row.integrity?.first_pitch ?? row.game_datetime
+    return row.feature_hash && beforeFirstPitch(asOf, firstPitch)
+  }).map((row) => ({
+    ...row,
+    // Outcome-time telemetry is available for research, never for a fit.
+    observed: undefined,
+    weather: undefined,
+    live: undefined,
+    odds: pregameOddsOnly(row.odds),
+  }))
+}
+
+function readAllGameRows({ purpose = 'raw' } = {}) {
   const files = fs.existsSync(GAMES) ? fs.readdirSync(GAMES).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort() : []
   const rows = []
   for (const f of files) { try { for (const r of j(`${GAMES}/${f}`).games || []) rows.push(r) } catch { /* skip */ } }
+  if (purpose === 'context') return contextRows(rows)
+  if (purpose === 'learning') return learningRows(rows)
+  if (purpose === 'deduped') return dedupeLedgerRows(rows)
   return rows
 }
 function buildLearning(rows) {
@@ -641,6 +1183,7 @@ function etNow() {
 }
 async function main() {
   fs.mkdirSync(GAMES, { recursive: true })
+  const runAt = new Date().toISOString()
   const et = etNow()
   const today = process.argv[2] || et.date
   const posting = !!process.argv[2] || et.hour >= 7 // manual runs always post
@@ -649,24 +1192,13 @@ async function main() {
   const day = await computeDay(today)
   if (day) {
     if (posting || existingToday) {
-      // Freeze the FIRST-generated plays + fijos of the day (a posted "fijo" must not
-      // silently change on an intraday re-run); the per-game logs still refresh live
-      // with the latest odds/consensus/line movement below via upsertGames.
-      // `?? day.locks`: a pre-upgrade day file has plays but no locks field — backfill
-      // the fijos once from the fresh compute, then they freeze like everything else.
-      const frozen = existingToday && existingToday.plays?.length
-      const plays = frozen ? existingToday.plays : day.plays
-      const locks = frozen ? (existingToday.locks ?? day.locks) : day.locks
-      const gems = frozen ? (existingToday.gems ?? day.gems) : day.gems
-      const market_lab = frozen ? (existingToday.market_lab ?? day.marketLab) : day.marketLab
-      const pitchers = frozen ? (existingToday.pitchers ?? day.pitcherMap) : day.pitcherMap
-      const generated_at = frozen ? existingToday.generated_at : new Date().toISOString()
-      const rec = { date: today, generated_at, graded: false, plays, locks, gems, market_lab, pitchers }
-      if (frozen) validateFrozenPitchers(rec, day.pitcherMap) // scratch flags on later runs
+      const rec = buildSlateRecord(existingToday, day, { date: today, publishedAt: runAt })
+      if (existingToday) validateFrozenPitchers(rec, day.pitcherMap)
       fs.writeFileSync(`${HIST}/${today}.json`, JSON.stringify(rec, null, 2))
     }
-    // Always log the games (pre-7am ET this captures the EARLIEST opening line).
-    upsertGames(today, day.rows)
+    // Pre-cutoff rows stay provisional. The first published slate freezes every
+    // game's exact feature bytes, even when the selected plays array is empty.
+    upsertGames(today, day.rows, { asOf: runAt, freezeFeatures: posting || !!existingToday })
   }
 
   // Grade past days (picks + full game logs) over a wide window, one fetch/date.
@@ -679,7 +1211,8 @@ async function main() {
     const pickRec = fs.existsSync(`${HIST}/${date}.json`) ? j(`${HIST}/${date}.json`) : null
     const gamesRec = fs.existsSync(`${GAMES}/${date}.json`) ? j(`${GAMES}/${date}.json`) : null
     const needPick = pickRec && !pickRec.graded
-    const needGames = gamesRec && gamesRec.games.some((r) => !r.graded)
+    const needGames = gamesRec && (gamesRec.games || []).some((r) => !r.graded
+      && r.outcome_status !== 'void' && !r.integrity?.duplicate_of)
     if (!needPick && !needGames) continue
     const byPk = new Map((await fetchSchedule(date)).map((g) => [g.game_pk, g]))
     if (needPick) { gradePicks(pickRec, byPk); fs.writeFileSync(`${HIST}/${date}.json`, JSON.stringify(pickRec, null, 2)) }
@@ -697,57 +1230,12 @@ async function main() {
     }
   }
 
-  // Rebuild the classic picks index with a running record.
+  // Rebuild the public record from the causal ledger only. Backtests, late
+  // captures and experimental shadow candidates can never inflate this number.
   const idxFiles = pickFiles.sort()
-  const idx = []
-  let w = 0, l = 0, ps = 0, lw = 0, ll = 0, lps = 0, gw = 0, gloss = 0, units = 0
-  const tierRec = { oro: { wins: 0, losses: 0 }, plata: { wins: 0, losses: 0 } }
-  const labRec = Object.fromEntries(['over', 'f5', 'pitcher_f5'].map((k) => [k, { wins: 0, losses: 0, pushes: 0 }]))
-  for (const f of idxFiles) {
-    const rec = j(`${HIST}/${f}`)
-    const g = rec.plays.filter((p) => p.result)
-    for (const p of g) { if (p.result === 'win') w++; else if (p.result === 'loss') l++; else ps++ }
-    const gl = (rec.locks || []).filter((p) => p.result)
-    for (const p of gl) {
-      if (p.result === 'win') lw++; else if (p.result === 'loss') ll++; else lps++
-      const t = p.tier === 'plata' ? tierRec.plata : tierRec.oro // pre-tier locks count as oro
-      if (p.result === 'win') t.wins++; else if (p.result === 'loss') t.losses++
-      // Public units ledger: flat 1u per fijo at the captured price (-110 when
-      // the price wasn't stored — pre-ledger locks only).
-      if (p.result === 'win' || p.result === 'loss') {
-        const ml = p.price ?? -110
-        units += p.result === 'win' ? (ml > 0 ? ml / 100 : 100 / Math.abs(ml)) : -1
-      }
-    }
-    for (const p of (rec.gems || []).filter((x) => x.result)) { if (p.result === 'win') gw++; else if (p.result === 'loss') gloss++ }
-    for (const k of Object.keys(labRec)) for (const p of (rec.market_lab?.[k] || []).filter((x) => x.result)) {
-      if (p.result === 'win') labRec[k].wins++
-      else if (p.result === 'loss') labRec[k].losses++
-      else labRec[k].pushes++
-    }
-    const gg = (rec.gems || []).filter((p) => p.result)
-    idx.push({
-      date: rec.date, n: rec.plays.length, graded: !!rec.graded,
-      wins: g.filter((p) => p.result === 'win').length, losses: g.filter((p) => p.result === 'loss').length,
-      locks_n: (rec.locks || []).length, locks_wins: gl.filter((p) => p.result === 'win').length, locks_losses: gl.filter((p) => p.result === 'loss').length,
-      gems_n: (rec.gems || []).length, gems_wins: gg.filter((p) => p.result === 'win').length, gems_losses: gg.filter((p) => p.result === 'loss').length,
-    })
-  }
-  const rate = (a, b) => (a + b ? Math.round(a / (a + b) * 1000) / 1000 : null)
-  fs.writeFileSync(`${HIST}/index.json`, JSON.stringify({
-    updated_at: new Date().toISOString(),
-    record: { wins: w, losses: l, pushes: ps, win_rate: rate(w, l) },
-    locks_record: {
-      wins: lw, losses: ll, pushes: lps, win_rate: rate(lw, ll),
-      units: Math.round(units * 100) / 100, // 1u plana por fijo, al precio capturado
-      oro: { ...tierRec.oro, win_rate: rate(tierRec.oro.wins, tierRec.oro.losses) },
-      plata: { ...tierRec.plata, win_rate: rate(tierRec.plata.wins, tierRec.plata.losses) },
-    },
-    gems_record: { wins: gw, losses: gloss, win_rate: rate(gw, gloss) },
-    // Sombra privada: el normalizador público no expone este bloque.
-    market_lab_record: Object.fromEntries(Object.entries(labRec).map(([k, r]) => [k, { ...r, win_rate: rate(r.wins, r.losses) }])),
-    days: idx.reverse(),
-  }, null, 2))
+  const publicIndex = buildPublicIndex(idxFiles.map((f) => j(`${HIST}/${f}`)), { updatedAt: runAt })
+  const { wins: w, losses: l, pushes: ps } = publicIndex.record
+  fs.writeFileSync(`${HIST}/index.json`, JSON.stringify(publicIndex, null, 2))
 
   // One-time: historical seasons (2023-25) + multi-season context study — 10×
   // the statistical power for the pre-registered signals. Skipped once done.
@@ -762,14 +1250,22 @@ async function main() {
   }
 
   // Live Elo: apply newly-graded finals so ratings never go stale (idempotent).
-  const allRows = readAllGameRows()
+  const allRows = readAllGameRows({ purpose: 'context' })
   const eloState = loadEloState(`${DATA}/elo_state.json`, today)
   const eloApplied = applyEloUpdates(priors.elo, eloState, allRows, { today })
   if (eloApplied > 0) fs.writeFileSync(`${DATA}/elo.json`, JSON.stringify(priors.elo))
   fs.writeFileSync(`${DATA}/elo_state.json`, JSON.stringify(eloState))
 
-  // Rebuild the Adrian Learning snapshot from all graded game logs.
-  const snap = buildLearning(allRows)
-  console.log(`adrian_daily: ${today} -> ${day ? day.plays.length : 0} plays; record ${w}-${l} (${ps} push); elo+${eloApplied}; learning n=${snap.n_graded}/${snap.n_total}`)
+  // Hourly ingestion/gradation is intentionally cheap. The dedicated daily
+  // workflow owns refitting; an operator can still run this file standalone.
+  let learningSummary = 'skipped'
+  if (process.env.AA_SKIP_LEARNING !== '1') {
+    const fitRows = readAllGameRows({ purpose: 'learning' })
+    const snap = buildLearning(fitRows)
+    learningSummary = `${snap.n_graded}/${snap.n_total}`
+  }
+  console.log(`adrian_daily: ${today} -> ${day ? day.plays.length : 0} plays; record ${w}-${l} (${ps} push); elo+${eloApplied}; learning ${learningSummary}`)
 }
-main().catch((e) => { console.error(e); process.exit(1) })
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((e) => { console.error(e); process.exit(1) })
+}

@@ -13,7 +13,13 @@
 
 const ESPN_SCOREBOARD =
   'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard';
-const MLB_ABBR_FIX = { ATH: 'OAK' };
+const MLB_ABBR_FIX = { ATH: 'OAK', CHW: 'CWS', ARI: 'AZ' };
+const MLB_INGEST_CRON = '*/20 * * * *';
+const MLB_INGEST_INTERVAL_MS = 20 * 60 * 1000;
+const MLB_INGEST_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const MLB_INGEST_STALE_SECONDS = 45 * 60;
+const MLB_INGEST_TIMEOUT_MS = 8000;
+const MLB_PREGAME_WINDOW_MS = 3 * 60 * 60 * 1000;
 
 // ESPN, antes de que empiece la jornada, deja su scoreboard sin parámetros en
 // el último día completado. Siempre fijamos el día calendario ET que AA Sports
@@ -27,6 +33,344 @@ export function mlbScoreboardUrl(date) {
 export function mlbLiveEventsForDate(data, date) {
   const events = Array.isArray(data && data.events) ? data.events : [];
   return events.filter((ev) => etDate(ev && ev.date) === date);
+}
+
+// ── Captura MLB de hechos públicos cada 20 minutos ─────────────────────────
+// Este bloque NO calcula predicciones ni contiene pesos del modelo. Conserva
+// solamente calendario, abridores, lineups, marcador y la línea primaria que
+// las dos APIs públicas ya exponen. El robot privado decide después qué medir.
+const ingestAbbr = (code) => {
+  const value = String(code || '').toUpperCase();
+  return MLB_ABBR_FIX[value] || value || null;
+};
+const ingestText = (value, max = 80) => value == null ? null : String(value).slice(0, max);
+const ingestNumber = (value) => {
+  if (value == null || value === '') return null;
+  const n = Number(String(value).replace(/^\+/, ''));
+  return Number.isFinite(n) ? n : null;
+};
+const ingestMarketLine = (value) => {
+  const direct = ingestNumber(value);
+  if (direct != null) return direct;
+  const match = String(value || '').match(/[-+]?\d+(?:\.\d+)?/);
+  return match ? ingestNumber(match[0]) : null;
+};
+const ingestStatus = (value) => {
+  const status = String(value || '').toLowerCase();
+  if (status.includes('final') || status.includes('completed') || status.includes('game over') || status === 'post') return 'final';
+  if (status.includes('progress') || status.includes('live') || status.includes('delay') || status.includes('rain') || status === 'in') return 'live';
+  return 'pre';
+};
+const ingestLineup = (players) => (Array.isArray(players) ? players : [])
+  .map((player) => Number(player && player.id))
+  .filter(Number.isFinite)
+  .slice(0, 12);
+const ingestMoneyline = (side) => ingestNumber(side && (
+  side.moneyLine ?? side.moneyline ?? side.odds ??
+  side.current?.moneyLine?.american ?? side.current?.moneyLine ??
+  side.close?.moneyLine?.american ?? side.close?.moneyLine ?? side.close?.odds ??
+  side.open?.moneyLine?.american ?? side.open?.moneyLine ?? side.open?.odds
+));
+const ingestMoneylineAt = (side, stage) => ingestNumber(side && (
+  side[stage]?.moneyLine?.american ?? side[stage]?.moneyLine ?? side[stage]?.odds
+));
+
+function compactStatsGame(game) {
+  const teams = game && game.teams || {};
+  const linescore = game && game.linescore || {};
+  const home = teams.home || {}, away = teams.away || {};
+  const homeTeam = home.team || {}, awayTeam = away.team || {};
+  const homePitcher = home.probablePitcher || {}, awayPitcher = away.probablePitcher || {};
+  const lineups = game && game.lineups || {};
+  const homeLine = linescore.teams && linescore.teams.home || {};
+  const awayLine = linescore.teams && linescore.teams.away || {};
+  const statusDetail = game && game.status && (game.status.detailedState || game.status.abstractGameState);
+  return {
+    id: String(game.gamePk), mlb_id: String(game.gamePk), espn_id: null,
+    start: game.gameDate || null, status: ingestStatus(statusDetail), detail: ingestText(statusDetail, 48),
+    home: {
+      id: homeTeam.id ?? null, code: ingestAbbr(homeTeam.abbreviation), score: ingestNumber(home.score),
+      hits: ingestNumber(homeLine.hits), errors: ingestNumber(homeLine.errors),
+      pitcher_id: homePitcher.id ?? null, pitcher: ingestText(homePitcher.fullName),
+      lineup: ingestLineup(lineups.homePlayers),
+    },
+    away: {
+      id: awayTeam.id ?? null, code: ingestAbbr(awayTeam.abbreviation), score: ingestNumber(away.score),
+      hits: ingestNumber(awayLine.hits), errors: ingestNumber(awayLine.errors),
+      pitcher_id: awayPitcher.id ?? null, pitcher: ingestText(awayPitcher.fullName),
+      lineup: ingestLineup(lineups.awayPlayers),
+    },
+    inning: ingestNumber(linescore.currentInning), half: ingestText(linescore.inningState, 12),
+    outs: ingestNumber(linescore.outs), series_game: ingestNumber(game.seriesGameNumber),
+    series_len: ingestNumber(game.gamesInSeries), venue_id: game.venue && game.venue.id || null,
+    espn_status: null, espn_period: null, market: null,
+  };
+}
+
+function compactEspnGame(event) {
+  const competition = event && event.competitions && event.competitions[0] || {};
+  const competitors = competition.competitors || [];
+  const home = competitors.find((team) => team.homeAway === 'home') || {};
+  const away = competitors.find((team) => team.homeAway === 'away') || {};
+  const statusType = competition.status?.type || event?.status?.type || {};
+  const oddsList = Array.isArray(competition.odds) ? competition.odds : [];
+  const odds = oddsList.find((item) => item && (item.homeTeamOdds || item.awayTeamOdds || item.overUnder != null)) || oddsList[0] || null;
+  const moneyline = odds && odds.moneyline || {};
+  const pointSpread = odds && odds.pointSpread || {};
+  const totalMarket = odds && odds.total || {};
+  const market = odds ? {
+    provider: ingestText(odds.provider && odds.provider.name, 40),
+    home_ml: ingestMoneyline(odds.homeTeamOdds) ?? ingestMoneyline(moneyline.home),
+    away_ml: ingestMoneyline(odds.awayTeamOdds) ?? ingestMoneyline(moneyline.away),
+    home_ml_open: ingestMoneylineAt(odds.homeTeamOdds, 'open') ?? ingestMoneylineAt(moneyline.home, 'open'),
+    away_ml_open: ingestMoneylineAt(odds.awayTeamOdds, 'open') ?? ingestMoneylineAt(moneyline.away, 'open'),
+    total: ingestNumber(odds.overUnder) ?? ingestMarketLine(totalMarket.over?.close?.line ?? totalMarket.under?.close?.line),
+    spread: ingestNumber(odds.spread),
+    over_price: ingestMoneylineAt(totalMarket.over, 'close'),
+    under_price: ingestMoneylineAt(totalMarket.under, 'close'),
+    total_open: ingestMarketLine(totalMarket.over?.open?.line ?? totalMarket.under?.open?.line),
+    over_price_open: ingestMoneylineAt(totalMarket.over, 'open'),
+    under_price_open: ingestMoneylineAt(totalMarket.under, 'open'),
+    home_spread: ingestMarketLine(pointSpread.home?.close?.line),
+    away_spread: ingestMarketLine(pointSpread.away?.close?.line),
+    home_spread_price: ingestMoneylineAt(pointSpread.home, 'close'),
+    away_spread_price: ingestMoneylineAt(pointSpread.away, 'close'),
+  } : null;
+  return {
+    espn_id: event && event.id != null ? String(event.id) : null,
+    start: event && event.date || null,
+    status: ingestStatus(statusType.name || statusType.state || statusType.description),
+    detail: ingestText(statusType.shortDetail || statusType.detail, 48),
+    period: ingestNumber(competition.status && competition.status.period),
+    home: { code: ingestAbbr(home.team && home.team.abbreviation), score: ingestNumber(home.score) },
+    away: { code: ingestAbbr(away.team && away.team.abbreviation), score: ingestNumber(away.score) },
+    market,
+  };
+}
+
+function closestEspnGame(candidates, start, claimed) {
+  const target = Date.parse(start || '');
+  let best = null, bestDistance = Infinity;
+  for (const candidate of candidates || []) {
+    if (!candidate.espn_id || claimed.has(candidate.espn_id)) continue;
+    const candidateTime = Date.parse(candidate.start || '');
+    const distance = Number.isFinite(target) && Number.isFinite(candidateTime) ? Math.abs(candidateTime - target) : 0;
+    if (!best || distance < bestDistance) { best = candidate; bestDistance = distance; }
+  }
+  return best;
+}
+
+// Normalizador puro, exportado para regresión. Une por matchup y, en una doble
+// cartelera, por la hora más cercana. Si una fuente cae conserva la otra.
+export function compactMlbIngest(statsData, espnData, date) {
+  const statsGames = (Array.isArray(statsData && statsData.dates) ? statsData.dates : [])
+    .flatMap((day) => Array.isArray(day && day.games) ? day.games : [])
+    .filter((game) => (game.gameType || 'R') === 'R')
+    .map(compactStatsGame);
+  const espnGames = mlbLiveEventsForDate(espnData, date).map(compactEspnGame);
+  const byMatchup = new Map();
+  for (const game of espnGames) {
+    const key = `${game.away.code || '?'}@${game.home.code || '?'}`;
+    if (!byMatchup.has(key)) byMatchup.set(key, []);
+    byMatchup.get(key).push(game);
+  }
+  const claimed = new Set();
+  for (const game of statsGames) {
+    const key = `${game.away.code || '?'}@${game.home.code || '?'}`;
+    const espn = closestEspnGame(byMatchup.get(key), game.start, claimed);
+    if (!espn) continue;
+    claimed.add(espn.espn_id);
+    game.espn_id = espn.espn_id;
+    game.espn_status = espn.status;
+    game.espn_period = espn.period;
+    game.market = espn.market;
+    if (game.home.score == null) game.home.score = espn.home.score;
+    if (game.away.score == null) game.away.score = espn.away.score;
+  }
+  for (const espn of espnGames) {
+    if (espn.espn_id && claimed.has(espn.espn_id)) continue;
+    statsGames.push({
+      id: `espn:${espn.espn_id || 'unknown'}`, mlb_id: null, espn_id: espn.espn_id,
+      start: espn.start, status: espn.status, detail: espn.detail,
+      home: { id: null, code: espn.home.code, score: espn.home.score, hits: null, errors: null, pitcher_id: null, pitcher: null, lineup: [] },
+      away: { id: null, code: espn.away.code, score: espn.away.score, hits: null, errors: null, pitcher_id: null, pitcher: null, lineup: [] },
+      inning: espn.period, half: null, outs: null, series_game: null, series_len: null, venue_id: null,
+      espn_status: espn.status, espn_period: espn.period, market: espn.market,
+    });
+  }
+  statsGames.sort((a, b) => String(a.start || '').localeCompare(String(b.start || '')) || String(a.id).localeCompare(String(b.id)));
+  const sides = statsGames.length * 2;
+  const missingness = {
+    games: statsGames.length,
+    pitchers_missing: statsGames.reduce((n, game) => n + (!game.home.pitcher_id ? 1 : 0) + (!game.away.pitcher_id ? 1 : 0), 0),
+    pitchers_total: sides,
+    lineups_missing: statsGames.reduce((n, game) => n + (!game.home.lineup.length ? 1 : 0) + (!game.away.lineup.length ? 1 : 0), 0),
+    lineups_total: sides,
+    market_missing: statsGames.filter((game) => !game.market || (
+      game.market.home_ml == null && game.market.away_ml == null &&
+      game.market.total == null && game.market.spread == null
+    )).length,
+    mlb_unmatched: statsGames.filter((game) => !game.mlb_id).length,
+    espn_unmatched: statsGames.filter((game) => !game.espn_id).length,
+  };
+  return { games: statsGames, missingness };
+}
+
+export function mlbIngestSlotId(scheduledTime) {
+  const value = Number(scheduledTime);
+  if (!Number.isFinite(value)) throw new Error('scheduledTime inválido');
+  return Math.floor(value / MLB_INGEST_INTERVAL_MS);
+}
+
+// Etapa de la cartelera, no del modelo. Los estados públicos mandan; cuando
+// todos siguen por jugar, la hora del primer lanzamiento separa early de la
+// ventana operacional pregame (3 h). Una cartelera con al menos un juego ya
+// iniciado/terminado se considera live hasta que todos sean final. Nunca
+// inferimos que un juego empezó si las fuentes aún dicen pre.
+export function mlbIngestStage(games, scheduledTime) {
+  const rows = Array.isArray(games) ? games : [];
+  const effectiveStatus = (game) => {
+    const statuses = [game && game.status, game && game.espn_status];
+    if (statuses.includes('live')) return 'live';
+    if (statuses.includes('final')) return 'final';
+    return 'pre';
+  };
+  if (rows.length && rows.every((game) => effectiveStatus(game) === 'final')) return 'final';
+  if (rows.some((game) => effectiveStatus(game) !== 'pre')) return 'live';
+  const now = Number(scheduledTime);
+  const starts = rows.map((game) => Date.parse(game && game.start || '')).filter(Number.isFinite);
+  if (Number.isFinite(now) && starts.length && Math.min(...starts) - now <= MLB_PREGAME_WINDOW_MS) return 'pregame';
+  return 'early';
+}
+
+export async function mlbIngestSourceHash(value) {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function fetchMlbIngestJson(url, fetcher, timeoutMs, valid) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort('timeout'), timeoutMs);
+  try {
+    const response = await fetcher(url, {
+      signal: controller.signal,
+      headers: { accept: 'application/json', 'user-agent': 'aa-sports/1.0' },
+    });
+    if (!response.ok) throw new Error(`http_${response.status}`);
+    const data = await response.json();
+    if (valid && !valid(data)) throw new Error('invalid_shape');
+    return data;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+const ingestError = (reason) => ingestText(reason && reason.message || reason || 'unknown', 180);
+
+export async function runMlbIngest(env, {
+  scheduledTime = Date.now(), now = new Date(), fetcher = fetch, timeoutMs = MLB_INGEST_TIMEOUT_MS,
+} = {}) {
+  const scheduledMs = Number(scheduledTime);
+  const scheduledAt = new Date(scheduledMs).toISOString();
+  const capturedAt = new Date(now).toISOString();
+  const date = etDate(new Date(scheduledMs));
+  const statsUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,team,linescore,lineups,venue`;
+  const results = await Promise.allSettled([
+    fetchMlbIngestJson(statsUrl, fetcher, timeoutMs, (data) => data && Array.isArray(data.dates)),
+    fetchMlbIngestJson(mlbScoreboardUrl(date), fetcher, timeoutMs, (data) => data && Array.isArray(data.events)),
+  ]);
+  const statsOk = results[0].status === 'fulfilled';
+  const espnOk = results[1].status === 'fulfilled';
+  const sourceMask = (statsOk ? 2 : 0) | (espnOk ? 1 : 0);
+  const sources = {
+    mlb: { status: statsOk ? 'ok' : 'error', error: statsOk ? null : ingestError(results[0].reason) },
+    espn: { status: espnOk ? 'ok' : 'error', error: espnOk ? null : ingestError(results[1].reason) },
+  };
+  const compact = compactMlbIngest(statsOk ? results[0].value : null, espnOk ? results[1].value : null, date);
+  const status = sourceMask === 3 ? 'ok' : sourceMask ? 'partial' : 'error';
+  const stage = mlbIngestStage(compact.games, Date.parse(capturedAt));
+  const slotId = mlbIngestSlotId(scheduledMs);
+  const hashInput = { date, stage, source_mask: sourceMask, games: compact.games };
+  const sourceHash = await mlbIngestSourceHash(hashInput);
+  const errors = Object.fromEntries(Object.entries(sources).filter(([, value]) => value.error).map(([key, value]) => [key, value.error]));
+  const payload = {
+    schema: 'mlb_ingest_v1', slot_id: slotId, date, scheduled_at: scheduledAt,
+    captured_at: capturedAt, status, stage, sources, games: compact.games,
+  };
+  // First write wins. Un retry del mismo cron puede observar lineups/mercado
+  // más tarde y no debe reescribir retrospectivamente la captura causal del
+  // slot, aunque llegue con más fuentes o un payload distinto.
+  const upsert = env.DB.prepare(`
+    INSERT INTO mlb_ingest_slots
+      (slot_id, date, scheduled_at, captured_at, status, stage, source_mask, sources, source_hash, n_games, missingness, payload, error)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(slot_id) DO NOTHING
+  `).bind(
+    slotId, date, scheduledAt, capturedAt, status, stage, sourceMask, JSON.stringify(sources), sourceHash,
+    compact.games.length, JSON.stringify(compact.missingness), JSON.stringify(payload),
+    Object.keys(errors).length ? JSON.stringify(errors) : null,
+  );
+  const cutoff = new Date(scheduledMs - MLB_INGEST_RETENTION_MS).toISOString();
+  const cleanup = env.DB.prepare('DELETE FROM mlb_ingest_slots WHERE scheduled_at < ?').bind(cutoff);
+  const dbResults = await env.DB.batch([upsert, cleanup]);
+  const report = {
+    slot_id: slotId, date, status, stage, source_mask: sourceMask, source_hash: sourceHash,
+    n_games: compact.games.length, missingness: compact.missingness,
+    inserted_or_updated: Number(dbResults?.[0]?.meta?.changes || 0),
+    pruned: Number(dbResults?.[1]?.meta?.changes || 0), sources,
+  };
+  console.log(JSON.stringify({ message: 'mlb ingest complete', ...report }));
+  return report;
+}
+
+const parseHealthJson = (value, fallback) => {
+  try { return value ? JSON.parse(value) : fallback; } catch (e) { return fallback; }
+};
+
+export function mlbPipelineHealthDoc(row, now = Date.now()) {
+  if (!row) {
+    return {
+      ok: false, pipeline: 'mlb_ingest_20m', state: 'empty', interval_minutes: 20,
+      stale_after_minutes: MLB_INGEST_STALE_SECONDS / 60, latest: null,
+    };
+  }
+  const capturedMs = Date.parse(row.captured_at || '');
+  const ageSeconds = Number.isFinite(capturedMs) ? Math.max(0, Math.floor((Number(now) - capturedMs) / 1000)) : null;
+  const fresh = ageSeconds != null && ageSeconds <= MLB_INGEST_STALE_SECONDS;
+  const sources = parseHealthJson(row.sources, {});
+  const missingness = parseHealthJson(row.missingness, {});
+  const errors = parseHealthJson(row.error, null);
+  return {
+    ok: fresh && row.status === 'ok', pipeline: 'mlb_ingest_20m',
+    state: fresh ? (row.status || 'unknown') : 'stale',
+    interval_minutes: 20, stale_after_minutes: MLB_INGEST_STALE_SECONDS / 60,
+    fresh, age_seconds: ageSeconds,
+    latest: {
+      slot_id: Number(row.slot_id), date: row.date || null, scheduled_at: row.scheduled_at || null,
+      captured_at: row.captured_at || null, status: row.status || null, stage: row.stage || null,
+      source_hash: row.source_hash || null,
+      n_games: Number(row.n_games || 0), sources, missingness, errors,
+    },
+  };
+}
+
+async function mlbPipelineHealth(env, origin) {
+  try {
+    const row = await env.DB.prepare(`
+      SELECT slot_id, date, scheduled_at, captured_at, status, stage, source_hash,
+             n_games, sources, missingness, error
+      FROM mlb_ingest_slots ORDER BY slot_id DESC LIMIT 1
+    `).first();
+    return json(mlbPipelineHealthDoc(row), 200, origin, 30);
+  } catch (error) {
+    console.error(JSON.stringify({ message: 'mlb pipeline health unavailable', error: ingestError(error) }));
+    return json({
+      ok: false, pipeline: 'mlb_ingest_20m', state: 'unavailable',
+      interval_minutes: 20, stale_after_minutes: MLB_INGEST_STALE_SECONDS / 60,
+      error: 'storage_unavailable',
+    }, 200, origin, 15);
+  }
 }
 
 // Marcadores en vivo multideporte (mismo patrón proxy+caché que MLB).
@@ -47,6 +391,10 @@ export default {
     const path = url.pathname.replace(/\/+$/, '') || '/';
     const isAccount = path.startsWith('/v1/auth') || path.startsWith('/v1/me');
 
+    // Wrangler puede exponer esta ruta al simular scheduled() en desarrollo.
+    // En producción no aceptamos disparos HTTP del cron.
+    if (path === '/__scheduled') return json({ error: 'not_found' }, 404, origin);
+
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: isAccount ? credCors(request, env) : cors(origin) });
     }
@@ -57,12 +405,13 @@ export default {
     try {
       if (path === '/' || path === '/v1' || path === '/v1/health') {
         return json(
-          { service: 'aa-sports-api', ok: true, sports: ['mlb'], routes: ['/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live', '/v1/injuries'] },
+          { service: 'aa-sports-api', ok: true, sports: ['mlb'], routes: ['/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live', '/v1/mlb/pipeline-health', '/v1/injuries'] },
           200, origin,
         );
       }
 
       if (path === '/v1/mlb/today') return await today(env, origin);
+      if (path === '/v1/mlb/pipeline-health') return await mlbPipelineHealth(env, origin);
       const sm = path.match(/^\/v1\/mlb\/schedule\/(\d{4}-\d{2}-\d{2})$/);
       if (sm) return await schedule(sm[1], origin);
       const dm = path.match(/^\/v1\/mlb\/day\/(\d{4}-\d{2}-\d{2})$/);
@@ -137,15 +486,23 @@ export default {
     }
   },
 
-  // Crons del Radar:
+  // Crons del Worker:
   //  · "*/5 * * * *"  → vigía: transacciones nuevas de las wallets vigiladas → KV
   //    poly:alerts; Telegram solo si una señal supera el gate raro rare_v1.
+  //  · "*/20 * * * *" → captura hechos públicos MLB en D1. No calcula ni
+  //    publica predicciones y no contiene pesos privados del modelo.
   //  · "0 13 * * *"   → diario (9am ET): archiva snapshot en D1, mide persistencia
   //    viva + wallets nuevas en el top y publica poly:track (sin push diario).
-  // Solo lectura de datos públicos.
-  async scheduled(event, env, ctx) {
-    if (event && event.cron === '0 13 * * *') ctx.waitUntil(polyDaily(env));
-    else ctx.waitUntil(polyWatch(env));
+  async scheduled(controller, env, ctx) {
+    if (controller && controller.cron === MLB_INGEST_CRON) {
+      ctx.waitUntil(runMlbIngest(env, { scheduledTime: controller.scheduledTime }));
+    } else if (controller && controller.cron === '0 13 * * *') {
+      ctx.waitUntil(polyDaily(env));
+    } else if (controller && controller.cron === '*/5 * * * *') {
+      ctx.waitUntil(polyWatch(env));
+    } else {
+      console.warn(JSON.stringify({ message: 'scheduled cron ignored', cron: controller && controller.cron || null }));
+    }
   },
 };
 
@@ -156,7 +513,7 @@ async function today(env, origin) {
   let stored = null;
   try { stored = raw ? JSON.parse(raw) : null; } catch (e) { /* blob inválido: intenta el fallback */ }
   const date = etDate(new Date());
-  if (raw && stored && stored.date && stored.date >= date) {
+  if (raw && stored && stored.date === date) {
     return new Response(raw, {
       status: 200,
       headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=60' },
@@ -176,7 +533,9 @@ async function today(env, origin) {
     return json(doc, 200, origin, 120);
   } catch (err) {
     console.error(JSON.stringify({ message: 'mlb today fallback failed', error: String(err && err.message || err), date }));
-    if (raw && stored) {
+    // Ante una caída solo degradamos a un blob realmente anterior. Un blob
+    // futuro/manual no debe presentarse como si fuera la cartelera de hoy.
+    if (raw && stored && stored.date && stored.date < date) {
       return new Response(raw, {
         status: 200,
         headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=30' },
@@ -413,7 +772,17 @@ async function polyWatch(env) {
   // el cron (entrega at-least-once), no duplica el aviso.
   try {
     if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && tgItems.length) await tgSignal(env, tgItems);
-  } catch (e) { /* Telegram caído no afecta las alertas ni KV */ }
+  } catch (e) {
+    // La reserva se persistió antes de enviar para impedir duplicados. Si la
+    // API rechaza el mensaje, deshacemos únicamente esa reserva para que el
+    // mismo consenso pueda reintentarse sin perder siete días de señal.
+    console.error(JSON.stringify({ message: 'telegram exceptional alert failed', error: ingestError(e) }));
+    const rollback = polyTelegramRollback(ad.telegram, ad.cons_notified, tgItems, nowIso, e);
+    ad.telegram = rollback.telegram;
+    ad.cons_notified = rollback.cons_notified;
+    try { await env.AA_LATEST.put('poly:alerts', JSON.stringify(ad)); }
+    catch (persistError) { console.error(JSON.stringify({ message: 'telegram rollback failed', error: ingestError(persistError) })); }
+  }
 }
 
 // Helper puro (exportado para tests): filtra la actividad a trades más nuevos
@@ -656,6 +1025,29 @@ export function polyTelegramGate(items, state, opts = {}) {
   };
 }
 
+export function polyTelegramRollback(telegram, consNotified, items, failedAt = null, error = null) {
+  const state = { ...(telegram || {}), notified: { ...((telegram && telegram.notified) || {}) } };
+  const consensus = { ...(consNotified || {}) };
+  let released = 0;
+  const seen = new Set();
+  for (const item of Array.isArray(items) ? items : []) {
+    if (!item?.title || !item?.outcome) continue;
+    const key = item.title + '|' + item.outcome;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (Object.prototype.hasOwnProperty.call(state.notified, key)) {
+      delete state.notified[key];
+      released++;
+    }
+    if (Number(item.prevN) > 0) consensus[key] = Number(item.prevN);
+    else delete consensus[key];
+  }
+  state.sent = Math.max(0, (Number(state.sent) || 0) - released);
+  state.last_error_at = failedAt || null;
+  state.last_error = ingestError(error);
+  return { telegram: state, cons_notified: consensus };
+}
+
 // Telegram de observación excepcional: varias vigiladas con patrón estadístico
 // compatible con información en el mismo lado. Mensaje rico: mercado %, fuerza, y
 // wallets con su win rate. Un bloque por señal nueva/reforzada. Sin secretos → no
@@ -673,12 +1065,12 @@ async function tgSignal(env, items) {
     return `🎯 Posible informado${c.prevN ? ` (refuerzo · antes ${c.prevN})` : ''}\n“${c.outcome}” · ${c.title}\n🤝 ${c.n} vigiladas${mkt}${fz}${why ? `\nPor qué: ${why}` : ''}\n${wl}`;
   };
   const text = `🎯 Observación excepcional — Radar AA\n\n${items.map(block).join('\n\n')}\n\nPasó el filtro anti-ruido (3+ vigiladas, $500+ y precio no extremo), pero NO es una jugada segura ni una recomendación. La fuerza no es probabilidad de ganar; el % es el precio del mercado. «Posible informado» describe un patrón estadístico, nunca una acusación. aasport.net → Radar`;
-  try {
-    await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text }),
-    });
-  } catch (e) { /* Telegram caído no afecta las alertas de la página */ }
+  const res = await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.ok !== true) throw new Error(`Telegram ${res.status}: ${JSON.stringify(body).slice(0, 180)}`);
 }
 
 // Radar de wallets de Polymarket (observatorio descriptivo) — lo publica

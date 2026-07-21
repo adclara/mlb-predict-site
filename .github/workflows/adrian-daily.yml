@@ -1,13 +1,7 @@
-# Runs EVERY HOUR (a living model). daily.mjs is safe at any hour: it uses the
-# EASTERN date, posts the day's plays + fijos only after 7am ET (earlier runs
-# grade finals and capture the earliest opening lines), freezes posted picks,
-# refreshes multi-book odds/consensus/line movement, and rebuilds the learning
-# snapshot. After it, live_odds.mjs watches IN-PROGRESS games for up to ~45 min,
-# snapshotting the live books ("logros") every ~5 min and pushing every ~10 min
-# so GitHub Pages serves near-live market data during games.
-# Public repo -> free unlimited Actions minutes; same-repo commit -> the default
-# GITHUB_TOKEN suffices (no secret). The concurrency group serializes runs (a
-# queued hourly run simply starts when the watcher of the previous one ends).
+# Corrida horaria corta: materializa el slate privado, gradúa finales y publica
+# solo cuando cambia el documento. La ingesta pública de 20 minutos vive en el
+# Worker/D1 y el refit diario en mlb-learning-daily.yml. Separar estas tres
+# cadencias evita la cola de ~45 minutos del antiguo watcher y reduce escrituras.
 name: adrian-daily
 on:
   schedule:
@@ -27,25 +21,30 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Verificar secreto de publicación
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
       - name: Git identity (robot)
         run: |
           git config user.name "adrian-robot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-      - name: Compute + grade + learn
-        run: DATA_DIR="$PWD/data" node robot/daily.mjs
-      # 🧠 Cerebro AA: traduce el aprendizaje medido (learning.json) a diario simple
-      # + histórico, y lo publica a KV mlb:learning. Se ejecuta tras el re-ajuste.
-      - name: Diario de aprendizaje (Cerebro AA)
-        if: always()
+      - name: Consumir snapshots públicos D1 (best-effort)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
-        run: DATA_DIR="$PWD/data" node robot/learning_journal.mjs || echo "journal falló (no bloquea)"
+          AA_INGEST_SNAPSHOT: /tmp/aa-mlb-ingest.json
+        run: node robot/mlb_ingest_consumer.mjs
+      - name: Compute + grade (sin refit intradía)
+        env:
+          AA_SKIP_LEARNING: '1'
+          AA_INGEST_SNAPSHOT: /tmp/aa-mlb-ingest.json
+        run: DATA_DIR="$PWD/data" node robot/daily.mjs
       - name: Commit picks/history
         run: |
           git add data/history data/elo.json data/elo_state.json 2>/dev/null || git add data/history
@@ -53,52 +52,22 @@ jobs:
             echo "no changes"
           else
             git commit -m "Adrian robot: picks + grading ($(date -u +%FT%TZ))"
+            pushed=0
             for i in 1 2 3; do
-              git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push && break || sleep 5
+              if git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push; then
+                pushed=1
+                break
+              fi
+              sleep 5
             done
+            if [ "$pushed" -ne 1 ]; then
+              echo "No se pudo persistir el ledger tras 3 intentos."
+              exit 1
+            fi
           fi
       # AA Sports: publica los resultados del día a Cloudflare (KV + D1) vía API
-      # REST. Si el secret no existe todavía, se salta sin romper la corrida.
+      # REST. El preflight evita un run verde que deje producción congelada.
       - name: Publicar a Cloudflare (AA Sports)
-        if: always()
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "CLOUDFLARE_API_TOKEN no configurado; salto la publicación."
-          else
-            node cloudflare/upload.mjs
-          fi
-      # Bajas: lesionados/suspendidos por equipo (MLB StatsAPI + NBA ESPN) → KV.
-      - name: Bajas (lesionados y suspendidos)
-        if: always()
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          node robot/injuries.mjs || echo "bajas fallaron; la corrida sigue"
-      - name: Live odds watcher (logros en vivo)
-        run: DATA_DIR="$PWD/data" node robot/live_odds.mjs
-      - name: Commit any remaining live data
-        if: always()
-        run: |
-          git add data/history
-          if git diff --cached --quiet; then
-            echo "no changes"
-          else
-            git commit -m "live odds: final flush ($(date -u +%FT%TZ))"
-            for i in 1 2 3; do
-              git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push && break || sleep 5
-            done
-          fi
-      # Segunda publicación: tras el watcher, para que las curvas WP y los
-      # marcadores recién calificados lleguen frescos a AA Sports.
-      - name: Re-publicar a Cloudflare (post-watcher)
-        if: always()
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "CLOUDFLARE_API_TOKEN no configurado; salto la publicación."
-          else
-            node cloudflare/upload.mjs
-          fi
+        run: node cloudflare/upload.mjs

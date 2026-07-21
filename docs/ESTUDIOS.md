@@ -1,5 +1,11 @@
 # Registro de estudios — Predict Baseball 2026
 
+> **Nota de integridad (21-jul-2026):** los estudios del 7 de julio son cortes
+> históricos reproducibles, pero no son gates vigentes. La auditoría posterior
+> detectó precios sin timestamp y filas nativas mutables; por eso sus cifras de
+> ROI/ORO no autorizan publicación. Véase `MLB_INTELLIGENCE_PLAN.md` y el ledger
+> causal v2. ORO, Over y F5 permanecen en sombra.
+
 Bitácora científica del algoritmo. Cada estudio es **walk-forward** (los modelos solo ven
 días anteriores), con intervalos de confianza y prueba de estabilidad en ambas mitades de la
 temporada. Se reportan TODOS los resultados, incluidos los negativos.

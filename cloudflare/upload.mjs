@@ -15,9 +15,10 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { normalizeDay, toD1Rows } from './lib/normalize.mjs';
+import { semanticContentHash } from './lib/content_hash.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -88,10 +89,40 @@ async function restKvPut(key, value) {
   console.log(`✅ KV: ${key} actualizado (REST).`);
 }
 
+async function restKvGetJson(key) {
+  const res = await fetch(
+    `${CF}/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${KV_NAMESPACE_ID}/values/${encodeURIComponent(key)}`,
+    { headers: { Authorization: `Bearer ${API_TOKEN}` } },
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Cloudflare KV GET ${key} -> ${res.status}`);
+  return res.json().catch(() => null);
+}
+
+function contentHash(doc) {
+  return semanticContentHash(doc);
+}
+
+function etToday(now = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(now);
+}
+
+export function shouldPublishLatest(remoteDate, candidateDate, today = etToday()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(candidateDate || ''))) return false;
+  // `mlb:today` means exactly today ET. This also repairs a poisoned/future KV:
+  // a correct current candidate may replace either an older or a future blob.
+  return candidateDate === today;
+}
+
 async function restD1Exec(sql) {
-  await cfFetch(`/accounts/${ACCOUNT_ID}/d1/database/${D1_DATABASE_ID}/query`, {
+  const body = await cfFetch(`/accounts/${ACCOUNT_ID}/d1/database/${D1_DATABASE_ID}/query`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sql }),
   });
+  if (!Array.isArray(body.result) || !body.result.length || body.result.some((part) => part?.success !== true)) {
+    throw new Error(`D1 rechazó el upsert: ${JSON.stringify(body.result || body).slice(0, 400)}`);
+  }
   console.log('✅ D1: historial actualizado (REST).');
 }
 
@@ -118,6 +149,7 @@ async function main() {
   const liveDoc = readJson(join(DATA, 'live', `${date}.json`));
 
   const normalized = normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs, liveDoc);
+  normalized.content_hash = contentHash(normalized);
   const rows = toD1Rows(normalized);
 
   mkdirSync(DIST, { recursive: true });
@@ -137,12 +169,26 @@ async function main() {
   //  - sin token (Mac de Adrian): wrangler con su OAuth local.
   const payload = JSON.stringify(normalized);
   if (API_TOKEN) {
-    await restKvPut('mlb:today', payload);
-    await restKvPut(`mlb:day:${date}`, payload); // archivo navegable por fecha
+    const [latest, dayBlob] = await Promise.all([
+      restKvGetJson('mlb:today'),
+      restKvGetJson(`mlb:day:${date}`),
+    ]);
+    const latestSame = latest?.content_hash === normalized.content_hash;
+    const daySame = dayBlob?.content_hash === normalized.content_hash;
+    const mayPublishLatest = shouldPublishLatest(latest?.date, date);
+    if (!mayPublishLatest) console.log(`↷ KV: mlb:today conserva ${latest?.date || 'el valor remoto'}; ${date} no es hoy ET.`);
+    else if (!latestSame) await restKvPut('mlb:today', payload);
+    else console.log(`↷ KV: mlb:today sin cambios (${normalized.content_hash.slice(0, 12)}).`);
+    if (!daySame) await restKvPut(`mlb:day:${date}`, payload);
+    else console.log(`↷ KV: mlb:day:${date} sin cambios.`);
+    // D1 tiene su propia idempotencia (INSERT OR REPLACE). Se ejecuta aunque KV
+    // ya tenga el mismo hash: así una caída de D1 no queda oculta para siempre
+    // por dos PUT de KV que sí alcanzaron a completar en la corrida anterior.
     const sql = buildSql(rows);
     if (sql) await restD1Exec(sql);
   } else {
-    wrangler(['kv', 'key', 'put', 'mlb:today', '--path', todayPath, '--namespace-id', KV_NAMESPACE_ID, '--remote']);
+    if (shouldPublishLatest(null, date)) wrangler(['kv', 'key', 'put', 'mlb:today', '--path', todayPath, '--namespace-id', KV_NAMESPACE_ID, '--remote']);
+    else console.log(`↷ KV: no actualizo mlb:today con fecha histórica ${date}.`);
     wrangler(['kv', 'key', 'put', `mlb:day:${date}`, '--path', todayPath, '--namespace-id', KV_NAMESPACE_ID, '--remote']);
     if (rows.length) wrangler(['d1', 'execute', D1_NAME, '--remote', '--file', sqlPath]);
   }
@@ -162,6 +208,7 @@ async function backfillDays() {
     const prev = days.filter((x) => x < d).slice(-10).map((x) => readJson(join(gdir, `${x}.json`))).filter(Boolean);
     const liveDoc = readJson(join(DATA, 'live', `${d}.json`));
     const doc = normalizeDay(d, gamesDoc, dailyDoc, indexDoc, prev, liveDoc);
+    doc.content_hash = contentHash(doc);
     const body = JSON.stringify(doc);
     if (API_TOKEN) await restKvPut(`mlb:day:${d}`, body);
     else {
@@ -174,5 +221,8 @@ async function backfillDays() {
   console.log('🎉 Backfill de días completo.');
 }
 
-if (backfill) await backfillDays();
-else await main();
+const direct = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+if (direct) {
+  if (backfill) await backfillDays();
+  else await main();
+}

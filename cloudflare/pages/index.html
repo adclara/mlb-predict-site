@@ -229,6 +229,10 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .mmeta{font-size:11px;color:var(--faint);font-weight:600;padding-left:28px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmeta .vs{opacity:.6;font-size:10px;padding:0 2px}
 .mmeta.pending{color:var(--amber)}
+.mmeta.invalid{color:var(--red);white-space:normal;line-height:1.35;font-weight:800}
+.pred-invalid-notice{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;padding:11px 13px;border-radius:12px;
+  border:1px solid rgba(255,70,85,.45);background:rgba(255,70,85,.10);color:var(--text);font-size:12.5px;line-height:1.5;font-weight:700}
+.pred-invalid-notice .ic{color:var(--red);font-size:16px;line-height:1.2;flex:none}
 .mt.win{color:var(--text)}
 .mt .aapick{
   font-size:9.5px;font-weight:800;letter-spacing:.04em;color:var(--volt);
@@ -1340,8 +1344,9 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       corregida (calibrada) del modelo, no un número inflado: si decimos ~60%, buscamos que ocurra
       ~6 de cada 10. Medimos nuestra propia calibración y el récord de cada nivel queda público.
       Durante el juego, el número se mueve con el marcador (probabilidad en vivo). Honestidad:
-      nuestro modelo iguala al mercado, no lo supera — el valor está en la selección y en no
-      inventar. La pestaña Simulación reparte el resultado en 10,000 corridas de esa probabilidad.</div>
+      en la cohorte histórica auditable el mercado fue mejor en promedio; la selección sigue
+      como hipótesis en validación, no como ventaja demostrada. La pestaña Simulación reparte
+      el resultado en 10,000 corridas de la probabilidad ya publicada.</div>
     <div class="howsec"><b>5 · Tú decides.</b> AA Sports no toma apuestas ni dinero. Te damos
       datos honestos (marcadores en vivo, forma, bajas, mercado) y nuestra lectura. La decisión
       —y la responsabilidad— es tuya. Juego responsable, 18/21+.</div>
@@ -1549,10 +1554,10 @@ const T = {
     sim_title: '🔬 Validación out-of-sample', sim_sub: 'Cada día se entrena solo con el pasado y predice ese día — nunca ve el futuro. Esto es lo que mide sobre todo el histórico.',
     sim_games: 'Juegos validados', sim_acc: 'Acierto (fuera de muestra)', sim_ece: 'Calibración (ECE)', sim_ece_sub: 'menos es mejor',
     sim_learns: 'El aprendizaje mejora la probabilidad de forma medible (intervalo bajo cero).', sim_learns_tie: 'El aprendizaje empata al modelo base (sin diferencia significativa).',
-    sim_sel: '🎯 Selección a −110 (equilibrio 52.4%)', sim_thr: 'confianza', sim_picks: 'jugadas', sim_hit: 'acierto', sim_roi: 'ROI',
-    sim_edge: 'ventaja real', sim_mkt: 'Acierto global: AA {m}% vs mercado {k}% — la ventaja vive en la selección, no en el promedio.',
+    sim_sel: '🎯 Selección por confianza (sin precio inventado)', sim_thr: 'confianza', sim_picks: 'jugadas', sim_hit: 'acierto', sim_roi: 'ROI real', sim_acc_signal: 'acierto >50% (IC)',
+    sim_edge: 'ventaja real', sim_mkt: 'Acierto global: AA {m}% vs mercado {k}% — la selección sigue como hipótesis en validación; no es una ventaja demostrada.',
     sim_note: 'Todo out-of-sample; se reporta tal cual, gane o pierda. No es recomendación de apuesta.',
-    tr_units: '📈 Unidades de fijos en el tiempo', tr_units_h: 'Ganancia acumulada (fijos a −110)', tr_units_soon: 'Acumulando fijos calificados — la curva aparece pronto.',
+    tr_units: '📈 Unidades de fijos en el tiempo', tr_units_h: 'Ganancia acumulada (cuota real)', tr_units_soon: 'Acumulando fijos con cuota pregame auditada — sin precio real no calculamos unidades.',
     tr_locks: 'Fijos', tr_gems: 'Gemas', tr_locks_n: 'fijos medidos', tr_at110: 'a −110', tr_measured: 'medidas',
     share: 'Compartir', share_txt: 'Mira este partido en AA Sports',
     future_note: '📅 Próximos enfrentamientos · la predicción AA se publica el día del juego',
@@ -1595,6 +1600,8 @@ const T = {
     mk_field: 'defensa floja: {n} errores en 10 juegos', mk_sweep: '{t} necesita ganar para evitar la barrida',
     mk_stakes: '{r}º en su división · a {gb} juegos', mk_note: 'Claves basadas en datos reales del juego — no es recomendación; tú decides.',
     pred_pending: 'Predicción AA · se publica ~7am ET',
+    pred_invalid_list: 'Pronóstico invalidado · cambió el abridor',
+    pred_invalid_detail: 'Pronóstico AA invalidado: cambió el abridor probable. El análisis original ya no aplica.',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -1712,10 +1719,10 @@ const T = {
     sim_title: '🔬 Out-of-sample validation', sim_sub: 'Each day it trains only on the past and predicts that day — it never sees the future. This is what it measures across the whole history.',
     sim_games: 'Games validated', sim_acc: 'Accuracy (out-of-sample)', sim_ece: 'Calibration (ECE)', sim_ece_sub: 'lower is better',
     sim_learns: 'Learning improves the probability measurably (interval below zero).', sim_learns_tie: 'Learning ties the base model (no significant difference).',
-    sim_sel: '🎯 Selection at −110 (break-even 52.4%)', sim_thr: 'confidence', sim_picks: 'picks', sim_hit: 'hit', sim_roi: 'ROI',
-    sim_edge: 'real edge', sim_mkt: 'Overall accuracy: AA {m}% vs market {k}% — the edge lives in selection, not the average.',
+    sim_sel: '🎯 Confidence selection (no assumed price)', sim_thr: 'confidence', sim_picks: 'picks', sim_hit: 'hit', sim_roi: 'real ROI', sim_acc_signal: 'hit rate >50% (CI)',
+    sim_edge: 'real edge', sim_mkt: 'Overall accuracy: AA {m}% vs market {k}% — selection remains a hypothesis under validation, not a proven edge.',
     sim_note: 'All out-of-sample; reported as-is, win or lose. Not betting advice.',
-    tr_units: '📈 Lock units over time', tr_units_h: 'Cumulative return (locks at −110)', tr_units_soon: 'Building graded locks — the curve shows up soon.',
+    tr_units: '📈 Lock units over time', tr_units_h: 'Cumulative return (actual price)', tr_units_soon: 'Collecting locks with audited pregame prices — without a real price we do not calculate units.',
     tr_locks: 'Locks', tr_gems: 'Gems', tr_locks_n: 'locks measured', tr_at110: 'at −110', tr_measured: 'measured',
     share: 'Share', share_txt: 'Check out this game on AA Sports',
     future_note: '📅 Upcoming matchups · the AA prediction publishes on game day',
@@ -1758,12 +1765,14 @@ const T = {
     mk_field: 'sloppy fielding: {n} errors in 10 games', mk_sweep: '{t} needs a win to avoid the sweep',
     mk_stakes: '{r} in its division · {gb} games back', mk_note: 'Keys are built from the game’s real data — not a recommendation; you decide.',
     pred_pending: 'AA prediction · publishes around 7am ET',
+    pred_invalid_list: 'Prediction invalidated · starter changed',
+    pred_invalid_detail: 'AA prediction invalidated: the probable starter changed. The original analysis no longer applies.',
     brain_soon: 'AA Brain is preparing its first learning journal.',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
       <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
       <div class="howsec"><b>3 · Shadow period.</b> Before turning on a new sport, its predictions run for weeks in private against real results. They only go public if live accuracy holds up what the simulations promised.</div>
-      <div class="howsec"><b>4 · Calibrated, live probabilities.</b> We show the model's corrected (calibrated) probability, not an inflated number: if we say ~60%, we aim for it to happen ~6 out of 10. We measure our own calibration and each tier's record stays public. During the game, the number moves with the score (live probability). Honesty: our model matches the market, it doesn't beat it — the value is in the selection and in not making things up. The Simulation tab spreads the outcome across 10,000 runs of that probability.</div>
+      <div class="howsec"><b>4 · Calibrated, live probabilities.</b> We show the model's corrected (calibrated) probability, not an inflated number: if we say ~60%, we aim for it to happen ~6 out of 10. We measure our own calibration and each tier's record stays public. During the game, the number moves with the score (live probability). Honesty: the market was better on average in the auditable historical cohort; selection remains a hypothesis under validation, not a proven edge. The Simulation tab spreads the already-published probability across 10,000 runs.</div>
       <div class="howsec"><b>5 · You decide.</b> AA Sports takes no bets and no money. We give you honest data (live scores, form, injuries, market) and our read. The decision —and the responsibility— is yours. Responsible gaming, 18/21+.</div>
       <p class="hownote">Data: MLB StatsAPI and ESPN. Infrastructure: Cloudflare. Full record in the History tab.</p>`,
     legal_html: `<h2>Legal notice & terms of use</h2>
@@ -1969,7 +1978,7 @@ function renderRecord(){
   const trLine = (name, r) => {
     if (!r || r.wins == null) return '';
     const under = (r.win_rate ?? r.wins / Math.max(1, r.wins + r.losses)) < 0.5;
-    const u = (typeof r.units === 'number') ? ` <span style="color:${r.units < 0 ? 'var(--red)' : 'var(--volt)'}">${r.units > 0 ? '+' : ''}${r.units}u</span>` : '';
+    const u = (typeof r.units === 'number' && r.priced_n > 0) ? ` <span style="color:${r.units < 0 ? 'var(--red)' : 'var(--volt)'}">${r.units > 0 ? '+' : ''}${r.units}u (n=${r.priced_n})</span>` : '';
     return `<br><span style="color:var(--faint)">${name}</span> <b style="color:${under ? 'var(--red)' : 'var(--volt)'}">${r.wins}-${r.losses}</b>${u}`;
   };
   if (nEl) nEl.innerHTML = `<b>${w}</b> ${t('rec_won')}<br><b>${l}</b> ${t('rec_lost')}<br><span style="color:var(--faint)">${w + l} ${t('rec_measured')}</span>${trLine(t('rec_locks'), rec.locks)}${trLine(t('rec_gems'), rec.gems)}`;
@@ -2083,6 +2092,7 @@ function renderTicker(){
   const chips = [];
   for (const ev of events){
     const lv = lvOf(ev), st = effStatus(ev), p = ev.prediction || {};
+    if (p.invalidated) continue;
     if (st === 'live' && lv){
       chips.push({id: ev.event_id, html:
         `<span class="ldot"></span>${logoImg(ev.away.code)}<b class="num">${lv.away.score ?? '-'}–${lv.home.score ?? '-'}</b>${logoImg(ev.home.code)}<span class="lv">${esc(shortDetail(lv))}</span>`});
@@ -2135,8 +2145,9 @@ function rowHtml(ev, idx){
   else if (viewDate && ev.start && String(ev.start).includes('T')) timeCol = new Date(ev.start).toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' });
   else timeCol = 'Hoy';
 
-  const pickA = p.pick && canon(p.pick) === canon(ev.away.code);
-  const pickH = p.pick && canon(p.pick) === canon(ev.home.code);
+  const validPick = p.pick && !p.invalidated;
+  const pickA = validPick && canon(p.pick) === canon(ev.away.code);
+  const pickH = validPick && canon(p.pick) === canon(ev.home.code);
   const res = ev.result === 'win' ? 'won' : ev.result === 'loss' ? 'lost' : '';
   // EN VIVO: el % del pick es la prob de ESPN que se mueve con el marcador; si el
   // juego se volteó en contra, se atenúa (no un badge dorado sobre un juego perdido).
@@ -2146,7 +2157,7 @@ function rowHtml(ev, idx){
   const pickSideWp = liveWpHome == null ? null : (pickH ? liveWpHome : pickA ? 1 - liveWpHome : null);
   const rowMuted = pickSideWp != null && pickSideWp < 0.4;
 
-  const tags = (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${rowMuted ? 'muted' : ''}">${b === 'gema' ? t('tag_gem') : esc(b)}</span>`).join('');
+  const tags = p.invalidated ? '' : (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${rowMuted ? 'muted' : ''}">${b === 'gema' ? t('tag_gem') : esc(b)}</span>`).join('');
 
   // duelo de abridores en la fila (solo pre-juego): se ve el pitcheo de un vistazo
   const sp2 = ev.snapshot && ev.snapshot.pitchers;
@@ -2154,6 +2165,7 @@ function rowHtml(ev, idx){
   const spLine = (st === 'pre' && sp2 && (sp2.away?.name || sp2.home?.name))
     ? `<span class="mmeta">⚾ ${ln(sp2.away?.name)} <span class="vs">vs</span> ${ln(sp2.home?.name)}</span>` : '';
   const pendingLine = ev.pending && !p.pick ? `<span class="mmeta pending">⏳ ${t('pred_pending')}</span>` : '';
+  const invalidLine = p.invalidated ? `<span class="mmeta invalid">⚠️ ${t('pred_invalid_list')}</span>` : '';
 
   return `<button class="mrow ${ev.event_id === selectedId ? 'sel' : ''}" data-id="${esc(ev.event_id)}" style="--i:${idx ?? 0}">
     <span class="mtime num">${timeCol}</span>
@@ -2162,6 +2174,7 @@ function rowHtml(ev, idx){
       <span class="mt ${hWin || (!done && pickH) ? 'win' : ''}">${logoImg(ev.home.code)}<span class="nm">${esc(tNick(ev.home.code))}</span>${pickH && sidePct('home') != null ? chip(sidePct('home'), liveWpHome != null) : ''}</span>
       ${spLine}
       ${pendingLine}
+      ${invalidLine}
     </span>
     <span class="mscore num">
       <span class="ms ${st === 'live' ? 'lv' : aWin ? 'win' : ''}">${scored ? as2 : ''}</span>
@@ -2215,10 +2228,10 @@ function simCard(){
   const co = s.oos.combined || {};
   const helps = s.delta_ll && s.delta_ll.helps;
   const sel = (s.selection || []).filter(r => r.n >= 30);
-  const selRows = sel.map(r => `<tr${r.edge ? ' class="simedge"' : ''}>
+  const selRows = sel.map(r => { const hasRoi = typeof r.roi === 'number'; return `<tr${r.edge ? ' class="simedge"' : ''}>
       <td class="num">≥${r.thr}%</td><td class="num">${r.n}</td><td class="num">${r.rate}%</td>
-      <td class="num ${r.roi >= 0 ? 'up' : 'dn'}">${r.roi >= 0 ? '+' : ''}${r.roi}%</td>
-      <td>${r.edge ? '✅ ' + t('sim_edge') : '—'}</td></tr>`).join('');
+      <td class="num ${hasRoi ? (r.roi >= 0 ? 'up' : 'dn') : ''}">${hasRoi ? `${r.roi >= 0 ? '+' : ''}${r.roi}%` : '—'}</td>
+      <td>${r.edge ? '✅ ' + t('sim_edge') : r.accuracy_signal ? '📊 ' + t('sim_acc_signal') : '—'}</td></tr>`; }).join('');
   const mkt = s.market ? `<div class="simmkt">${t('sim_mkt').replace('{m}', s.market.model_acc).replace('{k}', s.market.market_acc)}</div>` : '';
   return `<div class="simcard">
     <div class="bsect">${t('sim_title')}</div>
@@ -2302,7 +2315,7 @@ function boletoTier(ev){
 }
 function boletoLegs(){
   return events
-    .filter(ev => { const b = ev.badges || []; return (b.includes('fijo') || b.includes('gema')) && (ev.prediction && ev.prediction.pick); })
+    .filter(ev => { const b = ev.badges || []; return !ev.prediction?.invalidated && (b.includes('fijo') || b.includes('gema')) && (ev.prediction && ev.prediction.pick); })
     .map(ev => ({ ev, tier: boletoTier(ev), pct: ev.prediction.prob_pct }))
     .sort((a, b) => (BOL_RANK[b.tier] || 0) - (BOL_RANK[a.tier] || 0) || (b.pct || 0) - (a.pct || 0))
     .slice(0, 4);
@@ -2393,7 +2406,12 @@ function renderHistDash(){
   const gemPicks = g.filter(x => x.confidence === 'gema');
   const lw = lockPicks.filter(x => x.result === 'win').length, ll = lockPicks.length - lw;
   const gw = gemPicks.filter(x => x.result === 'win').length, gl = gemPicks.length - gw;
-  let acc = 0; const upts = lockPicks.map(x => { acc += x.result === 'win' ? 0.909 : -1; return { date: x.date, u: Math.round(acc * 100) / 100 }; });
+  const pricedLocks = lockPicks.filter(x => Number.isFinite(Number(x.price)) && Number(x.price) !== 0);
+  let acc = 0; const upts = pricedLocks.map(x => {
+    const price = Number(x.price);
+    acc += x.result === 'win' ? (price > 0 ? price / 100 : 100 / Math.abs(price)) : -1;
+    return { date: x.date, u: Math.round(acc * 100) / 100 };
+  });
   const finalU = Math.round(acc * 100) / 100;
   const unitsCurve = (() => {
     if (upts.length < 2) return `<div class="secttl">${t('tr_units')}</div><div class="bempty">${t('tr_units_soon')}</div>`;
@@ -2413,7 +2431,7 @@ function renderHistDash(){
           <path d="${area}" fill="${col}" opacity="0.13"/>
           <path d="${line}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
         </svg>
-        <div class="bcaphint num">${esc(upts[0].date)} → ${esc(upts[upts.length - 1].date)} · ${lockPicks.length} ${t('tr_locks_n')}</div>
+        <div class="bcaphint num">${esc(upts[0].date)} → ${esc(upts[upts.length - 1].date)} · ${pricedLocks.length} ${t('tr_locks_n')}</div>
       </div>`;
   })();
   const byDay = new Map();
@@ -2604,13 +2622,13 @@ function renderDetail(){
   // Prob del local: calibrada antes del juego; EN VIVO la de ESPN (win_prob_home)
   // para que el número se mueva con el marcador y no quede congelado.
   const liveWpHome = (st === 'live' && lv && typeof lv.win_prob_home === 'number') ? lv.win_prob_home : null;
-  const pHomeCal = p.pick && canon(p.pick) === canon(ev.home.code) ? p.prob : (p.prob != null ? 1 - p.prob : null);
+  const pHomeCal = !p.invalidated && p.pick && canon(p.pick) === canon(ev.home.code) ? p.prob : (!p.invalidated && p.prob != null ? 1 - p.prob : null);
   const pHome = liveWpHome != null ? liveWpHome : pHomeCal;
   const homePct = pHome != null ? Math.round(pHome * 1000) / 10 : null;
   const awayPct = homePct != null ? Math.round((100 - homePct) * 10) / 10 : null;
   // % del lado del pick (calibrado / en vivo) y si el juego se volteó en su contra
-  const pickWpLive = (liveWpHome != null && p.pick) ? (canon(p.pick) === canon(ev.home.code) ? liveWpHome : 1 - liveWpHome) : null;
-  const pickPct = pickWpLive != null ? Math.round(pickWpLive * 100) : p.prob_pct;
+  const pickWpLive = (liveWpHome != null && p.pick && !p.invalidated) ? (canon(p.pick) === canon(ev.home.code) ? liveWpHome : 1 - liveWpHome) : null;
+  const pickPct = p.invalidated ? null : (pickWpLive != null ? Math.round(pickWpLive * 100) : p.prob_pct);
   const badgeMuted = pickWpLive != null && pickWpLive < 0.4;
 
   let mid;
@@ -2643,15 +2661,15 @@ function renderDetail(){
   } else {
     const startTime = ev.start && String(ev.start).includes('T')
       ? new Date(ev.start).toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' }) : null;
-    mid = (p.prob != null && p.pick)
+    mid = (!p.invalidated && p.prob != null && p.pick)
       ? `${aaGauge(Math.round(p.prob * 1000) / 10, tNick(p.pick))}
          <div class="dsub" style="margin-top:6px">${startTime ? t('first_pitch') + ' ' + startTime : t('to_play_today')}</div>`
       : `<div class="dscore num" style="font-size:22px;color:var(--dim);font-weight:700">${startTime || t('o_today')}</div>
-         <div class="dsub">${ev.pending ? t('pred_pending') : t('o_toplay')}</div>`;
+         <div class="dsub">${ev.pending ? t('pred_pending') : p.invalidated ? t('pred_invalid_list') : t('o_toplay')}</div>`;
   }
   const recA = lv && lv.away.rec ? `<span class="rc num">${esc(lv.away.rec)}</span>` : '';
   const recH = lv && lv.home.rec ? `<span class="rc num">${esc(lv.home.rec)}</span>` : '';
-  const tags = (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${badgeMuted ? 'muted' : ''}">${b === 'gema' ? t('tag_gem') : esc(b)}</span>`).join(' ');
+  const tags = p.invalidated ? '' : (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${badgeMuted ? 'muted' : ''}">${b === 'gema' ? t('tag_gem') : esc(b)}</span>`).join(' ');
 
   const risk = ev.risk || {};
   const riskPct = risk.score != null ? Math.min(100, risk.score) : null;
@@ -2664,6 +2682,7 @@ function renderDetail(){
   };
 
   const snap = ev.snapshot || {};
+  const invalidNotice = p.invalidated ? `<div class="pred-invalid-notice" role="alert"><span class="ic">⚠</span><span>${t('pred_invalid_detail')}</span></div>` : '';
 
   const verdictBox = snap.verdict_es ? `
     <div class="verdict">
@@ -2708,6 +2727,7 @@ function renderDetail(){
     <ul class="whylist">${snap.reasons.map(r2 => `<li>${esc(r2)}</li>`).join('')}</ul>` : '';
 
   const analisis = `
+    ${invalidNotice}
     ${viewFuture ? `<div class="verdict"><span class="ic">📅</span><p><span class="vt">${t('upcoming')}</span>${t('future_detail')}</p></div>` : ''}
     ${verdictBox}
     ${homePct != null ? `
@@ -2716,9 +2736,9 @@ function renderDetail(){
       <div class="probhead num"><span>${esc(tNick(ev.away.code))} ${awayPct}%</span><span>${homePct}% ${esc(tNick(ev.home.code))}</span></div>
       <div class="probtrack"><span class="aw" style="width:${awayPct}%"></span><span class="hm" style="width:${homePct}%"></span></div>
       <div class="ww-pick">
-        ${p.pick ? `<span class="bigpick ${badgeMuted ? 'muted' : ''}">${liveWpHome != null ? t('d_pick_lbl') : t('d_wins_lbl')}${esc(tNick(p.pick))}</span>` : ''}
+        ${p.pick && !p.invalidated ? `<span class="bigpick ${badgeMuted ? 'muted' : ''}">${liveWpHome != null ? t('d_pick_lbl') : t('d_wins_lbl')}${esc(tNick(p.pick))}</span>` : ''}
         ${pickPct != null ? `<span class="bigprob num ${badgeMuted ? 'muted' : ''}">${pickPct}%</span>` : ''}
-        ${liveWpHome == null && p.confidence ? `<span class="confpill">${t('d_confidence')} ${esc(p.confidence)}</span>` : ''}
+        ${liveWpHome == null && p.confidence && !p.invalidated ? `<span class="confpill">${t('d_confidence')} ${esc(p.confidence)}</span>` : ''}
         ${tags}
       </div>
     </div>` : ''}
@@ -3013,7 +3033,7 @@ function renderDetail(){
     <div class="dtabs">
       <button class="dtab ${dtab === 'analisis' ? 'on' : ''}" data-dt="analisis">${t('tab_analysis')}</button>
       ${ev.snapshot ? `<button class="dtab ${dtab === 'equipos' ? 'on' : ''}" data-dt="equipos">${t('d_teams')}</button>` : ''}
-      ${p.prob != null ? `<button class="dtab ${dtab === 'sim' ? 'on' : ''}" data-dt="sim">${t('tab_sim')}</button>` : ''}
+      ${p.prob != null && !p.invalidated ? `<button class="dtab ${dtab === 'sim' ? 'on' : ''}" data-dt="sim">${t('tab_sim')}</button>` : ''}
       <button class="dtab ${dtab === 'mercado' ? 'on' : ''}" data-dt="mercado">${t('d_market')}</button>
     </div>
     <div class="dbody">
@@ -3047,8 +3067,8 @@ function widgetRow(ev, i){
   </button>`;
 }
 function renderSide(){
-  const gems = events.filter(e => e.badges?.includes('gema'));
-  const locks = events.filter(e => e.badges?.includes('fijo'));
+  const gems = events.filter(e => !e.prediction?.invalidated && e.badges?.includes('gema'));
+  const locks = events.filter(e => !e.prediction?.invalidated && e.badges?.includes('fijo'));
   $('wGems').innerHTML = gems.length ? gems.map(widgetRow).join('') : t('d_no_gems');
   $('wGems').className = gems.length ? '' : 'wempty';
   $('wLocks').innerHTML = locks.length ? locks.map(widgetRow).join('') : t('d_no_locks');

@@ -2,7 +2,9 @@
 
 **Fecha del estudio:** 21 de julio de 2026
 
-**Estado:** plan técnico; no despliega ni promociona ningún modelo
+**Estado (21-jul-2026):** integridad causal, captura D1 cada 20 minutos,
+aprendizaje diario y gates en sombra implementados y validados localmente. El
+rollout de producción conserva ORO/Over/F5 cerrados hasta evidencia forward.
 
 **Objetivo:** aumentar la calidad predictiva y la tasa de acierto sin inventar ventaja, sin fuga temporal y manteniendo infraestructura $0.
 

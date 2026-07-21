@@ -1,8 +1,10 @@
-# AA Sports — palanca independiente para publicar las bajas YA, sin esperar
-# la cola serializada de adrian-daily (que también las publica cada hora).
+# AA Sports — pipeline independiente de bajas. Corre cada seis horas para no
+# mezclar fallos/latencia de rosters con el slate MLB horario.
 name: injuries
 on:
   workflow_dispatch: {}
+  schedule:
+    - cron: '19 */6 * * *'
   push:
     branches: [main]
     paths: ['.github/poke-injuries']
@@ -20,6 +22,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Verificar secreto de publicación
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
       - name: Bajas (lesionados y suspendidos)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}

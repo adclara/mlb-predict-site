@@ -100,6 +100,27 @@ function median(xs) {
   const s = [...xs].sort((a, b) => a - b), m = s.length >> 1
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
 }
+
+// ESPN's total-price shape varies by provider/era. Parse only an actual
+// American price; the total line itself is never treated as juice.
+function amOdds(v) {
+  if (v == null) return null
+  if (typeof v === 'number') return v === 0 ? null : v
+  const s = String(v).trim().toUpperCase()
+  if (s === 'EVEN' || s === 'EV') return 100
+  const n = Number(s.replace('+', ''))
+  return isFinite(n) && n !== 0 ? n : null
+}
+function totalSidePrice(o, side) {
+  const cap = side[0].toUpperCase() + side.slice(1)
+  const roots = [o?.[`${side}Odds`], o?.[`total${cap}Odds`], o?.total?.[side], o?.odds?.[side]]
+  for (const x of roots) {
+    const p = amOdds(x?.moneyLine) ?? amOdds(x?.current?.moneyLine?.american ?? x?.current?.moneyLine)
+      ?? amOdds(x?.close?.moneyLine?.american ?? x?.close?.moneyLine) ?? amOdds(x)
+    if (p != null) return p
+  }
+  return null
+}
 // De-vigged consensus across every priced book: the MEDIAN home prob (robust to a
 // single off book) plus a `disagreement` = spread of home probs between books (how
 // much the market itself is unsure — a pure risk signal, 0 when only one book).
@@ -124,7 +145,9 @@ export function parseSummaryOdds(json) {
     const ml_away = pc?.awayTeamOdds?.moneyLine ?? null
     const [ph, pa] = devigMoneyline(ml_home, ml_away)
     if (ph == null) continue // unpriced book → skip
-    books.push({ provider: pc?.provider?.name ?? null, ml_home, ml_away, over_under: pc?.overUnder ?? null, spread: pc?.spread ?? null, p_home_mkt: round4(ph), p_away_mkt: round4(pa) })
+    books.push({ provider: pc?.provider?.name ?? null, ml_home, ml_away, over_under: pc?.overUnder ?? null,
+      over_price: totalSidePrice(pc, 'over'), under_price: totalSidePrice(pc, 'under'),
+      spread: pc?.spread ?? null, p_home_mkt: round4(ph), p_away_mkt: round4(pa) })
   }
   const cons = consensusOf(books)
   const primary = pcs[0] || null
@@ -137,6 +160,7 @@ export function parseSummaryOdds(json) {
     provider: primary?.provider?.name ?? null,
     ml_home, ml_away,
     over_under: primary?.overUnder ?? null,
+    over_price: totalSidePrice(primary, 'over'), under_price: totalSidePrice(primary, 'under'),
     spread: primary?.spread ?? null,
     p_home_mkt, p_away_mkt,
     fav_side: p_home_mkt == null ? null : p_home_mkt >= 0.5 ? 'home' : 'away',
@@ -153,14 +177,6 @@ export function parseSummaryOdds(json) {
 // (/events/{id}/competitions/{id}/odds) lists several providers. Shapes vary by
 // era, so parse defensively: moneyLine may be a number, or nested under
 // current/close/open as {american: "-150"|"EVEN"}.
-const amOdds = (v) => {
-  if (v == null) return null
-  if (typeof v === 'number') return v === 0 ? null : v
-  const s = String(v).trim().toUpperCase()
-  if (s === 'EVEN' || s === 'EV') return 100
-  const n = Number(s.replace('+', ''))
-  return isFinite(n) && n !== 0 ? n : null
-}
 const sideML = (o) => {
   if (!o) return null
   return amOdds(o.moneyLine) ?? amOdds(o.current?.moneyLine?.american ?? o.current?.moneyLine)
@@ -174,7 +190,9 @@ export function parseCoreOdds(json) {
     const ml_away = sideML(it.awayTeamOdds)
     const [ph, pa] = devigMoneyline(ml_home, ml_away)
     if (ph == null) continue
-    books.push({ provider: it.provider?.name ?? null, ml_home, ml_away, over_under: it.overUnder ?? null, spread: it.spread ?? null, p_home_mkt: round4(ph), p_away_mkt: round4(pa) })
+    books.push({ provider: it.provider?.name ?? null, ml_home, ml_away, over_under: it.overUnder ?? null,
+      over_price: totalSidePrice(it, 'over'), under_price: totalSidePrice(it, 'under'),
+      spread: it.spread ?? null, p_home_mkt: round4(ph), p_away_mkt: round4(pa) })
   }
   return books
 }
@@ -212,23 +230,73 @@ export function mergeExtraBooks(odds, extraBooks) {
 // closing-line capture at grading. Additive metadata — never gated.
 export function mergeOddsBlocks(prev, fresh) {
   if (!fresh) return prev ?? null
-  const out = prev ? {
-    ...prev, ...fresh,
-    p_home_open: prev.p_home_open ?? fresh.p_home_open,
-    over_under_open: prev.over_under_open ?? (prev.over_under != null ? prev.over_under : fresh.over_under_open),
-    spread_open: prev.spread_open ?? (prev.spread != null ? prev.spread : fresh.spread_open),
-    wp_curve: fresh.wp_curve ?? prev.wp_curve,
-  } : { ...fresh }
-  if (out.p_home_open == null && out.p_home_mkt != null) out.p_home_open = out.p_home_mkt
-  if (out.over_under_open == null && out.over_under != null) out.over_under_open = out.over_under
-  if (out.spread_open == null && out.spread != null) out.spread_open = out.spread
-  if (fresh.stage === 'final') {
-    if (fresh.over_under != null) out.over_under_close = fresh.over_under
-    if (fresh.spread != null) out.spread_close = fresh.spread
+  const out = prev ? { ...prev, ...fresh, wp_curve: fresh.wp_curve ?? prev.wp_curve } : { ...fresh }
+  const explicitPregame = fresh.capture_phase === 'pregame' || fresh.is_pregame === true || fresh.stage === 'pregame'
+  const explicitClose = fresh.capture_phase === 'close' || fresh.capture_phase === 'postgame'
+    || fresh.stage === 'close' || fresh.stage === 'final'
+  const openMap = {
+    p_home_open: 'p_home_mkt', ml_home_open: 'ml_home', ml_away_open: 'ml_away',
+    over_under_open: 'over_under', over_price_open: 'over_price', under_price_open: 'under_price',
+    spread_open: 'spread',
   }
-  if (out.p_home_open != null && out.p_home_mkt != null) out.line_move = round4(out.p_home_mkt - out.p_home_open)
-  if (out.over_under_open != null && out.over_under != null) out.total_line_move = round4(out.over_under - out.over_under_open)
+  const prevAudited = prev?.captured_at_open != null && prev?.open_provenance === 'explicit_pregame'
+  const freshPersistedAudited = fresh.captured_at_open != null && fresh.open_provenance === 'explicit_pregame'
+  // Preserve the earliest known opening. Legacy persisted openings remain
+  // readable but are explicitly marked unknown; a late/final capture can never
+  // manufacture a new opening field.
+  for (const [dst, src] of Object.entries(openMap)) {
+    if (prevAudited && prev?.[dst] != null) out[dst] = prev[dst]
+    else if (explicitPregame && fresh[src] != null) out[dst] = fresh[src]
+    else if (freshPersistedAudited && fresh[dst] != null) out[dst] = fresh[dst]
+    else if (prev?.[dst] != null) out[dst] = prev[dst]
+    else delete out[dst]
+  }
+  if (prevAudited) out.captured_at_open = prev.captured_at_open
+  else if (explicitPregame && fresh.captured_at != null) out.captured_at_open = fresh.captured_at
+  else if (freshPersistedAudited) out.captured_at_open = fresh.captured_at_open
+  else delete out.captured_at_open
+  if (out.p_home_open != null || out.over_under_open != null) {
+    out.open_provenance = out.captured_at_open != null ? 'explicit_pregame' : 'legacy_unknown'
+    out.provider_open = prevAudited ? prev.provider_open ?? null
+      : explicitPregame ? fresh.provider ?? null : freshPersistedAudited ? fresh.provider_open ?? null : prev?.provider_open ?? null
+  } else {
+    delete out.open_provenance; delete out.provider_open
+  }
+  if (explicitClose) {
+    if (fresh.p_home_mkt != null) out.p_home_close = fresh.p_home_mkt
+    if (fresh.ml_home != null) out.ml_home_close = fresh.ml_home
+    if (fresh.ml_away != null) out.ml_away_close = fresh.ml_away
+    if (fresh.over_under != null) out.over_under_close = fresh.over_under
+    if (fresh.over_price != null) out.over_price_close = fresh.over_price
+    if (fresh.under_price != null) out.under_price_close = fresh.under_price
+    if (fresh.spread != null) out.spread_close = fresh.spread
+    out.captured_at_close = fresh.captured_at ?? fresh.captured_at_close ?? null
+    out.provider_close = fresh.provider ?? fresh.provider_close ?? null
+    out.close_provenance = out.captured_at_close != null && out.provider_close != null
+      ? 'explicit_close_capture' : 'unknown'
+  } else if (prev) {
+    for (const k of ['p_home_close', 'ml_home_close', 'ml_away_close', 'over_under_close', 'over_price_close', 'under_price_close', 'spread_close', 'captured_at_close', 'provider_close', 'close_provenance']) {
+      if (prev[k] != null) out[k] = prev[k]
+    }
+  }
+  const currentHome = out.p_home_close ?? out.p_home_mkt
+  const currentTotal = out.over_under_close ?? out.over_under
+  if (out.p_home_open != null && currentHome != null) out.line_move = round4(currentHome - out.p_home_open)
+  if (out.over_under_open != null && currentTotal != null) out.total_line_move = round4(currentTotal - out.over_under_open)
   return out
+}
+
+export function hasAuditableOpening(odds, market = 'ml') {
+  if (!odds || odds.captured_at_open == null || !Number.isFinite(Date.parse(odds.captured_at_open))
+    || odds.open_provenance !== 'explicit_pregame') return false
+  if (market === 'total') {
+    return Number.isFinite(Number(odds.over_under_open))
+      && Number.isFinite(Number(odds.over_price_open)) && Number(odds.over_price_open) !== 0
+      && Number.isFinite(Number(odds.under_price_open)) && Number(odds.under_price_open) !== 0
+  }
+  return Number(odds.p_home_open) > 0 && Number(odds.p_home_open) < 1
+    && Number.isFinite(Number(odds.ml_home_open)) && Number(odds.ml_home_open) !== 0
+    && Number.isFinite(Number(odds.ml_away_open)) && Number(odds.ml_away_open) !== 0
 }
 
 // --- value engine: where OUR number beats the market (the Yankees/Tampa case) -

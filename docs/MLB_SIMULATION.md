@@ -1,47 +1,48 @@
-# 🔬 Simulación MLB — walk-forward (2026-03-25 → 2026-07-20)
+# 🔬 Simulación MLB — walk-forward (2026-03-25 → 2026-07-04)
 
 Entrenamiento y validación **out-of-sample**: cada día se entrena solo con el
-pasado y se predice ese día. Datos: **1506 juegos** en 116 días.
+pasado y se predice ese día. Datos: **1332 juegos** en 116 días.
 
-## 1 · Precisión probabilística OOS (n=1398)
+## 1 · Precisión probabilística OOS (n=1224)
 | modelo | acierto | log-loss | Brier |
 |---|---|---|---|
-| clásico | 54.2% | 0.721 | 0.262 |
-| aprendido | 53.7% | 0.695 | 0.251 |
-| combinado | 53.9% | 0.694 | 0.250 |
+| clásico | 53.9% | 0.723 | 0.263 |
+| aprendido | 53.1% | 0.697 | 0.252 |
+| combinado | 53.2% | 0.696 | 0.251 |
 
-Δ log-loss (combinado − clásico): **-0.030** IC95% [-0.043, -0.018] — el aprendizaje **ayuda** (mejora la probabilidad).
+Δ log-loss (combinado − clásico): **-0.028** IC95% [-0.044, -0.012] — el aprendizaje **ayuda** (mejora la probabilidad).
 
 ## 2 · Calibración
-ECE **3.9%** — razonable
+ECE **3.8%** — razonable
 
-## 3 · Backtest de selección (apostar el lado favorecido a −110, OOS)
-Punto de equilibrio a −110 = **52.4%**.
+## 3 · Backtest de selección (OOS)
+El acierto se mide sobre toda la cohorte. Unidades y ROI solo aparecen cuando la
+fila conserva el precio moneyline pregame real de ambos lados; no se supone −110.
 
-| umbral confianza | picks | acierto | unidades | ROI |
-|---|---|---|---|---|
-| ≥53% | 934 | 54.7% | +41.5u | 4.4% |
-| ≥55% | 675 | 53.2% | +10.3u | 1.5% |
-| ≥58% | 349 | 52.4% | +0.3u | 0.1% |
-| ≥60% | 217 | 52.5% | +0.6u | 0.3% |
-| ≥62% | 136 | 55.9% | +9.1u | 6.7% |
-| ≥65% | 61 | 59.0% | +7.7u | 12.7% |
+| umbral confianza | picks | acierto | con precio real | unidades | ROI real |
+|---|---|---|---|---|---|
+| ≥53% | 827 | 53.6% | 0/827 | — | — |
+| ≥55% | 611 | 52.5% | 0/611 | — | — |
+| ≥58% | 327 | 52.9% | 0/327 | — | — |
+| ≥60% | 206 | 53.4% | 0/206 | — | — |
+| ≥62% | 130 | 55.4% | 0/130 | — | — |
+| ≥65% | 58 | 58.6% | 0/58 | — | — |
 
-Ninguna franja supera el equilibrio con significancia estadística sobre toda la muestra: la ventaja medida vive en los tiers curados (FIJO/ORO/GEMA), no en apostar todo lo que pasa un umbral. Se reporta tal cual — así es la marca.
+La franja de mayor acierto medida fue ≥65%: 58.6% sobre 58 juegos. Esto describe acierto, no rentabilidad; sin precios auditables suficientes no se afirma ventaja apostable.
 
 ## 4 · Modelo vs mercado
-Acierto global: modelo 53.9% vs mercado 56.4% → **mercado mejor**. La ventaja del modelo no está en el promedio, está en la selección.
+Sin una cohorte auditable modelo-vs-mercado.
 
 ## 5 · Laboratorio de nuevos mercados (NO publicados)
-Corte cronológico 70/30: **2026-06-13**. Se eligen como máximo dos candidatos por
+Corte cronológico 70/30: **2026-06-04**. Se eligen como máximo dos candidatos por
 día; no se rellenan cupos. Over se evalúa contra la línea O/U disponible; F5 es
 equipo arriba al terminar cinco entradas (empate = push), no victoria del pitcher.
 
 | mercado sombra | train | test histórico | IC95% test | forward real | gate |
 |---|---:|---:|---:|---:|---|
-| over | 81-68 (54.4%) | 36-30 (54.5%) | 42.6%–66.0% | n=0 | NO: muestra forward insuficiente (n=0) |
-| f5 | 71-66 (51.8%) | 35-23 (60.3%) | 47.5%–71.9% | n=0 | NO: sin línea/precio F5 real |
-| pitcher_f5 | 61-58 (51.3%) | 37-23 (61.7%) | 49.0%–72.9% | n=0 | NO: sin línea/precio F5 real |
+| over | 71-60 (54.2%) | 34-27 (55.7%) | 43.3%–67.5% | n=0 | NO: sin línea y juice pregame auditables |
+| f5 | 61-61 (50.0%) | 32-19 (62.7%) | 49.0%–74.7% | n=0 | NO: sin línea y juice pregame auditables |
+| pitcher_f5 | 48-55 (46.6%) | 39-17 (69.6%) | 56.7%–80.1% | n=0 | NO: sin línea y juice pregame auditables |
 
 **Decisión:** permanecen en sombra. El test histórico usa la línea disponible al
 cierre de captura y sirve solo para exploración. Over empieza ahora su muestra

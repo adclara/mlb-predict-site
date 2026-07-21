@@ -5,6 +5,8 @@
 // podrá ser expuesta después con aprobación humana. Cero candidatos es válido.
 
 import { starterRecentGate } from './adrian.js'
+import { prepareTrainingRows } from './learn.js'
+import { hasAuditableOpening } from './odds.js'
 
 export const TOTAL_SIGMA = 2.9
 export const BREAK_EVEN_110 = 0.5238
@@ -25,19 +27,26 @@ function normCdf(z) {
 // La línea para un boleto debe ser la línea REAL capturada, nunca la referencia
 // redondeada del propio modelo. Desde rare_v1 se conserva over_under_open.
 export function totalAtMarket(row) {
-  const lineRaw = row?.odds?.over_under_open ?? row?.odds?.over_under
+  const odds = row?.odds
+  const audited = hasAuditableOpening(odds, 'total')
+  const lineRaw = audited ? odds.over_under_open : (odds?.over_under_open ?? odds?.over_under)
   const expectedRaw = row?.adj_total
   if (lineRaw == null || expectedRaw == null) return null
   const line = Number(lineRaw), expected = Number(expectedRaw)
   if (!Number.isFinite(line) || !Number.isFinite(expected)) return null
   const pOver = clamp(1 - normCdf((line - expected) / TOTAL_SIGMA), 0.05, 0.95)
+  const side = pOver >= 0.5 ? 'over' : 'under'
+  const price = audited ? Number(side === 'over' ? odds.over_price_open : odds.under_price_open) : null
+  const priced = Number.isFinite(price) && price !== 0
   return {
     line, expected: Math.round(expected * 10) / 10,
     edge_runs: Math.round((expected - line) * 10) / 10,
-    p_over: round3(pOver), side: pOver >= 0.5 ? 'over' : 'under',
-    provider: row?.odds?.provider ?? null,
-    captured_at: row?.odds?.captured_at ?? null,
-    line_stage: row?.odds?.over_under_open != null ? 'opening_preserved' : (row?.odds?.stage ?? null),
+    p_over: round3(pOver), side,
+    price: priced ? price : null,
+    publicable: audited && priced,
+    provider: audited ? odds.provider_open ?? odds.provider ?? null : odds?.provider ?? null,
+    captured_at: audited ? odds.captured_at_open : null,
+    line_stage: audited ? 'audited_pregame_open' : odds?.over_under_open != null ? 'legacy_open_unverified' : 'late_or_unknown',
   }
 }
 
@@ -80,6 +89,36 @@ function baseCandidate(row, side) {
   return out
 }
 
+const f5Price = (row, side) => {
+  const o = row?.odds || {}
+  const raw = side === 'home' ? (o.f5_home_price_open ?? o.f5_home_price) : (o.f5_away_price_open ?? o.f5_away_price)
+  const n = Number(raw)
+  const audited = Number.isFinite(n) && n !== 0 && o.captured_at_open != null && o.open_provenance === 'explicit_pregame'
+  return { price: audited ? n : null, audited }
+}
+
+const americanProfit = (price, won) => won ? (price > 0 ? price / 100 : 100 / Math.abs(price)) : -1
+
+function roiBlockBootstrap(picks, B = 1000, seed = 20260721) {
+  const priced = picks.filter((p) => Number.isFinite(p.price) && (p.result === 'win' || p.result === 'loss'))
+  if (!priced.length) return { lo: null, hi: null, method: 'date_block', n: 0, dates: 0 }
+  const by = new Map()
+  for (const p of priced) { if (!by.has(p.date)) by.set(p.date, []); by.get(p.date).push(p) }
+  const days = [...by.values()]
+  let x = seed >>> 0 || 0x9e3779b9
+  const rnd = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296 }
+  const vals = []
+  for (let b = 0; b < B; b++) {
+    let units = 0, n = 0
+    for (let d = 0; d < days.length; d++) for (const p of days[(rnd() * days.length) | 0]) {
+      units += americanProfit(p.price, p.result === 'win'); n++
+    }
+    vals.push(n ? units / n : 0)
+  }
+  vals.sort((a, b) => a - b)
+  return { lo: round3(vals[Math.floor(B * 0.025)]), hi: round3(vals[Math.floor(B * 0.975)]), method: 'date_block', n: priced.length, dates: days.length }
+}
+
 // Candidatos de HOY, guardados únicamente en data/history/{date}.json.
 export function buildMarketLab(rows, { max = 2 } = {}) {
   const overs = [], f5 = [], pitchers = []
@@ -88,11 +127,14 @@ export function buildMarketLab(rows, { max = 2 } = {}) {
     if (tot && tot.side === 'over') {
       overs.push({ ...baseCandidate(row, null), market: 'total', side: 'over', line: tot.line,
         prob_raw: tot.p_over, expected: tot.expected, edge_runs: tot.edge_runs,
-        provider: tot.provider, captured_at: tot.captured_at, line_stage: tot.line_stage, score: tot.p_over })
+        price: tot.price, publicable: tot.publicable, provider: tot.provider,
+        captured_at: tot.captured_at, line_stage: tot.line_stage, score: tot.p_over })
     }
     const fp = f5Projection(row)
     if (!fp) continue
-    const cand = { ...baseCandidate(row, fp.side), market: 'f5_ml', prob_raw: round3(fp.prob), score: fp.score }
+    const fpPrice = f5Price(row, fp.side)
+    const cand = { ...baseCandidate(row, fp.side), market: 'f5_ml', prob_raw: round3(fp.prob),
+      price: fpPrice.price, publicable: false, score: fp.score }
     f5.push(cand)
     const starter = starterRecentGate(row, cand.pick)
     if (starter.passes) {
@@ -145,19 +187,26 @@ function wilson(w, n) {
   return { rate: round3(p), lo: round3(Math.max(0, center - half)), hi: round3(Math.min(1, center + half)) }
 }
 
-function evaluate(rows, kind, period, cut, max = 2) {
+function evaluate(rows, kind, period, cut, max = 2, { requireTradable = false } = {}) {
   const src = rows.filter((r) => period === 'train' ? r.date < cut : period === 'test' ? r.date >= cut : true)
   const byDate = new Map()
   for (const row of src) {
     let cand = null
     if (kind === 'over') {
       const t = totalAtMarket(row)
-      if (t && t.side === 'over' && row.total_runs != null) cand = { row, side: 'over', score: t.p_over, line: t.line }
+      if (t && t.side === 'over' && row.total_runs != null && (!requireTradable || t.publicable)) {
+        cand = { row, side: 'over', score: t.p_over, line: t.line, price: t.price, tradable: t.publicable }
+      }
     } else {
       const f = f5Projection(row), out = f5Outcome(row)
       if (f && out) {
         const pick = f.side === 'home' ? row.home : row.away
-        if (kind !== 'pitcher_f5' || starterRecentGate(row, pick).passes) cand = { row, side: f.side, score: f.score, outcome: out }
+        const px = f5Price(row, f.side)
+        const explicitScore = row.f5_home_score != null && row.f5_away_score != null
+        const tradable = px.audited && explicitScore
+        if ((!requireTradable || tradable) && (kind !== 'pitcher_f5' || starterRecentGate(row, pick).passes)) {
+          cand = { row, side: f.side, score: f.score, outcome: out, price: px.price, tradable, explicitScore }
+        }
       }
     }
     if (!cand) continue
@@ -166,24 +215,33 @@ function evaluate(rows, kind, period, cut, max = 2) {
   }
   const picks = []
   for (const day of byDate.values()) picks.push(...day.sort((a, b) => b.score - a.score).slice(0, max))
-  let wins = 0, losses = 0, pushes = 0
+  let wins = 0, losses = 0, pushes = 0, units = 0, priced = 0, explicitScores = 0
+  const settled = []
   for (const p of picks) {
+    let result
     if (kind === 'over') {
-      if (Number(p.row.total_runs) === p.line) pushes++
-      else if (Number(p.row.total_runs) > p.line) wins++
-      else losses++
-    } else if (p.outcome.result === 'push') pushes++
-    else if (p.outcome.result === p.side) wins++
-    else losses++
+      if (Number(p.row.total_runs) === p.line) { pushes++; result = 'push' }
+      else if (Number(p.row.total_runs) > p.line) { wins++; result = 'win' }
+      else { losses++; result = 'loss' }
+    } else if (p.outcome.result === 'push') { pushes++; result = 'push' }
+    else if (p.outcome.result === p.side) { wins++; result = 'win' }
+    else { losses++; result = 'loss' }
+    if (p.explicitScore) explicitScores++
+    if (Number.isFinite(p.price) && (result === 'win' || result === 'loss')) {
+      priced++; units += americanProfit(p.price, result === 'win')
+      settled.push({ date: p.row.date, price: p.price, result })
+    }
   }
-  return { period, n: wins + losses, picks: picks.length, days: byDate.size, wins, losses, pushes, ...wilson(wins, wins + losses) }
+  return { period, n: wins + losses, picks: picks.length, days: byDate.size, wins, losses, pushes,
+    priced, explicit_scores: explicitScores, units: round3(units), roi: priced ? round3(units / priced) : null,
+    roi_ci: roiBlockBootstrap(settled), ...wilson(wins, wins + losses) }
 }
 
 // Reporte exploratorio determinista. El corte 70/30 es cronológico. Los gates
 // exigen muestra de test suficiente + cota inferior; F5 además exige precios
 // reales antes de que pueda llamarse boleto.
 export function marketLabReport(rows, { split = 0.70, minTest = 100, forwardStart = FORWARD_START } = {}) {
-  const graded = (rows || []).filter((r) => r.graded && r.formula_version === 'v2')
+  const graded = prepareTrainingRows(rows)
   const dates = [...new Set(graded.map((r) => r.date))].sort()
   const cut = dates[Math.floor(dates.length * split)] || null
   const report = { version: 'shadow_v1', generated_at: new Date().toISOString(), cut, rows: graded.length, markets: {} }
@@ -191,16 +249,17 @@ export function marketLabReport(rows, { split = 0.70, minTest = 100, forwardStar
     const train = evaluate(graded, kind, 'train', cut)
     const test = evaluate(graded, kind, 'test', cut)
     const all = evaluate(graded, kind, 'all', cut)
-    const forwardRows = graded.filter((r) => r.date >= forwardStart && (kind !== 'over' || r.odds?.over_under_open != null))
-    const forward = evaluate(forwardRows, kind, 'all', cut)
-    const hasPrice = kind === 'over'
-    const threshold = kind === 'over' ? BREAK_EVEN_110 : 0.5
-    const passes = hasPrice && forward.n >= minTest && forward.lo != null && forward.lo > threshold
+    const forwardRows = graded.filter((r) => r.date >= forwardStart)
+    const forward = evaluate(forwardRows, kind, 'all', cut, 2, { requireTradable: true })
+    const hasPrice = forward.n > 0 && forward.priced === forward.n
+    const hasScore = kind === 'over' || (forward.picks > 0 && forward.explicit_scores === forward.picks)
+    const threshold = forward.priced ? null : (kind === 'over' ? BREAK_EVEN_110 : 0.5)
+    const passes = hasPrice && hasScore && forward.n >= minTest && forward.roi_ci?.lo != null && forward.roi_ci.lo > 0
     report.markets[kind] = {
       train, test, all, forward,
-      gate: { passes, min_test: minTest, threshold, has_market_price: hasPrice,
+      gate: { passes, min_test: minTest, threshold, has_market_price: hasPrice, has_explicit_score: hasScore,
         forward_start: forwardStart,
-        reason: !hasPrice ? 'sin línea/precio F5 real' : forward.n < minTest ? `muestra forward insuficiente (n=${forward.n})` : forward.lo <= threshold ? 'intervalo forward cruza el break-even' : 'pasa' },
+        reason: !hasPrice ? 'sin línea y juice pregame auditables' : !hasScore ? 'sin score F5 explícito' : forward.n < minTest ? `muestra forward insuficiente (n=${forward.n})` : forward.roi_ci.lo <= 0 ? 'IC95% forward de ROI cruza 0' : 'pasa' },
     }
   }
   return report

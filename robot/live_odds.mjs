@@ -1,5 +1,6 @@
-// Live odds ("logros") watcher — runs after daily.mjs on every hourly Actions
-// run. While games are IN PROGRESS it snapshots the multi-book moneyline +
+// Live odds ("logros") watcher — runs in the independent mlb-live-observer
+// workflow so its 45-minute loop never blocks daily.mjs. While games are IN
+// PROGRESS it snapshots the multi-book moneyline +
 // de-vig consensus + live win probability every ~5 minutes into
 // data/history/live/<date>.json, and commits/pushes every ~10 minutes so the
 // GitHub Pages site updates near-live. When a game goes final it captures the

@@ -17,12 +17,22 @@ function row(id = 1, overrides = {}) {
 }
 
 test('preserva línea O/U de apertura aunque la captura final cambie', () => {
-  const open = mergeOddsBlocks(null, { stage: 'open', over_under: 8, spread: -1.5, p_home_mkt: 0.56 });
-  const close = mergeOddsBlocks(open, { stage: 'final', over_under: 9, spread: -2.5, p_home_mkt: 0.58 });
+  const open = mergeOddsBlocks(null, {
+    capture_phase: 'pregame', captured_at: '2026-07-21T12:00:00Z', provider: 'book',
+    over_under: 8, over_price: -110, under_price: -110, spread: -1.5,
+    p_home_mkt: 0.56, ml_home: -125, ml_away: 110,
+  });
+  const close = mergeOddsBlocks(open, {
+    capture_phase: 'postgame', captured_at: '2026-07-22T03:00:00Z', provider: 'book',
+    over_under: 9, over_price: -115, under_price: -105, spread: -2.5,
+    p_home_mkt: 0.58, ml_home: -140, ml_away: 120,
+  });
   assert.equal(close.over_under_open, 8);
   assert.equal(close.over_under_close, 9);
   assert.equal(close.over_under, 9);
   assert.equal(close.total_line_move, 1);
+  assert.equal(close.open_provenance, 'explicit_pregame');
+  assert.equal(close.captured_at_open, '2026-07-21T12:00:00Z');
 });
 
 test('Over sombra usa línea real de apertura, no la referencia del modelo', () => {
@@ -67,7 +77,7 @@ test('reporte cronológico mantiene Over/F5 cerrados cuando falta el gate', () =
   const report = marketLabReport(rows, { minTest: 100 });
   assert.equal(report.markets.over.gate.passes, false);
   assert.equal(report.markets.over.forward.n, 0);
-  assert.match(report.markets.over.gate.reason, /forward insuficiente/);
+  assert.match(report.markets.over.gate.reason, /sin línea y juice pregame auditables/);
   assert.equal(report.markets.f5.gate.has_market_price, false);
   assert.equal(report.markets.pitcher_f5.gate.passes, false);
 });

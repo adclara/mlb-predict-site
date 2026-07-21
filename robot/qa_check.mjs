@@ -134,11 +134,25 @@ async function qaMlbLive() {
   else if (scoreBad.length) W(`marcadores desalineados (puede ser desfase de caché 30s): ${scoreBad.slice(0,4).join(' · ')}`);
 }
 
+async function qaMlbPipeline() {
+  H('3) Salud de ingesta MLB cada 20 minutos');
+  const w = await getJson(`${API}/v1/mlb/pipeline-health`);
+  if (w.status !== 200 || !w.data) { F(`pipeline-health no respondió (status ${w.status})`); return; }
+  if (w.data.state === 'empty' || w.data.state === 'unavailable') {
+    W(`pipeline aún ${w.data.state}; es esperable solo durante los primeros 20 min tras el deploy`);
+    return;
+  }
+  if (w.data.fresh) P(`última captura fresca (${w.data.age_seconds}s; ${w.data.latest?.n_games ?? 0} juegos)`);
+  else F(`captura atrasada: ${w.data.age_seconds ?? 'sin edad'}s`);
+  if (w.data.state === 'ok') P('StatsAPI y ESPN respondieron en el último slot');
+  else W(`último slot ${w.data.state}: ${JSON.stringify(w.data.latest?.errors || {})}`);
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // 3) SOCCER LIVE vs ESPN (Mundial)
 // ─────────────────────────────────────────────────────────────────────────
 async function qaSoccer() {
-  H('3) Soccer /v1/soccer/live?league=fifa.world vs ESPN');
+  H('4) Soccer /v1/soccer/live?league=fifa.world vs ESPN');
   const w = await getJson(`${API}/v1/soccer/live?league=fifa.world`);
   if (w.status !== 200) { F(`Worker soccer/live status ${w.status}`); return; }
   const wg = (w.data && w.data.games) || [];
@@ -157,7 +171,7 @@ async function qaSoccer() {
 // 4) STANDINGS NBA/Soccer vs ESPN (fila top)
 // ─────────────────────────────────────────────────────────────────────────
 async function qaStandings() {
-  H('4) Standings vs ESPN (spot-check)');
+  H('5) Standings vs ESPN (spot-check)');
   for (const [sp, wurl, surl] of [
     ['nba', `${API}/v1/nba/standings`, 'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings'],
     ['soccer', `${API}/v1/soccer/standings?league=fifa.world`, 'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings'],
@@ -177,7 +191,7 @@ async function qaStandings() {
 // 5) SUMMARY nuevo (soccer/nba) vs ESPN — la feature recién desplegada
 // ─────────────────────────────────────────────────────────────────────────
 async function qaSummary() {
-  H('5) Detalle /v1/soccer/summary vs ESPN (feature nueva)');
+  H('6) Detalle /v1/soccer/summary vs ESPN (feature nueva)');
   // tomar un evento reciente/en vivo del Mundial
   const rec = await getJson(`${API}/v1/soccer/recent?league=fifa.world`);
   const live = await getJson(`${API}/v1/soccer/live?league=fifa.world`);
@@ -211,7 +225,7 @@ async function qaSummary() {
 // 6) Rankings tenis + injuries presentes
 // ─────────────────────────────────────────────────────────────────────────
 async function qaMisc() {
-  H('6) Tenis rankings + bajas');
+  H('7) Tenis rankings + bajas');
   const rk = await getJson(`${API}/v1/tennis/rankings`);
   const secs = (rk.data && rk.data.sections) || [];
   if (secs.length) P(`ranking de tenis: ${secs.map(s => `${s.name} ${s.rows?.length||0}`).join(', ')}`);
@@ -220,7 +234,7 @@ async function qaMisc() {
   if (inj.status === 200) P('/v1/injuries responde'); else W(`/v1/injuries status ${inj.status}`);
 }
 
-for (const fn of [qaMlbToday, qaMlbLive, qaSoccer, qaStandings, qaSummary, qaMisc]) {
+for (const fn of [qaMlbToday, qaMlbLive, qaMlbPipeline, qaSoccer, qaStandings, qaSummary, qaMisc]) {
   try { await fn(); } catch (e) { F(`excepción en ${fn.name}: ${e.message}`); }
 }
 

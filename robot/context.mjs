@@ -15,14 +15,25 @@ import { park } from './venues.js'
 const EXP = 1.83
 const r3 = (x) => (x == null ? null : Math.round(x * 1000) / 1000)
 
-// rows: games_v1 rows (graded or not; ungraded rows only contribute schedule
-// facts like dates/parks, not results). Returns a query function:
+// rows: finalized games_v1 rows. Postponed/ungraded placeholders never become
+// appearances: counting them changes rest/density without a game being played.
+// Compact historical rows without a `graded` property remain compatible when
+// they carry both `home_win` and `final`. Returns a query function:
 //   ctx(date, team) -> { homeForm10, roadForm10, pyth20, rest, dens7, prevParkAbbr }
 export function buildTeamContext(rows) {
   // Per team, chronological log of appearances: {date, atHome, rf, ra, won|null, parkAbbr}
   const byTeam = new Map()
   const add = (team, rec) => { if (!byTeam.has(team)) byTeam.set(team, []); byTeam.get(team).push(rec) }
-  for (const r of rows) {
+  const valid = new Map(), noPk = []
+  const quality = (r) => (r.date === r.game_date ? 2 : 0) + (r.graded === true ? 1 : 0)
+  for (const r of rows || []) {
+    const explicitGrading = Object.prototype.hasOwnProperty.call(r || {}, 'graded')
+    const final = (r?.home_win === 0 || r?.home_win === 1) && typeof r?.final === 'string' && /^\d+-\d+$/.test(r.final)
+    if (!final || (explicitGrading && r.graded !== true) || /postponed|cancel(?:led|ed)|suspended/i.test(String(r?.status || ''))) continue
+    if (r.game_pk == null) noPk.push(r)
+    else { const k = String(r.game_pk), p = valid.get(k); if (!p || quality(r) > quality(p)) valid.set(k, r) }
+  }
+  for (const r of [...valid.values(), ...noPk]) {
     if (!r.date || !r.home || !r.away) continue
     let hs = null, as = null
     if (r.final != null) { const m = String(r.final).split('-'); as = Number(m[0]); hs = Number(m[1]) }
