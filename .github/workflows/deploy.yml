@@ -66,20 +66,26 @@ jobs:
           SCHED=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             https://api.cloudflare.com/client/v4/accounts/f02574feb7272a1da2818e35e0ff4342/workers/scripts/aa-sports-api/schedules)
           echo "schedules: $(echo "$SCHED" | head -c 300)"
-          if echo "$SCHED" | grep -q '"success":true'; then
-            echo "$SCHED" | grep -qF '*/5 * * * *' \
-              && echo "✅ Radar en vivo: cron */5 * * * * REGISTRADO — el vigía corre cada 5 min" \
-              || { echo "❌ FALTA el cron */5 — el Radar NO se actualizaría cada 5 min"; exit 1; }
-            echo "$SCHED" | grep -qF '*/20 * * * *' \
-              && echo "✅ MLB: captura pública */20 * * * * REGISTRADA" \
-              || { echo "❌ FALTA el cron */20 — la ingesta MLB no estaría activa"; exit 1; }
-            echo "$SCHED" | grep -qF '0 13 * * *' \
-              && echo "✅ Radar: archivo diario 0 13 * * * REGISTRADO" \
-              || { echo "❌ FALTA el cron diario 0 13 — el archivo del Radar no correría"; exit 1; }
-          else
-            echo "❌ no se pudo leer schedules (API/token); no puedo probar que los crons quedaron activos"
-            exit 1
-          fi
+          SCHED_JSON="$SCHED" node <<'NODE'
+          const body = JSON.parse(process.env.SCHED_JSON || '{}')
+          if (body.success !== true) {
+            console.error('❌ no se pudo leer schedules (API/token); no puedo probar que los crons quedaron activos')
+            process.exit(1)
+          }
+          const rows = Array.isArray(body.result) ? body.result : (body.result?.schedules || [])
+          const actual = new Set(rows.map((row) => row?.cron).filter(Boolean))
+          const required = [
+            ['*/5 * * * *', 'Radar en vivo: el vigía corre cada 5 min'],
+            ['*/20 * * * *', 'MLB: captura pública cada 20 min'],
+            ['0 13 * * *', 'Radar: archivo diario 13:00 UTC'],
+          ]
+          let missing = false
+          for (const [cron, label] of required) {
+            if (actual.has(cron)) console.log(`✅ ${label} — ${cron} REGISTRADO`)
+            else { console.error(`❌ FALTA ${cron} — ${label}`); missing = true }
+          }
+          if (missing) process.exit(1)
+          NODE
       - name: Telegram del vigía (solo cargar secretos; sin mensaje de prueba)
         working-directory: cloudflare
         env:
