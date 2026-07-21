@@ -62,6 +62,14 @@ async function installApiMocks(page, date, events, games) {
     if (path === '/v1/mlb/live') {
       return json(route, { sport: 'mlb', date, updated_at: new Date().toISOString(), games });
     }
+    if (path === '/v1/mlb/learning') {
+      return json(route, {
+        n_graded: 106, first_date: '2026-03-25', cal: {}, market: {}, history: [], log: [],
+        state_es: ['Aprendizaje medido.'], state_en: ['Measured learning.'],
+        signals: [{ label: 'Coincide con el favorito del mercado', label_en: 'Matches the market favorite', edge_pp: 11.5 }],
+      });
+    }
+    if (path === '/v1/mlb/simulation') return json(route, { note: 'test' });
     if (path === '/v1/injuries') return json(route, { players: [] });
     if (path === '/v1/me') return json(route, { enabled: false, user: null });
     return json(route, {});
@@ -169,6 +177,12 @@ try {
     assert.notEqual(state.time, 'Final', `${viewport.name}: el final de ayer contaminó hoy`);
     assert.deepEqual(state.scores, ['', ''], `${viewport.name}: aparecen marcadores de ayer`);
     await assertNoOverflow(page, viewport.name);
+    await page.locator('#langbtn').click();
+    await page.locator('.ltab[data-lt="brain"]').click();
+    const signalLabel = page.locator('.bsig .bsl').first();
+    await signalLabel.waitFor({ state: 'visible' });
+    assert.equal(await signalLabel.textContent(), 'Matches the market favorite', `${viewport.name}: señal del Cerebro sin traducir`);
+    await assertNoOverflow(page, `${viewport.name}-brain-en`);
     assert.deepEqual(errors, [], `${viewport.name}: errores de consola/red de la app`);
     await context.close();
   }

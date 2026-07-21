@@ -2264,7 +2264,8 @@ function renderBrain(){
   const learns = ((lang === 'en' ? d.state_en : d.state_es) || []);
   const sigs = d.signals || [];
   const sigBar = (s) => { const w = Math.max(4, Math.min(100, Math.round((s.edge_pp || 0) / 15 * 100)));
-    return `<div class="bsig"><span class="bsl">${esc(s.label)}</span><span class="bsw"><i style="width:${w}%"></i></span><span class="bse num">+${s.edge_pp} pts</span></div>`; };
+    const label = lang === 'en' ? (s.label_en || s.label) : s.label;
+    return `<div class="bsig"><span class="bsl">${esc(label)}</span><span class="bsw"><i style="width:${w}%"></i></span><span class="bse num">+${s.edge_pp} pts</span></div>`; };
   const logRows = (d.log || []).slice(0, 8).map(e => `<div class="blogr"><span class="bd num">${esc(e.date)}</span><span>${esc(lang === 'en' ? e.en : e.es)}</span></div>`).join('');
   $('list').innerHTML = `
     <div class="brain">
