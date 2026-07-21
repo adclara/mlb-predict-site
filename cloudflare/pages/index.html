@@ -2038,29 +2038,43 @@ let pendingGame = null, pendingOther = null;   // deep-links de links compartido
 let firstLoad = true, lastAnimKey = null;
 let favs = new Set(JSON.parse(localStorage.getItem('aa_favs') || '[]'));
 const $ = id => document.getElementById(id);
-// Cruza el marcador en vivo por equipos, PERO con candado de mismo día
-// calendario. En una serie el matchup se repite día tras día; en la mañana
-// ESPN todavía sirve los finales de ANOCHE y se pegaban al juego de hoy.
-// El delta de horas fallaba porque ev.start suele ser solo-fecha (medianoche
-// UTC); comparamos la fecha del feed en vivo contra la fecha que se ve.
-const dayOf = s => String(s || '').slice(0, 10);
+// AA_MLB_LIVE_DATE_GUARD_V2
+// Cruza el marcador en vivo solo dentro del MISMO día calendario ET. En una
+// serie el matchup se repite día tras día: fallamos cerrado si falta la fecha,
+// si el doc no es realmente de hoy o si dos juegos no se pueden distinguir.
 const lvOf = ev => {
-  // solo mezclamos live cuando se ve HOY, no un día archivado
   if (viewDate) return null;
-  const lv = liveByKey.get(key(ev.away.code, ev.home.code));
-  if (!lv) return null;
-  // fecha del juego en vivo en horario del Este (la manda el worker);
-  // fallback al corte del ISO si no viniera.
-  const lvDay = lv.date || dayOf(lv.start);
-  if (!lvDay) return lv;
-  // Aceptamos el marcador si su fecha ET coincide con la del doc O con el HOY
-  // real del cliente (mata el off-by-one cuando el doc quedó con fecha vieja o
-  // un juego nocturno rueda de día en UTC). Si no, toleramos ±36h; más allá,
-  // es de otro día y no se mezcla. (Los días archivados ya salen arriba.)
-  const ok = [todayDate, etTodayClient()].filter(Boolean);
-  if (ok.includes(lvDay)) return lv;
-  const near = ok.some(d => Math.abs(Date.parse(lvDay + 'T00:00Z') - Date.parse(d + 'T00:00Z')) <= 36 * 3600 * 1000);
-  return near ? lv : null;
+  const clientDay = etTodayClient();
+  if (!todayDate || todayDate !== clientDay) return null;
+
+  const pair = key(ev.away.code, ev.home.code);
+  const raw = liveByKey.get(pair);
+  const candidates = (Array.isArray(raw) ? raw : raw ? [raw] : [])
+    .filter(lv => lv && lv.date === todayDate);
+  if (!candidates.length) return null;
+
+  const docGames = events.filter(x => key(x.away?.code, x.home?.code) === pair);
+  if (candidates.length === 1 && docGames.length === 1) return candidates[0];
+
+  // Doble jornada: empareja por la hora programada. Si falta una hora o hay
+  // empate, no muestra un marcador potencialmente equivocado.
+  const evMs = Date.parse(ev.start || '');
+  if (!Number.isFinite(evMs)) return null;
+  const ranked = candidates
+    .map(lv => ({ lv, ms: Date.parse(lv.start || '') }))
+    .filter(x => Number.isFinite(x.ms))
+    .map(x => ({ ...x, delta: Math.abs(x.ms - evMs) }))
+    .sort((a, b) => a.delta - b.delta);
+  if (!ranked.length || (ranked[1] && ranked[0].delta === ranked[1].delta)) return null;
+
+  const chosen = ranked[0];
+  const nearestDocs = docGames
+    .map(x => ({ id: String(x.event_id), ms: Date.parse(x.start || '') }))
+    .filter(x => Number.isFinite(x.ms))
+    .map(x => ({ ...x, delta: Math.abs(x.ms - chosen.ms) }))
+    .sort((a, b) => a.delta - b.delta);
+  if (!nearestDocs.length || (nearestDocs[1] && nearestDocs[0].delta === nearestDocs[1].delta)) return null;
+  return nearestDocs[0].id === String(ev.event_id) ? chosen.lv : null;
 };
 const effStatus = ev => { const lv = lvOf(ev); return lv ? lv.status : ev.status; };
 
@@ -4577,7 +4591,12 @@ async function loadLive(){
     lastLiveSig = sig;
     liveByKey = new Map();
     for (const g of (d.games || [])){
-      if (g.home?.code && g.away?.code) liveByKey.set(key(g.away.code, g.home.code), g);
+      if (g.home?.code && g.away?.code){
+        const k = key(g.away.code, g.home.code);
+        const bucket = liveByKey.get(k) || [];
+        bucket.push(g);
+        liveByKey.set(k, bucket);
+      }
     }
     notifyFavGames();
     if (events.length) renderAll();
