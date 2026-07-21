@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { normalizeDay } from '../cloudflare/lib/normalize.mjs'
+import { normalizeDay, toD1Rows } from '../cloudflare/lib/normalize.mjs'
 
 const frozen = {
   game_pk: 7,
@@ -81,7 +81,7 @@ test('fila provisional conserva hechos públicos pero no expone ninguna salida d
   const event = normalizeDay('2026-07-21', { games: [provisional] }, daily, null, [], null).events[0]
   assert.equal(event.pending, true)
   assert.deepEqual(event.prediction, {
-    pick: null, prob: null, prob_pct: null, confidence: null, engine_version: null,
+    pick: null, prob: null, prob_pct: null, price: null, confidence: null, engine_version: null,
   })
   assert.deepEqual(event.metrics, [])
   assert.equal(event.summary_es, null)
@@ -95,21 +95,41 @@ test('fila provisional conserva hechos públicos pero no expone ninguna salida d
 test('cambio de abridor invalida la predicción congelada y elimina toda promoción', () => {
   const daily = {
     selection_snapshot_verified: true,
+    starter_invalidations: { 7: {
+      reason: 'probable_starter_changed', detected_at: '2026-07-21T17:00:00Z',
+      scheduled_start_utc: frozen.first_pitch, phase: 'pregame', note: 'Abridor cambió',
+    } },
     plays: [{
       game_pk: 7, pick: 'NYY', prob_v2: 0.57, confidence: 'alta',
+      price: -121,
       scratch_warning: true, scratch_note: 'Abridor cambió',
       record_scope: 'public_live', eligible_public_record: true,
     }],
     locks: [{
       game_pk: 7, pick: 'NYY', prob_v2: 0.57, tier: 'oro',
+      price: -121,
       scratch_warning: true, scratch_note: 'Abridor cambió',
       record_scope: 'public_live', eligible_public_record: true,
     }],
   }
-  const event = normalizeDay('2026-07-21', { games: [frozen] }, daily, null, [], null).events[0]
+  const scratchedRow = {
+    ...frozen,
+    learning_eligible: false,
+    invalid_reason: 'probable_starter_changed_pregame',
+    integrity: {
+      ...frozen.integrity,
+      training_eligible: false,
+      reason: 'probable_starter_changed_pregame',
+    },
+  }
+  const event = normalizeDay('2026-07-21', { games: [scratchedRow] }, daily, null, [], null).events[0]
   assert.equal(event.pending, false)
-  assert.equal(event.prediction.pick, 'NYY')
-  assert.equal(event.prediction.prob_pct, 57)
+  assert.equal(event.prediction.pick, null)
+  assert.equal(event.prediction.prob, null)
+  assert.equal(event.prediction.prob_pct, null)
+  assert.equal(event.prediction.price, null)
+  assert.equal(event.prediction.confidence, null)
+  assert.equal(event.prediction.engine_version, null)
   assert.equal(event.prediction.invalidated, true)
   assert.equal(event.prediction.invalidated_reason, 'probable_starter_changed')
   assert.deepEqual(event.badges, [])
@@ -117,6 +137,99 @@ test('cambio de abridor invalida la predicción congelada y elimina toda promoci
   assert.equal(event.summary_es, null)
   assert.equal(event.snapshot, null)
   assert.equal(event.risk, null)
+})
+
+test('predictions conserva la cuota real pero no mezcla flags del ledger público', () => {
+  const daily = {
+    selection_snapshot_verified: true,
+    locks: [{
+      game_pk: 7, pick: 'NYY', prob_v2: 0.57, tier: 'oro', price: -121,
+      record_scope: 'public_live', eligible_public_record: true,
+    }],
+  }
+  const doc = normalizeDay('2026-07-21', { games: [frozen] }, daily, null, [], null)
+  const prediction = doc.events[0].prediction
+  const row = toD1Rows(doc)[0]
+  assert.equal(prediction.price, -121)
+  assert.equal(row.price, -121)
+  for (const key of ['public_play', 'public_lock', 'public_gem']) {
+    assert.equal(Object.hasOwn(prediction, key), false, `${key} no pertenece a prediction`)
+    assert.equal(Object.hasOwn(row, key), false, `${key} no pertenece a predictions D1`)
+  }
+
+  daily.locks[0].price = 0
+  const missing = normalizeDay('2026-07-21', { games: [frozen] }, daily, null, [], null)
+  assert.equal(missing.events[0].prediction.price, null)
+  assert.equal(toD1Rows(missing)[0].price, null)
+})
+
+test('invalidación de abridor aplica al juego general y a un daily legacy', () => {
+  const legacyDaily = {
+    selection_snapshot_verified: false,
+    starter_invalidations: {
+      7: {
+        reason: 'probable_starter_changed', note: 'Abridor cambió',
+        detected_at: '2026-07-21T17:00:00Z', scheduled_start_utc: frozen.first_pitch,
+        phase: 'pregame',
+      },
+    },
+    plays: [], locks: [], gems: [],
+  }
+  const event = normalizeDay('2026-07-21', { games: [frozen] }, legacyDaily, null, [], null).events[0]
+  assert.equal(event.prediction.invalidated, true)
+  assert.equal(event.prediction.invalidated_reason, 'probable_starter_changed')
+  assert.equal(event.prediction.pick, null)
+  assert.equal(event.prediction.prob_pct, null)
+  assert.deepEqual(event.badges, [])
+  assert.deepEqual(event.metrics, [])
+  assert.equal(event.snapshot, null)
+})
+
+test('la observación factual del row también detecta un cambio de abridor', () => {
+  const row = {
+    ...frozen,
+    home_probable_pitcher_id: 101,
+    home_probable_pitcher_name: 'Starter One',
+    away_probable_pitcher_id: 202,
+    away_probable_pitcher_name: 'Starter Away',
+    observed: {
+      ...frozen.observed,
+      captured_at: '2026-07-21T22:30:00Z',
+      status: 'Scheduled',
+      pitchers: {
+        home: { id: 303, name: 'Starter Three' },
+        away: { id: 202, name: 'Starter Away' },
+      },
+    },
+  }
+  const event = normalizeDay('2026-07-21', { games: [row] }, null, null, [], null).events[0]
+  assert.equal(event.prediction.invalidated, true)
+  assert.equal(event.prediction.pick, null)
+  assert.equal(event.snapshot, null)
+})
+
+test('cambio de abridor observado después del inicio no borra el pick', () => {
+  const row = {
+    ...frozen,
+    home_probable_pitcher_id: 101,
+    home_probable_pitcher_name: 'Starter One',
+    away_probable_pitcher_id: 202,
+    away_probable_pitcher_name: 'Starter Away',
+    observed: {
+      ...frozen.observed,
+      captured_at: '2026-07-22T01:00:00Z',
+      status: 'Final',
+      pitchers: {
+        home: { id: 303, name: 'Starter Three' },
+        away: { id: 202, name: 'Starter Away' },
+      },
+    },
+  }
+  const event = normalizeDay('2026-07-21', { games: [row] }, null, null, [], null).events[0]
+  assert.equal(event.prediction.invalidated, false)
+  assert.equal(event.prediction.pick, 'NYY')
+  assert.equal(event.result, null)
+  assert.notEqual(event.snapshot, null)
 })
 
 test('un daily legacy no puede pisar la probabilidad de una fila causal nueva', () => {

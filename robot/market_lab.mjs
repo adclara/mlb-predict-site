@@ -11,6 +11,7 @@ import { hasAuditableOpening } from './odds.js'
 export const TOTAL_SIGMA = 2.9
 export const BREAK_EVEN_110 = 0.5238
 export const FORWARD_START = '2026-07-21'
+export const isVoidStatus = (status) => /Postponed|Cancelled|Canceled/i.test(String(status || ''))
 
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x))
 const round3 = (x) => x == null ? null : Math.round(x * 1000) / 1000
@@ -161,7 +162,13 @@ export function gradeMarketLab(lab, byPk) {
   for (const key of ['over', 'f5', 'pitcher_f5']) {
     for (const p of lab[key] || []) {
       if (p.result) continue
+      if (p.scratch_warning === true) {
+        p.result = 'void'; p.void_reason = 'probable_starter_changed_pregame'; continue
+      }
       const g = byPk?.get ? byPk.get(p.game_pk) : byPk?.[p.game_pk]
+      if (g && isVoidStatus(g.status)) {
+        p.result = 'void'; p.void_reason = g.status || 'void'; continue
+      }
       if (!g || g.home_score == null || g.away_score == null) { done = false; continue }
       if (p.market === 'total') {
         const total = Number(g.home_score) + Number(g.away_score)
@@ -240,8 +247,9 @@ function evaluate(rows, kind, period, cut, max = 2, { requireTradable = false } 
 // Reporte exploratorio determinista. El corte 70/30 es cronológico. Los gates
 // exigen muestra de test suficiente + cota inferior; F5 además exige precios
 // reales antes de que pueda llamarse boleto.
-export function marketLabReport(rows, { split = 0.70, minTest = 100, forwardStart = FORWARD_START } = {}) {
-  const graded = prepareTrainingRows(rows)
+export function marketLabReport(rows, { split = 0.70, minTest = 100, forwardStart = FORWARD_START, invalidatedGamePks = new Set() } = {}) {
+  const excluded = invalidatedGamePks instanceof Set ? invalidatedGamePks : new Set(invalidatedGamePks || [])
+  const graded = prepareTrainingRows(rows).filter((row) => !excluded.has(String(row.game_pk)))
   const dates = [...new Set(graded.map((r) => r.date))].sort()
   const cut = dates[Math.floor(dates.length * split)] || null
   const report = { version: 'shadow_v1', generated_at: new Date().toISOString(), cut, rows: graded.length, markets: {} }

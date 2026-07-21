@@ -34,11 +34,11 @@ function event(id, start) {
     sport: 'mlb', league: 'MLB', event_id: id, matchup: 'MIN @ CLE', start, status: 'pre',
     away: { code: 'MIN', name: 'Minnesota Twins' },
     home: { code: 'CLE', name: 'Cleveland Guardians' },
-    prediction: { pick: 'CLE', prob: 0.57, prob_pct: 57, confidence: 'test' },
+    prediction: { pick: 'CLE', prob: 0.57, prob_pct: 57, confidence: 'media' },
     metrics: [], snapshot: {
       fielding: { away: { err_l10: 2, epg: 0.2, g: 10 }, home: { err_l10: 9, epg: 0.9, g: 10 } },
       context: { series: { game: 4, len: 4, home_wins: 0, away_wins: 3 } },
-    }, risk: null, odds: null, badges: [], result: null, final: null,
+    }, risk: null, odds: null, badges: ['oro'], result: null, final: null,
   };
 }
 
@@ -54,13 +54,13 @@ function invalidatedEvent(id, start) {
   return {
     ...event(id, start),
     prediction: {
-      pick: 'CLE', prob: 0.61, prob_pct: 61, confidence: 'alta',
+      pick: null, prob: null, prob_pct: null, confidence: null, engine_version: null,
       invalidated: true, invalidated_reason: 'probable_starter_changed',
     },
     snapshot: null,
     metrics: [],
     risk: null,
-    badges: ['fijo', 'oro'],
+    badges: [],
   };
 }
 
@@ -101,6 +101,19 @@ async function installApiMocks(page, date, events, games) {
       selection: [{ thr: 53, n: 40, rate: 55, priced_n: 0, units: null, roi: null, accuracy_signal: true, edge: false }],
       market: { model_acc: 53.7, market_acc: 56.5 },
     });
+    if (path === '/v1/mlb/history') return json(route, { predictions: [
+      // Los dos juegos más recientes arrancan a la misma hora. La UI debe
+      // tratarlos como grupo y no inventar un orden que infle la racha.
+      { date, event_id: 'hist-ml-win', selection_key: 'ml|CLE||', market: 'ml', pick: 'CLE', side: null, line: null, away: 'MIN', home: 'CLE', prob: 0.57, confidence: 'oro', result: 'win', price: -120, public_play: 1, public_lock: 1, public_gem: 0, start_time: `${date}T23:10:00Z`, source_scope: 'causal_verified' },
+      { date, event_id: 'hist-ml-loss', selection_key: 'ml|MIN||', market: 'ml', pick: 'MIN', side: null, line: null, away: 'MIN', home: 'CLE', prob: 0.55, confidence: 'alta', result: 'loss', price: 110, public_play: 1, public_lock: 1, public_gem: 0, start_time: `${date}T23:10:00Z`, source_scope: 'causal_verified' },
+      // Total legacy factual: conserva mercado/línea/resultado, pero no inventa pick ni probabilidad.
+      { date, event_id: 'hist-total', selection_key: 'total||over|8.5', market: 'total', pick: null, side: 'over', line: 8.5, away: 'BOS', home: 'NYY', prob: null, confidence: null, result: 'win', price: null, public_play: 1, public_lock: 0, public_gem: 0, start_time: `${date}T22:10:00Z`, source_scope: 'legacy_public_record' },
+      { date, event_id: 'hist-lock-only', selection_key: 'ml|DET||', market: 'ml', pick: 'DET', side: null, line: null, away: 'DET', home: 'KC', prob: null, confidence: null, result: 'loss', price: null, public_play: 0, public_lock: 1, public_gem: 0, start_time: `${date}T21:10:00Z`, source_scope: 'legacy_public_record' },
+      { date, event_id: 'hist-gem-only', selection_key: 'ml|LAD||', market: 'ml', pick: 'LAD', side: null, line: null, away: 'SF', home: 'LAD', prob: null, confidence: null, result: 'win', price: null, public_play: 0, public_lock: 0, public_gem: 1, start_time: `${date}T20:10:00Z`, source_scope: 'legacy_public_record' },
+      // Push y void permanecen auditables en la API, pero no son W/L ni unidades.
+      { date, event_id: 'hist-push', selection_key: 'total||under|7.5', market: 'total', pick: null, side: 'under', line: 7.5, away: 'TB', home: 'TOR', prob: null, confidence: 'alta', result: 'push', price: null, public_play: 1, public_lock: 0, public_gem: 0, source_scope: 'legacy_public_record' },
+      { date, event_id: 'hist-void', selection_key: 'ml|BOS||', market: 'ml', pick: 'BOS', side: null, line: null, away: 'BOS', home: 'NYY', prob: 0.54, confidence: 'oro', result: 'void', price: -115, public_play: 1, public_lock: 1, public_gem: 0, source_scope: 'causal_verified' },
+    ] });
     if (path === '/v1/injuries') return json(route, { players: [] });
     if (path === '/v1/me') return json(route, { enabled: false, user: null });
     return json(route, {});
@@ -215,6 +228,7 @@ try {
     const detailEs = await page.locator('#dcard').textContent();
     assert.match(detailEs, /defensa floja: 9 errores en 10 juegos/i, `${viewport.name}: falta fielding ES`);
     assert.match(detailEs, /necesita ganar para evitar la barrida/i, `${viewport.name}: falta barrida ES`);
+    assert.match(detailEs, /Confianza Media/i, `${viewport.name}: falta confianza ES`);
     await page.locator('#dback').evaluate(el => el.click());
     assert.match(await page.locator('.mrow[data-id="pending-game"]').textContent(), /se publica ~7am ET/i, `${viewport.name}: falta pending ES`);
     const invalidRowEs = await page.locator('.mrow[data-id="invalidated-game"]').textContent();
@@ -227,12 +241,30 @@ try {
     assert.match(invalidDetailEs, /pronóstico AA invalidado: cambió el abridor probable\. El análisis original ya no aplica/i, `${viewport.name}: falta aviso prominente ES`);
     assert.doesNotMatch(invalidDetailEs, /61%/, `${viewport.name}: probabilidad invalidada visible en detalle ES`);
     await page.locator('#dback').evaluate(el => el.click());
+    await page.locator('.ltab[data-lt="hist"]').click();
+    await page.waitForFunction(() => /cuota real/i.test(document.querySelector('#dcard')?.textContent || ''));
+    const histEs = await page.locator('#dcard').textContent();
+    assert.match(histEs, /cuota real · n=2/i, `${viewport.name}: historial no declara cuotas reales ES`);
+    assert.match(histEs, /Picks medidos\s*3/i, `${viewport.name}: push\/void inflaron la muestra ES`);
+    assert.match(histEs, /Récord\s*2–1/i, `${viewport.name}: total con pick null no entró al récord ES`);
+    assert.match(histEs, /Racha actual\s*—\s*según hora programada/i, `${viewport.name}: racha intrahoraria inventada ES`);
+    assert.match(histEs, /Alta/i, `${viewport.name}: falta nivel de confianza ES`);
+    const histListEs = await page.locator('#list').textContent();
+    assert.match(histListEs, /Alta 8\.5/i, `${viewport.name}: total legacy con pick null desapareció ES`);
+    assert.equal(await page.locator('#list .hrow').count(), 5, `${viewport.name}: faltan cohortes o push\/void aparecieron como W\/L ES`);
+    assert.match(histListEs, /Fijo/i, `${viewport.name}: fijo-only no quedó auditable ES`);
+    assert.match(histListEs, /Gema/i, `${viewport.name}: gema-only no quedó auditable ES`);
+    assert.doesNotMatch(histListEs, /Baja 7\.5|Gana Boston/i, `${viewport.name}: push\/void visibles como resultado ES`);
+    assert.doesNotMatch(histEs, /−110/, `${viewport.name}: historial aún afirma cuota sintética ES`);
+    await page.locator('.ltab[data-lt="all"]').click();
     await assertNoOverflow(page, viewport.name);
     await page.locator('#langbtn').click();
     await page.locator('.mrow[data-id="today-game"]').click();
     const detailEn = await page.locator('#dcard').textContent();
     assert.match(detailEn, /sloppy fielding: 9 errors in 10 games/i, `${viewport.name}: missing fielding EN`);
     assert.match(detailEn, /needs a win to avoid the sweep/i, `${viewport.name}: missing sweep EN`);
+    assert.match(detailEn, /Confidence Medium/i, `${viewport.name}: confidence code was not translated in detail EN`);
+    assert.doesNotMatch(detailEn, /\bmedia\b|\boro\b|\bfijo\b/i, `${viewport.name}: Spanish confidence or badge leaked into detail EN`);
     await page.locator('#dback').evaluate(el => el.click());
     assert.match(await page.locator('.mrow[data-id="pending-game"]').textContent(), /publishes around 7am ET/i, `${viewport.name}: missing pending EN`);
     const invalidRowEn = await page.locator('.mrow[data-id="invalidated-game"]').textContent();
@@ -243,6 +275,22 @@ try {
     assert.match(invalidDetailEn, /AA prediction invalidated: the probable starter changed\. The original analysis no longer applies/i, `${viewport.name}: missing prominent warning EN`);
     assert.doesNotMatch(invalidDetailEn, /61%/, `${viewport.name}: invalidated probability visible in detail EN`);
     await page.locator('#dback').evaluate(el => el.click());
+    await page.locator('.ltab[data-lt="hist"]').click();
+    await page.waitForFunction(() => /actual odds/i.test(document.querySelector('#dcard')?.textContent || ''));
+    const histEn = await page.locator('#dcard').textContent();
+    assert.match(histEn, /actual odds · n=2/i, `${viewport.name}: history does not disclose actual odds EN`);
+    assert.match(histEn, /Current streak\s*—\s*by scheduled start/i, `${viewport.name}: intratime streak was invented EN`);
+    assert.match(histEn, /Picks tracked\s*3/i, `${viewport.name}: push\/void inflated the sample EN`);
+    assert.match(histEn, /Record\s*2–1/i, `${viewport.name}: null-pick total missing from record EN`);
+    assert.match(histEn, /High/i, `${viewport.name}: confidence code was not translated EN`);
+    const histListEn = await page.locator('#list').textContent();
+    assert.match(histListEn, /Over 8\.5/i, `${viewport.name}: null-pick legacy total disappeared EN`);
+    assert.equal(await page.locator('#list .hrow').count(), 5, `${viewport.name}: cohorts missing or push\/void rendered as W\/L EN`);
+    assert.match(histListEn, /Lock/i, `${viewport.name}: lock-only row is not auditable EN`);
+    assert.match(histListEn, /Gem/i, `${viewport.name}: gem-only row is not auditable EN`);
+    assert.doesNotMatch(histListEn, /Alta|Baja|Gana/i, `${viewport.name}: Spanish leaked into history EN`);
+    assert.doesNotMatch(histEn, /sin dato|alta|oro|plata|gema|fijo/i, `${viewport.name}: Spanish leaked from confidence codes EN`);
+    assert.doesNotMatch(histEn, /−110/, `${viewport.name}: history still claims synthetic odds EN`);
     await page.locator('.ltab[data-lt="brain"]').click();
     const signalLabel = page.locator('.bsig .bsl').first();
     await signalLabel.waitFor({ state: 'visible' });

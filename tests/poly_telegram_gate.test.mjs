@@ -1,7 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { polySignals, polyTelegramGate, polyTelegramRollback } from '../cloudflare/worker/index.js';
+import {
+  completePolyTelegramReservations,
+  failPolyTelegramReservations,
+  polySignals,
+  polyTelegramGate,
+  polyTelegramLegacySlots,
+  polyTelegramRollback,
+  polyTelegramStateAfterReservations,
+  reservePolyTelegram,
+} from '../cloudflare/worker/index.js';
 
 const NOW = 1_784_650_000;
 const DAY = '2026-07-21';
@@ -20,6 +29,41 @@ function signal(title, overrides = {}) {
     },
     ...overrides,
   };
+}
+
+class AtomicTelegramD1 {
+  constructor({ cutoverBlocked = false } = {}) { this.rows = []; this.cutoverBlocked = cutoverBlocked; }
+  prepare(sql) {
+    return { bind: (...values) => ({ run: () => this.run(sql, values) }) };
+  }
+  async run(sql, values) {
+    let changes = 0;
+    if (/INSERT OR IGNORE INTO poly_telegram_deliveries/i.test(sql)) {
+      const [reservation_id, et_date, dedupe_key, reserved_at, payload_hash, usedBefore, cutoverNow, quotaDate, key, cutoff] = values;
+      const active = this.rows.filter((r) => r.et_date === quotaDate && ['reserved', 'sent', 'unknown'].includes(r.status));
+      const duplicate = this.rows.some((r) => r.dedupe_key === key
+        && (['reserved', 'unknown'].includes(r.status) || (r.status === 'sent' && r.sent_at >= cutoff)));
+      const used = new Set(active.map((r) => r.slot));
+      const slot = [1, 2].find((value) => value > usedBefore && !used.has(value));
+      if (!this.cutoverBlocked && cutoverNow && !duplicate && slot) {
+        this.rows.push({ reservation_id, et_date, slot, dedupe_key, status: 'reserved', reserved_at, payload_hash });
+        changes = 1;
+      }
+    } else if (/SET status = 'sent'/i.test(sql)) {
+      const [sent_at, telegram_message_id, reservation_id] = values;
+      const row = this.rows.find((item) => item.reservation_id === reservation_id && item.status === 'reserved');
+      if (row) { Object.assign(row, { status: 'sent', sent_at, telegram_message_id }); changes = 1; }
+    } else if (/SET status = 'failed'/i.test(sql)) {
+      const [failed_at, error, reservation_id] = values;
+      const row = this.rows.find((item) => item.reservation_id === reservation_id && item.status === 'reserved');
+      if (row) { Object.assign(row, { status: 'failed', slot: null, failed_at, error }); changes = 1; }
+    } else if (/SET status = 'unknown'/i.test(sql)) {
+      const [failed_at, error, reservation_id] = values;
+      const row = this.rows.find((item) => item.reservation_id === reservation_id && item.status === 'reserved');
+      if (row) { Object.assign(row, { status: 'unknown', failed_at, error }); changes = 1; }
+    } else throw new Error(`SQL inesperado: ${sql}`);
+    return { success: true, meta: { changes } };
+  }
 }
 
 test('gate de Telegram rechaza ruido de centavos, extremos y consenso débil', () => {
@@ -52,6 +96,80 @@ test('gate selecciona como máximo dos señales excepcionales por día', () => {
   const again = polyTelegramGate([signal('cuarta')], out.state, { nowSec: NOW + 60, date: DAY });
   assert.deepEqual(again.items, []);
   assert.equal(again.state.sent, 2);
+});
+
+test('D1 hace atómico el máximo global de dos y el dedupe de siete días', async () => {
+  const db = new AtomicTelegramD1();
+  const candidates = [signal('atómica A'), signal('atómica B'), signal('atómica C')];
+  const attempts = await Promise.all(candidates.map((item) => reservePolyTelegram(db, [item], {
+    date: DAY, nowSec: NOW,
+  })));
+  const reservations = attempts.flatMap((result) => result.reservations);
+  assert.equal(reservations.length, 2);
+  assert.deepEqual(db.rows.filter((row) => row.et_date === DAY).map((row) => row.slot).sort(), [1, 2]);
+
+  await completePolyTelegramReservations(db, [reservations[0]], {
+    sentAt: new Date(NOW * 1000).toISOString(), messageId: 77,
+  });
+  await failPolyTelegramReservations(db, [reservations[1]], {
+    failedAt: new Date(NOW * 1000).toISOString(), error: 'Telegram 429', definitive: true,
+  });
+  const retry = await reservePolyTelegram(db, [candidates[2]], { date: DAY, nowSec: NOW + 60 });
+  assert.equal(retry.reservations.length, 1);
+  assert.equal(db.rows.find((row) => row.reservation_id === retry.reservations[0].reservation_id).slot, 2);
+
+  // A sent market stays deduplicated after the ET date changes.
+  const duplicateNextDay = await reservePolyTelegram(db, [reservations[0].item], {
+    date: '2026-07-22', nowSec: NOW + 86400,
+  });
+  assert.equal(duplicateNextDay.reservations.length, 0);
+
+  // An ambiguous failure keeps its physical slot; it is never released into a
+  // possible duplicate or third notification.
+  await failPolyTelegramReservations(db, retry.reservations, {
+    failedAt: new Date((NOW + 120) * 1000).toISOString(), error: 'timeout', definitive: false,
+  });
+  assert.equal(db.rows.find((row) => row.reservation_id === retry.reservations[0].reservation_id).status, 'unknown');
+});
+
+test('el Worker nuevo guarda silencio durante el solapamiento de cutover', async () => {
+  const db = new AtomicTelegramD1({ cutoverBlocked: true });
+  const result = await reservePolyTelegram(db, [signal('cutover')], { date: DAY, nowSec: NOW });
+  assert.equal(result.reservations.length, 0);
+  assert.equal(db.rows.length, 0);
+});
+
+test('la transición cuenta alertas legacy y nunca puede producir una tercera', async () => {
+  const db = new AtomicTelegramD1();
+  const legacy = {
+    date: DAY, sent: 1, max_per_day: 2, policy: 'rare_v1',
+    notified: { 'legacy|Yes': NOW - 60 },
+  };
+  const legacySlots = polyTelegramLegacySlots(legacy, DAY);
+  assert.equal(legacySlots, 1);
+
+  const attempts = await Promise.all([
+    reservePolyTelegram(db, [signal('transición A')], { date: DAY, nowSec: NOW, usedBefore: legacySlots }),
+    reservePolyTelegram(db, [signal('transición B')], { date: DAY, nowSec: NOW, usedBefore: legacySlots }),
+  ]);
+  const reservations = attempts.flatMap((result) => result.reservations);
+  assert.equal(reservations.length, 1);
+  assert.equal(db.rows[0].slot, 2);
+
+  const gated = polyTelegramGate([signal('transición A')], legacy, { nowSec: NOW, date: DAY });
+  const state = polyTelegramStateAfterReservations(gated, [], { legacySlots });
+  assert.equal(state.legacy_slots, 1);
+  assert.equal(polyTelegramLegacySlots(state, DAY), 1);
+  assert.equal(polyTelegramLegacySlots(state, '2026-07-22'), 0);
+});
+
+test('la proyección KV cuenta solo reservas admitidas por D1', () => {
+  const gated = polyTelegramGate([signal('admitida'), signal('rechazada')], null, { nowSec: NOW, date: DAY });
+  const state = polyTelegramStateAfterReservations(gated, [gated.items[0]]);
+  assert.equal(state.sent, 1);
+  assert.equal(state.policy, 'rare_v2_d1_atomic');
+  assert.equal(state.notified['admitida|Yes'], NOW);
+  assert.equal(state.notified['rechazada|Yes'], undefined);
 });
 
 test('gate deduplica por mercado siete días aun al cambiar de fecha', () => {

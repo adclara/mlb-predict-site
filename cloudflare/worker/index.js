@@ -751,18 +751,27 @@ async function polyWatch(env) {
   } catch (e) { /* el push del consenso nunca debe tumbar la ronda del vigía */ }
   // Telegram NO replica el tape crudo ni el resumen diario. Solo puede salir una
   // observación excepcional que supere todos los filtros de calidad y el tope
-  // diario. El estado vive dentro de poly:alerts: cero claves/escrituras KV extra.
+  // diario. D1 owns the atomic two-slot quota; KV is only a UI projection.
   let tgItems = [];
+  let tgReservations = [];
+  const tgDate = etDate(new Date(nowSec * 1000));
   try {
     if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && consPush.length) {
       const sigByKey = new Map();
       for (const s of [...((ad.signals && ad.signals.strong) || []), ...((ad.signals && ad.signals.likely) || [])]) sigByKey.set(s.title + '|' + s.outcome, s);
       const enriched = consPush.map((c) => ({ ...c, sig: sigByKey.get(c.title + '|' + c.outcome) || null }));
-      const gated = polyTelegramGate(enriched, ad.telegram, { nowSec, date: etDate(new Date(nowSec * 1000)) });
-      ad.telegram = gated.state;
-      tgItems = gated.items;
+      const legacySlots = polyTelegramLegacySlots(ad.telegram, tgDate);
+      const gated = polyTelegramGate(enriched, ad.telegram, { nowSec, date: tgDate });
+      const reserved = await reservePolyTelegram(env.DB, gated.items, { date: tgDate, nowSec, usedBefore: legacySlots });
+      ad.telegram = polyTelegramStateAfterReservations(gated, reserved.items, { legacySlots });
+      tgItems = reserved.items;
+      tgReservations = reserved.reservations;
     }
-  } catch (e) { /* el gate de Telegram nunca debe tumbar el vigía */ }
+  } catch (e) {
+    // Fail closed: an unavailable quota authority can suppress a message, but
+    // can never let an unreserved message escape.
+    console.error(JSON.stringify({ message: 'telegram reservation failed closed', error: ingestError(e) }));
+  }
   await env.AA_LATEST.put('poly:alerts', JSON.stringify(ad));
   // lastseen: solo se reescribe si CAMBIÓ (en ventanas tranquilas no hay actividad
   // nueva) → ahorra escrituras KV para quedarnos holgados en el free tier ($0 infra).
@@ -770,18 +779,42 @@ async function polyWatch(env) {
   if (lsAfter !== (lsRaw || '')) await env.AA_LATEST.put('poly:lastseen', lsAfter);
   // Telegram se manda DESPUÉS de persistir el dedupe/tope. Si Cloudflare reintenta
   // el cron (entrega at-least-once), no duplica el aviso.
-  try {
-    if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && tgItems.length) await tgSignal(env, tgItems);
-  } catch (e) {
-    // La reserva se persistió antes de enviar para impedir duplicados. Si la
-    // API rechaza el mensaje, deshacemos únicamente esa reserva para que el
-    // mismo consenso pueda reintentarse sin perder siete días de señal.
-    console.error(JSON.stringify({ message: 'telegram exceptional alert failed', error: ingestError(e) }));
-    const rollback = polyTelegramRollback(ad.telegram, ad.cons_notified, tgItems, nowIso, e);
-    ad.telegram = rollback.telegram;
-    ad.cons_notified = rollback.cons_notified;
-    try { await env.AA_LATEST.put('poly:alerts', JSON.stringify(ad)); }
-    catch (persistError) { console.error(JSON.stringify({ message: 'telegram rollback failed', error: ingestError(persistError) })); }
+  if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && tgItems.length) {
+    try {
+      const receipt = await tgSignal(env, tgItems);
+      // A failed status update remains `reserved`, which still occupies its
+      // physical slot and is safer than releasing a message already delivered.
+      try {
+        await completePolyTelegramReservations(env.DB, tgReservations, {
+          sentAt: new Date().toISOString(), messageId: receipt?.message_id ?? null,
+        });
+      } catch (completeError) {
+        console.error(JSON.stringify({ message: 'telegram delivery finalization failed safe', error: ingestError(completeError) }));
+      }
+    } catch (e) {
+      const definitive = e?.telegramDefinitive === true;
+      console.error(JSON.stringify({ message: 'telegram exceptional alert failed', definitive, error: ingestError(e) }));
+      try {
+        await failPolyTelegramReservations(env.DB, tgReservations, {
+          failedAt: new Date().toISOString(), error: ingestError(e), definitive,
+        });
+      } catch (quotaError) {
+        console.error(JSON.stringify({ message: 'telegram D1 failure state failed safe', error: ingestError(quotaError) }));
+      }
+      if (definitive) {
+        // Telegram explicitly answered ok:false, so no message was delivered;
+        // release only our own reservations and allow a measured retry.
+        const rollback = polyTelegramRollback(ad.telegram, ad.cons_notified, tgItems, nowIso, e);
+        ad.telegram = rollback.telegram;
+        ad.cons_notified = rollback.cons_notified;
+      } else {
+        // Timeout/network/ambiguous response: keep both D1 slots and KV dedupe.
+        // Under-sending is preferable to a duplicate or a third daily alert.
+        ad.telegram = { ...(ad.telegram || {}), last_error_at: nowIso, last_error: ingestError(e) };
+      }
+      try { await env.AA_LATEST.put('poly:alerts', JSON.stringify(ad)); }
+      catch (persistError) { console.error(JSON.stringify({ message: 'telegram failure projection failed', error: ingestError(persistError) })); }
+    }
   }
 }
 
@@ -1025,6 +1058,140 @@ export function polyTelegramGate(items, state, opts = {}) {
   };
 }
 
+const polyTelegramKey = (item) => `${item?.title || ''}|${item?.outcome || ''}`;
+const requireD1Write = (result, operation) => {
+  if (result?.success !== true) throw new Error(`D1 ${operation} failed`);
+  return Number(result?.meta?.changes || 0);
+};
+
+// During the deployment day, messages already sent by the legacy KV-only gate
+// consume the lower physical slots. Persisting this offset for the whole ET day
+// also keeps concurrent transition runs from turning a lost KV write into a
+// third real notification.
+export function polyTelegramLegacySlots(telegram, date) {
+  if (!telegram || telegram.date !== date) return 0;
+  const carried = Number(telegram.legacy_slots);
+  if (Number.isFinite(carried)) return Math.min(2, Math.max(0, Math.trunc(carried)));
+  if (telegram.policy === 'rare_v2_d1_atomic') return 0;
+  return Math.min(2, Math.max(0, Math.trunc(Number(telegram.sent) || 0)));
+}
+
+// D1 is the quota authority. One atomic INSERT chooses a free physical slot
+// (1 or 2) and checks the seven-day signal dedupe. SQLite serializes writes and
+// the partial UNIQUE index is the final invariant under concurrent cron runs.
+export async function reservePolyTelegram(DB, items, opts = {}) {
+  if (!DB) throw new Error('D1 unavailable for Telegram quota');
+  const date = String(opts.date || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('invalid ET date for Telegram quota');
+  const nowMs = Number(opts.nowSec) > 0 ? Number(opts.nowSec) * 1000 : Date.now();
+  const usedBefore = Math.min(2, Math.max(0, Math.trunc(Number(opts.usedBefore) || 0)));
+  const reservedAt = opts.reservedAt || new Date(nowMs).toISOString();
+  const cutoff = new Date(nowMs - (opts.dedupeSec ?? 7 * 86400) * 1000).toISOString();
+  const reservations = [];
+  try {
+    for (const item of Array.isArray(items) ? items : []) {
+      const rawKey = polyTelegramKey(item);
+      if (rawKey === '|') continue;
+      const dedupeKey = await mlbIngestSourceHash({ signal: rawKey });
+      const payloadHash = await mlbIngestSourceHash({
+        title: item.title, outcome: item.outcome, n: item.n ?? null, usd: item.usd ?? null,
+        price: item.sig?.price ?? null, strength: item.sig?.strength ?? null,
+      });
+      const reservationId = crypto.randomUUID();
+      const result = await DB.prepare(`
+        INSERT OR IGNORE INTO poly_telegram_deliveries
+          (reservation_id, et_date, slot, dedupe_key, status, reserved_at, payload_hash)
+        SELECT ?, ?, free.slot, ?, 'reserved', ?, ?
+        FROM (SELECT 1 AS slot UNION ALL SELECT 2 AS slot) AS free
+        WHERE free.slot > ?
+        AND NOT EXISTS (
+          SELECT 1 FROM poly_telegram_policy rollout
+          WHERE rollout.id = 1
+            AND julianday(?) < julianday(rollout.cutover_at, '+24 hours')
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM poly_telegram_deliveries x
+          WHERE x.et_date = ? AND x.slot = free.slot
+            AND x.status IN ('reserved', 'sent', 'unknown')
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM poly_telegram_deliveries x
+          WHERE x.dedupe_key = ?
+            AND (x.status IN ('reserved', 'unknown') OR (x.status = 'sent' AND x.sent_at >= ?))
+        )
+        ORDER BY free.slot
+        LIMIT 1
+      `).bind(reservationId, date, dedupeKey, reservedAt, payloadHash, usedBefore, reservedAt, date, dedupeKey, cutoff).run();
+      if (requireD1Write(result, 'Telegram reserve') === 1) {
+        reservations.push({ reservation_id: reservationId, et_date: date, dedupe_key: dedupeKey, item });
+      }
+    }
+  } catch (error) {
+    if (reservations.length) {
+      try {
+        await failPolyTelegramReservations(DB, reservations, {
+          failedAt: new Date().toISOString(), error: `reservation_batch_rollback: ${ingestError(error)}`, definitive: true,
+        });
+      } catch { /* the UNIQUE slots remain fail-closed if cleanup also fails */ }
+    }
+    throw error;
+  }
+  return { items: reservations.map((row) => row.item), reservations };
+}
+
+export function polyTelegramStateAfterReservations(gated, admittedItems, opts = {}) {
+  const state = { ...((gated && gated.state) || {}), notified: { ...((gated?.state?.notified) || {}) } };
+  const admitted = new Set((admittedItems || []).map(polyTelegramKey));
+  let rejected = 0;
+  for (const item of (gated?.items || [])) {
+    const key = polyTelegramKey(item);
+    if (admitted.has(key)) continue;
+    delete state.notified[key];
+    rejected++;
+  }
+  state.sent = Math.max(0, (Number(state.sent) || 0) - rejected);
+  state.legacy_slots = Math.min(2, Math.max(0, Math.trunc(Number(opts.legacySlots) || 0)));
+  state.policy = 'rare_v2_d1_atomic';
+  return state;
+}
+
+export async function completePolyTelegramReservations(DB, reservations, opts = {}) {
+  if (!DB) throw new Error('D1 unavailable for Telegram completion');
+  const sentAt = opts.sentAt || new Date().toISOString();
+  let changes = 0;
+  for (const row of Array.isArray(reservations) ? reservations : []) {
+    const result = await DB.prepare(`
+      UPDATE poly_telegram_deliveries
+      SET status = 'sent', sent_at = ?, telegram_message_id = ?, error = NULL
+      WHERE reservation_id = ? AND status = 'reserved'
+    `).bind(sentAt, opts.messageId ?? null, row.reservation_id).run();
+    changes += requireD1Write(result, 'Telegram complete');
+  }
+  return changes;
+}
+
+export async function failPolyTelegramReservations(DB, reservations, opts = {}) {
+  if (!DB) throw new Error('D1 unavailable for Telegram failure state');
+  const failedAt = opts.failedAt || new Date().toISOString();
+  const definitive = opts.definitive === true;
+  let changes = 0;
+  for (const row of Array.isArray(reservations) ? reservations : []) {
+    const result = definitive
+      ? await DB.prepare(`
+          UPDATE poly_telegram_deliveries
+          SET status = 'failed', slot = NULL, failed_at = ?, error = ?
+          WHERE reservation_id = ? AND status = 'reserved'
+        `).bind(failedAt, String(opts.error || '').slice(0, 300), row.reservation_id).run()
+      : await DB.prepare(`
+          UPDATE poly_telegram_deliveries
+          SET status = 'unknown', failed_at = ?, error = ?
+          WHERE reservation_id = ? AND status = 'reserved'
+        `).bind(failedAt, String(opts.error || '').slice(0, 300), row.reservation_id).run();
+    changes += requireD1Write(result, definitive ? 'Telegram release' : 'Telegram unknown');
+  }
+  return changes;
+}
+
 export function polyTelegramRollback(telegram, consNotified, items, failedAt = null, error = null) {
   const state = { ...(telegram || {}), notified: { ...((telegram && telegram.notified) || {}) } };
   const consensus = { ...(consNotified || {}) };
@@ -1070,7 +1237,14 @@ async function tgSignal(env, items) {
     body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text }),
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok || body.ok !== true) throw new Error(`Telegram ${res.status}: ${JSON.stringify(body).slice(0, 180)}`);
+  if (!res.ok || body.ok !== true) {
+    const error = new Error(`Telegram ${res.status}: ${JSON.stringify(body).slice(0, 180)}`);
+    // ok:false is an explicit rejection: Telegram says it did not deliver.
+    // Network/timeouts or an unreadable body remain ambiguous and keep slots.
+    error.telegramDefinitive = body && body.ok === false;
+    throw error;
+  }
+  return { message_id: body?.result?.message_id ?? null };
 }
 
 // Radar de wallets de Polymarket (observatorio descriptivo) — lo publica
@@ -1201,7 +1375,7 @@ async function day(date, env, origin) {
   }
   if (env.DB) {
     const { results } = await env.DB.prepare(
-      'SELECT event_id, home, away, pick, prob, confidence, status, result FROM predictions WHERE sport = ? AND date = ? ORDER BY prob DESC',
+      'SELECT event_id, home, away, pick, prob, price, confidence, status, result FROM predictions WHERE sport = ? AND date = ? ORDER BY prob DESC',
     ).bind('mlb', date).all();
     if (results && results.length) {
       const events = results.map((r) => ({
@@ -1211,6 +1385,7 @@ async function day(date, env, origin) {
         prediction: {
           pick: r.pick, prob: r.prob,
           prob_pct: r.prob != null ? Math.round(r.prob * 1000) / 10 : null,
+          price: Number.isFinite(Number(r.price)) && Math.abs(Number(r.price)) >= 100 ? Number(r.price) : null,
           confidence: r.confidence, engine_version: null,
         },
         metrics: [], summary_es: null, snapshot: null, risk: null, odds: null,
@@ -1279,11 +1454,16 @@ async function event(id, env, origin) {
 async function history(url, env, origin) {
   if (!env.DB) return json({ error: 'no_db' }, 503, origin);
   const days = Math.min(60, Math.max(1, parseInt(url.searchParams.get('days') || '14', 10) || 14));
+  const cutoffDate = new Date(`${etDate(new Date())}T12:00:00Z`);
+  cutoffDate.setUTCDate(cutoffDate.getUTCDate() - (days - 1));
+  const cutoff = cutoffDate.toISOString().slice(0, 10);
   const { results } = await env.DB.prepare(
-    'SELECT date, event_id, home, away, pick, prob, confidence, status, result, engine_version ' +
-    'FROM predictions WHERE sport = ? ORDER BY date DESC, prob DESC LIMIT ?',
-  ).bind('mlb', days * 40).all();
-  return json({ sport: 'mlb', days, count: results.length, predictions: results }, 200, origin, 120);
+    'SELECT date, event_id, selection_key, market, pick, side, line, home, away, prob, price, ' +
+    'public_play, public_lock, public_gem, confidence, result, posted_at, start_time, engine_version, source_scope ' +
+    'FROM mlb_public_picks WHERE invalidated = 0 AND date >= ? ' +
+    'ORDER BY date DESC, start_time DESC, selection_key ASC LIMIT ?',
+  ).bind(cutoff, days * 40).all();
+  return json({ sport: 'mlb', days, cutoff, count: results.length, predictions: results }, 200, origin, 120);
 }
 
 // Marcadores en vivo: proxy a ESPN con caché de borde (30s) para no golpear la

@@ -69,6 +69,39 @@ test('gradúa Over y F5 sin convertirlos en picks públicos', () => {
   assert.equal(lab.pitcher_f5[0].result, 'win');
 });
 
+test('un juego pospuesto liquida Over y F5 sombra como void', () => {
+  const lab = buildMarketLab([row()], { max: 2 });
+  const games = new Map([[1, { game_pk: 1, status: 'Postponed', home_score: null, away_score: null }]]);
+  assert.equal(gradeMarketLab(lab, games), true);
+  for (const key of ['over', 'f5', 'pitcher_f5']) {
+    assert.equal(lab[key][0].result, 'void');
+    assert.equal(lab[key][0].void_reason, 'Postponed');
+  }
+});
+
+test('scratch pregame queda fuera del replay que decide el gate', () => {
+  const lab = buildMarketLab([row()], { max: 2 });
+  for (const key of ['over', 'f5', 'pitcher_f5']) lab[key][0].scratch_warning = true;
+  assert.equal(gradeMarketLab(lab, new Map()), true);
+  for (const key of ['over', 'f5', 'pitcher_f5']) {
+    assert.equal(lab[key][0].result, 'void');
+    assert.equal(lab[key][0].void_reason, 'probable_starter_changed_pregame');
+  }
+
+  const causal = (id) => row(id, {
+    game_date: '2026-07-21', home_win: 1, final: '1-3',
+    first_pitch: '2026-07-21T23:00:00Z', feature_as_of: '2026-07-21T12:00:00Z',
+    decision_captured_at: '2026-07-21T12:00:00Z', capture_phase: 'pregame',
+    feature_hash: String(id).padStart(64, 'a').slice(-64),
+    integrity: { cohort: 'native_pregame_immutable', training_eligible: true },
+  });
+  const rows = [causal(1), causal(2), causal(3)];
+  const full = marketLabReport(rows, { minTest: 100 });
+  const filtered = marketLabReport(rows, { minTest: 100, invalidatedGamePks: new Set(['1']) });
+  assert.equal(full.rows, 3);
+  assert.equal(filtered.rows, 2);
+});
+
 test('reporte cronológico mantiene Over/F5 cerrados cuando falta el gate', () => {
   const rows = [];
   for (let d = 1; d <= 12; d++) for (let i = 0; i < 3; i++) rows.push(row(d * 10 + i, {
