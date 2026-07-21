@@ -23,6 +23,30 @@ const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN || null;
 const r2 = (x) => Math.round(x * 1000) / 10;   // fracción → % con 1 decimal
 const pp = (x) => Math.round(x * 1000) / 10;   // idem para "puntos porcentuales"
 
+const SIGNAL_EN = {
+  market: 'Matches the market favorite',
+  agree5: '5+ factors agree with the pick',
+  prob60: 'Pick probability at or above 60%',
+  pitcher: 'Better recent starter ERA',
+  streak3: 'Pick team winning streak of 3+',
+  news: 'News/injuries favor the pick',
+  aux_rest: 'Real rest advantage for the pick (1+ day)',
+  aux_dens: 'Fresher schedule (games in last 7 days)',
+  aux_haf: 'Better venue-specific form',
+  aux_pyth: 'Better Pythagorean record over last 20',
+  aux_tze: 'Opponent traveled east by 2+ time zones',
+  platoon: 'Platoon advantage versus starter handedness',
+};
+
+const FACTOR_LABELS = {
+  momentum: { es: 'momento reciente', en: 'recent form' },
+  pitching: { es: 'pitcheo', en: 'pitching' },
+  f5: { es: 'primeras cinco entradas', en: 'first-five innings' },
+  bats: { es: 'bateo', en: 'offense' },
+  schedule: { es: 'calendario y descanso', en: 'schedule and rest' },
+  manager: { es: 'manejo y banquillo', en: 'management and bench' },
+};
+
 // ECE (error de calibración esperado): promedio ponderado de |confianza − real|.
 function eceOf(curve) {
   if (!Array.isArray(curve) || !curve.length) return null;
@@ -48,7 +72,8 @@ function build() {
   const signals = (L.signal_audit && L.signal_audit.list || [])
     .filter((s) => s.verdict === 'robusto' && s.gap != null)
     .sort((a, b) => b.gap - a.gap).slice(0, 5)
-    .map((s) => ({ label: s.label, edge_pp: pp(s.gap), verdict: s.verdict, fav_rate: r2(s.fav_rate) }));
+    .map((s) => ({ id: s.id, label: s.label, label_en: SIGNAL_EN[s.id] || s.label,
+      edge_pp: pp(s.gap), verdict: s.verdict, fav_rate: r2(s.fav_rate) }));
 
   // Snapshot compacto para la tendencia histórica
   const snap = { date: L.last_date, n: L.n_graded, gap: gap != null ? r2(gap) : null,
@@ -67,9 +92,10 @@ function build() {
          `I know I run a bit overconfident: when I say ~65% on average, it happens ~${r2(seg.hits)}% (a ${r2(gap)}-pt gap). That's why the number I show is already calibrated downward.`);
   }
   if (signals.length) {
-    const top = signals.slice(0, 3).map((s) => `${s.label} (+${s.edge_pp} pts)`).join(', ');
-    push(`Aprendí qué señales SÍ predicen de verdad: ${top}. Cuando coinciden, mi acierto sube de forma medible.`,
-         `I've learned which signals truly predict: ${top}. When they line up, my hit rate rises measurably.`);
+    const topEs = signals.slice(0, 3).map((s) => `${s.label} (+${s.edge_pp} pts)`).join(', ');
+    const topEn = signals.slice(0, 3).map((s) => `${s.label_en} (+${s.edge_pp} pts)`).join(', ');
+    push(`Aprendí qué señales SÍ predicen de verdad: ${topEs}. Cuando coinciden, mi acierto sube de forma medible.`,
+         `I've learned which signals truly predict: ${topEn}. When they line up, my hit rate rises measurably.`);
   }
   if (lockGate?.gate?.passes && lockGate.all?.n) {
     push(`Encontré una combinación más selectiva para ORO: favorito del mercado + 5 factores AA + mejor ERA reciente del abridor. En el replay cronológico hizo ${lockGate.all.wins}-${lockGate.all.losses} (${r2(lockGate.all.p)}%); ahora me abstengo si falta una de las tres.`,
@@ -86,9 +112,11 @@ function build() {
   }
   const miss = (L.misses || [])[0];
   if (miss && Array.isArray(miss.misled_factors) && miss.misled_factors.length) {
-    const facs = miss.misled_factors.slice(0, 2).map((f) => f.factor).join(' y ');
-    push(`De mi último error (${miss.matchup} ${miss.final}): me fié de ${facs} y no funcionó. Lo peso en la próxima re-calibración.`,
-         `From my latest miss (${miss.matchup} ${miss.final}): I leaned on ${facs} and it didn't pan out. I weigh that into the next re-calibration.`);
+    const factors = miss.misled_factors.slice(0, 2).map((f) => FACTOR_LABELS[f.factor] || { es: f.factor, en: f.factor });
+    const facsEs = factors.map((f) => f.es).join(' y ');
+    const facsEn = factors.map((f) => f.en).join(' and ');
+    push(`De mi último error (${miss.matchup} ${miss.final}): me fié de ${facsEs} y no funcionó. Lo peso en la próxima re-calibración.`,
+         `From my latest miss (${miss.matchup} ${miss.final}): I leaned on ${facsEn} and it didn't pan out. I weigh that into the next re-calibration.`);
   }
 
   // ── Log con fecha (append-only): registra cambios notables entre corridas ──
