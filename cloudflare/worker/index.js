@@ -139,9 +139,9 @@ export default {
 
   // Crons del Radar:
   //  · "*/5 * * * *"  → vigía: transacciones nuevas de las wallets vigiladas → KV
-  //    poly:alerts (+ Telegram si hay secretos).
+  //    poly:alerts; Telegram solo si una señal supera el gate raro rare_v1.
   //  · "0 13 * * *"   → diario (9am ET): archiva snapshot en D1, mide persistencia
-  //    viva + wallets nuevas en el top, publica poly:track y manda el resumen del día.
+  //    viva + wallets nuevas en el top y publica poly:track (sin push diario).
   // Solo lectura de datos públicos.
   async scheduled(event, env, ctx) {
     if (event && event.cron === '0 13 * * *') ctx.waitUntil(polyDaily(env));
@@ -333,16 +333,21 @@ async function polyWatch(env) {
   const lsRaw = await env.AA_LATEST.get('poly:lastseen');
   let lastseen; try { lastseen = lsRaw ? JSON.parse(lsRaw) : {}; } catch (e) { lastseen = {}; }
   const found = [], recentBuys = [];
-  const nowSec = Math.floor(Date.now() / 1000), CONS_WIN = 7 * 86400; // consenso: ventana de 7 días
+  // El panel de señales debe reflejar actividad reciente y con tamaño medido,
+  // no una coincidencia que lleva una semana flotando.
+  const nowSec = Math.floor(Date.now() / 1000), CONS_WIN = 48 * 3600;
   for (const w of watch) {
     try {
       const r = await fetch(`https://data-api.polymarket.com/activity?user=${encodeURIComponent(w.w)}&limit=25&type=TRADE`, { headers: { Accept: 'application/json' } });
       if (!r.ok) continue;
       const acts = await r.json();
-      // Consenso de sharps: recolecta las COMPRAS recientes (7 días) de las vigiladas.
+      // Consenso de vigiladas: compras recientes de al menos $50 medidos.
       for (const a of (Array.isArray(acts) ? acts : [])) {
         if (a.side !== 'BUY' || !isFinite(+a.timestamp) || (nowSec - +a.timestamp) > CONS_WIN) continue;
-        recentBuys.push({ wallet: w.w, name: w.pseudonym || w.name || null, score: w.insider_score ?? null, title: String(a.title || '').slice(0, 90), outcome: a.outcome != null ? String(a.outcome) : null, ts: +a.timestamp, price: isFinite(+a.price) ? +a.price : null, usd: a.usdcSize != null && isFinite(+a.usdcSize) ? Math.round(+a.usdcSize) : (isFinite(+a.price) && isFinite(+a.size) ? Math.round(+a.price * +a.size) : null) });
+        const usd = a.usdcSize != null && isFinite(+a.usdcSize) ? Math.round(+a.usdcSize)
+          : (isFinite(+a.price) && isFinite(+a.size) ? Math.round(+a.price * +a.size) : null);
+        if (!Number.isFinite(usd) || usd < 50) continue;
+        recentBuys.push({ wallet: w.w, name: w.pseudonym || w.name || null, score: w.insider_score ?? null, title: String(a.title || '').slice(0, 90), outcome: a.outcome != null ? String(a.outcome) : null, ts: +a.timestamp, price: isFinite(+a.price) ? +a.price : null, usd });
       }
       const bootstrap = lastseen[w.w] == null;
       const { fresh, maxTs } = polyFreshTrades(acts, bootstrap ? Infinity : lastseen[w.w]);
@@ -364,7 +369,6 @@ async function polyWatch(env) {
     if (fresh.length) {
       ad.alerts = [...fresh, ...ad.alerts].slice(0, 100);
       ad.updated_at = nowIso;
-      if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) await tgNotify(env, fresh.slice(0, 5));
     }
   }
   ad.checked_at = nowIso;
@@ -386,22 +390,29 @@ async function polyWatch(env) {
     ad.cons_notified = r.notified;
     consPush = r.push;
   } catch (e) { /* el push del consenso nunca debe tumbar la ronda del vigía */ }
+  // Telegram NO replica el tape crudo ni el resumen diario. Solo puede salir una
+  // observación excepcional que supere todos los filtros de calidad y el tope
+  // diario. El estado vive dentro de poly:alerts: cero claves/escrituras KV extra.
+  let tgItems = [];
+  try {
+    if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && consPush.length) {
+      const sigByKey = new Map();
+      for (const s of [...((ad.signals && ad.signals.strong) || []), ...((ad.signals && ad.signals.likely) || [])]) sigByKey.set(s.title + '|' + s.outcome, s);
+      const enriched = consPush.map((c) => ({ ...c, sig: sigByKey.get(c.title + '|' + c.outcome) || null }));
+      const gated = polyTelegramGate(enriched, ad.telegram, { nowSec, date: etDate(new Date(nowSec * 1000)) });
+      ad.telegram = gated.state;
+      tgItems = gated.items;
+    }
+  } catch (e) { /* el gate de Telegram nunca debe tumbar el vigía */ }
   await env.AA_LATEST.put('poly:alerts', JSON.stringify(ad));
   // lastseen: solo se reescribe si CAMBIÓ (en ventanas tranquilas no hay actividad
   // nueva) → ahorra escrituras KV para quedarnos holgados en el free tier ($0 infra).
   const lsAfter = JSON.stringify(lastseen);
   if (lsAfter !== (lsRaw || '')) await env.AA_LATEST.put('poly:lastseen', lsAfter);
-  // 🎯 Alerta de Telegram: SOLO señales «posible informado» fuertes (no cualquier
-  // consenso) → poca frecuencia, mucho valor. Cruza los consensos nuevos/reforzados
-  // con su lectura en ad.signals (informado + fuerza) y manda el mensaje rico.
+  // Telegram se manda DESPUÉS de persistir el dedupe/tope. Si Cloudflare reintenta
+  // el cron (entrega at-least-once), no duplica el aviso.
   try {
-    if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && consPush.length) {
-      const sigByKey = new Map();
-      for (const s of [...((ad.signals && ad.signals.strong) || []), ...((ad.signals && ad.signals.likely) || [])]) sigByKey.set(s.title + '|' + s.outcome, s);
-      const alertable = consPush.map((c) => ({ ...c, sig: sigByKey.get(c.title + '|' + c.outcome) || null }))
-        .filter((c) => c.sig && c.sig.info === 'informed' && (c.sig.strength || 0) >= 55);
-      if (alertable.length) await tgSignal(env, alertable.slice(0, 3));
-    }
+    if (env.TG_BOT_TOKEN && env.TG_CHAT_ID && tgItems.length) await tgSignal(env, tgItems);
   } catch (e) { /* Telegram caído no afecta las alertas ni KV */ }
 }
 
@@ -538,11 +549,15 @@ export function polySignalStrength({ n = 1, avgWrLB = null, avgInfoScore = 50, u
 
 // 🎯 Señales del día (exportada para tests): convierte el consenso en "fichas" con
 // lectura informado/tendencia + fuerza + probabilidad del mercado. Dos rankings:
-//  · strong → las más fuertes (más dinero listo), sin importar el precio
+//  · strong → las más fuertes dentro del rango no-extremo y con tamaño medido
 //  · likely → las más probables SEGÚN EL MERCADO (precio ≥ likelyMin), pagan poco
 export function polySignals(consensus, byWallet, nowSec = 0, opts = {}) {
   const likelyMin = opts.likelyMin != null ? opts.likelyMin : 0.70;
   const cap = opts.cap != null ? opts.cap : 8;
+  const minUsd = opts.minUsd != null ? opts.minUsd : 100;
+  const minPrice = opts.minPrice != null ? opts.minPrice : 0.05;
+  const maxPrice = opts.maxPrice != null ? opts.maxPrice : 0.95;
+  const maxAgeSec = opts.maxAgeSec != null ? opts.maxAgeSec : 48 * 3600;
   const bw = byWallet instanceof Map ? byWallet
     : new Map(Object.entries(byWallet && typeof byWallet === 'object' ? byWallet : {}));
   const avg = (xs) => { const v = xs.filter((x) => x != null && isFinite(x)); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
@@ -550,6 +565,9 @@ export function polySignals(consensus, byWallet, nowSec = 0, opts = {}) {
   for (const c of (Array.isArray(consensus) ? consensus : [])) {
     if (!c || !c.title || !c.outcome) continue;
     const ref = c.price != null ? c.price : null;
+    const usd = Number(c.usd);
+    const age = nowSec ? (Number.isFinite(Number(c.last_ts)) ? Math.max(0, nowSec - Number(c.last_ts)) : Infinity) : 0;
+    if (!Number.isFinite(usd) || usd < minUsd || !Number.isFinite(Number(ref)) || Number(ref) < minPrice || Number(ref) > maxPrice || age > maxAgeSec) continue;
     const wl = (c.wallets || []).map((w) => {
       const prof = bw.get(w.w) || {};
       const read = polyWalletInfo(prof, w.price != null ? w.price : null, ref);
@@ -582,23 +600,64 @@ export function polySignals(consensus, byWallet, nowSec = 0, opts = {}) {
   const strong = [...out].sort((a, b) => (b.strength - a.strength) || (b.n - a.n) || ((b.last_ts || 0) - (a.last_ts || 0))).slice(0, cap);
   const likely = out.filter((s) => s.price != null && s.price >= likelyMin)
     .sort((a, b) => (b.price - a.price) || (b.strength - a.strength)).slice(0, cap);
-  return { strong, likely, min_prob: likelyMin };
+  return { strong, likely, min_prob: likelyMin, filters: { min_usd: minUsd, min_price: minPrice, max_price: maxPrice, max_age_hours: maxAgeSec / 3600 } };
 }
 
-// Telegram (opcional): agrupa hasta 5 alertas en un mensaje. Sin secretos → no-op.
-async function tgNotify(env, alerts) {
-  const line = (a) => `🚨 ${a.pseudonym || a.wallet.slice(0, 8)}${a.score != null ? ` (score ${a.score})` : ''}: ${a.side === 'BUY' ? 'COMPRA' : 'VENDE'} "${a.outcome}" a ${a.price != null ? (100 * a.price).toFixed(0) : '?'}¢${a.usd != null ? ` ($${a.usd})` : ''} — ${a.title}`;
-  const text = `📡 Radar AA — movimiento de wallets vigiladas:\n\n${alerts.map(line).join('\n\n')}\n\nDescriptivo, no recomendación. aasport.net → Radar`;
-  try {
-    await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text }),
-    });
-  } catch (e) { /* Telegram caído no afecta las alertas de la página */ }
+// Gate extraordinariamente selectivo para Telegram (puro/exportado para tests).
+// No estima probabilidad de ganar: elimina ruido evidente antes del push. Requiere
+// 3+ wallets, 2 con lectura informada y $100+ cada una, $500 agregados, precio no
+// extremo, piso Wilson alto, fuerza 80+, señal reciente y dedupe por 7 días.
+// Máximo DOS señales por día ET; puede devolver cero (lo normal).
+export function polyTelegramGate(items, state, opts = {}) {
+  const nowSec = Number(opts.nowSec) || 0;
+  const date = String(opts.date || '');
+  const maxPerDay = opts.maxPerDay ?? 2;
+  const minWallets = opts.minWallets ?? 3;
+  const minFundedWallets = opts.minFundedWallets ?? 2;
+  const minWalletUsd = opts.minWalletUsd ?? 100;
+  const minUsd = opts.minUsd ?? 500;
+  const minStrength = opts.minStrength ?? 80;
+  const minWrLB = opts.minWrLB ?? 0.60;
+  const minPrice = opts.minPrice ?? 0.10;
+  const maxPrice = opts.maxPrice ?? 0.90;
+  const maxAgeSec = opts.maxAgeSec ?? 6 * 3600;
+  const dedupeSec = opts.dedupeSec ?? 7 * 86400;
+  const prev = state && typeof state === 'object' ? state : {};
+  const notified = {};
+  for (const [key, ts] of Object.entries(prev.notified || {})) {
+    if (Number.isFinite(+ts) && (!nowSec || nowSec - +ts <= dedupeSec)) notified[key] = +ts;
+  }
+  const sent = prev.date === date ? Math.max(0, Number(prev.sent) || 0) : 0;
+  let room = Math.max(0, maxPerDay - sent);
+  const eligible = [];
+  for (const c of Array.isArray(items) ? items : []) {
+    const s = c && c.sig;
+    if (!c || !s || !c.title || !c.outcome || room <= 0) continue;
+    const key = c.title + '|' + c.outcome;
+    const wallets = Array.isArray(s.wallets) ? s.wallets : [];
+    const informed = wallets.filter((w) => w.info === 'informed');
+    const funded = informed.filter((w) => Number(w.usd) >= minWalletUsd);
+    const usd = Number(c.usd), strength = Number(s.strength), wrLB = Number(s.avg_wr_lb);
+    const age = nowSec && Number.isFinite(Number(c.last_ts)) ? Math.max(0, nowSec - Number(c.last_ts)) : Infinity;
+    if (notified[key] != null) continue;
+    if ((c.n || 0) < minWallets || informed.length < minFundedWallets || funded.length < minFundedWallets) continue;
+    if (!Number.isFinite(usd) || usd < minUsd || s.info !== 'informed' || !Number.isFinite(strength) || strength < minStrength) continue;
+    if (!Number.isFinite(wrLB) || wrLB < minWrLB || !Number.isFinite(Number(s.price)) || Number(s.price) < minPrice || Number(s.price) > maxPrice) continue;
+    if (age > maxAgeSec) continue;
+    eligible.push(c);
+  }
+  eligible.sort((a, b) => (b.sig.strength - a.sig.strength) || ((b.n || 0) - (a.n || 0)) || ((b.usd || 0) - (a.usd || 0)));
+  const selected = eligible.slice(0, room);
+  for (const c of selected) notified[c.title + '|' + c.outcome] = nowSec;
+  room -= selected.length;
+  return {
+    items: selected,
+    state: { date, sent: sent + selected.length, max_per_day: maxPerDay, notified, policy: 'rare_v1' },
+  };
 }
 
-// Telegram de la 🎯 Señal informada: la más fuerte del Radar (varias vigiladas que
-// «saben algo» en el mismo lado). Mensaje rico: mercado %, fuerza, por qué, y las
+// Telegram de observación excepcional: varias vigiladas con patrón estadístico
+// compatible con información en el mismo lado. Mensaje rico: mercado %, fuerza, y
 // wallets con su win rate. Un bloque por señal nueva/reforzada. Sin secretos → no
 // se llega aquí. Cada item lleva {n, prevN, outcome, title, usd, sig} donde sig es
 // la lectura de polySignals (info, strength, implied, why, wallets con wr).
@@ -613,7 +672,7 @@ async function tgSignal(env, items) {
       .map((w) => `• ${w.name || (w.w || '').slice(0, 8) || '0x…'}${w.score != null ? ` 🎯${w.score}` : ''}${w.wr != null ? ` (${Math.round(100 * w.wr)}%)` : ''}`).join('\n');
     return `🎯 Posible informado${c.prevN ? ` (refuerzo · antes ${c.prevN})` : ''}\n“${c.outcome}” · ${c.title}\n🤝 ${c.n} vigiladas${mkt}${fz}${why ? `\nPor qué: ${why}` : ''}\n${wl}`;
   };
-  const text = `🎯 Señal informada — Radar AA\n\n${items.map(block).join('\n\n')}\n\nLa fuerza mide el dinero listo que coincide, NO es probabilidad de que ganes; el % es lo que pone el mercado. «Posible informado» es un patrón (entra antes/barato con buen récord), no una acusación. Descriptivo, no recomendación — el pasado apenas predice el futuro. aasport.net → Radar`;
+  const text = `🎯 Observación excepcional — Radar AA\n\n${items.map(block).join('\n\n')}\n\nPasó el filtro anti-ruido (3+ vigiladas, $500+ y precio no extremo), pero NO es una jugada segura ni una recomendación. La fuerza no es probabilidad de ganar; el % es el precio del mercado. «Posible informado» describe un patrón estadístico, nunca una acusación. aasport.net → Radar`;
   try {
     await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
@@ -725,28 +784,8 @@ async function polyDaily(env) {
   const { persistence, new_wallets } = polyTrackCompute(doc, { thenDate, thenWatched, seenPrev });
   await env.AA_LATEST.put('poly:track', JSON.stringify({ updated_at: new Date().toISOString(), date, persistence, new_wallets, history }));
 
-  // 3. Resumen diario por Telegram (opcional).
-  if (env.TG_BOT_TOKEN && env.TG_CHAT_ID) await tgDaily(env, doc, new_wallets, persistence);
-}
-
-// Resumen diario del Radar por Telegram: Top 3 por dinero + 1 nueva + mejor jugada
-// + persistencia viva, en un solo mensaje. Sin secretos → no se llama.
-async function tgDaily(env, doc, newWallets, persistence) {
-  const money = (x) => '$' + Math.round(+x || 0).toLocaleString('en-US');
-  const nm = (w) => w.pseudonym || w.name || String(w.w || '').slice(0, 8);
-  const top3 = (doc.wallets || []).slice(0, 3).map((w, i) => `${i + 1}. ${nm(w)} +${money(w.pnl_usd)}`).join('\n');
-  const bt = (doc.top_trades || [])[0];
-  const lines = ['🏆 Radar AA — resumen del día', '', 'Top 3 por dinero ganado:', top3];
-  if (newWallets && newWallets.length) lines.push('', `🆕 Nueva en el top: ${newWallets[0].name || String(newWallets[0].w).slice(0, 8)} (+${money(newWallets[0].pnl)})`);
-  if (bt) lines.push('', `🎯 Mejor jugada: "${String(bt.q || '').slice(0, 60)}" +${money(bt.profit)}`);
-  if (persistence) lines.push('', `📈 Persistencia viva: de ${persistence.then_n} vigiladas hace ~7 días, ${persistence.stayed} siguen hoy (${Math.round(100 * persistence.overlap)}%).`);
-  lines.push('', 'Descriptivo, no recomendación. aasport.net → Radar');
-  try {
-    await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text: lines.join('\n') }),
-    });
-  } catch (e) { /* Telegram caído no afecta nada */ }
+  // El resumen diario permanece en /v1/poly/track y en la app. No se empuja a
+  // Telegram: el canal queda reservado para el gate excepcional rare_v1.
 }
 
 // Bajas (lesionados/suspendidos) por equipo — las publica robot/injuries.mjs cada hora.

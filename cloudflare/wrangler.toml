@@ -19,9 +19,10 @@ database_id = "ed0969d8-050a-4987-ab98-b047c30f76c9"
 
 # Crons del Radar:
 #  · cada 5 min → vigía: transacciones nuevas de las wallets vigiladas
-#    (poly:radar.watchlist) → KV poly:alerts (+Telegram si hay secretos).
+#    (poly:radar.watchlist) → KV poly:alerts. Telegram queda reservado para un
+#    máximo de 2 observaciones/día que superen el gate anti-ruido rare_v1.
 #  · 13:00 UTC (≈9am ET) → diario: snapshot en D1 poly_snapshots, persistencia
-#    viva + wallets nuevas en el top → KV poly:track + resumen del día por Telegram.
+#    viva + wallets nuevas en el top → KV poly:track (sin resumen por Telegram).
 [triggers]
 crons = ["*/5 * * * *", "0 13 * * *"]
 
