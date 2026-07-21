@@ -267,22 +267,18 @@ export function selectPlays(analyses, { max = 3, minConf = 0.45 } = {}) {
     plays.push(p)
     if (plays.length >= max) break
   }
-  const legs = plays.slice(0, Math.min(3, plays.length))
-  const jointP = legs.reduce((pp, a) => pp * a.prob, 1)
-  const combo = legs.length >= 2 ? {
-    legs: legs.map((a) => ({ label: a.label, matchup: a.matchup, prob: a.prob, game_pk: a.game_pk, market: a.market })),
-    joint_probability: jointP,
-    fair_decimal: jointP > 0 ? Math.round((1 / jointP) * 100) / 100 : null,
-  } : null
-  return { plays, combo, ranked: analyses.sort((x, y) => y.bestPlay.confScore - x.bestPlay.confScore) }
+  // A parlay cannot be priced by multiplying marginal probabilities: legs can
+  // share the same run environment, starter and bullpen. Keep this field null
+  // until a joint simulation is calibrated and a real payout is captured.
+  return { plays, combo: null, ranked: analyses.sort((x, y) => y.bestPlay.confScore - x.bestPlay.confScore) }
 }
 
 // --- "Fijos del día": the 0-2 highest-SAFETY moneyline picks ------------------
 // A game only qualifies when THREE independently-audited signals line up:
 //   1) market favorite, 2) 5+ AA factors, 3) the pick's starter has the better
-// recent ERA with >=2 measured starts on BOTH sides. The 2026-07-21 chronological
-// replay produced 76-30 (71.7%, n=106): 47-19 before the 70% date cut and 29-11
-// after it. This is a selection gate, not a higher made-up probability.
+// recent ERA with >=2 measured starts on BOTH sides. Historical screens are
+// discovery evidence only; the native immutable forward cohort controls the
+// public gate. Until that gate passes, candidates remain in shadow.
 // PLATA is no longer used to fill a quota: its own replay was unstable/negative.
 // Some days return zero or one pick; abstention is part of the model.
 // Higher-probability tier, never a guarantee. `oddsByPk` is a Map or object
