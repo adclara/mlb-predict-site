@@ -1,0 +1,57 @@
+# Observador MLB rico, separado del robot horario para que sus 45 minutos de
+# muestreo no bloqueen el slate, la gradación ni la publicación de las 7am.
+# La captura D1 */20 del Worker es el reloj fiable; este workflow best-effort
+# añade multi-book, win probability y movimiento open→close al histórico Git.
+name: mlb-live-observer
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '27 * * * *'
+  push:
+    branches: [main]
+    paths: ['.github/poke-live']
+permissions:
+  contents: write
+concurrency:
+  group: mlb-live-observer
+  cancel-in-progress: false
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Git identity (robot)
+        run: |
+          git config user.name "adrian-robot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Capturar multi-book y win probability en vivo
+        env:
+          DATA_DIR: ${{ github.workspace }}/data
+        run: node robot/live_odds.mjs
+      - name: Persistir cualquier flush pendiente
+        shell: bash
+        run: |
+          git add data/history/live
+          if ! git diff --cached --quiet; then
+            git commit -m "MLB live observer: final flush ($(date -u +%FT%TZ))"
+          fi
+          if [ "$(git rev-list --count "origin/$GITHUB_REF_NAME..HEAD")" -gt 0 ]; then
+            pushed=0
+            for i in 1 2 3; do
+              if git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push; then
+                pushed=1
+                break
+              fi
+              sleep 5
+            done
+            if [ "$pushed" -ne 1 ]; then
+              echo "No se pudo persistir el histórico live tras 3 intentos."
+              exit 1
+            fi
+          else
+            echo "sin snapshots nuevos"
+          fi

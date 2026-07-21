@@ -4,17 +4,18 @@
 //   1. Precisión probabilística (Brier/log-loss/acierto) del modelo clásico vs
 //      el APRENDIDO vs el combinado, con intervalos por bootstrap.
 //   2. Calibración (¿cuando digo X% ocurre X%?).
-//   3. Backtest de SELECCIÓN: si solo apostáramos los picks de mayor confianza
-//      (varios umbrales), ¿qué acierto y qué unidades netas a -110 da OOS?
-//      (52.38% es el punto de equilibrio a -110.)
+//   3. Backtest de SELECCIÓN: cobertura y acierto por confianza. ROI/unidades
+//      se calculan únicamente si existe un precio pregame auditable; jamás se
+//      supone −110 para una moneyline cuyo precio real no fue capturado.
 //   4. Comparación honesta vs el mercado (de learning.json).
 //
 // Uso: node robot/simulate.mjs   (no necesita red; usa data/history)
 
 import fs from 'node:fs';
 import { join } from 'node:path';
-import { walkForwardEnsemble, bootstrapStability, probMetrics, reliability, FORMULA_VERSION } from './learn.js';
+import { walkForwardEnsemble, bootstrapStability, probMetrics, reliability, FORMULA_VERSION, prepareTrainingRows } from './learn.js';
 import { marketLabReport } from './market_lab.mjs';
+import { hasAuditableOpening } from './odds.js';
 
 const DATA = process.env.DATA_DIR || join(process.cwd(), 'data');
 const GAMES = join(DATA, 'history', 'games');
@@ -31,7 +32,7 @@ const r3 = (x) => (x == null ? '—' : x.toFixed(3));
 const files = fs.readdirSync(GAMES).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort();
 const rows = [];
 for (const f of files) { try { for (const r of (JSON.parse(fs.readFileSync(join(GAMES, f), 'utf8')).games || [])) rows.push(r); } catch { /* skip */ } }
-const graded = rows.filter((r) => r.graded && r.formula_version === FORMULA_VERSION);
+const graded = prepareTrainingRows(rows).filter((r) => r.formula_version === FORMULA_VERSION);
 console.log(`\n🔬 SIMULACIÓN MLB — walk-forward sobre ${files.length} días`);
 console.log(`   filas totales: ${rows.length} · gradadas (formula ${FORMULA_VERSION}): ${graded.length}`);
 
@@ -43,7 +44,7 @@ const showModel = (name, m) => console.log(`   ${name.padEnd(10)} acierto ${pctf
 showModel('clásico', run.classic);
 showModel('aprendido', run.learned);
 showModel('combinado', run.combined);
-const boot = bootstrapStability(pr.y, { classic: pr.classic, combined: pr.combined }, { B: 1000 });
+const boot = bootstrapStability(pr.y, { classic: pr.classic, combined: pr.combined }, { B: 1000, blocks: pr.dates });
 const dLL = boot.delta && boot.delta.logloss;
 const dLo = dLL && dLL.ci ? dLL.ci[0] : null;
 const dHi = dLL && dLL.ci ? dLL.ci[1] : null;
@@ -55,35 +56,42 @@ const ece = rel.ece;
 console.log(`\n══ 2) Calibración (modelo combinado OOS) ══`);
 console.log(`   ECE ${pctf(ece)} ${ece <= 0.03 ? '(excelente)' : ece <= 0.06 ? '(buena)' : '(mejorable — por eso el % mostrado se calibra hacia abajo)'}`);
 
-// ── 3) backtest de SELECCIÓN (¿los picks de alta confianza tienen ventaja?) ──
-console.log(`\n══ 3) Backtest de selección OOS (apostar el lado favorecido a -110) ══`);
-console.log(`   umbral · picks · acierto · unidades · IC95% acierto · veredicto (equilibrio 52.4%)`);
-const BE = 0.5238; // break-even a -110
+// ── 3) backtest de SELECCIÓN (cobertura/acierto + precio real si existe) ─────
+console.log(`\n══ 3) Backtest de selección OOS (sin fabricar precio −110) ══`);
+console.log(`   umbral · picks · acierto · precios auditables · ROI real · IC95% acierto`);
+const americanProfit = (price) => price > 0 ? price / 100 : 100 / Math.abs(price);
 function selAt(thr) {
-  let n = 0, w = 0, units = 0;
+  let n = 0, w = 0, pricedN = 0, units = 0;
   for (let i = 0; i < pr.combined.length; i++) {
     const p = pr.combined[i]; const conf = Math.max(p, 1 - p);
     if (conf < thr) continue;
     const pickHome = p >= 0.5; const win = (pickHome && pr.y[i] === 1) || (!pickHome && pr.y[i] === 0);
-    n++; if (win) { w++; units += 0.909; } else { units -= 1; }
+    n++; if (win) w++;
+    const row = pr.rows?.[i], odds = row?.odds;
+    const price = hasAuditableOpening(odds, 'ml')
+      ? Number(pickHome ? odds.ml_home_open : odds.ml_away_open) : null;
+    if (Number.isFinite(price) && price !== 0) {
+      pricedN++; units += win ? americanProfit(price) : -1;
+    }
   }
   const rate = n ? w / n : null;
   const se = n ? Math.sqrt(rate * (1 - rate) / n) : null;
-  return { thr, n, w, rate, lo: rate != null ? rate - 1.96 * se : null, hi: rate != null ? rate + 1.96 * se : null, units, roi: n ? units / n : null };
+  return { thr, n, w, rate, lo: rate != null ? rate - 1.96 * se : null, hi: rate != null ? rate + 1.96 * se : null,
+    priced_n: pricedN, units: pricedN ? units : null, roi: pricedN ? units / pricedN : null };
 }
 const selRows = [];
 for (const thr of [0.53, 0.55, 0.58, 0.60, 0.62, 0.65]) {
   const s = selAt(thr); selRows.push(s);
-  const verdict = s.n < 30 ? 'n bajo' : s.lo > BE ? '✅ ventaja (CI>equilibrio)' : s.rate > BE ? '≈ sobre equilibrio (CI cruza)' : '✗ sin ventaja';
-  console.log(`   ≥${(thr * 100).toFixed(0)}%  ·  ${String(s.n).padStart(4)}  ·  ${pctf(s.rate)}  ·  ${s.units >= 0 ? '+' : ''}${s.units.toFixed(1)}u (ROI ${s.roi != null ? (s.roi * 100).toFixed(1) + '%' : '—'})  ·  [${pctf(s.lo)}, ${pctf(s.hi)}]  ·  ${verdict}`);
+  console.log(`   ≥${(thr * 100).toFixed(0)}%  ·  ${String(s.n).padStart(4)}  ·  ${pctf(s.rate)}  ·  ${s.priced_n}/${s.n}  ·  ${pctf(s.roi)}  ·  [${pctf(s.lo)}, ${pctf(s.hi)}]`);
 }
 
 // ── 4) comparación vs mercado (de learning.json) ────────────────────────────
 let mvm = null;
 try { const L = JSON.parse(fs.readFileSync(LEARN, 'utf8')); mvm = L.market_vs_model || (L.odds && L.odds.market_vs_model); } catch { /* */ }
+const mvmValid = Number.isFinite(Number(mvm?.model?.acc)) && Number.isFinite(Number(mvm?.market?.acc));
 console.log(`\n══ 4) Modelo vs mercado (acierto global) ══`);
-if (mvm) console.log(`   modelo ${pctf(mvm.model.acc)} · mercado ${pctf(mvm.market.acc)} → ${mvm.verdict}. La ventaja del modelo NO está en el promedio, está en la SELECCIÓN (arriba).`);
-else console.log('   (sin market_vs_model en learning.json)');
+if (mvmValid) console.log(`   modelo ${pctf(mvm.model.acc)} · mercado ${pctf(mvm.market.acc)} → ${mvm.verdict}. La selección es una hipótesis en validación forward, no una ventaja demostrada.`);
+else console.log('   (sin cohorte auditable modelo-vs-mercado en learning.json)');
 
 // ── 5) mercados secundarios pedidos: todavía en sombra ─────────────────────
 const lab = marketLabReport(rows);
@@ -93,7 +101,7 @@ for (const [key, x] of Object.entries(lab.markets)) {
 }
 
 // ── reporte a docs/ ─────────────────────────────────────────────────────────
-const best = selRows.filter((s) => s.n >= 30).sort((a, b) => (b.roi || -9) - (a.roi || -9))[0];
+const best = selRows.filter((s) => s.n >= 30).sort((a, b) => (b.rate || -9) - (a.rate || -9))[0];
 const md = `# 🔬 Simulación MLB — walk-forward (${run.first_date} → ${run.last_date})
 
 Entrenamiento y validación **out-of-sample**: cada día se entrena solo con el
@@ -111,17 +119,18 @@ pasado y se predice ese día. Datos: **${graded.length} juegos** en ${files.leng
 ## 2 · Calibración
 ECE **${pctf(ece)}** — ${ece <= 0.06 ? 'razonable' : 'con exceso de confianza, por eso el % mostrado ya se calibra hacia abajo.'}
 
-## 3 · Backtest de selección (apostar el lado favorecido a −110, OOS)
-Punto de equilibrio a −110 = **52.4%**.
+## 3 · Backtest de selección (OOS)
+El acierto se mide sobre toda la cohorte. Unidades y ROI solo aparecen cuando la
+fila conserva el precio moneyline pregame real de ambos lados; no se supone −110.
 
-| umbral confianza | picks | acierto | unidades | ROI |
-|---|---|---|---|---|
-${selRows.map((s) => `| ≥${(s.thr * 100).toFixed(0)}% | ${s.n} | ${pctf(s.rate)} | ${s.units >= 0 ? '+' : ''}${s.units.toFixed(1)}u | ${s.roi != null ? (s.roi * 100).toFixed(1) + '%' : '—'} |`).join('\n')}
+| umbral confianza | picks | acierto | con precio real | unidades | ROI real |
+|---|---|---|---|---|---|
+${selRows.map((s) => `| ≥${(s.thr * 100).toFixed(0)}% | ${s.n} | ${pctf(s.rate)} | ${s.priced_n}/${s.n} | ${s.units != null ? `${s.units >= 0 ? '+' : ''}${s.units.toFixed(1)}u` : '—'} | ${pctf(s.roi)} |`).join('\n')}
 
-${best && best.lo > BE ? `**Ventaja OOS real** en el umbral ≥${(best.thr * 100).toFixed(0)}%: acierto ${pctf(best.rate)} (IC por encima del equilibrio), ROI ${(best.roi * 100).toFixed(1)}% con ${best.n} picks.` : `Ninguna franja supera el equilibrio con significancia estadística sobre toda la muestra: la ventaja medida vive en los tiers curados (FIJO/ORO/GEMA), no en apostar todo lo que pasa un umbral. Se reporta tal cual — así es la marca.`}
+${best ? `La franja de mayor acierto medida fue ≥${(best.thr * 100).toFixed(0)}%: ${pctf(best.rate)} sobre ${best.n} juegos. Esto describe acierto, no rentabilidad; sin precios auditables suficientes no se afirma ventaja apostable.` : 'No hay una franja con muestra suficiente.'}
 
 ## 4 · Modelo vs mercado
-${mvm ? `Acierto global: modelo ${pctf(mvm.model.acc)} vs mercado ${pctf(mvm.market.acc)} → **${mvm.verdict}**. La ventaja del modelo no está en el promedio, está en la selección.` : '—'}
+${mvmValid ? `Acierto global: modelo ${pctf(mvm.model.acc)} vs mercado ${pctf(mvm.market.acc)} → **${mvm.verdict}**. La selección permanece como hipótesis y necesita validación forward; no se presenta como ventaja demostrada.` : 'Sin una cohorte auditable modelo-vs-mercado.'}
 
 ## 5 · Laboratorio de nuevos mercados (NO publicados)
 Corte cronológico 70/30: **${lab.cut}**. Se eligen como máximo dos candidatos por
@@ -156,9 +165,11 @@ const doc = {
   delta_ll: dLL ? { mean: dLL.mean, lo: dLo, hi: dHi, helps: dHi != null && dHi < 0 } : null,
   ece: p1(ece),
   selection: selRows.map((s) => ({ thr: Math.round(s.thr * 100), n: s.n, rate: p1(s.rate),
-    units: Math.round(s.units * 10) / 10, roi: p1(s.roi), lo: p1(s.lo), hi: p1(s.hi),
-    edge: s.n >= 30 && s.lo != null && s.lo > BE })),
-  market: mvm ? { model_acc: p1(mvm.model.acc), market_acc: p1(mvm.market.acc), verdict: mvm.verdict || null } : null,
+    priced_n: s.priced_n, units: s.units == null ? null : Math.round(s.units * 10) / 10,
+    roi: p1(s.roi), lo: p1(s.lo), hi: p1(s.hi), edge: false,
+    accuracy_signal: s.n >= 30 && s.lo != null && s.lo > 0.5 })),
+  market: mvmValid ? { model_acc: p1(mvm.model.acc), market_acc: p1(mvm.market.acc), verdict: mvm.verdict || null,
+    selection_hypothesis: true, proven_edge: false } : null,
   market_lab: lab,
   attribution: 'Validación out-of-sample del propio modelo AA sobre todo el histórico. Cada día se entrena solo con el pasado. El algoritmo es privado.',
 };

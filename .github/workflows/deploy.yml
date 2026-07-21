@@ -15,34 +15,40 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Regresión de lógica — MLB, mercados sombra y Radar/Telegram
-        run: node --test tests/mlb_live_date.test.mjs tests/mlb_lock_gate.test.mjs tests/mlb_market_lab.test.mjs tests/poly_telegram_gate.test.mjs
+      - name: Regresión de lógica — MLB causal, ingesta, mercados sombra y Radar/Telegram
+        run: node --test tests/mlb_live_date.test.mjs tests/mlb_lock_gate.test.mjs tests/mlb_market_lab.test.mjs tests/mlb_ledger_migration.test.mjs tests/mlb_ledger_integrity.test.mjs tests/mlb_model_integrity.test.mjs tests/mlb_ingest_consumer.test.mjs tests/mlb_normalize_observed.test.mjs tests/mlb_content_hash.test.mjs tests/mlb_upload_guard.test.mjs tests/worker_mlb_ingest.test.mjs tests/poly_telegram_gate.test.mjs
       - name: Producción = main (fix de production branch)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          CUR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            https://api.cloudflare.com/client/v4/accounts/f02574feb7272a1da2818e35e0ff4342/pages/projects/aa-sports \
-            | tr ',' '\n' | grep -m1 '"production_branch"' || true)
-          echo "actual: $CUR"
-          echo "$CUR" | grep -q '"main"' && echo "ya es main" || {
-            curl -s -X PATCH -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
-              -d '{"production_branch":"main"}' \
-              https://api.cloudflare.com/client/v4/accounts/f02574feb7272a1da2818e35e0ff4342/pages/projects/aa-sports \
-              | head -c 300; echo; echo "production branch → main"; }
+          set -euo pipefail
+          URL=https://api.cloudflare.com/client/v4/accounts/f02574feb7272a1da2818e35e0ff4342/pages/projects/aa-sports
+          BODY=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$URL")
+          CUR=$(BODY="$BODY" node -e 'const j=JSON.parse(process.env.BODY); if(j.success!==true) process.exit(1); process.stdout.write(String(j.result?.production_branch||""))')
+          echo "rama de producción actual: $CUR"
+          if [ "$CUR" != main ]; then
+            PATCH=$(curl -fsS -X PATCH -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H "content-type: application/json" -d '{"production_branch":"main"}' "$URL")
+            PATCH="$PATCH" node -e 'const j=JSON.parse(process.env.PATCH); if(j.success!==true || j.result?.production_branch!=="main") process.exit(1)'
+          fi
+          VERIFY=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$URL")
+          VERIFY="$VERIFY" node -e 'const j=JSON.parse(process.env.VERIFY); if(j.success!==true || j.result?.production_branch!=="main") process.exit(1)'
+          echo "✅ rama de producción verificada: main"
       - name: Deploy Worker (API)
         working-directory: cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
-        run: npx --yes wrangler@4 deploy
-      - name: Verificar cron del vigía (Radar cada 5 min)
+        run: |
+          npx --yes wrangler@4.112.0 d1 migrations apply aa-sports --remote
+          npx --yes wrangler@4.112.0 deploy
+      - name: Verificar crons del vigía y la ingesta MLB
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: |
@@ -53,8 +59,15 @@ jobs:
             echo "$SCHED" | grep -qF '*/5 * * * *' \
               && echo "✅ Radar en vivo: cron */5 * * * * REGISTRADO — el vigía corre cada 5 min" \
               || { echo "❌ FALTA el cron */5 — el Radar NO se actualizaría cada 5 min"; exit 1; }
+            echo "$SCHED" | grep -qF '*/20 * * * *' \
+              && echo "✅ MLB: captura pública */20 * * * * REGISTRADA" \
+              || { echo "❌ FALTA el cron */20 — la ingesta MLB no estaría activa"; exit 1; }
+            echo "$SCHED" | grep -qF '0 13 * * *' \
+              && echo "✅ Radar: archivo diario 0 13 * * * REGISTRADO" \
+              || { echo "❌ FALTA el cron diario 0 13 — el archivo del Radar no correría"; exit 1; }
           else
-            echo "⚠️ no se pudo leer schedules (API/token); no fallo el deploy por esto"
+            echo "❌ no se pudo leer schedules (API/token); no puedo probar que los crons quedaron activos"
+            exit 1
           fi
       - name: Telegram del vigía (solo cargar secretos; sin mensaje de prueba)
         working-directory: cloudflare
@@ -72,16 +85,14 @@ jobs:
           CHAT="$TG_CHAT_ID"
           if [ -z "$CHAT" ]; then
             CHAT=$(curl -s "https://api.telegram.org/bot${TG_BOT_TOKEN}/getUpdates" \
-              | tr '{' '\n' | grep -m1 '"chat":' -A0 || true)
-            CHAT=$(curl -s "https://api.telegram.org/bot${TG_BOT_TOKEN}/getUpdates" \
-              | grep -o '"chat":{"id":[-0-9]*' | grep -o '[-0-9]*$' | sort -u | head -1)
+              | grep -o '"chat":{"id":[-0-9]*' | grep -o '[-0-9]*$' | sort -u | head -1 || true)
           fi
           if [ -z "$CHAT" ]; then
             echo "⚠️ El bot aún no tiene mensajes: envíale cualquier texto a t.me/POLYSIBOT y re-dispara el deploy."
             exit 0
           fi
-          printf '%s' "$TG_BOT_TOKEN" | npx --yes wrangler@4 secret put TG_BOT_TOKEN
-          printf '%s' "$CHAT" | npx --yes wrangler@4 secret put TG_CHAT_ID
+          printf '%s' "$TG_BOT_TOKEN" | npx --yes wrangler@4.112.0 secret put TG_BOT_TOKEN
+          printf '%s' "$CHAT" | npx --yes wrangler@4.112.0 secret put TG_CHAT_ID
           echo "✅ Secretos de Telegram cargados al Worker (chat …${CHAT: -4})."
           echo "Sin mensaje de prueba: el canal solo recibe el gate excepcional rare_v1 (máx. 2/día; puede ser 0)."
       - name: Deploy Pages (app)
@@ -89,7 +100,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
-        run: npx --yes wrangler@4 pages deploy pages --project-name=aa-sports --branch=main --commit-dirty=true
+        run: npx --yes wrangler@4.112.0 pages deploy pages --project-name=aa-sports --branch=main --commit-dirty=true
       - name: Verificar y diagnosticar producción
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
@@ -122,6 +133,22 @@ jobs:
             && echo "✅ CSP permite el envío oficial de Web Analytics" \
             || { echo "❌ CSP bloquea el envío de Cloudflare Web Analytics"; exit 1; }
       - name: Diagnóstico semántico de producción
-        run: node robot/prod_diag.mjs
+        run: |
+          node robot/prod_diag.mjs
+          healthy=0
+          for i in $(seq 1 80); do
+            BODY=$(curl -fsS https://aa-sports-api.opsmira9.workers.dev/v1/mlb/pipeline-health || true)
+            echo "pipeline intento $i/80: $BODY"
+            if BODY="$BODY" node -e 'const j=JSON.parse(process.env.BODY); process.exit(j.pipeline==="mlb_ingest_20m" && j.ok===true && j.fresh===true ? 0 : 1)'; then
+              healthy=1
+              break
+            fi
+            sleep 30
+          done
+          if [ "$healthy" -ne 1 ]; then
+            echo "❌ la ingesta MLB no produjo un slot completo y fresco dentro de 40 minutos"
+            exit 1
+          fi
+          echo "✅ ingesta MLB completa y fresca"
       - name: Gate de datos de producción
         run: node robot/qa_check.mjs

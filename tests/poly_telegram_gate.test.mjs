@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { polySignals, polyTelegramGate } from '../cloudflare/worker/index.js';
+import { polySignals, polyTelegramGate, polyTelegramRollback } from '../cloudflare/worker/index.js';
 
 const NOW = 1_784_650_000;
 const DAY = '2026-07-21';
@@ -61,6 +61,17 @@ test('gate deduplica por mercado siete días aun al cambiar de fecha', () => {
   });
   assert.deepEqual(nextDay.items, []);
   assert.equal(nextDay.state.sent, 0);
+});
+
+test('un rechazo de Telegram libera cupo y consenso para reintento', () => {
+  const item = signal('reintentar', { prevN: 2 });
+  const gated = polyTelegramGate([item], null, { nowSec: NOW, date: DAY });
+  const key = 'reintentar|Yes';
+  const rollback = polyTelegramRollback(gated.state, { [key]: 3 }, gated.items, '2026-07-21T12:00:00Z', new Error('HTTP 429'));
+  assert.equal(rollback.telegram.sent, 0);
+  assert.equal(rollback.telegram.notified[key], undefined);
+  assert.equal(rollback.telegram.last_error, 'HTTP 429');
+  assert.equal(rollback.cons_notified[key], 2);
 });
 
 test('ranking visible excluye montos diminutos, precios extremos y señales viejas', () => {

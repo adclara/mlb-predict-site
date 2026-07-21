@@ -102,3 +102,5 @@ WITH rollout(phase, scope, state, trigger, guardrail) AS (
       '30–50 new decisions / sufficient alert outcomes', 'Disable or keep shadow if the gate degrades')
 )
 SELECT * FROM rollout ORDER BY phase;
+-- ARCHIVO SUPERADO: la auditoría causal posterior excluyó precios sin timestamp
+-- y filas nativas mutables. Este replay no autoriza publicar ORO.

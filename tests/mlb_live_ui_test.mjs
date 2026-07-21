@@ -35,7 +35,32 @@ function event(id, start) {
     away: { code: 'MIN', name: 'Minnesota Twins' },
     home: { code: 'CLE', name: 'Cleveland Guardians' },
     prediction: { pick: 'CLE', prob: 0.57, prob_pct: 57, confidence: 'test' },
-    metrics: [], snapshot: null, risk: null, odds: null, badges: [], result: null, final: null,
+    metrics: [], snapshot: {
+      fielding: { away: { err_l10: 2, epg: 0.2, g: 10 }, home: { err_l10: 9, epg: 0.9, g: 10 } },
+      context: { series: { game: 4, len: 4, home_wins: 0, away_wins: 3 } },
+    }, risk: null, odds: null, badges: [], result: null, final: null,
+  };
+}
+
+function pendingEvent(id, start) {
+  return {
+    ...event(id, start), pending: true,
+    prediction: { pick: null, prob: null, prob_pct: null, confidence: null },
+    snapshot: null,
+  };
+}
+
+function invalidatedEvent(id, start) {
+  return {
+    ...event(id, start),
+    prediction: {
+      pick: 'CLE', prob: 0.61, prob_pct: 61, confidence: 'alta',
+      invalidated: true, invalidated_reason: 'probable_starter_changed',
+    },
+    snapshot: null,
+    metrics: [],
+    risk: null,
+    badges: ['fijo', 'oro'],
   };
 }
 
@@ -69,7 +94,13 @@ async function installApiMocks(page, date, events, games) {
         signals: [{ label: 'Coincide con el favorito del mercado', label_en: 'Matches the market favorite', edge_pp: 11.5 }],
       });
     }
-    if (path === '/v1/mlb/simulation') return json(route, { note: 'test' });
+    if (path === '/v1/mlb/simulation') return json(route, {
+      n_games: 100, n_oos: 80, ece: 3.8,
+      oos: { combined: { acc: 53.2, ll: 0.696, brier: 0.251 } },
+      delta_ll: { helps: false },
+      selection: [{ thr: 53, n: 40, rate: 55, priced_n: 0, units: null, roi: null, accuracy_signal: true, edge: false }],
+      market: { model_acc: 53.7, market_acc: 56.5 },
+    });
     if (path === '/v1/injuries') return json(route, { players: [] });
     if (path === '/v1/me') return json(route, { enabled: false, user: null });
     return json(route, {});
@@ -169,19 +200,56 @@ try {
     await installApiMocks(
       page,
       today,
-      [event('today-game', `${today}T22:40:00Z`)],
+      [
+        event('today-game', `${today}T22:40:00Z`),
+        pendingEvent('pending-game', `${today}T23:40:00Z`),
+        invalidatedEvent('invalidated-game', `${today}T20:10:00Z`),
+      ],
       [live('yesterday-final', yesterday, `${yesterday}T22:40:00Z`, 'final', 4, 13)],
     );
     await page.goto(`${base}/?mlb-live-date-regression=${viewport.name}`, { waitUntil: 'domcontentloaded' });
     const state = await rowState(page, 'today-game');
     assert.notEqual(state.time, 'Final', `${viewport.name}: el final de ayer contaminó hoy`);
     assert.deepEqual(state.scores, ['', ''], `${viewport.name}: aparecen marcadores de ayer`);
+    await page.locator('.mrow[data-id="today-game"]').click();
+    const detailEs = await page.locator('#dcard').textContent();
+    assert.match(detailEs, /defensa floja: 9 errores en 10 juegos/i, `${viewport.name}: falta fielding ES`);
+    assert.match(detailEs, /necesita ganar para evitar la barrida/i, `${viewport.name}: falta barrida ES`);
+    await page.locator('#dback').evaluate(el => el.click());
+    assert.match(await page.locator('.mrow[data-id="pending-game"]').textContent(), /se publica ~7am ET/i, `${viewport.name}: falta pending ES`);
+    const invalidRowEs = await page.locator('.mrow[data-id="invalidated-game"]').textContent();
+    assert.match(invalidRowEs, /pronóstico invalidado · cambió el abridor/i, `${viewport.name}: falta aviso scratch ES`);
+    assert.doesNotMatch(invalidRowEs, /AA\s*61%/i, `${viewport.name}: pick invalidado visible en fila ES`);
+    assert.equal(await page.locator('.tkchip[data-id="invalidated-game"]').count(), 0, `${viewport.name}: scratch entró al ticker`);
+    assert.equal(await page.locator('.bleg[data-id="invalidated-game"]').count(), 0, `${viewport.name}: scratch entró al boleto`);
+    await page.locator('.mrow[data-id="invalidated-game"]').click();
+    const invalidDetailEs = await page.locator('#dcard').textContent();
+    assert.match(invalidDetailEs, /pronóstico AA invalidado: cambió el abridor probable\. El análisis original ya no aplica/i, `${viewport.name}: falta aviso prominente ES`);
+    assert.doesNotMatch(invalidDetailEs, /61%/, `${viewport.name}: probabilidad invalidada visible en detalle ES`);
+    await page.locator('#dback').evaluate(el => el.click());
     await assertNoOverflow(page, viewport.name);
     await page.locator('#langbtn').click();
+    await page.locator('.mrow[data-id="today-game"]').click();
+    const detailEn = await page.locator('#dcard').textContent();
+    assert.match(detailEn, /sloppy fielding: 9 errors in 10 games/i, `${viewport.name}: missing fielding EN`);
+    assert.match(detailEn, /needs a win to avoid the sweep/i, `${viewport.name}: missing sweep EN`);
+    await page.locator('#dback').evaluate(el => el.click());
+    assert.match(await page.locator('.mrow[data-id="pending-game"]').textContent(), /publishes around 7am ET/i, `${viewport.name}: missing pending EN`);
+    const invalidRowEn = await page.locator('.mrow[data-id="invalidated-game"]').textContent();
+    assert.match(invalidRowEn, /prediction invalidated · starter changed/i, `${viewport.name}: missing scratch warning EN`);
+    assert.doesNotMatch(invalidRowEn, /pronóstico|abridor|análisis/i, `${viewport.name}: Spanish leaked into scratch warning EN`);
+    await page.locator('.mrow[data-id="invalidated-game"]').click();
+    const invalidDetailEn = await page.locator('#dcard').textContent();
+    assert.match(invalidDetailEn, /AA prediction invalidated: the probable starter changed\. The original analysis no longer applies/i, `${viewport.name}: missing prominent warning EN`);
+    assert.doesNotMatch(invalidDetailEn, /61%/, `${viewport.name}: invalidated probability visible in detail EN`);
+    await page.locator('#dback').evaluate(el => el.click());
     await page.locator('.ltab[data-lt="brain"]').click();
     const signalLabel = page.locator('.bsig .bsl').first();
     await signalLabel.waitFor({ state: 'visible' });
     assert.equal(await signalLabel.textContent(), 'Matches the market favorite', `${viewport.name}: señal del Cerebro sin traducir`);
+    const brainText = await page.locator('#list').textContent();
+    assert.match(brainText, /Confidence selection \(no assumed price\)/, `${viewport.name}: simulation still assumes a price`);
+    assert.match(brainText, /hit rate >50% \(CI\)/, `${viewport.name}: missing accuracy-only signal`);
     await assertNoOverflow(page, `${viewport.name}-brain-en`);
     assert.deepEqual(errors, [], `${viewport.name}: errores de consola/red de la app`);
     await context.close();

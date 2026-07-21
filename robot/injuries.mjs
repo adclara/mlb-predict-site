@@ -35,7 +35,7 @@ async function getJson(url, tries = 3) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return await res.json();
     } catch (e) {
-      if (i === tries - 1) { console.warn(`  ✗ ${url}: ${e.message}`); return null; }
+      if (i === tries - 1) throw new Error(`${url}: ${e.message}`);
       await sleep(700 * (i + 1));
     }
   }
@@ -83,10 +83,12 @@ async function pullMlb() {
   const out = {};
   const teamsDoc = await getJson('https://statsapi.mlb.com/api/v1/teams?sportId=1');
   const teams = (teamsDoc && teamsDoc.teams) || [];
+  if (!Array.isArray(teamsDoc?.teams) || teams.length < 25) throw new Error('StatsAPI devolvió un catálogo MLB incompleto');
   const injured = []; // { code, personId, name, pos, status }
   for (const t of teams) {
     const code = MLB_CODE_FIX[t.abbreviation] || t.abbreviation;
     const roster = await getJson(`https://statsapi.mlb.com/api/v1/teams/${t.id}/roster?rosterType=40Man`);
+    if (!Array.isArray(roster?.roster)) throw new Error(`StatsAPI devolvió roster inválido para ${code}`);
     for (const r of (roster && roster.roster) || []) {
       const desc = (r.status && r.status.description) || '';
       if (!OUT_RE.test(desc)) continue;
@@ -107,6 +109,7 @@ async function pullMlb() {
     if (!batch.length) continue;
     const ids = batch.map((p) => p.personId).join(',');
     const doc = await getJson(`https://statsapi.mlb.com/api/v1/people?personIds=${ids}&hydrate=stats(group=[hitting,pitching],type=[season],season=${SEASON})`);
+    if (!Array.isArray(doc?.people)) throw new Error('StatsAPI devolvió estadísticas de lesionados inválidas');
     const byId = new Map(((doc && doc.people) || []).map((p) => [p.id, p]));
     for (const p of batch) {
       const person = byId.get(p.personId);
@@ -141,9 +144,11 @@ async function pullNba() {
   const teamsDoc = await getJson('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams?limit=40');
   const abbr = new Map();
   const teamList = (((teamsDoc || {}).sports || [])[0]?.leagues || [])[0]?.teams || [];
+  if (!Array.isArray(teamList) || teamList.length < 25) throw new Error('ESPN devolvió un catálogo NBA incompleto');
   for (const t of teamList) if (t.team) abbr.set(t.team.displayName, t.team.abbreviation);
 
   const doc = await getJson('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/injuries');
+  if (!Array.isArray(doc?.injuries)) throw new Error('ESPN devolvió un reporte de lesiones inválido');
   for (const entry of (doc && doc.injuries) || []) {
     const code = abbr.get(entry.displayName) || entry.shortDisplayName || entry.displayName;
     for (const inj of entry.injuries || []) {
@@ -164,7 +169,10 @@ async function pullNba() {
 }
 
 /* ── main ────────────────────────────────────────────────────────────────── */
-const doc = { generated_at: new Date().toISOString(), mlb: await pullMlb(), nba: await pullNba() };
+// Publicación atómica: si una fuente se cae o llega con forma incompleta, no se
+// reemplaza el último KV válido por dos objetos vacíos.
+const [mlb, nba] = await Promise.all([pullMlb(), pullNba()]);
+const doc = { generated_at: new Date().toISOString(), mlb, nba };
 
 const dist = join(process.cwd(), 'cloudflare', 'dist');
 mkdirSync(dist, { recursive: true });

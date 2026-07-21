@@ -1,0 +1,75 @@
+# AA Sports — entrenamiento privado diario. La doble hora UTC cubre DST; el
+# guard de zona ET deja pasar únicamente la corrida de las 05:37 ET.
+name: mlb-learning-daily
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '37 9,10 * * *'
+  push:
+    branches: [main]
+    paths: ['.github/poke-learn']
+permissions:
+  contents: write
+concurrency:
+  group: mlb-learning-daily
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verificar secreto de publicación
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
+      - name: Ventana diaria ET
+        id: window
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ] || [ "$(TZ=America/New_York date +%H)" = "05" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Fuera de la ventana 05:xx ET; la otra expresión UTC hará el run válido."
+          fi
+      - name: Refit, calibración y challengers en sombra
+        if: steps.window.outputs.run == 'true'
+        run: DATA_DIR="$PWD/data" node robot/mlb_learn_daily.mjs
+      - name: Generar Cerebro AA (sin publicar aún)
+        if: steps.window.outputs.run == 'true'
+        env:
+          AA_SKIP_PUBLISH: '1'
+        run: DATA_DIR="$PWD/data" node robot/learning_journal.mjs
+      - name: Persistir aprendizaje diario
+        if: steps.window.outputs.run == 'true'
+        shell: bash
+        run: |
+          git config user.name "adrian-robot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/history/learning.json data/history/learning_journal.json
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m "MLB learning: daily causal refit ($(date -u +%FT%TZ))"
+            pushed=0
+            for i in 1 2 3; do
+              if git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push; then
+                pushed=1
+                break
+              fi
+              sleep 5
+            done
+            if [ "$pushed" -ne 1 ]; then
+              echo "No se pudo persistir el aprendizaje tras 3 intentos."
+              exit 1
+            fi
+          fi
+      - name: Publicar Cerebro AA ya persistido
+        if: steps.window.outputs.run == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: DATA_DIR="$PWD/data" node robot/learning_journal.mjs --publish-existing

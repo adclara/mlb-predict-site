@@ -4,7 +4,7 @@
 
 name = "aa-sports-api"
 main = "worker/index.js"
-compatibility_date = "2026-07-01"
+compatibility_date = "2026-07-21"
 
 # KV: "lo último" por deporte (lectura caliente, milisegundos).
 [[kv_namespaces]]
@@ -16,15 +16,18 @@ id = "683aa2f8846643bf8a6a8b606e5bf0b7"
 binding = "DB"
 database_name = "aa-sports"
 database_id = "ed0969d8-050a-4987-ab98-b047c30f76c9"
+migrations_dir = "migrations"
 
-# Crons del Radar:
+# Crons del Worker (3 triggers; dentro del límite del plan gratuito):
 #  · cada 5 min → vigía: transacciones nuevas de las wallets vigiladas
 #    (poly:radar.watchlist) → KV poly:alerts. Telegram queda reservado para un
 #    máximo de 2 observaciones/día que superen el gate anti-ruido rare_v1.
+#  · cada 20 min → captura compacta de hechos públicos MLB (StatsAPI + ESPN) en
+#    D1. No ejecuta ni expone el algoritmo privado.
 #  · 13:00 UTC (≈9am ET) → diario: snapshot en D1 poly_snapshots, persistencia
 #    viva + wallets nuevas en el top → KV poly:track (sin resumen por Telegram).
 [triggers]
-crons = ["*/5 * * * *", "0 13 * * *"]
+crons = ["*/5 * * * *", "*/20 * * * *", "0 13 * * *"]
 
 [vars]
 # Orígenes permitidos para CORS. "*" mientras probamos en .pages.dev;

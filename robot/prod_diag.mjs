@@ -52,6 +52,14 @@ try {
   console.log('  llaves live (away@home):', JSON.stringify(games.slice(0, 6).map(g => `${g.away?.code}@${g.home?.code}`)));
 } catch (e) { console.log('no-json:', lv.status, lv.text.slice(0, 160)); }
 
+console.log('\n== /v1/mlb/pipeline-health (captura cada 20 min) ==');
+try {
+  const ph = JSON.parse((await get(`${API}/v1/mlb/pipeline-health`)).text);
+  console.log('estado:', ph.state, '| fresh:', ph.fresh ?? '—', '| edad s:', ph.age_seconds ?? '—',
+    '| juegos:', ph.latest?.n_games ?? '—', '| capturado:', ph.latest?.captured_at || '—');
+  console.log('  fuentes:', JSON.stringify(ph.latest?.sources || {}), '| missingness:', JSON.stringify(ph.latest?.missingness || {}));
+} catch (e) { console.log('no-json:', String(e).slice(0, 160)); }
+
 // ── Diagnóstico del JOIN en vivo (por qué el marcador no aparece) ──
 console.log('\n== JOIN live↔today (raíz del bug "todo Por jugar") ==');
 try {

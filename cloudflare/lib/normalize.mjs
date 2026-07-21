@@ -13,6 +13,23 @@
 
 const PCT = (x) => (x == null || Number.isNaN(x) ? null : Math.round(x * 1000) / 10);
 
+// A model output is public only after the robot has sealed an immutable,
+// pre-first-pitch feature snapshot. Provisional rows are useful internally for
+// refreshes, but publishing their pick/probability would create a prediction
+// that can silently change before the official slate is frozen.
+function isCausalFrozen(g) {
+  const capturedAt = g && (g.decision_captured_at || g.feature_as_of);
+  const firstPitch = g && (g.first_pitch || g.game_datetime);
+  const capturedMs = Date.parse(capturedAt || '');
+  const firstPitchMs = Date.parse(firstPitch || '');
+  return !!g
+    && /^[a-f0-9]{64}$/i.test(String(g.feature_hash || ''))
+    && g.feature_scope === 'pregame_immutable'
+    && g.integrity && g.integrity.training_eligible === true
+    && Number.isFinite(capturedMs) && Number.isFinite(firstPitchMs)
+    && capturedMs < firstPitchMs;
+}
+
 // "Final" | "In Progress" | "Pre-Game" | (cualquier otra) -> pre|live|final
 function normStatus(raw) {
   const s = String(raw || '').toLowerCase();
@@ -405,16 +422,53 @@ function snapshotFor(g, formIdx, pitcherNames, prob, liveGame) {
 
 // Construye un evento normalizado a partir de un juego + su pick del daily (si existe).
 function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
-  const status = normStatus(g.status);
+  const observed = g.observed && typeof g.observed === 'object' ? g.observed : null;
+  const status = normStatus(observed?.status ?? g.status);
+  const currentGame = observed?.odds ? { ...g, odds: observed.odds } : g;
+  const publicReady = isCausalFrozen(g);
+  const invalidated = publicReady && pickInfo?.scratch_warning === true;
+  const observedHomeRaw = observed?.scores?.home, observedAwayRaw = observed?.scores?.away;
+  const observedHome = observedHomeRaw == null ? null : Number(observedHomeRaw);
+  const observedAway = observedAwayRaw == null ? null : Number(observedAwayRaw);
+  const observedFinal = status === 'final' && Number.isFinite(observedHome) && Number.isFinite(observedAway)
+    ? `${observedAway}-${observedHome}` : null;
+
+  // Keep a pending event shape compatible with the Worker's live schedule
+  // fallback, but expose no model-derived value until the causal seal exists.
+  if (!publicReady) {
+    return {
+      sport: 'mlb', league: 'MLB', event_id: String(g.game_pk),
+      matchup: g.matchup || `${g.away} @ ${g.home}`,
+      start: g.game_datetime || g.game_date || g.date || null,
+      status,
+      home: { code: g.home, name: g.home }, away: { code: g.away, name: g.away },
+      prediction: { pick: null, prob: null, prob_pct: null, confidence: null, engine_version: null },
+      metrics: [], summary_es: null, snapshot: null, risk: null,
+      odds: oddsFor(currentGame), badges: [], result: null,
+      final: g.final || observedFinal,
+      live: null, pending: true,
+      updated_at: observed?.captured_at || g.date || null,
+    };
+  }
+
   const pp = pickProb(g);
   // Prob CALIBRADA del lado del pick (honestidad — ver calibratedProb). Antes se
   // mostraba la clásica sobre-confiada; ahora se prefiere prob_v2 / p_final.
   const prob = calibratedProb(pickInfo, pp);
   const confidence = pickInfo && pickInfo.confidence ? pickInfo.confidence : confFromProb(prob);
   const badges = [];
-  if (pickInfo && pickInfo.badge) badges.push(pickInfo.badge);
-  if (pickInfo && pickInfo.tier) badges.push(pickInfo.tier);
+  if (!invalidated && pickInfo && pickInfo.badge) badges.push(pickInfo.badge);
+  if (!invalidated && pickInfo && pickInfo.tier) badges.push(pickInfo.tier);
 
+  let snapshot = invalidated ? null : snapshotFor(g, formIdx, pitcherNames, prob, liveGame);
+  if (!invalidated && observed?.odds) {
+    const overlay = {
+      market: marketFor(currentGame),
+      books: booksFor(currentGame),
+      wp: wpFor(currentGame, liveGame),
+    };
+    snapshot = { ...(snapshot || {}), ...Object.fromEntries(Object.entries(overlay).filter(([, value]) => value != null)) };
+  }
   return {
     sport: 'mlb',
     league: 'MLB',
@@ -430,17 +484,20 @@ function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
       prob_pct: PCT(prob),
       confidence: confidence || null,
       engine_version: g.formula_version || g.engine || 'v2',
+      invalidated,
+      invalidated_reason: invalidated ? 'probable_starter_changed' : null,
     },
-    metrics: metricsFor(g, prob),
-    summary_es: summarize(g),
-    snapshot: snapshotFor(g, formIdx, pitcherNames, prob, liveGame),
-    risk: g.risk ? { level: g.risk.level || null, score: g.risk.score ?? null } : null,
-    odds: oddsFor(g),
+    metrics: invalidated ? [] : metricsFor(g, prob),
+    summary_es: invalidated ? null : summarize(g),
+    snapshot,
+    risk: !invalidated && g.risk ? { level: g.risk.level || null, score: g.risk.score ?? null } : null,
+    odds: oddsFor(currentGame),
     badges,
     result: g.ml_result || null, // win|loss del pick cuando el juego ya se calificó
-    final: g.final || null,      // marcador final "away-home" si terminó
+    final: g.final || observedFinal, // marcador factual "away-home" si terminó
     live: null, // los marcadores en vivo los inyecta el Worker (/v1/mlb/live) a 30-60s.
-    updated_at: g.date || null,
+    pending: false,
+    updated_at: observed?.captured_at || g.date || null,
   };
 }
 
@@ -477,10 +534,18 @@ function calibratedProb(pickInfo, pp) {
 // Indexa plays/locks/gems del daily por game_pk para enriquecer cada juego.
 function indexDaily(daily) {
   const map = new Map();
+  // Slates migrados preservan su track record público, pero no existe un hash
+  // que vincule su probabilidad/badge con la fila de features inmutable. En ese
+  // caso la predicción general sale de la fila causal y el daily no la pisa.
+  if (!daily || daily.selection_snapshot_verified !== true) return map;
   const add = (arr, badge) => {
     if (!Array.isArray(arr)) return;
     for (const p of arr) {
       if (p.game_pk == null) continue;
+      // El ledger v2 conserva backtests y picks tardíos para auditoría, pero
+      // nunca los presenta como selecciones públicas ni les asigna badge.
+      if (p.eligible_public_record === false) continue;
+      if (p.record_scope && p.record_scope !== 'public_live') continue;
       const prev = map.get(p.game_pk) || {};
       map.set(p.game_pk, {
         pick: p.pick ?? prev.pick,
@@ -489,6 +554,8 @@ function indexDaily(daily) {
         confidence: p.confidence ?? prev.confidence,
         badge: badge || prev.badge,
         tier: p.tier ?? prev.tier,
+        scratch_warning: p.scratch_warning === true || prev.scratch_warning === true,
+        scratch_note: p.scratch_note ?? prev.scratch_note,
       });
     }
   };
@@ -532,6 +599,7 @@ export function normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs, 
   const tierRec = (r) => r ? {
     wins: r.wins ?? null, losses: r.losses ?? null,
     win_rate: r.win_rate ?? null, units: r.units ?? null,
+    priced_n: r.priced_n ?? null,
   } : null;
   const record = indexDoc && indexDoc.record ? {
     wins: indexDoc.record.wins ?? null,
@@ -539,6 +607,8 @@ export function normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs, 
     win_rate: indexDoc.record.win_rate ?? null,
     locks: tierRec(indexDoc.locks_record),
     gems: tierRec(indexDoc.gems_record),
+    scope: indexDoc.record_scope || 'legacy_unscoped',
+    sample_n: (indexDoc.record.wins ?? 0) + (indexDoc.record.losses ?? 0),
   } : null;
 
   return {

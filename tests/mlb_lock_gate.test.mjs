@@ -57,16 +57,15 @@ test('no rellena cupos con PLATA cuando el gate fuerte no pasa', () => {
   assert.deepEqual(selectLocks([marketOnly], odds, { max: 2 }), []);
 });
 
-test('replay real del nuevo ORO pasa muestra, intervalo y ambos cortes', () => {
+test('replay de ORO falla cerrado cuando el precio histórico no tiene apertura auditable', () => {
   const rows = [];
   for (const file of readdirSync('data/history/games').filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))) {
     rows.push(...(JSON.parse(readFileSync(`data/history/games/${file}`, 'utf8')).games || []));
   }
   const report = lockGateReport(rows);
   assert.equal(report.rule, 'market_agree5_starter_v1');
-  assert.ok(report.all.n >= 100, `muestra insuficiente: ${report.all.n}`);
-  assert.ok(report.all.lo > report.gate.threshold, `IC inferior ${report.all.lo} no supera ${report.gate.threshold}`);
-  assert.ok(report.train.p > report.gate.threshold);
-  assert.ok(report.test.p > report.gate.threshold);
-  assert.equal(report.gate.passes, true);
+  assert.deepEqual({ n: report.all.n, wins: report.all.wins, losses: report.all.losses }, { n: 0, wins: 0, losses: 0 });
+  assert.deepEqual({ n: report.test.n, wins: report.test.wins, losses: report.test.losses }, { n: 0, wins: 0, losses: 0 });
+  assert.equal(report.gate.passes, false);
+  assert.match(report.gate.reason, /muestra\/intervalo insuficiente/);
 });

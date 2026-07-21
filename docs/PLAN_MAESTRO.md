@@ -1,5 +1,11 @@
 # 🧭 Plan Maestro — MLB Predict
 
+> **ARCHIVO HISTÓRICO — no describe la arquitectura ni los gates vigentes.**
+> La auditoría causal del 21-jul-2026 invalidó varias cifras de replay/ROI de
+> este documento porque mezclaban precios sin timestamp y filas mutables.
+> La fuente vigente es [`MLB_INTELLIGENCE_PLAN.md`](MLB_INTELLIGENCE_PLAN.md):
+> ORO, Over y F5 permanecen en sombra hasta reunir evidencia forward auditable.
+
 > Documento vivo. Contexto de todo lo construido + hoja de ruta para seguir mejorando,
 > compactar los dos repos y correr más simulaciones. Escrito para trabajar desde tu Mac
 > (con git y acceso al repo privado).

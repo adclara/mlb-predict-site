@@ -1,0 +1,264 @@
+{
+  "generated_at": "2026-07-21T17:49:45Z",
+  "repo_sha": "6086684864ab6af798f30a1aa4f7f190452934a4",
+  "scope": {
+    "history_first_date": "2026-03-25",
+    "history_last_graded_date": "2026-07-20",
+    "workflow_window_first": "2026-07-12T21:01:02Z",
+    "workflow_window_last": "2026-07-21T16:36:48Z",
+    "mode": "read-only audit",
+    "limitations": [
+      "Native training features are mutable during the game day, so current OOS metrics are not promotion-grade causal evidence.",
+      "Most historical market rows are backfilled/final-stage and do not have an auditable opening timestamp.",
+      "Forward samples for real opening totals and explicit F5 outcomes are zero."
+    ]
+  },
+  "inventory": {
+    "days": 116,
+    "rows": 1544,
+    "graded": 1506,
+    "unique_game_pk": 1528,
+    "duplicate_game_pk_rows": 16,
+    "graded_duplicate_games": 1,
+    "backfill_rows": 1353,
+    "backfill_graded": 1333,
+    "native_rows": 191,
+    "native_graded": 173,
+    "native_graded_status": {
+      "final": 94,
+      "in_progress": 40,
+      "pregame": 34,
+      "other": 5
+    }
+  },
+  "public_record_integrity": {
+    "plays_total": 52,
+    "plays_resolved": 49,
+    "reported": {
+      "wins": 26,
+      "losses": 23,
+      "rate": 0.5306
+    },
+    "post_start": {
+      "n": 13,
+      "wins": 8,
+      "losses": 5,
+      "rate": 0.6154,
+      "retrospective_seed": 12,
+      "operational_reopen": 1
+    },
+    "strict_prestart": {
+      "n": 36,
+      "wins": 18,
+      "losses": 18,
+      "rate": 0.5
+    },
+    "locks": {
+      "resolved": 18,
+      "wins": 11,
+      "losses": 7,
+      "post_start": 0
+    }
+  },
+  "feature_mutation_2026_07_20": {
+    "games": 15,
+    "changed": {
+      "p_final": 15,
+      "factor_leans": 15,
+      "p_over": 15,
+      "weather_forecast": 15,
+      "model_p": 14,
+      "adrian_p": 14,
+      "sp_fip_diff": 14,
+      "ml_pick": 2,
+      "total_side": 5
+    },
+    "p_final_abs_change_pp": {
+      "mean": 4.11,
+      "max": 15.47
+    },
+    "examples": [
+      {
+        "matchup": "MIA @ HOU",
+        "change": "ml_pick MIA to HOU; adrian_p 0.440 to 0.687"
+      },
+      {
+        "matchup": "BAL @ BOS",
+        "change": "total Over to Under; probability 0.616 to 0.491"
+      },
+      {
+        "matchup": "LAD @ PHI",
+        "change": "total Over to Under; probability 0.571 to 0.429"
+      }
+    ]
+  },
+  "reported_model_metrics": {
+    "warning": "Computed on the current mutable-row dataset; rebuild after immutable decision snapshots.",
+    "n_oos": 1398,
+    "classic": {
+      "accuracy": 0.5422,
+      "logloss": 0.7209,
+      "brier": 0.2621
+    },
+    "learned": {
+      "accuracy": 0.5372,
+      "logloss": 0.6953,
+      "brier": 0.251
+    },
+    "combined": {
+      "accuracy": 0.5386,
+      "logloss": 0.6942,
+      "brier": 0.2504,
+      "ece": 0.039
+    },
+    "market": {
+      "n": 1492,
+      "accuracy": 0.5643,
+      "logloss": 0.6845,
+      "brier": 0.2457
+    }
+  },
+  "bootstrap_audit": {
+    "current_rng_issue": "The 1103515245 LCG multiplication exceeds JavaScript's exact-integer range and produced bootstrap means that did not center on point estimates.",
+    "corrected_iid_5000": {
+      "delta_combined_minus_classic": {
+        "accuracy_mean": -0.00353,
+        "accuracy_ci95": [-0.0279, 0.02074],
+        "logloss_mean": -0.02687,
+        "logloss_ci95": [-0.04034, -0.01393],
+        "brier_mean": -0.01174,
+        "brier_ci95": [-0.01802, -0.00573]
+      }
+    },
+    "corrected_date_block_10000": {
+      "days": 105,
+      "pairs": 1398,
+      "delta_logloss_mean": -0.02696,
+      "delta_logloss_ci95": [-0.04123, -0.01289]
+    },
+    "interpretation": "The probability-quality gain survives corrected resampling on the current data, but temporal mutability still prevents a promotion claim. Accuracy remains a statistical tie."
+  },
+  "oro_gate": {
+    "reported": {
+      "wins": 76,
+      "losses": 30,
+      "n": 106,
+      "passes": true
+    },
+    "backfill_asof_only": {
+      "wins": 63,
+      "losses": 23,
+      "n": 86,
+      "test_wins": 19,
+      "test_losses": 6,
+      "test_n": 25,
+      "passes_current_gate": false
+    },
+    "implemented_minimums": {
+      "all_n": 100,
+      "test_n": 30
+    },
+    "decision": "Treat as experimental/shadow until clean forward evidence is available."
+  },
+  "market_data_quality": {
+    "moneyline_rows": 1529,
+    "moneyline_coverage": 0.9903,
+    "p_home_open_rows": 168,
+    "p_home_open_coverage": 0.1088,
+    "total_open_rows": 15,
+    "total_open_coverage": 0.0097,
+    "win_probability_curve_rows": 1492,
+    "win_probability_curve_coverage": 0.9663,
+    "rows_with_game_time_and_captured_at": 93,
+    "captured_post_start": 78,
+    "captured_prestart": 15,
+    "captured_at_median_hours_from_start": 7.5,
+    "final_stage_backfill_rows": 1338,
+    "multi_book_rows": 0,
+    "explicit_f5_score_rows": 0
+  },
+  "total_line_audit": {
+    "priced_rows": 1492,
+    "internal_line_differs_from_espn": 1156,
+    "difference_rate": 0.7748,
+    "internal_line": {
+      "wins": 737,
+      "losses": 684,
+      "rate": 0.5186
+    },
+    "same_side_against_espn_line": {
+      "wins": 713,
+      "losses": 711,
+      "rate": 0.5007
+    }
+  },
+  "feature_coverage": [
+    {"field": "Basic model features/probabilities", "coverage": 1.0},
+    {"field": "Moneyline odds", "coverage": 0.9903},
+    {"field": "Pitcher recent home", "coverage": 0.919},
+    {"field": "Pitcher recent away", "coverage": 0.926},
+    {"field": "Forecast / aux2 / projected F5", "coverage": 0.1088},
+    {"field": "Game datetime", "coverage": 0.0602},
+    {"field": "Complete 9-v-9 lineups", "coverage": 0.0492},
+    {"field": "Observed weather", "coverage": 0.1813},
+    {"field": "Live summary", "coverage": 0.0881},
+    {"field": "Explicit F5 score", "coverage": 0.0}
+  ],
+  "workflow_reliability": {
+    "scheduled_runs": 100,
+    "success": 100,
+    "gaps": 99,
+    "gap_minutes": {
+      "p50": 127.83,
+      "p75": 171.82,
+      "p90": 200.1,
+      "max": 232.2,
+      "gt_90": 73,
+      "gt_120": 53
+    },
+    "duration_minutes": {
+      "p50": 0.67,
+      "p90": 40.83
+    },
+    "conclusion": "GitHub schedule is a best-effort compute trigger, not a reliable 20-minute capture clock."
+  },
+  "free_tier_design": {
+    "existing_worker_crons": 2,
+    "worker_cron_limit": 5,
+    "new_capture_cron": "*/20 * * * *",
+    "capture_invocations_per_day": 72,
+    "upstream_fetches_per_day": 144,
+    "d1_row_writes_per_day_estimate": [72, 144],
+    "d1_payload_mb_per_30_days_estimate": [22, 43],
+    "full_workflow_every_20m_kv_writes_per_day_estimate": 1029,
+    "kv_free_writes_per_day": 1000,
+    "decision": "Use D1 for append-only capture and skip unchanged KV writes; do not run the full workflow every 20 minutes."
+  },
+  "roadmap": [
+    {
+      "phase": "0 - Integrity",
+      "scope": "Immutable decision snapshot, prestart ledger, ORO back to shadow, real totals/F5, dedupe and deterministic RNG",
+      "exit_gate": "Zero post-start training rows, zero feature mutations and zero duplicate outcomes"
+    },
+    {
+      "phase": "1 - 20-minute capture",
+      "scope": "Cloudflare Cron plus idempotent D1 slots; split watcher, refresh, learner and uploader",
+      "exit_gate": "Capture age <=30 minutes during active slate and free-tier budgets remain green"
+    },
+    {
+      "phase": "2 - Clean champion",
+      "scope": "End-to-end production replay, nested walk-forward, block bootstrap, versioning and rollback",
+      "exit_gate": "Champion metrics reproduced from immutable same-timestamp inputs"
+    },
+    {
+      "phase": "3 - Shadow challengers",
+      "scope": "Market-residual model, ablations, starter/bullpen and T-90 lineup horizon",
+      "exit_gate": "Independent forward gates pass; otherwise remain shadow"
+    },
+    {
+      "phase": "4 - Governed continuous learning",
+      "scope": "Drift, daily refit, weekly promotion and price-aware abstaining selector",
+      "exit_gate": "Stable forward improvement with operational and honesty guardrails"
+    }
+  ]
+}
