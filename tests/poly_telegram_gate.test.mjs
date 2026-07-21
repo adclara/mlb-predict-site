@@ -107,19 +107,27 @@ test('D1 hace atómico el máximo global de dos y el dedupe de siete días', asy
   const reservations = attempts.flatMap((result) => result.reservations);
   assert.equal(reservations.length, 2);
   assert.deepEqual(db.rows.filter((row) => row.et_date === DAY).map((row) => row.slot).sort(), [1, 2]);
+  // Promise completion order is not slot order: hashing three candidates can
+  // resolve in any order on CI. Identify each reservation by the atomic slot
+  // D1 actually assigned before exercising release/retry semantics.
+  const slotOf = (reservation) => db.rows.find((row) => row.reservation_id === reservation.reservation_id)?.slot;
+  const slotOne = reservations.find((reservation) => slotOf(reservation) === 1);
+  const slotTwo = reservations.find((reservation) => slotOf(reservation) === 2);
+  assert.ok(slotOne);
+  assert.ok(slotTwo);
 
-  await completePolyTelegramReservations(db, [reservations[0]], {
+  await completePolyTelegramReservations(db, [slotOne], {
     sentAt: new Date(NOW * 1000).toISOString(), messageId: 77,
   });
-  await failPolyTelegramReservations(db, [reservations[1]], {
+  await failPolyTelegramReservations(db, [slotTwo], {
     failedAt: new Date(NOW * 1000).toISOString(), error: 'Telegram 429', definitive: true,
   });
-  const retry = await reservePolyTelegram(db, [candidates[2]], { date: DAY, nowSec: NOW + 60 });
+  const retry = await reservePolyTelegram(db, [slotTwo.item], { date: DAY, nowSec: NOW + 60 });
   assert.equal(retry.reservations.length, 1);
   assert.equal(db.rows.find((row) => row.reservation_id === retry.reservations[0].reservation_id).slot, 2);
 
   // A sent market stays deduplicated after the ET date changes.
-  const duplicateNextDay = await reservePolyTelegram(db, [reservations[0].item], {
+  const duplicateNextDay = await reservePolyTelegram(db, [slotOne.item], {
     date: '2026-07-22', nowSec: NOW + 86400,
   });
   assert.equal(duplicateNextDay.reservations.length, 0);
