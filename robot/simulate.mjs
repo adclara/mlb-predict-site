@@ -31,7 +31,20 @@ const r3 = (x) => (x == null ? '—' : x.toFixed(3));
 // ── cargar TODAS las filas de juegos ────────────────────────────────────────
 const files = fs.readdirSync(GAMES).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort();
 const rows = [];
-for (const f of files) { try { for (const r of (JSON.parse(fs.readFileSync(join(GAMES, f), 'utf8')).games || [])) rows.push(r); } catch { /* skip */ } }
+const invalidatedGamePks = new Set();
+for (const f of files) {
+  try { for (const r of (JSON.parse(fs.readFileSync(join(GAMES, f), 'utf8')).games || [])) rows.push(r); } catch { /* skip */ }
+  // El gate de mercados sombra excluye scratches medidos antes del inicio. Una
+  // observación live/postgame no borra resultados ni entra en este conjunto.
+  try {
+    const daily = JSON.parse(fs.readFileSync(join(DATA, 'history', f), 'utf8'));
+    for (const [gamePk, invalidation] of Object.entries(daily.starter_invalidations || {})) {
+      const detected = Date.parse(invalidation?.detected_at || '');
+      const start = Date.parse(invalidation?.scheduled_start_utc || daily?.scheduled_starts?.[gamePk] || '');
+      if (Number.isFinite(detected) && Number.isFinite(start) && detected < start) invalidatedGamePks.add(String(gamePk));
+    }
+  } catch { /* días sin ledger público */ }
+}
 const graded = prepareTrainingRows(rows).filter((r) => r.formula_version === FORMULA_VERSION);
 console.log(`\n🔬 SIMULACIÓN MLB — walk-forward sobre ${files.length} días`);
 console.log(`   filas totales: ${rows.length} · gradadas (formula ${FORMULA_VERSION}): ${graded.length}`);
@@ -94,7 +107,7 @@ if (mvmValid) console.log(`   modelo ${pctf(mvm.model.acc)} · mercado ${pctf(mv
 else console.log('   (sin cohorte auditable modelo-vs-mercado en learning.json)');
 
 // ── 5) mercados secundarios pedidos: todavía en sombra ─────────────────────
-const lab = marketLabReport(rows);
+const lab = marketLabReport(rows, { invalidatedGamePks });
 console.log(`\n══ 5) Laboratorio Over / F5 (top 2 por día; corte ${lab.cut}) ══`);
 for (const [key, x] of Object.entries(lab.markets)) {
   console.log(`   ${key.padEnd(11)} train ${x.train.wins}-${x.train.losses} (${pctf(x.train.rate)}) · test histórico ${x.test.wins}-${x.test.losses} (${pctf(x.test.rate)}, IC95% ${pctf(x.test.lo)}–${pctf(x.test.hi)}) · forward n=${x.forward.n} · gate ${x.gate.passes ? 'PASA' : 'NO PASA: ' + x.gate.reason}`);

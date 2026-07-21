@@ -111,16 +111,26 @@ function canonicalScore(entry) {
   return score
 }
 
-function rebuildIndex(dailyDocs, oldIndex) {
+export function rebuildIndex(dailyDocs, oldIndex) {
   let w = 0, l = 0, ps = 0, lw = 0, ll = 0, lps = 0, gw = 0, gl = 0, units = 0, pricedN = 0
   const tier = { oro: { wins: 0, losses: 0 }, plata: { wins: 0, losses: 0 } }
   const lab = Object.fromEntries(['over', 'f5', 'pitcher_f5'].map((key) => [key, { wins: 0, losses: 0, pushes: 0 }]))
   const days = []
-  const eligible = (pick) => pick.eligible_public_record === true && pick.record_scope === 'public_live'
+  const pregameInvalidation = (pick, rec) => {
+    const invalidation = rec?.starter_invalidations?.[String(pick?.game_pk)]
+    const detected = isoMs(invalidation?.detected_at)
+    const start = isoMs(pick?.scheduled_start_utc
+      || invalidation?.scheduled_start_utc
+      || rec?.scheduled_starts?.[String(pick?.game_pk)])
+    return detected != null && start != null && detected < start
+  }
+  const eligible = (pick, rec) => pick.eligible_public_record === true
+    && pick.record_scope === 'public_live' && !pregameInvalidation(pick, rec)
+  const resolved = (pick) => ['win', 'loss', 'push'].includes(pick?.result)
   for (const rec of dailyDocs.sort((a, b) => String(a.date).localeCompare(String(b.date)))) {
-    const plays = (rec.plays || []).filter((pick) => eligible(pick) && pick.result)
-    const locks = (rec.locks || []).filter((pick) => eligible(pick) && pick.result)
-    const gems = (rec.gems || []).filter((pick) => eligible(pick) && pick.result)
+    const plays = (rec.plays || []).filter((pick) => eligible(pick, rec) && resolved(pick))
+    const locks = (rec.locks || []).filter((pick) => eligible(pick, rec) && resolved(pick))
+    const gems = (rec.gems || []).filter((pick) => eligible(pick, rec) && resolved(pick))
     for (const pick of plays) pick.result === 'win' ? w++ : pick.result === 'loss' ? l++ : ps++
     for (const pick of locks) {
       pick.result === 'win' ? lw++ : pick.result === 'loss' ? ll++ : lps++
@@ -129,7 +139,7 @@ function rebuildIndex(dailyDocs, oldIndex) {
       else if (pick.result === 'loss') group.losses++
       if (pick.result === 'win' || pick.result === 'loss') {
         const price = Number(pick.price)
-        if (Number.isFinite(price) && price !== 0) {
+        if (Number.isFinite(price) && Math.abs(price) >= 100) {
           pricedN++
           units += pick.result === 'win' ? (price > 0 ? price / 100 : 100 / Math.abs(price)) : -1
         }
@@ -143,14 +153,14 @@ function rebuildIndex(dailyDocs, oldIndex) {
     }
     days.push({
       date: rec.date,
-      n: (rec.plays || []).filter(eligible).length,
+      n: (rec.plays || []).filter((pick) => eligible(pick, rec)).length,
       graded: !!rec.graded,
       wins: plays.filter((p) => p.result === 'win').length,
       losses: plays.filter((p) => p.result === 'loss').length,
-      locks_n: (rec.locks || []).filter(eligible).length,
+      locks_n: (rec.locks || []).filter((pick) => eligible(pick, rec)).length,
       locks_wins: locks.filter((p) => p.result === 'win').length,
       locks_losses: locks.filter((p) => p.result === 'loss').length,
-      gems_n: (rec.gems || []).filter(eligible).length,
+      gems_n: (rec.gems || []).filter((pick) => eligible(pick, rec)).length,
       gems_wins: gems.filter((p) => p.result === 'win').length,
       gems_losses: gems.filter((p) => p.result === 'loss').length,
     })

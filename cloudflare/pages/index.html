@@ -1124,6 +1124,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .hrow .hm{display:flex;align-items:center;gap:8px;font-weight:600;min-width:0}
 .hrow .hm img,.hrow .hm .tfall{width:18px;height:18px}
 .hrow .hm .mu2{color:var(--faint);font-weight:500;font-size:12px}
+.hcohs{display:inline-flex;gap:4px;flex-wrap:wrap;margin-top:2px}.hcoh{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);border:1px solid var(--hair);border-radius:999px;padding:1px 5px}
 .hrow .hp{font-weight:800;color:var(--dim)}
 .hrow .hr{font-size:11px;font-weight:800;letter-spacing:.05em;padding:2px 8px;border-radius:5px}
 .hrow .hr.w{background:rgba(25,222,159,.13);color:var(--volt)} .hrow .hr.l{background:rgba(255,70,85,.11);color:var(--red)}
@@ -1558,7 +1559,7 @@ const T = {
     sim_edge: 'ventaja real', sim_mkt: 'Acierto global: AA {m}% vs mercado {k}% — la selección sigue como hipótesis en validación; no es una ventaja demostrada.',
     sim_note: 'Todo out-of-sample; se reporta tal cual, gane o pierda. No es recomendación de apuesta.',
     tr_units: '📈 Unidades de fijos en el tiempo', tr_units_h: 'Ganancia acumulada (cuota real)', tr_units_soon: 'Acumulando fijos con cuota pregame auditada — sin precio real no calculamos unidades.',
-    tr_locks: 'Fijos', tr_gems: 'Gemas', tr_locks_n: 'fijos medidos', tr_at110: 'a −110', tr_measured: 'medidas',
+    tr_locks: 'Fijos', tr_gems: 'Gemas', tr_locks_n: 'fijos medidos', tr_actual_odds: 'con cuota real · n={n}', tr_measured: 'medidas',
     share: 'Compartir', share_txt: 'Mira este partido en AA Sports',
     future_note: '📅 Próximos enfrentamientos · la predicción AA se publica el día del juego',
     future_detail: 'Partido por jugar. La predicción AA (número calibrado + análisis) se publica el mismo día, cuando corre el modelo con lineups y datos frescos.',
@@ -1567,7 +1568,8 @@ const T = {
     aria_home: 'AA Sports — inicio', aria_search: 'Buscar', aria_sports: 'Deportes', aria_prevday: 'Día anterior', aria_pickdate: 'Elegir fecha', aria_nextday: 'Día siguiente', aria_close: 'Cerrar',
     auth_login: 'Entrar', auth_account: 'Mi cuenta', auth_logout: 'Salir', auth_delete: 'Borrar mi cuenta', auth_note: 'Solo guardamos tu nombre, email y foto de Google, y tus favoritos. Borra tu cuenta cuando quieras — se elimina todo.', auth_del_confirm: '¿Borrar tu cuenta y tus favoritos sincronizados? Esto no se puede deshacer.',
     rec_title: 'Récord AA', rec_locks: 'Fijos', rec_gems: 'Gemas', rec_won: 'ganados', rec_lost: 'perdidos', rec_measured: 'picks medidos',
-    live_chip: 'vivo', tag_gem: '💎 Gema', hist_loading: 'Cargando historial…', hist_none: 'Aún no hay picks calificados en la base.', abbr_w: 'G', abbr_l: 'P', h_wins: 'Gana', h_won: 'GANÓ', h_lost: 'PERDIÓ',
+    live_chip: 'vivo', tag_gem: '💎 Gema', hist_loading: 'Cargando historial…', hist_none: 'Aún no hay picks calificados en la base.', abbr_w: 'G', abbr_l: 'P', h_wins: 'Gana', h_over: 'Alta', h_under: 'Baja', h_won: 'GANÓ', h_lost: 'PERDIÓ',
+    conf_high: 'Alta', conf_medium: 'Media', conf_low: 'Baja', conf_gold: 'ORO', conf_silver: 'PLATA', conf_gem: 'Gema', conf_lock: 'Fijo',
     more_in_list: 'más en la lista.', mlb_recentnote: 'Sin juegos de MLB hoy · mostrando los últimos resultados', mlb_fav_hint: 'Marca partidos con ⭐ para verlos aquí.', mlb_no_filter: 'Sin partidos en este filtro.', load_err_retry: 'No pude cargar las predicciones. Reintentando…', load_err_date: 'No pude cargar esa fecha.',
     d_moment: 'Momento del juego', d_why: 'Por qué esta jugada', d_metrics: 'Métricas AA', d_based: 'En base a los datos', d_risk: 'Índice de riesgo', d_duel: 'Duelo de señales AA', d_h2h: 'Comparación cara a cara', d_f5: 'Primeras 5 entradas · NRFI', d_injuries: 'Bajas por lesión o suspensión', d_injury_note: '★ = jugador clave (buenas estadísticas esta temporada). Informativo: el modelo AA no se altera con esto sin re-validación.',
     d_starters: 'Abridores probables', d_form: 'Forma reciente (últimos {n})', d_bats5: 'Bateo últimos 5', d_lineup: 'Alineación al bate', d_hitters: 'Mejores bateadores', d_context: 'Contexto del juego',
@@ -1579,7 +1581,7 @@ const T = {
     pick_hit: 'pick acertado', pick_miss: 'pick fallado', tab_analysis: 'Análisis AA', tab_sim: 'Simulación', postponed: 'Pospuesto',
     sim_ntimes: 'Simulamos este juego {n} veces', sim_top: 'Marcador más probable', sim_freq: 'Marcadores más frecuentes', sim_runs: 'Carreras totales por juego', sim_margin: '¿Por cuánto gana {t}?', sim_by1: 'Por 1 carrera', sim_by23: 'Por 2-3', sim_by4: 'Por 4+', sim_loses: 'Pierde', sim_of_sims: 'de las simulaciones',
     o_recentnote: 'Sin juegos hoy · mostrando los últimos resultados', o_no_events: 'Sin eventos ahora mismo en {s}.', o_loading: 'Cargando…', o_no_events2: 'Sin eventos por ahora. Vuelve más tarde.', o_compare: 'Comparación', o_lineups: 'Alineaciones', o_match_stats: 'Estadísticas del partido', o_events: 'Eventos', o_team_stats: 'Estadísticas del equipo', o_today: 'HOY', o_toplay: 'Por jugar', o_recent_form: 'Racha reciente', o_leaders: 'Líderes del partido', o_injuries: 'Bajas reportadas', o_note: 'Datos en vivo vía AA Sports API. Actualización automática cada 45s.', no_data: 'Sin datos.',
-    hd_crumb: 'Historial AA', hd_measured: 'Picks medidos', hd_30d: 'últimos 30 días', hd_record: 'Récord', hd_wl: 'ganados–perdidos', hd_acc: 'Acierto', hd_acc_sub: 'todo medido, nada oculto', hd_streak: 'Racha actual', hd_streak_sub: 'picks seguidos ganados', hd_byday: 'Por día (últimos 14)', hd_noday: 'Sin días calificados aún.', hd_byconf: 'Por nivel de confianza',
+    hd_crumb: 'Historial AA', hd_measured: 'Picks medidos', hd_30d: 'últimos 30 días', hd_record: 'Récord', hd_wl: 'ganados–perdidos', hd_acc: 'Acierto', hd_acc_sub: 'todo medido, nada oculto', hd_streak: 'Racha actual', hd_streak_sub: 'según hora programada', hd_byday: 'Por día (últimos 14)', hd_noday: 'Sin días calificados aún.', hd_byconf: 'Por nivel de confianza', hist_public_rec: 'récord del boleto', hist_cohort_play: 'boleto', hist_cohort_lock: 'fijo', hist_cohort_gem: 'gema',
     cm_ops: 'OPS temporada', cm_rpg: 'Carreras/juego', cm_rpg5: 'C/juego últimos 5', cm_starter_fip: 'Abridor FIP', cm_form: 'Forma (V de 5)', cm_rest: 'Descanso (días)', d_set_score: 'Marcador por set',
     co_pos: 'Posición', co_pts: 'Puntos', co_gd: 'Dif. de gol', co_wins: 'Victorias', co_pos_conf: 'Posición conf.', co_winpct: '% Victorias', co_ptdiff: 'Dif. puntos', co_world_rank: 'Ranking mundial',
     d_verdict: 'Veredicto AA', d_wp_of: 'Prob. de victoria de', d_wp_local: '(local)', d_wp_aria: 'curva de probabilidad de victoria', d_wins_of: 'gana {t}', d_wins: 'gana', d_wins_lbl: 'Gana ', d_pick_lbl: 'Pick: ',
@@ -1723,7 +1725,7 @@ const T = {
     sim_edge: 'real edge', sim_mkt: 'Overall accuracy: AA {m}% vs market {k}% — selection remains a hypothesis under validation, not a proven edge.',
     sim_note: 'All out-of-sample; reported as-is, win or lose. Not betting advice.',
     tr_units: '📈 Lock units over time', tr_units_h: 'Cumulative return (actual price)', tr_units_soon: 'Collecting locks with audited pregame prices — without a real price we do not calculate units.',
-    tr_locks: 'Locks', tr_gems: 'Gems', tr_locks_n: 'locks measured', tr_at110: 'at −110', tr_measured: 'measured',
+    tr_locks: 'Locks', tr_gems: 'Gems', tr_locks_n: 'locks measured', tr_actual_odds: 'at actual odds · n={n}', tr_measured: 'measured',
     share: 'Share', share_txt: 'Check out this game on AA Sports',
     future_note: '📅 Upcoming matchups · the AA prediction publishes on game day',
     future_detail: 'Game not played yet. The AA prediction (calibrated number + analysis) publishes the same day, once the model runs with lineups and fresh data.',
@@ -1732,7 +1734,8 @@ const T = {
     aria_home: 'AA Sports — home', aria_search: 'Search', aria_sports: 'Sports', aria_prevday: 'Previous day', aria_pickdate: 'Pick date', aria_nextday: 'Next day', aria_close: 'Close',
     auth_login: 'Sign in', auth_account: 'My account', auth_logout: 'Sign out', auth_delete: 'Delete my account', auth_note: 'We only store your name, email and Google photo, plus your favorites. Delete your account anytime — everything is removed.', auth_del_confirm: 'Delete your account and synced favorites? This cannot be undone.',
     rec_title: 'AA record', rec_locks: 'Locks', rec_gems: 'Gems', rec_won: 'won', rec_lost: 'lost', rec_measured: 'picks tracked',
-    live_chip: 'live', tag_gem: '💎 Gem', hist_loading: 'Loading history…', hist_none: 'No graded picks in the database yet.', abbr_w: 'W', abbr_l: 'L', h_wins: 'Wins', h_won: 'WON', h_lost: 'LOST',
+    live_chip: 'live', tag_gem: '💎 Gem', hist_loading: 'Loading history…', hist_none: 'No graded picks in the database yet.', abbr_w: 'W', abbr_l: 'L', h_wins: 'Wins', h_over: 'Over', h_under: 'Under', h_won: 'WON', h_lost: 'LOST',
+    conf_high: 'High', conf_medium: 'Medium', conf_low: 'Low', conf_gold: 'GOLD', conf_silver: 'SILVER', conf_gem: 'Gem', conf_lock: 'Lock',
     more_in_list: 'more in the list.', mlb_recentnote: 'No MLB games today · showing the latest results', mlb_fav_hint: 'Star games with ⭐ to see them here.', mlb_no_filter: 'No games in this filter.', load_err_retry: 'Could not load predictions. Retrying…', load_err_date: 'Could not load that date.',
     d_moment: 'Game moment', d_why: 'Why this play', d_metrics: 'AA metrics', d_based: 'Based on the data', d_risk: 'Risk index', d_duel: 'AA signal duel', d_h2h: 'Head to head', d_f5: 'First 5 innings · NRFI', d_injuries: 'Injuries or suspensions', d_injury_note: '★ = key player (good stats this season). Informational: the AA model does not change from this without re-validation.',
     d_starters: 'Probable starters', d_form: 'Recent form (last {n})', d_bats5: 'Batting, last 5', d_lineup: 'Batting lineup', d_hitters: 'Top hitters', d_context: 'Game context',
@@ -1744,7 +1747,7 @@ const T = {
     pick_hit: 'pick hit', pick_miss: 'pick missed', tab_analysis: 'AA analysis', tab_sim: 'Simulation', postponed: 'Postponed',
     sim_ntimes: 'We simulated this game {n} times', sim_top: 'Most likely score', sim_freq: 'Most frequent scores', sim_runs: 'Total runs per game', sim_margin: 'By how much does {t} win?', sim_by1: 'By 1 run', sim_by23: 'By 2-3', sim_by4: 'By 4+', sim_loses: 'Loses', sim_of_sims: 'of the simulations',
     o_recentnote: 'No games today · showing the latest results', o_no_events: 'No events right now in {s}.', o_loading: 'Loading…', o_no_events2: 'No events for now. Check back later.', o_compare: 'Comparison', o_lineups: 'Lineups', o_match_stats: 'Match stats', o_events: 'Events', o_team_stats: 'Team stats', o_today: 'TODAY', o_toplay: 'Upcoming', o_recent_form: 'Recent form', o_leaders: 'Match leaders', o_injuries: 'Reported injuries', o_note: 'Live data via AA Sports API. Auto-refresh every 45s.', no_data: 'No data.',
-    hd_crumb: 'AA History', hd_measured: 'Picks tracked', hd_30d: 'last 30 days', hd_record: 'Record', hd_wl: 'won–lost', hd_acc: 'Hit rate', hd_acc_sub: 'all tracked, nothing hidden', hd_streak: 'Current streak', hd_streak_sub: 'picks won in a row', hd_byday: 'By day (last 14)', hd_noday: 'No graded days yet.', hd_byconf: 'By confidence level',
+    hd_crumb: 'AA History', hd_measured: 'Picks tracked', hd_30d: 'last 30 days', hd_record: 'Record', hd_wl: 'won–lost', hd_acc: 'Hit rate', hd_acc_sub: 'all tracked, nothing hidden', hd_streak: 'Current streak', hd_streak_sub: 'by scheduled start', hd_byday: 'By day (last 14)', hd_noday: 'No graded days yet.', hd_byconf: 'By confidence level', hist_public_rec: 'ticket record', hist_cohort_play: 'ticket', hist_cohort_lock: 'lock', hist_cohort_gem: 'gem',
     cm_ops: 'Season OPS', cm_rpg: 'Runs/game', cm_rpg5: 'R/game last 5', cm_starter_fip: 'Starter FIP', cm_form: 'Form (W of 5)', cm_rest: 'Rest (days)', d_set_score: 'Score by set',
     co_pos: 'Position', co_pts: 'Points', co_gd: 'Goal diff', co_wins: 'Wins', co_pos_conf: 'Conf. position', co_winpct: 'Win %', co_ptdiff: 'Point diff', co_world_rank: 'World ranking',
     d_verdict: 'AA verdict', d_wp_of: 'Win prob. for', d_wp_local: '(home)', d_wp_aria: 'win probability curve', d_wins_of: '{t} wins', d_wins: 'wins', d_wins_lbl: 'Wins ', d_pick_lbl: 'Pick: ',
@@ -2157,7 +2160,7 @@ function rowHtml(ev, idx){
   const pickSideWp = liveWpHome == null ? null : (pickH ? liveWpHome : pickA ? 1 - liveWpHome : null);
   const rowMuted = pickSideWp != null && pickSideWp < 0.4;
 
-  const tags = p.invalidated ? '' : (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${rowMuted ? 'muted' : ''}">${b === 'gema' ? t('tag_gem') : esc(b)}</span>`).join('');
+  const tags = p.invalidated ? '' : (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${rowMuted ? 'muted' : ''}">${b === 'gema' ? t('tag_gem') : esc(confLabel(b))}</span>`).join('');
 
   // duelo de abridores en la fila (solo pre-juego): se ve el pitcheo de un vistazo
   const sp2 = ev.snapshot && ev.snapshot.pitchers;
@@ -2188,19 +2191,33 @@ function rowHtml(ev, idx){
 }
 function renderHistList(){
   if (!histData){ $('list').innerHTML = `<div class="lempty">${t('hist_loading')}</div>`; return; }
-  const graded = histData.filter(x => x.result);
+  const scoped = histData.some(x => x.public_play != null || x.public_lock != null || x.public_gem != null);
+  const inPublicCohort = x => Number(x.public_play) === 1 || Number(x.public_lock) === 1 || Number(x.public_gem) === 1;
+  const graded = histData.filter(x => (x.result === 'win' || x.result === 'loss') && (!scoped || inPublicCohort(x)));
   if (!graded.length){ $('list').innerHTML = `<div class="lempty">${t('hist_none')}</div>`; return; }
   const byDay = new Map();
   for (const r of graded){ if (!byDay.has(r.date)) byDay.set(r.date, []); byDay.get(r.date).push(r); }
   let html = '';
   for (const [day, rows] of byDay){
-    const w = rows.filter(x => x.result === 'win').length, l = rows.length - w;
-    html += `<div class="dayhead"><span class="dt num">${esc(day)}</span><span class="drec num"><b class="w">${w}${t('abbr_w')}</b> · <b class="l">${l}${t('abbr_l')}</b></span></div>`;
-    html += rows.map(r => `<div class="hrow">
-      <span class="hm">${logoImg(r.pick)}<span>${t('h_wins')} ${esc(tNick(r.pick))}<br><span class="mu2">${esc(canon(r.away))} @ ${esc(canon(r.home))}</span></span></span>
+    const ticketRows = scoped ? rows.filter(x => Number(x.public_play) === 1) : rows;
+    const w = ticketRows.filter(x => x.result === 'win').length, l = ticketRows.length - w;
+    html += `<div class="dayhead"><span class="dt num">${esc(day)}</span><span class="drec num">${t('hist_public_rec')} · <b class="w">${w}${t('abbr_w')}</b> · <b class="l">${l}${t('abbr_l')}</b></span></div>`;
+    html += rows.map(r => {
+      const total = r.market === 'total';
+      const choice = total
+        ? `${t(r.side === 'under' ? 'h_under' : 'h_over')} ${r.line != null ? r.line : ''}`
+        : `${t('h_wins')} ${tNick(r.pick)}`;
+      const cohorts = scoped ? [
+        Number(r.public_play) === 1 ? t('hist_cohort_play') : null,
+        Number(r.public_lock) === 1 ? t('hist_cohort_lock') : null,
+        Number(r.public_gem) === 1 ? t('hist_cohort_gem') : null,
+      ].filter(Boolean).map(label => `<span class="hcoh">${esc(label)}</span>`).join('') : '';
+      return `<div class="hrow">
+      <span class="hm">${total ? '<span aria-hidden="true">↕️</span>' : logoImg(r.pick)}<span>${esc(choice)}<br><span class="mu2">${esc(canon(r.away))} @ ${esc(canon(r.home))}</span>${cohorts ? `<br><span class="hcohs">${cohorts}</span>` : ''}</span></span>
       <span class="hp num">${r.prob != null ? Math.round(r.prob * 1000) / 10 + '%' : ''}</span>
       <span class="hr ${r.result === 'win' ? 'w' : 'l'}">${r.result === 'win' ? '✓ ' + t('h_won') : '✗ ' + t('h_lost')}</span>
-    </div>`).join('');
+    </div>`;
+    }).join('');
   }
   $('list').innerHTML = html;
 }
@@ -2330,7 +2347,7 @@ function boletoHtml(){
   const rec = todayRecord ? [recLine(t('rec_locks'), todayRecord.locks), recLine(t('rec_gems'), todayRecord.gems)].filter(Boolean).join('') : '';
   const head = `<div class="bolhead"><span class="boltt">🎫 ${t('bol_title')}</span>${legs.length ? `<span class="boln num">${legs.length}</span>` : ''}</div>`;
   if (!legs.length) return `<div class="boleto"><div class="boleto-in">${head}<div class="bolempty">${t('bol_none')}</div></div></div>`;
-  const tierTxt = tr => tr === 'gema' ? t('tag_gem') : tr;
+  const tierTxt = tr => tr === 'gema' ? t('tag_gem') : confLabel(tr);
   const rows = legs.map(({ ev, tier, pct }) => {
     const rk = ev.risk && ev.risk.level ? `<span class="bolrisk">${t('bol_risk')}: ${t('risk_' + ev.risk.level) || esc(ev.risk.level)}</span>` : '';
     return `<button class="bleg" data-id="${esc(ev.event_id)}">
@@ -2384,29 +2401,52 @@ function diamondSvg(sit){
     <rect x="5" y="18" width="12" height="12" rx="2.5" transform="rotate(45 11 24)" fill="${b(sit.onThird)}"/>
   </svg>`;
 }
+function confLabel(value){
+  const keys = { alta: 'conf_high', media: 'conf_medium', baja: 'conf_low', oro: 'conf_gold', plata: 'conf_silver', gema: 'conf_gem', fijo: 'conf_lock' };
+  const raw = String(value || '').toLowerCase();
+  return raw ? t(keys[raw] || raw) : '—';
+}
 function renderHistDash(){
   const dc = $('dcard');
   dc.classList.toggle('enter', lastAnimKey !== 'hist');
   lastAnimKey = 'hist';
   if (!histData){ dc.innerHTML = `<div class="dempty">${t('hist_loading')}</div>`; return; }
-  const g = histData.filter(x => x.result);
+  const graded = histData.filter(x => x.result === 'win' || x.result === 'loss');
+  const scoped = histData.some(x => x.public_play != null || x.public_lock != null || x.public_gem != null);
+  // El récord general cuenta únicamente picks públicos; fijos y gemas tienen
+  // cohortes propias y pueden incluir un juego que no quedó en el top-3 diario.
+  const g = scoped ? graded.filter(x => Number(x.public_play) === 1) : graded;
   const w = g.filter(x => x.result === 'win').length, l = g.length - w;
   const pct = g.length ? Math.round(w / g.length * 100) : 0;
-  let streak = 0;
-  for (const r of g){ if (r.result === 'win') streak++; else break; }
+  // Una racha solo es medible con una secuencia temporal factual. Agrupamos
+  // juegos con la misma hora programada: si alguno perdió, la racha se corta
+  // antes de ese grupo en vez de inventar un orden dentro del mismo horario.
+  let streak = null;
+  if (g.length && g.every(r => r.start_time)){
+    const ordered = [...g].sort((a, b) => String(b.start_time).localeCompare(String(a.start_time)) || String(a.selection_key || '').localeCompare(String(b.selection_key || '')));
+    streak = 0;
+    for (let i = 0; i < ordered.length;){
+      const at = ordered[i].start_time;
+      const sameStart = [];
+      while (i < ordered.length && ordered[i].start_time === at) sameStart.push(ordered[i++]);
+      if (sameStart.some(r => r.result === 'loss')) break;
+      streak += sameStart.length;
+    }
+  }
   const byConf = {};
   for (const r of g){
-    const c = r.confidence || 'sin dato';
+    const c = r.confidence || '';
     byConf[c] = byConf[c] || { w: 0, n: 0 };
     byConf[c].n++; if (r.result === 'win') byConf[c].w++;
   }
   // ── récord por nivel + curva de unidades de FIJOS (transparencia total) ──
   const isLock = (c) => c === 'oro' || c === 'plata' || c === 'fijo';
-  const lockPicks = g.filter(x => isLock(x.confidence)).sort((a, b) => String(a.date).localeCompare(String(b.date)));
-  const gemPicks = g.filter(x => x.confidence === 'gema');
+  const lockPicks = (scoped ? graded.filter(x => Number(x.public_lock) === 1) : graded.filter(x => isLock(x.confidence)))
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const gemPicks = scoped ? graded.filter(x => Number(x.public_gem) === 1) : graded.filter(x => x.confidence === 'gema');
   const lw = lockPicks.filter(x => x.result === 'win').length, ll = lockPicks.length - lw;
   const gw = gemPicks.filter(x => x.result === 'win').length, gl = gemPicks.length - gw;
-  const pricedLocks = lockPicks.filter(x => Number.isFinite(Number(x.price)) && Number(x.price) !== 0);
+  const pricedLocks = lockPicks.filter(x => Number.isFinite(Number(x.price)) && Math.abs(Number(x.price)) >= 100);
   let acc = 0; const upts = pricedLocks.map(x => {
     const price = Number(x.price);
     acc += x.result === 'win' ? (price > 0 ? price / 100 : 100 / Math.abs(price)) : -1;
@@ -2451,7 +2491,7 @@ function renderHistDash(){
         <div class="dtile"><div class="lb">${t('hd_record')}</div><div class="vl num"><span style="color:var(--volt)">${w}</span>–<span style="color:var(--faint)">${l}</span></div><div class="sub2">${t('hd_wl')}</div></div>
         <div class="dtile"><div class="lb">${t('hd_acc')}</div><div class="vl num" style="color:var(--volt)">${pct}%</div><div class="sub2">${t('hd_acc_sub')}</div></div>
         <div class="dtile"><div class="lb">${t('hd_streak')}</div><div class="vl num">${streak > 0 ? t('abbr_w') + streak : '—'}</div><div class="sub2">${t('hd_streak_sub')}</div></div>
-        ${lockPicks.length ? `<div class="dtile"><div class="lb">${t('tr_locks')}</div><div class="vl num"><span style="color:var(--volt)">${lw}</span>–<span style="color:var(--faint)">${ll}</span></div><div class="sub2 num" style="color:${finalU < 0 ? 'var(--red)' : 'var(--volt)'}">${finalU > 0 ? '+' : ''}${finalU}u ${t('tr_at110')}</div></div>` : ''}
+        ${lockPicks.length ? `<div class="dtile"><div class="lb">${t('tr_locks')}</div><div class="vl num"><span style="color:var(--volt)">${lw}</span>–<span style="color:var(--faint)">${ll}</span></div><div class="sub2 num" style="color:${pricedLocks.length ? (finalU < 0 ? 'var(--red)' : 'var(--volt)') : 'var(--dim)'}">${pricedLocks.length ? `${finalU > 0 ? '+' : ''}${finalU}u ${t('tr_actual_odds').replace('{n}', pricedLocks.length)}` : t('tr_units_soon')}</div></div>` : ''}
         ${gemPicks.length ? `<div class="dtile"><div class="lb">${t('tr_gems')}</div><div class="vl num"><span style="color:var(--volt)">${gw}</span>–<span style="color:var(--faint)">${gl}</span></div><div class="sub2">${gw + gl} 💎 ${t('tr_measured')}</div></div>` : ''}
       </div>
       ${unitsCurve}
@@ -2459,7 +2499,7 @@ function renderHistDash(){
       <div class="wpcard"><div class="daybars">${bars || `<span class="wempty">${t('hd_noday')}</span>`}</div></div>
       <div class="secttl">${t('hd_byconf')}</div>
       ${Object.entries(byConf).map(([c, v]) => `<div class="confrow">
-        <span class="ck">${esc(c)}</span>
+        <span class="ck">${esc(confLabel(c))}</span>
         <span class="cbar"><i style="width:${v.n ? Math.round(v.w / v.n * 100) : 0}%"></i></span>
         <span class="cn num">${v.w}/${v.n} · ${v.n ? Math.round(v.w / v.n * 100) : 0}%</span>
       </div>`).join('')}
@@ -2669,7 +2709,7 @@ function renderDetail(){
   }
   const recA = lv && lv.away.rec ? `<span class="rc num">${esc(lv.away.rec)}</span>` : '';
   const recH = lv && lv.home.rec ? `<span class="rc num">${esc(lv.home.rec)}</span>` : '';
-  const tags = p.invalidated ? '' : (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${badgeMuted ? 'muted' : ''}">${b === 'gema' ? t('tag_gem') : esc(b)}</span>`).join(' ');
+  const tags = p.invalidated ? '' : (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${badgeMuted ? 'muted' : ''}">${b === 'gema' ? t('tag_gem') : esc(confLabel(b))}</span>`).join(' ');
 
   const risk = ev.risk || {};
   const riskPct = risk.score != null ? Math.min(100, risk.score) : null;
@@ -2738,7 +2778,7 @@ function renderDetail(){
       <div class="ww-pick">
         ${p.pick && !p.invalidated ? `<span class="bigpick ${badgeMuted ? 'muted' : ''}">${liveWpHome != null ? t('d_pick_lbl') : t('d_wins_lbl')}${esc(tNick(p.pick))}</span>` : ''}
         ${pickPct != null ? `<span class="bigprob num ${badgeMuted ? 'muted' : ''}">${pickPct}%</span>` : ''}
-        ${liveWpHome == null && p.confidence && !p.invalidated ? `<span class="confpill">${t('d_confidence')} ${esc(p.confidence)}</span>` : ''}
+        ${liveWpHome == null && p.confidence && !p.invalidated ? `<span class="confpill">${t('d_confidence')} ${esc(confLabel(p.confidence))}</span>` : ''}
         ${tags}
       </div>
     </div>` : ''}
@@ -4574,7 +4614,7 @@ async function loadHistory(){
   try{
     const r = await fetch(API + '/v1/mlb/history?days=30');
     const d = await r.json();
-    histData = (d.predictions || []).filter(x => x.pick);
+    histData = d.predictions || [];
   }catch(err){ histData = []; }
   histLoading = false;
   if (listTab === 'hist') renderAll();

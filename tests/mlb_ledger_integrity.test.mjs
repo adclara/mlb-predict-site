@@ -13,6 +13,7 @@ import {
   learningRows,
   mergeGameRows,
   parseGame,
+  validateFrozenPitchers,
 } from '../robot/daily.mjs'
 
 const game = ({
@@ -105,7 +106,7 @@ test('un slate vacío también se congela; ORO y laboratorios nacen en sombra', 
   const rows = [{ game_pk: 1, game_datetime: '2026-07-21T23:00:00Z' }]
   const first = buildSlateRecord(null, {
     rows,
-    plays: [],
+    plays: [{ game_pk: 1, market: 'total', side: 'over', line: 8.5 }],
     locks: [{ game_pk: 1, market: 'ml', pick: 'NYY' }],
     gems: [],
     marketLab: { over: [{ game_pk: 1, market: 'total', side: 'over' }], f5: [], pitcher_f5: [] },
@@ -116,6 +117,8 @@ test('un slate vacío también se congela; ORO y laboratorios nacen en sombra', 
   assert.equal(first.selection_snapshot_verified, true)
   assert.equal(first.shadow.locks[0].record_scope, 'shadow_forward_gate')
   assert.equal(first.shadow.market_lab.over[0].record_scope, 'shadow_experiment')
+  assert.equal(first.shadow.market_plays[0].market, 'total')
+  assert.equal(first.shadow.market_plays[0].record_scope, 'shadow_experiment')
 
   const rerun = buildSlateRecord(first, {
     rows,
@@ -124,6 +127,122 @@ test('un slate vacío también se congela; ORO y laboratorios nacen en sombra', 
   }, { date: '2026-07-21', publishedAt: '2026-07-21T13:00:00Z' })
   assert.deepEqual(rerun.plays, [])
   assert.equal(rerun.slate_frozen_at, '2026-07-21T12:00:00Z')
+})
+
+test('cualquier cambio de abridor invalida el juego aunque no tenga selección', () => {
+  const detectedAt = '2026-07-21T15:00:00Z'
+  const rec = {
+    pitchers: { 1: { h: 101, a: null, hn: 'Home One', an: null } },
+    scheduled_starts: { 1: '2026-07-21T23:00:00Z' },
+    plays: [], locks: [], gems: [], shadow: {},
+  }
+  // Number/string equality is not a change; null -> ID on the away side is.
+  assert.equal(validateFrozenPitchers(rec, {
+    1: { h: '101', a: 202, hn: 'Home One', an: 'Away Two' },
+  }, null, detectedAt), true)
+  assert.equal(rec.starter_invalidations['1'].detected_at, detectedAt)
+  assert.deepEqual(rec.starter_invalidations['1'].changes, [{
+    side: 'away', from_id: null, to_id: '202', source: 'effective',
+  }])
+  assert.equal(rec.plays.length, 0)
+
+  // Idempotent: the original detection time is append-only.
+  assert.equal(validateFrozenPitchers(rec, {
+    1: { h: 101, a: 202, hn: 'Home One', an: 'Away Two' },
+  }, null, '2026-07-21T16:00:00Z'), false)
+  assert.equal(rec.starter_invalidations['1'].detected_at, detectedAt)
+
+  const removed = { pitchers: { 9: { h: 909, a: 808 } }, scheduled_starts: { 9: '2026-07-21T23:00:00Z' }, plays: [], locks: [], gems: [], shadow: {} }
+  assert.equal(validateFrozenPitchers(removed, { 9: { h: null, a: 808 } }, null, detectedAt), true)
+  assert.equal(removed.starter_invalidations['9'].changes[0].from_id, '909')
+  assert.equal(removed.starter_invalidations['9'].changes[0].to_id, null)
+
+  const confirmed = {
+    pitchers: { 5: { h: 505, a: 606 } },
+    official_pitchers: { 5: { h: null, a: 606 } },
+    plays: [], locks: [], gems: [], shadow: {},
+  }
+  // StatsAPI later confirming the same starter already used from D1 is not a change.
+  assert.equal(validateFrozenPitchers(confirmed,
+    { 5: { h: 505, a: 606 } }, { 5: { h: 505, a: 606 } }, detectedAt), false)
+
+  const officialRemoved = {
+    pitchers: { 6: { h: 707, a: 808 } },
+    official_pitchers: { 6: { h: 707, a: 808 } },
+    scheduled_starts: { 6: '2026-07-21T23:00:00Z' },
+    plays: [], locks: [], gems: [], shadow: {},
+  }
+  // A stale D1 effective value cannot hide an official ID -> null transition.
+  assert.equal(validateFrozenPitchers(officialRemoved,
+    { 6: { h: 707, a: 808 } }, { 6: { h: null, a: 808 } }, detectedAt), true)
+  assert.equal(officialRemoved.starter_invalidations['6'].changes[0].source, 'official')
+
+  const late = {
+    date: '2026-07-21', graded: true,
+    pitchers: { 7: { h: 707, a: 808 } },
+    plays: [{ game_pk: 7, market: 'ml', pick: 'NYY', result: 'win',
+      record_scope: 'public_live', eligible_public_record: true,
+      posted_at: '2026-07-21T12:00:00Z', scheduled_start_utc: '2026-07-21T23:00:00Z' }],
+    locks: [], gems: [], shadow: { market_lab: {
+      over: [{ game_pk: 7, market: 'total', result: 'loss', scheduled_start_utc: '2026-07-21T23:00:00Z' }],
+      f5: [], pitcher_f5: [],
+    } },
+  }
+  const lateDetectedAt = '2026-07-22T01:00:00Z'
+  assert.equal(validateFrozenPitchers(late, { 7: { h: 999, a: 808 } }, null, lateDetectedAt), true)
+  assert.equal(late.starter_invalidations['7'], undefined)
+  assert.equal(late.starter_observations['7'].phase, 'late_or_unknown')
+  assert.equal(late.plays[0].scratch_warning, undefined)
+  const lateIndex = buildPublicIndex([late], { updatedAt: 'x' })
+  assert.deepEqual(lateIndex.record,
+    { wins: 1, losses: 0, pushes: 0, win_rate: 1 })
+  assert.equal(lateIndex.market_lab_record.over.losses, 1)
+
+  const pregame = {
+    date: '2026-07-21', graded: true,
+    pitchers: { 7: { h: 707, a: 808 } },
+    plays: [{ game_pk: 7, market: 'ml', pick: 'NYY', result: 'win',
+      record_scope: 'public_live', eligible_public_record: true,
+      posted_at: '2026-07-21T12:00:00Z', scheduled_start_utc: '2026-07-21T23:00:00Z' }],
+    locks: [], gems: [], shadow: { market_lab: {
+      over: [{ game_pk: 7, market: 'total', result: 'loss', scheduled_start_utc: '2026-07-21T23:00:00Z' }],
+      f5: [], pitcher_f5: [],
+    } },
+  }
+  assert.equal(validateFrozenPitchers(pregame, { 7: { h: 999, a: 808 } }, null, detectedAt), true)
+  assert.equal(pregame.starter_invalidations['7'].phase, 'pregame')
+  assert.equal(pregame.plays[0].scratch_warning, true)
+  assert.equal(pregame.plays[0].result, 'win')
+  const pregameIndex = buildPublicIndex([pregame], { updatedAt: 'x' })
+  assert.deepEqual(pregameIndex.record,
+    { wins: 0, losses: 0, pushes: 0, win_rate: null })
+  assert.equal(pregameIndex.market_lab_record.over.losses, 0)
+})
+
+test('scratch pregame conserva features pero excluye la fila del aprendizaje', () => {
+  const start = '2026-07-21T23:00:00Z'
+  const frozen = freezeFeatureRow({
+    game_pk: 7, date: '2026-07-21', game_date: '2026-07-21',
+    game_datetime: start, first_pitch: start, status: 'Scheduled',
+    formula_version: 'v2', ml_pick: 'NYY',
+  }, '2026-07-21T12:00:00Z')
+  frozen.graded = true
+  frozen.home_win = 1
+  frozen.final = '3-5'
+  frozen.outcome_status = 'final'
+  const originalHash = frozen.feature_hash
+  const [marked] = mergeGameRows([frozen], [], {
+    asOf: '2026-07-22T02:00:00Z',
+    starterInvalidations: { 7: {
+      reason: 'probable_starter_changed', detected_at: '2026-07-21T17:00:00Z',
+      scheduled_start_utc: start, phase: 'pregame',
+    } },
+  })
+  assert.equal(marked.feature_hash, originalHash)
+  assert.equal(marked.learning_eligible, false)
+  assert.equal(marked.integrity.training_eligible, false)
+  assert.equal(marked.integrity.reason, 'probable_starter_changed_pregame')
+  assert.deepEqual(learningRows([marked]), [])
 })
 
 test('candidatos publicados después del inicio jamás entran al ledger público', () => {

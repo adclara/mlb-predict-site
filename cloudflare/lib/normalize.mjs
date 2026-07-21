@@ -22,10 +22,15 @@ function isCausalFrozen(g) {
   const firstPitch = g && (g.first_pitch || g.game_datetime);
   const capturedMs = Date.parse(capturedAt || '');
   const firstPitchMs = Date.parse(firstPitch || '');
+  const integrity = g && g.integrity;
+  const causallySealed = integrity?.training_eligible === true
+    || (integrity?.training_eligible === false
+      && integrity?.cohort === 'native_pregame_immutable'
+      && g?.invalid_reason === 'probable_starter_changed_pregame');
   return !!g
     && /^[a-f0-9]{64}$/i.test(String(g.feature_hash || ''))
     && g.feature_scope === 'pregame_immutable'
-    && g.integrity && g.integrity.training_eligible === true
+    && causallySealed
     && Number.isFinite(capturedMs) && Number.isFinite(firstPitchMs)
     && capturedMs < firstPitchMs;
 }
@@ -420,13 +425,36 @@ function snapshotFor(g, formIdx, pitcherNames, prob, liveGame) {
   return Object.values(snap).some((v) => v != null) ? snap : null;
 }
 
+const cleanStarterId = (value) => value == null || String(value).trim() === '' ? null : String(value).trim();
+const cleanStarterName = (value) => value == null || String(value).trim() === '' ? null : String(value).trim().toLowerCase();
+function rowStarterChanged(g) {
+  const current = g?.observed?.pitchers;
+  if (!current || typeof current !== 'object') return false;
+  const observedAt = Date.parse(g?.observed?.captured_at || '');
+  const firstPitch = Date.parse(g?.first_pitch || g?.game_datetime || '');
+  // Una observación tomada live/postgame no puede retirar retrospectivamente
+  // una decisión que fue pública antes del juego. Sin ambos tiempos medidos,
+  // fallamos cerrado y dejamos la discrepancia como hecho observado.
+  if (!Number.isFinite(observedAt) || !Number.isFinite(firstPitch) || observedAt >= firstPitch) return false;
+  const sideChanged = (side) => {
+    const frozenId = cleanStarterId(g?.[`${side}_probable_pitcher_id`]);
+    const currentId = cleanStarterId(current?.[side]?.id);
+    const frozenName = cleanStarterName(g?.[`${side}_probable_pitcher_name`] || g?.brief?.pitchers?.[side]?.name);
+    const currentName = cleanStarterName(current?.[side]?.name);
+    if (frozenId != null && currentId != null) return frozenId !== currentId;
+    if (frozenName != null && currentName != null) return frozenName !== currentName;
+    return frozenId !== currentId || frozenName !== currentName;
+  };
+  return sideChanged('home') || sideChanged('away');
+}
+
 // Construye un evento normalizado a partir de un juego + su pick del daily (si existe).
 function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
   const observed = g.observed && typeof g.observed === 'object' ? g.observed : null;
   const status = normStatus(observed?.status ?? g.status);
   const currentGame = observed?.odds ? { ...g, odds: observed.odds } : g;
   const publicReady = isCausalFrozen(g);
-  const invalidated = publicReady && pickInfo?.scratch_warning === true;
+  const invalidated = publicReady && (pickInfo?.scratch_warning === true || rowStarterChanged(g));
   const observedHomeRaw = observed?.scores?.home, observedAwayRaw = observed?.scores?.away;
   const observedHome = observedHomeRaw == null ? null : Number(observedHomeRaw);
   const observedAway = observedAwayRaw == null ? null : Number(observedAwayRaw);
@@ -442,7 +470,7 @@ function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
       start: g.game_datetime || g.game_date || g.date || null,
       status,
       home: { code: g.home, name: g.home }, away: { code: g.away, name: g.away },
-      prediction: { pick: null, prob: null, prob_pct: null, confidence: null, engine_version: null },
+      prediction: { pick: null, prob: null, prob_pct: null, price: null, confidence: null, engine_version: null },
       metrics: [], summary_es: null, snapshot: null, risk: null,
       odds: oddsFor(currentGame), badges: [], result: null,
       final: g.final || observedFinal,
@@ -479,11 +507,14 @@ function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
     home: { code: g.home, name: g.home },
     away: { code: g.away, name: g.away },
     prediction: {
-      pick: g.ml_pick || (pickInfo && pickInfo.pick) || null,
-      prob: prob == null ? null : Math.round(prob * 1000) / 1000,
-      prob_pct: PCT(prob),
-      confidence: confidence || null,
-      engine_version: g.formula_version || g.engine || 'v2',
+      // Once a starter changes, the old number is withdrawn rather than left
+      // accessible in the API while only the UI hides it.
+      pick: invalidated ? null : (g.ml_pick || (pickInfo && pickInfo.pick) || null),
+      prob: invalidated || prob == null ? null : Math.round(prob * 1000) / 1000,
+      prob_pct: invalidated ? null : PCT(prob),
+      price: invalidated ? null : normalizeAmericanPrice(pickInfo?.price),
+      confidence: invalidated ? null : (confidence || null),
+      engine_version: invalidated ? null : (g.formula_version || g.engine || 'v2'),
       invalidated,
       invalidated_reason: invalidated ? 'probable_starter_changed' : null,
     },
@@ -493,7 +524,7 @@ function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
     risk: !invalidated && g.risk ? { level: g.risk.level || null, score: g.risk.score ?? null } : null,
     odds: oddsFor(currentGame),
     badges,
-    result: g.ml_result || null, // win|loss del pick cuando el juego ya se calificó
+    result: invalidated ? null : (g.ml_result || null), // no gradúa una predicción retirada
     final: g.final || observedFinal, // marcador factual "away-home" si terminó
     live: null, // los marcadores en vivo los inyecta el Worker (/v1/mlb/live) a 30-60s.
     pending: false,
@@ -531,9 +562,28 @@ function calibratedProb(pickInfo, pp) {
   return calShrink(pp);
 }
 
+// Solo persistimos cuotas americanas reales. Un null significa que no hubo una
+// cuota auditable al capturar la selección; jamás se sustituye por -110.
+export function normalizeAmericanPrice(value) {
+  const price = Number(value);
+  return Number.isFinite(price) && Math.abs(price) >= 100 ? price : null;
+}
+
 // Indexa plays/locks/gems del daily por game_pk para enriquecer cada juego.
 function indexDaily(daily) {
   const map = new Map();
+  // Solo una invalidación detectada antes del primer lanzamiento puede retirar
+  // el pick. Una observación tardía nunca reescribe el track record.
+  for (const [gamePk, invalidation] of Object.entries(daily?.starter_invalidations || {})) {
+    const detectedAt = Date.parse(invalidation?.detected_at || '');
+    const firstPitch = Date.parse(invalidation?.scheduled_start_utc
+      || daily?.scheduled_starts?.[gamePk] || '');
+    if (!Number.isFinite(detectedAt) || !Number.isFinite(firstPitch) || detectedAt >= firstPitch) continue;
+    map.set(String(gamePk), {
+      scratch_warning: true,
+      scratch_note: invalidation?.note || null,
+    });
+  }
   // Slates migrados preservan su track record público, pero no existe un hash
   // que vincule su probabilidad/badge con la fila de features inmutable. En ese
   // caso la predicción general sale de la fila causal y el daily no la pisa.
@@ -546,16 +596,18 @@ function indexDaily(daily) {
       // nunca los presenta como selecciones públicas ni les asigna badge.
       if (p.eligible_public_record === false) continue;
       if (p.record_scope && p.record_scope !== 'public_live') continue;
-      const prev = map.get(p.game_pk) || {};
-      map.set(p.game_pk, {
+      const key = String(p.game_pk);
+      const prev = map.get(key) || {};
+      map.set(key, {
         pick: p.pick ?? prev.pick,
         prob: typeof p.prob === 'number' ? p.prob : prev.prob,
         prob_v2: typeof p.prob_v2 === 'number' ? p.prob_v2 : prev.prob_v2,
+        price: normalizeAmericanPrice(p.price) ?? prev.price,
         confidence: p.confidence ?? prev.confidence,
         badge: badge || prev.badge,
         tier: p.tier ?? prev.tier,
-        scratch_warning: p.scratch_warning === true || prev.scratch_warning === true,
-        scratch_note: p.scratch_note ?? prev.scratch_note,
+        scratch_warning: prev.scratch_warning === true,
+        scratch_note: prev.scratch_note ?? null,
       });
     }
   };
@@ -583,7 +635,7 @@ export function normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs, 
   const formIdx = prevGamesDocs && prevGamesDocs.length ? buildFormIndex(prevGamesDocs) : null;
   const pitcherIdx = (dailyDoc && dailyDoc.pitchers) || {};
   const liveIdx = (liveDoc && liveDoc.games) || {};
-  const events = games.map((g) => toEvent(g, dailyIdx.get(g.game_pk) || null, formIdx,
+  const events = games.map((g) => toEvent(g, dailyIdx.get(String(g.game_pk)) || null, formIdx,
     pitcherIdx[String(g.game_pk)] || null, liveIdx[String(g.game_pk)] || null));
 
   // Orden: primero live, luego pre por hora, luego final; dentro, por prob desc.
@@ -634,6 +686,7 @@ export function toD1Rows(normalized) {
     away: e.away.code,
     pick: e.prediction.pick,
     prob: e.prediction.prob,
+    price: normalizeAmericanPrice(e.prediction.price),
     confidence: e.prediction.confidence,
     engine_version: e.prediction.engine_version,
     result: e.result || null,

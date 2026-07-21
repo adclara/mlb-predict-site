@@ -19,6 +19,7 @@ const JOURNAL = join(DATA, 'history', 'learning_journal.json');
 const ACCOUNT_ID = 'f02574feb7272a1da2818e35e0ff4342';
 const KV_NAMESPACE_ID = '683aa2f8846643bf8a6a8b606e5bf0b7';
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN || null;
+const JOURNAL_COHORT_VERSION = 'causal_ledger_v2';
 
 const r2 = (x) => Math.round(x * 1000) / 10;   // fracción → % con 1 decimal
 const pp = (x) => Math.round(x * 1000) / 10;   // idem para "puntos porcentuales"
@@ -58,6 +59,11 @@ function build() {
   if (!existsSync(LEARN)) { console.log('No hay learning.json — nada que hacer.'); return null; }
   const L = JSON.parse(readFileSync(LEARN, 'utf8'));
   const prev = existsSync(JOURNAL) ? JSON.parse(readFileSync(JOURNAL, 'utf8')) : {};
+  // The causal-ledger migration reduced the eligible cohort. Trend points from
+  // the older mutable policy are not comparable and must never remain on the
+  // same chart or generate fake "new predictions" deltas.
+  const cohortReset = prev.n_graded != null && prev.cohort_version !== JOURNAL_COHORT_VERSION;
+  const prior = prev.cohort_version === JOURNAL_COHORT_VERSION ? prev : {};
 
   const seg = (L.segments || []).find((s) => s.id === 'all') || {};
   const gap = seg.gap ?? null;                                   // exceso de confianza global
@@ -126,32 +132,37 @@ function build() {
   }
 
   // ── Log con fecha (append-only): registra cambios notables entre corridas ──
-  const log = Array.isArray(prev.log) ? prev.log.slice(0, 40) : [];
-  const addLog = (es, en) => log.unshift({ date: L.last_date, es, en });
-  const pSnap = prev.cal || {};
-  if (prev.n_graded == null) {
+  const log = Array.isArray(prior.log) ? prior.log.slice(0, 40) : [];
+  const addLog = (es, en, date = L.last_date) => log.unshift({ date, es, en });
+  const pSnap = prior.cal || {};
+  if (cohortReset) {
+    const resetDate = String(L.updated_at || new Date().toISOString()).slice(0, 10);
+    addLog('Reinicié la tendencia con el ledger causal v2; los puntos de la cohorte mutable anterior no eran comparables.',
+      'I restarted the trend with causal ledger v2; points from the previous mutable cohort were not comparable.', resetDate);
+  } else if (prior.n_graded == null) {
     addLog('Empecé a llevar mi diario de aprendizaje.', 'I started keeping my learning journal.');
   } else {
-    if (prev.formula_version && prev.formula_version !== L.formula_version)
-      addLog(`Cambié de fórmula: ${prev.formula_version} → ${L.formula_version}.`, `Switched formula: ${prev.formula_version} → ${L.formula_version}.`);
+    if (prior.formula_version && prior.formula_version !== L.formula_version)
+      addLog(`Cambié de fórmula: ${prior.formula_version} → ${L.formula_version}.`, `Switched formula: ${prior.formula_version} → ${L.formula_version}.`);
     if (pSnap.gap != null && gap != null) {
       const d = r2(gap) - pSnap.gap;
       if (Math.abs(d) >= 0.3)
         addLog(`Mi calibración ${d < 0 ? 'mejoró' : 'se ensanchó'}: el hueco de confianza pasó de ${pSnap.gap}% a ${r2(gap)}%.`,
                `My calibration ${d < 0 ? 'improved' : 'widened'}: the confidence gap moved from ${pSnap.gap}% to ${r2(gap)}%.`);
     }
-    if (typeof prev.n_graded === 'number' && L.n_graded - prev.n_graded >= 1)
-      addLog(`Sumé ${L.n_graded - prev.n_graded} predicciones medidas nuevas.`, `Added ${L.n_graded - prev.n_graded} newly measured predictions.`);
+    if (typeof prior.n_graded === 'number' && L.n_graded - prior.n_graded >= 1)
+      addLog(`Sumé ${L.n_graded - prior.n_graded} predicciones medidas nuevas.`, `Added ${L.n_graded - prior.n_graded} newly measured predictions.`);
   }
 
   // ── Histórico para la gráfica de calibración en el tiempo (cap 120, dedupe por fecha) ──
-  const history = Array.isArray(prev.history) ? prev.history.filter((h) => h.date !== snap.date) : [];
-  history.push(snap);
+  const history = Array.isArray(prior.history) ? prior.history.filter((h) => h.date !== snap.date) : [];
+  history.push({ ...snap, cohort_version: JOURNAL_COHORT_VERSION });
   history.sort((a, b) => String(a.date).localeCompare(String(b.date)));
   while (history.length > 120) history.shift();
 
   return {
     updated_at: new Date().toISOString(),
+    cohort_version: JOURNAL_COHORT_VERSION,
     n_graded: L.n_graded, n_total: L.n_total, first_date: L.first_date, last_date: L.last_date,
     formula_version: L.formula_version,
     cal: { gap: gap != null ? r2(gap) : null, ece: ece != null ? r2(ece) : null, says: r2(seg.says), hits: r2(seg.hits),

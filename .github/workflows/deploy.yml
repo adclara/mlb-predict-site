@@ -40,14 +40,25 @@ jobs:
           VERIFY=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$URL")
           VERIFY="$VERIFY" node -e 'const j=JSON.parse(process.env.VERIFY); if(j.success!==true || j.result?.production_branch!=="main") process.exit(1)'
           echo "✅ rama de producción verificada: main"
-      - name: Deploy Worker (API)
+      - name: Preparar D1 (migraciones + corte seguro de Telegram)
         working-directory: cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
         run: |
           npx --yes wrangler@4.112.0 d1 migrations apply aa-sports --remote
-          npx --yes wrangler@4.112.0 deploy
+          npx --yes wrangler@4.112.0 d1 execute aa-sports --remote --command "UPDATE poly_telegram_policy SET cutover_at = datetime('now') WHERE id = 1"
+      - name: Sincronizar ledger público MLB por selección en D1
+        working-directory: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node upload.mjs --backfill-d1-prices
+      - name: Deploy Worker (API)
+        working-directory: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
+        run: npx --yes wrangler@4.112.0 deploy
       - name: Verificar crons del vigía y la ingesta MLB
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
