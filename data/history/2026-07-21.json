@@ -27,7 +27,9 @@
       "prob": 0.72,
       "prob_v2": 0.561,
       "confidence": "alta",
-      "engine": "v2"
+      "engine": "v2",
+      "scratch_warning": true,
+      "scratch_note": "Abridor cambió (local: Ranger Suarez → Eduardo Rivera) — el análisis original ya no aplica"
     },
     {
       "game_pk": 825056,
@@ -112,6 +114,104 @@
     }
   ],
   "gems": [],
+  "market_lab": {
+    "version": "shadow_v1",
+    "published": false,
+    "generated_at": "2026-07-21T17:09:53.834Z",
+    "gates": {
+      "over": {
+        "passes": false,
+        "reason": "línea de apertura + muestra forward pendientes"
+      },
+      "f5": {
+        "passes": false,
+        "reason": "sin precio F5 y gate OOS pendiente"
+      },
+      "pitcher_f5": {
+        "passes": false,
+        "reason": "sin precio F5 y gate OOS pendiente"
+      }
+    },
+    "over": [
+      {
+        "game_pk": 822871,
+        "matchup": "CWS @ TEX",
+        "market": "total",
+        "side": "over",
+        "line": 8.5,
+        "prob_raw": 0.811,
+        "expected": 11.1,
+        "edge_runs": 2.6,
+        "provider": "DraftKings",
+        "captured_at": "2026-07-21T17:09:53.831Z",
+        "line_stage": "opening_preserved"
+      },
+      {
+        "game_pk": 824895,
+        "matchup": "SD @ ATL",
+        "market": "total",
+        "side": "over",
+        "line": 9,
+        "prob_raw": 0.801,
+        "expected": 11.5,
+        "edge_runs": 2.5,
+        "provider": "DraftKings",
+        "captured_at": "2026-07-21T17:09:53.831Z",
+        "line_stage": "opening_preserved"
+      }
+    ],
+    "f5": [
+      {
+        "game_pk": 824409,
+        "matchup": "MIN @ CLE",
+        "pick": "CLE",
+        "side": "home",
+        "market": "f5_ml",
+        "prob_raw": 0.497
+      },
+      {
+        "game_pk": 823760,
+        "matchup": "NYM @ MIL",
+        "pick": "NYM",
+        "side": "away",
+        "market": "f5_ml",
+        "prob_raw": 0.475
+      }
+    ],
+    "pitcher_f5": [
+      {
+        "game_pk": 824409,
+        "matchup": "MIN @ CLE",
+        "pick": "CLE",
+        "side": "home",
+        "market": "pitcher_f5",
+        "prob_raw": 0.497,
+        "pitcher": "Parker Messick",
+        "starter_gate": {
+          "passes": true,
+          "pick_era": 3.06,
+          "opp_era": 5.14,
+          "starts": 3
+        }
+      },
+      {
+        "game_pk": 823760,
+        "matchup": "NYM @ MIL",
+        "pick": "NYM",
+        "side": "away",
+        "market": "pitcher_f5",
+        "prob_raw": 0.475,
+        "pitcher": "Zac Thornton",
+        "starter_gate": {
+          "passes": true,
+          "pick_era": 2.6,
+          "opp_era": 3.65,
+          "starts": 3
+        }
+      }
+    ],
+    "graded": false
+  },
   "pitchers": {
     "822787": {
       "h": 592332,
