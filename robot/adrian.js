@@ -3,7 +3,8 @@
 // scores each, and the formula decides which play carries the most weight — with
 // the reasons spelled out. The total lean is driven by Adrian's real edge: the
 // starter's RECENT form (last starts, not last year) + the team's contact/offense
-// profile, on top of the model's base run expectation. Runs client-side.
+// profile, on top of the model's base run expectation. Runs server-side in
+// GitHub Actions; the browser only receives the already-computed result.
 
 import { park } from './venues.js'
 import { marketConsensus } from './odds.js'
@@ -276,15 +277,14 @@ export function selectPlays(analyses, { max = 3, minConf = 0.45 } = {}) {
   return { plays, combo, ranked: analyses.sort((x, y) => y.bestPlay.confScore - x.bestPlay.confScore) }
 }
 
-// --- "Fijos del día": the 1-2 highest-SAFETY moneyline picks ------------------
-// Adrian's ask: máxima seguridad. A game only qualifies as a fijo when EVERYTHING
-// lines up: the model's confidence is `alta`, the pick is a STRONG market
-// consensus (market favorite AND 5+ factors agreeing — the only two signals the
-// audit rates 'robusto'), and the books themselves AGREE (low `book_disagreement`).
-// Walk-forward tournament (2026-07-07, 104 days, both-halves stable): this rule
-// hits 67.7% [60.1–74.5] at +7.9% ROI vs 66.3%/+4.5% without the agree>=5 filter;
-// pure-market variants LOSE (-10% ROI) — the model's factor screen adds real value.
-// Some days nothing qualifies (88% coverage) → return [] rather than force a pick.
+// --- "Fijos del día": the 0-2 highest-SAFETY moneyline picks ------------------
+// A game only qualifies when THREE independently-audited signals line up:
+//   1) market favorite, 2) 5+ AA factors, 3) the pick's starter has the better
+// recent ERA with >=2 measured starts on BOTH sides. The 2026-07-21 chronological
+// replay produced 76-30 (71.7%, n=106): 47-19 before the 70% date cut and 29-11
+// after it. This is a selection gate, not a higher made-up probability.
+// PLATA is no longer used to fill a quota: its own replay was unstable/negative.
+// Some days return zero or one pick; abstention is part of the model.
 // Higher-probability tier, never a guarantee. `oddsByPk` is a Map or object
 // keyed by game_pk holding the merged odds block.
 const MAX_LOCK_DISAGREE = 0.06 // books apart by >6 pts → too much market doubt
@@ -292,9 +292,27 @@ const MAX_LOCK_DISAGREE = 0.06 // books apart by >6 pts → too much market doub
 // beat the price (structural math, not a fitted threshold): the fijo still shows
 // (max win probability is the mandate) but carries a "línea cara" warning.
 const PRICE_WARN_BREAKEVEN = 0.68
+
+// Pure/exported for regression tests. `analysis.pitcher_recent` is the live
+// shape ({home:{recent:{era,n}}}); rows logged by learn.js flatten recent one
+// level, so the defensive `recent || side` also supports replay fixtures.
+export function starterRecentGate(analysis, pick) {
+  const side = (x) => {
+    const r = x?.recent || x || null
+    return r && r.era != null && Number.isFinite(Number(r.era)) && Number(r.n) >= 2
+      ? { era: Number(r.era), n: Number(r.n) } : null
+  }
+  const home = side(analysis?.pitcher_recent?.home)
+  const away = side(analysis?.pitcher_recent?.away)
+  if (!home || !away || !pick) return { passes: false, pick_era: null, opp_era: null }
+  const pickHome = pick === analysis.home
+  const mine = pickHome ? home : away, opp = pickHome ? away : home
+  return { passes: mine.era < opp.era, pick_era: mine.era, opp_era: opp.era, starts: Math.min(mine.n, opp.n) }
+}
+
 export function selectLocks(analyses, oddsByPk, { max = 2 } = {}) {
   const getOdds = (pk) => (oddsByPk?.get ? oddsByPk.get(pk) : oddsByPk?.[pk]) || null
-  const gold = [], silverPool = []
+  const gold = []
   for (const a of analyses) {
     const ml = a.ml
     if (!ml || ml.confidence !== 'alta') continue
@@ -302,7 +320,9 @@ export function selectLocks(analyses, oddsByPk, { max = 2 } = {}) {
     const odds = getOdds(a.game_pk)
     if (!odds || !odds.fav_side) continue
     const mc = marketConsensus(ml, odds) // 'strong' = market fav + agree>=5 (both robust signals)
-    if (mc.level !== 'strong' && mc.level !== 'market') continue
+    if (mc.level !== 'strong') continue
+    const starter = starterRecentGate(a, ml.pick)
+    if (!starter.passes) continue
     const disagree = odds.book_disagreement ?? 0
     if (disagree > MAX_LOCK_DISAGREE) continue
     const consHome = odds.consensus?.p_home ?? odds.p_home_mkt
@@ -320,19 +340,11 @@ export function selectLocks(analyses, oddsByPk, { max = 2 } = {}) {
       engine: ml.engine ?? 'classic', prob_v2: ml.prob_v2 ?? null,
       price: mlPrice ?? null, // American price at capture — feeds the public units ledger
       price_warning: breakeven > PRICE_WARN_BREAKEVEN, // ROI honesty flag, not a filter
-      safety,
+      safety, selection_rule: 'market_agree5_starter_v1', starter_gate: starter,
     }
-    if (mc.level === 'strong') gold.push({ ...lock, tier: 'oro' })
-    else silverPool.push({ ...lock, tier: 'plata' })
+    gold.push({ ...lock, tier: 'oro' })
   }
-  // ORO (market fav + agree>=5): the walk-forward tournament pick — 67.7%
-  // [60.1–74.5], +7.9% ROI, stable in both halves. PLATA fills the day up to
-  // `max` when gold is short: simulated at ~55-63% with NEGATIVE ROI and
-  // half-to-half instability → shown as the "second favorite", explicitly
-  // informational, with its own graded record. Never sold as gold.
+  // Rank the qualifiers, but never fill a missing slot with a failed gate.
   gold.sort((x, y) => y.safety - x.safety)
-  silverPool.sort((x, y) => y.safety - x.safety)
-  const out = gold.slice(0, max)
-  if (out.length < max) out.push(...silverPool.slice(0, max - out.length))
-  return out
+  return gold.slice(0, max)
 }

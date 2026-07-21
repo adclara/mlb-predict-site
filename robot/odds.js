@@ -212,9 +212,22 @@ export function mergeExtraBooks(odds, extraBooks) {
 // closing-line capture at grading. Additive metadata — never gated.
 export function mergeOddsBlocks(prev, fresh) {
   if (!fresh) return prev ?? null
-  const out = prev ? { ...prev, ...fresh, p_home_open: prev.p_home_open ?? fresh.p_home_open, wp_curve: fresh.wp_curve ?? prev.wp_curve } : { ...fresh }
+  const out = prev ? {
+    ...prev, ...fresh,
+    p_home_open: prev.p_home_open ?? fresh.p_home_open,
+    over_under_open: prev.over_under_open ?? (prev.over_under != null ? prev.over_under : fresh.over_under_open),
+    spread_open: prev.spread_open ?? (prev.spread != null ? prev.spread : fresh.spread_open),
+    wp_curve: fresh.wp_curve ?? prev.wp_curve,
+  } : { ...fresh }
   if (out.p_home_open == null && out.p_home_mkt != null) out.p_home_open = out.p_home_mkt
+  if (out.over_under_open == null && out.over_under != null) out.over_under_open = out.over_under
+  if (out.spread_open == null && out.spread != null) out.spread_open = out.spread
+  if (fresh.stage === 'final') {
+    if (fresh.over_under != null) out.over_under_close = fresh.over_under
+    if (fresh.spread != null) out.spread_close = fresh.spread
+  }
   if (out.p_home_open != null && out.p_home_mkt != null) out.line_move = round4(out.p_home_mkt - out.p_home_open)
+  if (out.over_under_open != null && out.over_under != null) out.total_line_move = round4(out.over_under - out.over_under_open)
   return out
 }
 

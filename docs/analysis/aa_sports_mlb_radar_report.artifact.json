@@ -1,0 +1,800 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "AA Sports: más selección, menos ruido",
+    "description": "Plan medido para MLB, Radar y Telegram — snapshot del 21 de julio de 2026.",
+    "generatedAt": "2026-07-21T16:45:59.525Z",
+    "sources": [
+      {
+        "id": "audit_snapshot",
+        "label": "AA Sports audit snapshot",
+        "path": "docs/analysis/aa_sports_audit_snapshot.json"
+      },
+      {
+        "id": "mlb_simulation",
+        "label": "MLB walk-forward simulation",
+        "path": "docs/MLB_SIMULATION.md"
+      },
+      {
+        "id": "poly_study",
+        "label": "Polymarket copy-study",
+        "path": "docs/POLY_STUDY.md"
+      },
+      {
+        "id": "production_mlb",
+        "label": "AA Sports production MLB API",
+        "href": "https://aa-sports-api.opsmira9.workers.dev/v1/mlb/today"
+      },
+      {
+        "id": "production_radar",
+        "label": "AA Sports production Radar APIs",
+        "href": "https://aa-sports-api.opsmira9.workers.dev/v1/poly/radar"
+      },
+      {
+        "id": "implementation",
+        "label": "AA Sports implementation",
+        "path": "robot/market_lab.mjs"
+      },
+      {
+        "id": "headline_sql",
+        "label": "Headline audit metrics",
+        "path": "docs/analysis/aa_sports_report_source.sql",
+        "query": {
+          "engine": "SQLite 3.51",
+          "language": "SQL",
+          "sql": "WITH s(doc) AS (\n  SELECT json(readfile('docs/analysis/aa_sports_audit_snapshot.json'))\n)\nSELECT\n  CAST(json_extract(doc, '$.mlb.history.graded_v2') AS INTEGER) AS graded_v2,\n  json_extract(doc, '$.mlb.lock_gate_market_agree5_starter_v1.test.rate') AS oro_test_rate,\n  CAST(json_extract(doc, '$.mlb.lock_gate_market_agree5_starter_v1.test.n') AS INTEGER) AS oro_test_n,\n  CAST(json_extract(doc, '$.mlb.market_lab_shadow_v1.over.gate_passes') AS INTEGER)\n    + CAST(json_extract(doc, '$.mlb.market_lab_shadow_v1.f5.gate_passes') AS INTEGER)\n    + CAST(json_extract(doc, '$.mlb.market_lab_shadow_v1.pitcher_f5.gate_passes') AS INTEGER)\n    AS secondary_markets_ready,\n  CAST(json_extract(doc, '$.radar.alert_snapshot_before_change.rare_v1_eligible_if_evaluated_now') AS INTEGER)\n    AS telegram_eligible,\n  CAST(json_extract(doc, '$.radar.rare_v1_policy.max_per_et_day') AS INTEGER) AS telegram_max_day\nFROM s;",
+          "description": "One-row materialization of the report headline metrics.",
+          "executed_at": "2026-07-21T16:45:59.525Z",
+          "tables_used": [
+            "docs/analysis/aa_sports_audit_snapshot.json"
+          ],
+          "filters": [
+            "Bounded audit snapshot as of July 21, 2026",
+            "No secrets or wallet-level rows"
+          ]
+        }
+      },
+      {
+        "id": "selection_sql",
+        "label": "MLB selection comparison",
+        "path": "docs/analysis/aa_sports_report_source.sql",
+        "query": {
+          "engine": "SQLite 3.51",
+          "language": "SQL",
+          "sql": "WITH s(doc) AS (\n  SELECT json(readfile('docs/analysis/aa_sports_audit_snapshot.json'))\n), rows AS (\n  SELECT 1 AS sort_order, 'AA global' AS segment,\n    '$.mlb.global_forecast.aa_model' AS p, 'All priced v2 games' AS basis\n  UNION ALL SELECT 2, 'Market global', '$.mlb.global_forecast.market', 'De-vig favorite, same games'\n  UNION ALL SELECT 3, 'ORO production before change', '$.mlb.production_record_before_change.locks', 'Public live record'\n  UNION ALL SELECT 4, 'ORO v1 · train', '$.mlb.lock_gate_market_agree5_starter_v1.train', 'Before June 13 cut'\n  UNION ALL SELECT 5, 'ORO v1 · reserved test', '$.mlb.lock_gate_market_agree5_starter_v1.test', 'June 13 onward'\n)\nSELECT sort_order, segment,\n  json_extract(doc, p || '.rate') AS rate,\n  CAST(COALESCE(json_extract(doc, p || '.n'),\n    json_extract(doc, p || '.wins') + json_extract(doc, p || '.losses')) AS INTEGER) AS n,\n  CAST(json_extract(doc, p || '.wins') AS INTEGER) AS wins,\n  CAST(json_extract(doc, p || '.losses') AS INTEGER) AS losses,\n  json_extract(doc, p || '.wilson_lo') AS wilson_lo,\n  json_extract(doc, p || '.wilson_hi') AS wilson_hi,\n  basis\nFROM s CROSS JOIN rows\nORDER BY sort_order;",
+          "description": "Global model, market and ORO selection rates at their documented grains.",
+          "executed_at": "2026-07-21T16:45:59.525Z",
+          "tables_used": [
+            "docs/analysis/aa_sports_audit_snapshot.json"
+          ],
+          "filters": [
+            "Bounded audit snapshot as of July 21, 2026",
+            "No secrets or wallet-level rows"
+          ]
+        }
+      },
+      {
+        "id": "market_lab_sql",
+        "label": "Secondary-market gate table",
+        "path": "docs/analysis/aa_sports_report_source.sql",
+        "query": {
+          "engine": "SQLite 3.51",
+          "language": "SQL",
+          "sql": "WITH s(doc) AS (\n  SELECT json(readfile('docs/analysis/aa_sports_audit_snapshot.json'))\n), markets(market, p, needed) AS (\n  VALUES\n    ('F5 team ahead', '$.mlb.market_lab_shadow_v1.f5', 'Real F5 price + interval above threshold'),\n    ('Over', '$.mlb.market_lab_shadow_v1.over', '100+ forward decisions with opening line'),\n    ('Pitcher/F5', '$.mlb.market_lab_shadow_v1.pitcher_f5', 'Real F5 price + interval above threshold')\n)\nSELECT market,\n  printf('%d–%d (%.1f%%)', json_extract(doc, p || '.train.wins'),\n    json_extract(doc, p || '.train.losses'), 100 * json_extract(doc, p || '.train.rate')) AS train_record,\n  printf('%d–%d', json_extract(doc, p || '.test.wins'), json_extract(doc, p || '.test.losses')) AS test_record,\n  json_extract(doc, p || '.test.rate') AS test_rate,\n  printf('%.1f%%–%.1f%%', 100 * json_extract(doc, p || '.test.wilson_lo'),\n    100 * json_extract(doc, p || '.test.wilson_hi')) AS test_ci,\n  CAST(json_extract(doc, p || '.forward.n') AS INTEGER) AS forward_n,\n  CASE json_extract(doc, p || '.gate_passes') WHEN 1 THEN 'YES' ELSE 'NO' END AS gate,\n  needed\nFROM s CROSS JOIN markets\nORDER BY market;",
+          "description": "Chronological train/test results and publish-gate status for the private market lab.",
+          "executed_at": "2026-07-21T16:45:59.525Z",
+          "tables_used": [
+            "docs/analysis/aa_sports_audit_snapshot.json"
+          ],
+          "filters": [
+            "Bounded audit snapshot as of July 21, 2026",
+            "No secrets or wallet-level rows"
+          ]
+        }
+      },
+      {
+        "id": "radar_evidence_sql",
+        "label": "Radar evidence table",
+        "path": "docs/analysis/aa_sports_report_source.sql",
+        "query": {
+          "engine": "SQLite 3.51",
+          "language": "SQL",
+          "sql": "WITH s(doc) AS (\n  SELECT json(readfile('docs/analysis/aa_sports_audit_snapshot.json'))\n)\nSELECT 1 AS sort_order, 'Raw alerts in 24 hours' AS metric,\n  printf('%d', json_extract(doc, '$.radar.alert_snapshot_before_change.alerts_last_24h')) AS value,\n  'High-volume tape is noise, not a Telegram product.' AS interpretation FROM s\nUNION ALL SELECT 2, 'Past–future wallet rank correlation',\n  printf('ρ = %.3f (n=%s)', json_extract(doc, '$.radar.production_snapshot.honesty.spearman_past_vs_future'),\n    printf('%,d', json_extract(doc, '$.radar.production_snapshot.honesty.n'))),\n  'Past rank barely predicts future rank.' FROM s\nUNION ALL SELECT 3, 'Delayed copy edge at 5 minutes',\n  printf('%.3f/action', json_extract(doc, '$.radar.copy_study.copy_edge_5m_net')),\n  'The replication gate fails.' FROM s\nUNION ALL SELECT 4, 'Delayed copy edge at 60 minutes',\n  printf('%.3f/action', json_extract(doc, '$.radar.copy_study.copy_edge_60m_net')),\n  'Longer delay still loses in the study.' FROM s\nUNION ALL SELECT 5, 'Current consensuses passing rare_v1',\n  printf('%d of %d', json_extract(doc, '$.radar.alert_snapshot_before_change.rare_v1_eligible_if_evaluated_now'),\n    json_extract(doc, '$.radar.alert_snapshot_before_change.consensus')),\n  'Silence is the expected outcome when evidence is weak.' FROM s\nORDER BY sort_order;",
+          "description": "Alert-volume, persistence and delayed-copy evidence from the audited snapshot.",
+          "executed_at": "2026-07-21T16:45:59.525Z",
+          "tables_used": [
+            "docs/analysis/aa_sports_audit_snapshot.json"
+          ],
+          "filters": [
+            "Bounded audit snapshot as of July 21, 2026",
+            "No secrets or wallet-level rows"
+          ]
+        }
+      },
+      {
+        "id": "rollout_sql",
+        "label": "Release plan table",
+        "path": "docs/analysis/aa_sports_report_source.sql",
+        "query": {
+          "engine": "SQLite 3.51",
+          "language": "SQL",
+          "sql": "WITH rollout(phase, scope, state, trigger, guardrail) AS (\n  VALUES\n    ('1 · Deploy', 'ORO v1 + Radar anti-noise + Telegram rare_v1', 'Ready after QA',\n      'Merge and poke-deploy; poke daily robot', 'Zero is valid; no guarantee language'),\n    ('2 · Forward shadow', 'Over + F5 + pitcher/F5', 'Private only',\n      'Daily capture and grading', 'No frontend candidates or forced quota'),\n    ('3 · Gate review', 'Secondary markets', 'Blocked today',\n      '100+ forward decisions and real prices', 'Lower 95% bound above break-even'),\n    ('4 · Live monitoring', 'ORO and rare_v1', 'Continuous',\n      '30–50 new decisions / sufficient alert outcomes', 'Disable or keep shadow if the gate degrades')\n)\nSELECT * FROM rollout ORDER BY phase;",
+          "description": "Explicit implementation states, review triggers and guardrails.",
+          "executed_at": "2026-07-21T16:45:59.525Z",
+          "tables_used": [],
+          "filters": [
+            "Explicit rollout policy; no performance inference"
+          ]
+        }
+      }
+    ],
+    "cards": [
+      {
+        "id": "graded_games",
+        "description": "Juegos MLB finalizados con fórmula v2 disponibles para la auditoría.",
+        "dataset": "headline",
+        "sourceId": "headline_sql",
+        "metrics": [
+          {
+            "label": "Juegos MLB medidos",
+            "field": "graded_v2",
+            "format": "number"
+          }
+        ]
+      },
+      {
+        "id": "oro_test",
+        "description": "Tramo cronológico reservado; replay retrospectivo, no promesa futura.",
+        "dataset": "headline",
+        "sourceId": "headline_sql",
+        "metrics": [
+          {
+            "label": "ORO v1 · acierto test",
+            "field": "oro_test_rate",
+            "format": "percent"
+          },
+          {
+            "label": "Decisiones",
+            "field": "oro_test_n",
+            "format": "number"
+          }
+        ]
+      },
+      {
+        "id": "secondary_ready",
+        "description": "Over, F5 y pitcher/F5 permanecen en sombra hasta pasar su gate.",
+        "dataset": "headline",
+        "sourceId": "headline_sql",
+        "metrics": [
+          {
+            "label": "Mercados nuevos listos",
+            "field": "secondary_markets_ready",
+            "format": "number"
+          }
+        ]
+      },
+      {
+        "id": "telegram_eligible",
+        "description": "Consensos del snapshot que habrían superado todos los filtros rare_v1.",
+        "dataset": "headline",
+        "sourceId": "headline_sql",
+        "metrics": [
+          {
+            "label": "Telegram · elegibles",
+            "field": "telegram_eligible",
+            "format": "number"
+          },
+          {
+            "label": "Máximo por día",
+            "field": "telegram_max_day",
+            "format": "number"
+          }
+        ]
+      }
+    ],
+    "charts": [
+      {
+        "id": "mlb_hit_rate",
+        "title": "MLB hit-rate comparison",
+        "subtitle": "Global baselines and chronological ORO v1 replay; denominators vary by row.",
+        "showDescription": true,
+        "intent": "comparison",
+        "question": "How does the selective ORO gate compare with the global model, market and current public record?",
+        "rationale": "A horizontal bar chart keeps the five long segment labels readable and makes the discrete rate comparison direct.",
+        "comparisonContext": {
+          "denominator": "Wins divided by wins plus losses; pushes excluded",
+          "grain": "One graded moneyline decision",
+          "unit": "Hit rate",
+          "baseline": "52.38% break-even at -110 is discussed in the adjacent narrative"
+        },
+        "type": "horizontalBar",
+        "dataset": "selection_comparison",
+        "sourceId": "selection_sql",
+        "encodings": {
+          "x": {
+            "field": "segment",
+            "type": "nominal",
+            "label": "Segment"
+          },
+          "y": {
+            "field": "rate",
+            "type": "quantitative",
+            "format": "percent",
+            "label": "Hit rate"
+          },
+          "tooltip": [
+            {
+              "field": "n",
+              "type": "quantitative",
+              "label": "Decisions"
+            },
+            {
+              "field": "wins",
+              "type": "quantitative",
+              "label": "Wins"
+            },
+            {
+              "field": "losses",
+              "type": "quantitative",
+              "label": "Losses"
+            },
+            {
+              "field": "wilson_lo",
+              "type": "quantitative",
+              "format": "percent",
+              "label": "95% lower bound"
+            },
+            {
+              "field": "wilson_hi",
+              "type": "quantitative",
+              "format": "percent",
+              "label": "95% upper bound"
+            },
+            {
+              "field": "basis",
+              "type": "text",
+              "label": "Basis"
+            }
+          ]
+        },
+        "valueFormat": "percent",
+        "layout": "full",
+        "labels": {
+          "values": "all"
+        },
+        "palette": {
+          "kind": "sequential",
+          "name": "aa-selection"
+        },
+        "settings": {
+          "orientation": "horizontal",
+          "sort": "none",
+          "showValues": true,
+          "categoryLabelPolicy": "wrap"
+        },
+        "surface": {
+          "surface": "card",
+          "showControls": true,
+          "viewMode": "both"
+        }
+      }
+    ],
+    "tables": [
+      {
+        "id": "market_lab",
+        "title": "Secondary-market shadow results",
+        "subtitle": "Top two candidates per day, 70/30 chronological split; pushes excluded.",
+        "showDescription": true,
+        "dataset": "market_lab",
+        "sourceId": "market_lab_sql",
+        "defaultSort": {
+          "field": "market",
+          "direction": "asc"
+        },
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "market",
+            "label": "Market",
+            "type": "text"
+          },
+          {
+            "field": "train_record",
+            "label": "Train",
+            "type": "text"
+          },
+          {
+            "field": "test_record",
+            "label": "Reserved test",
+            "type": "text"
+          },
+          {
+            "field": "test_rate",
+            "label": "Test hit rate",
+            "format": "percent"
+          },
+          {
+            "field": "test_ci",
+            "label": "95% CI",
+            "type": "text"
+          },
+          {
+            "field": "forward_n",
+            "label": "Forward decisions",
+            "format": "number"
+          },
+          {
+            "field": "gate",
+            "label": "Publish gate",
+            "type": "text"
+          },
+          {
+            "field": "needed",
+            "label": "What is missing",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "id": "radar_evidence",
+        "title": "Radar evidence and noise audit",
+        "subtitle": "Production snapshot plus the July 16 copy-study.",
+        "showDescription": true,
+        "dataset": "radar_evidence",
+        "sourceId": "radar_evidence_sql",
+        "defaultSort": {
+          "field": "order",
+          "direction": "asc"
+        },
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "order",
+            "label": "#",
+            "format": "number"
+          },
+          {
+            "field": "metric",
+            "label": "Metric",
+            "type": "text"
+          },
+          {
+            "field": "value",
+            "label": "Observed",
+            "type": "text"
+          },
+          {
+            "field": "interpretation",
+            "label": "Decision meaning",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "id": "rollout",
+        "title": "Release and measurement plan",
+        "subtitle": "Only gates with measured support can move from shadow to public.",
+        "showDescription": true,
+        "dataset": "rollout",
+        "sourceId": "rollout_sql",
+        "defaultSort": {
+          "field": "phase",
+          "direction": "asc"
+        },
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "phase",
+            "label": "Phase",
+            "type": "text"
+          },
+          {
+            "field": "scope",
+            "label": "Scope",
+            "type": "text"
+          },
+          {
+            "field": "state",
+            "label": "State",
+            "type": "text"
+          },
+          {
+            "field": "trigger",
+            "label": "Review trigger",
+            "type": "text"
+          },
+          {
+            "field": "guardrail",
+            "label": "Guardrail",
+            "type": "text"
+          }
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "id": "title",
+        "type": "markdown",
+        "body": "# AA Sports: más selección, menos ruido"
+      },
+      {
+        "id": "executive_summary",
+        "type": "markdown",
+        "sourceId": "audit_snapshot",
+        "body": "## Executive Summary / Resumen ejecutivo\n\n- **Sí hay una mejora MLB que puede encenderse:** ORO v1 exige favorito del mercado, al menos cinco factores AA y el mejor ERA reciente del abridor. Dio 29–11 en el tramo reservado y 76–30 en el replay completo; seguirá pudiendo devolver cero.\n- **Los boletos nuevos no están listos para venderse:** Over, F5 y pitcher/F5 ya quedan instrumentados con máximo dos candidatos diarios, pero los tres fallan hoy su gate. Se registran en sombra hasta reunir evidencia forward y precios reales.\n- **Telegram pasa de volumen a excepción:** se eliminan movimientos crudos, resumen diario y prueba de deploy. rare_v1 permite como máximo dos observaciones por día ET, deduplica siete días y puede mandar cero.\n- **No existen jugadas seguras:** el estudio de Radar no encontró edge copiable y ningún backtest garantiza el futuro. Toda alerta seguirá siendo descriptiva, nunca acusación ni recomendación."
+      },
+      {
+        "id": "headline_metrics",
+        "type": "metric-strip",
+        "cardIds": [
+          "graded_games",
+          "oro_test",
+          "secondary_ready",
+          "telegram_eligible"
+        ]
+      },
+      {
+        "id": "mlb_finding",
+        "type": "markdown",
+        "sourceId": "audit_snapshot",
+        "body": "## La mejora medible vive en seleccionar menos\n\nEl modelo AA global acierta 54.0%, mientras el mercado llega a 56.4% sobre los mismos 1,492 juegos con línea. Eso descarta la idea de apostar todo lo que el modelo favorece. El gate ORO v1 concentra las tres señales robustas ya medidas y, en el tramo reservado, alcanza 72.5% (29–11; IC95% 57.2%–83.9%).\n\n**Qué significa:** se puede endurecer la selección de ganadores sin alterar la probabilidad calibrada que ve el usuario. El 72.5% es un replay retrospectivo con n=40, no una promesa ni una cuota; se monitorea en vivo y se apaga si pierde el gate."
+      },
+      {
+        "id": "mlb_chart",
+        "type": "chart",
+        "chartId": "mlb_hit_rate",
+        "layout": "full"
+      },
+      {
+        "id": "markets_finding",
+        "type": "markdown",
+        "sourceId": "audit_snapshot",
+        "body": "## Dos candidatos es un máximo, no una obligación\n\nEl laboratorio ya captura la línea O/U inicial, registra Over y define F5 como el equipo arriba tras cinco entradas. La señal pitcher/F5 añade la ventaja reciente del abridor, pero no la llama victoria oficial del pitcher.\n\n**Decisión:** ninguno se publica todavía. El 36–30 de Over en el test es exploratorio porque esas filas históricas conservan la línea disponible al cierre de captura; la muestra verdaderamente forward con apertura preservada empieza en n=0. F5 y pitcher/F5 también tienen intervalos que cruzan 50% y, además, no tienen precio F5 real para medir valor."
+      },
+      {
+        "id": "market_table",
+        "type": "table",
+        "tableId": "market_lab",
+        "layout": "full"
+      },
+      {
+        "id": "radar_finding",
+        "type": "markdown",
+        "sourceId": "audit_snapshot",
+        "body": "## Radar debe observar rarezas, no sonar como tipster\n\nAntes del cambio había 17 alertas crudas en una hora y 98 en 24 horas. Algunas señales visibles llamadas fuertes acumulaban menos de $50 o precios cercanos a cero o uno. A la vez, el estudio walk-forward de copiado produjo -0.070 por acción a cinco minutos y -0.026 a sesenta minutos.\n\n**Qué cambia:** el ranking visible usa compras de al menos $50, una ventana de 48 horas, monto agregado mínimo y precios no extremos. Telegram añade tres wallets, $500 agregados, dos perfiles informados financiados, fuerza mínima 80, piso Wilson 60%, edad máxima seis horas y máximo dos por día. En el snapshot auditado, cero señales habrían pasado."
+      },
+      {
+        "id": "radar_table",
+        "type": "table",
+        "tableId": "radar_evidence",
+        "layout": "full"
+      },
+      {
+        "id": "next_steps",
+        "type": "markdown",
+        "sourceId": "implementation",
+        "body": "## Recommended next steps / Próximos pasos\n\n1. Desplegar ORO v1 y rare_v1 con sus regresiones, sin cambiar el porcentaje calibrado público.\n2. Ejecutar daily.mjs cada día para acumular línea inicial, resultado final y F5 en el registro privado.\n3. Revisar Over al llegar a 100 decisiones forward independientes; revisar F5 y pitcher/F5 solo al llegar a 100 con precio/línea real.\n4. Exigir en cada revisión muestra suficiente, corte cronológico, intervalo Wilson por encima del break-even y estabilidad por mitades.\n5. Mostrar cero si no hay señal. Nunca rellenar dos espacios por diseño."
+      },
+      {
+        "id": "rollout_table_block",
+        "type": "table",
+        "tableId": "rollout",
+        "layout": "full"
+      },
+      {
+        "id": "further_questions",
+        "type": "markdown",
+        "body": "## Further questions / Preguntas abiertas\n\n- ¿La captura keyless disponible puede obtener precios F5 reales sin violar el presupuesto $0? Si no, F5 solo podrá presentarse como observación descriptiva después de calibrarse, no como boleto con valor.\n- ¿El ORO v1 mantiene su intervalo por encima del corte después de 30–50 decisiones nuevas en vivo?\n- ¿rare_v1 produce suficientes observaciones para medir resultados sin volver a introducir ruido? Cero durante semanas sería un resultado válido."
+      },
+      {
+        "id": "english_summary",
+        "type": "markdown",
+        "sourceId": "audit_snapshot",
+        "body": "## English summary\n\nShip the more selective winner gate and the quieter Radar policy. Keep Over, team-ahead-after-five and starter/F5 candidates private until independent forward samples and real market prices pass their gates. Telegram is capped at two exceptional descriptive observations per ET day and may send none. Nothing is framed as guaranteed, actionable inside information, or a recommendation."
+      },
+      {
+        "id": "caveats",
+        "type": "markdown",
+        "sourceId": "audit_snapshot",
+        "body": "## Caveats and assumptions / Límites\n\n- The ORO rule was identified and replayed on the current-season dataset; the reserved date segment helps, but this is not a fully untouched future season.\n- Historical O/U rows mostly contain the line available at final capture. Opening-line preservation begins forward with this change.\n- F5 historical outcomes use explicit five-inning scores when available and the recorded ESPN score curve otherwise; actual F5 odds are absent.\n- Radar scores have weak past-to-future persistence. rare_v1 is an anti-noise filter, not a validated prediction model.\n- All public behavior remains subject to the visible honesty box, legal notice and model gates."
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-07-21T16:45:59.525Z",
+    "status": "ready",
+    "datasets": {
+      "headline": [
+        {
+          "graded_v2": 1506,
+          "oro_test_rate": 0.725,
+          "oro_test_n": 40,
+          "secondary_markets_ready": 0,
+          "telegram_eligible": 0,
+          "telegram_max_day": 2
+        }
+      ],
+      "selection_comparison": [
+        {
+          "segment": "AA global",
+          "rate": 0.5395,
+          "n": 1492,
+          "wins": 805,
+          "losses": 687,
+          "wilson_lo": 0.5142,
+          "wilson_hi": 0.5647,
+          "basis": "All priced v2 games",
+          "sort_order": 1
+        },
+        {
+          "segment": "Market global",
+          "rate": 0.5643,
+          "n": 1492,
+          "wins": 842,
+          "losses": 650,
+          "wilson_lo": 0.539,
+          "wilson_hi": 0.5893,
+          "basis": "De-vig favorite, same games",
+          "sort_order": 2
+        },
+        {
+          "segment": "ORO production before change",
+          "rate": 0.6111,
+          "n": 18,
+          "wins": 11,
+          "losses": 7,
+          "wilson_lo": 0.3862,
+          "wilson_hi": 0.797,
+          "basis": "Public live record",
+          "sort_order": 3
+        },
+        {
+          "segment": "ORO v1 · train",
+          "rate": 0.7121,
+          "n": 66,
+          "wins": 47,
+          "losses": 19,
+          "wilson_lo": 0.5936,
+          "wilson_hi": 0.8073,
+          "basis": "Before June 13 cut",
+          "sort_order": 4
+        },
+        {
+          "segment": "ORO v1 · reserved test",
+          "rate": 0.725,
+          "n": 40,
+          "wins": 29,
+          "losses": 11,
+          "wilson_lo": 0.5716,
+          "wilson_hi": 0.8389,
+          "basis": "June 13 onward",
+          "sort_order": 5
+        }
+      ],
+      "market_lab": [
+        {
+          "market": "F5 team ahead",
+          "train_record": "71–66 (51.8%)",
+          "test_record": "35–23",
+          "test_rate": 0.603,
+          "test_ci": "47.5%–71.9%",
+          "gate": "NO",
+          "needed": "Real F5 price + interval above threshold",
+          "forward_n": 0
+        },
+        {
+          "market": "Over",
+          "train_record": "81–68 (54.4%)",
+          "test_record": "36–30",
+          "test_rate": 0.545,
+          "test_ci": "42.6%–66.0%",
+          "gate": "NO",
+          "needed": "100+ forward decisions with opening line",
+          "forward_n": 0
+        },
+        {
+          "market": "Pitcher/F5",
+          "train_record": "61–58 (51.3%)",
+          "test_record": "37–23",
+          "test_rate": 0.617,
+          "test_ci": "49.0%–72.9%",
+          "gate": "NO",
+          "needed": "Real F5 price + interval above threshold",
+          "forward_n": 0
+        }
+      ],
+      "radar_evidence": [
+        {
+          "order": 1,
+          "metric": "Raw alerts in 24 hours",
+          "value": "98",
+          "interpretation": "High-volume tape is noise, not a Telegram product."
+        },
+        {
+          "order": 2,
+          "metric": "Past–future wallet rank correlation",
+          "value": "ρ = 0.071 (n=1,653)",
+          "interpretation": "Past rank barely predicts future rank."
+        },
+        {
+          "order": 3,
+          "metric": "Delayed copy edge at 5 minutes",
+          "value": "−0.070/action",
+          "interpretation": "The replication gate fails."
+        },
+        {
+          "order": 4,
+          "metric": "Delayed copy edge at 60 minutes",
+          "value": "−0.026/action",
+          "interpretation": "Longer delay still loses in the study."
+        },
+        {
+          "order": 5,
+          "metric": "Current consensuses passing rare_v1",
+          "value": "0 of 10",
+          "interpretation": "Silence is the expected outcome when evidence is weak."
+        }
+      ],
+      "rollout": [
+        {
+          "phase": "1 · Deploy",
+          "scope": "ORO v1 + Radar anti-noise + Telegram rare_v1",
+          "state": "Ready after QA",
+          "trigger": "Merge and poke-deploy; poke daily robot",
+          "guardrail": "Zero is valid; no guarantee language"
+        },
+        {
+          "phase": "2 · Forward shadow",
+          "scope": "Over + F5 + pitcher/F5",
+          "state": "Private only",
+          "trigger": "Daily capture and grading",
+          "guardrail": "No frontend candidates or forced quota"
+        },
+        {
+          "phase": "3 · Gate review",
+          "scope": "Secondary markets",
+          "state": "Blocked today",
+          "trigger": "100+ forward decisions and real prices",
+          "guardrail": "Lower 95% bound above break-even"
+        },
+        {
+          "phase": "4 · Live monitoring",
+          "scope": "ORO and rare_v1",
+          "state": "Continuous",
+          "trigger": "30–50 new decisions / sufficient alert outcomes",
+          "guardrail": "Disable or keep shadow if the gate degrades"
+        }
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": "audit_snapshot",
+      "label": "AA Sports audit snapshot",
+      "path": "docs/analysis/aa_sports_audit_snapshot.json"
+    },
+    {
+      "id": "mlb_simulation",
+      "label": "MLB walk-forward simulation",
+      "path": "docs/MLB_SIMULATION.md"
+    },
+    {
+      "id": "poly_study",
+      "label": "Polymarket copy-study",
+      "path": "docs/POLY_STUDY.md"
+    },
+    {
+      "id": "production_mlb",
+      "label": "AA Sports production MLB API",
+      "href": "https://aa-sports-api.opsmira9.workers.dev/v1/mlb/today"
+    },
+    {
+      "id": "production_radar",
+      "label": "AA Sports production Radar APIs",
+      "href": "https://aa-sports-api.opsmira9.workers.dev/v1/poly/radar"
+    },
+    {
+      "id": "implementation",
+      "label": "AA Sports implementation",
+      "path": "robot/market_lab.mjs"
+    },
+    {
+      "id": "headline_sql",
+      "label": "Headline audit metrics",
+      "path": "docs/analysis/aa_sports_report_source.sql",
+      "query": {
+        "engine": "SQLite 3.51",
+        "language": "SQL",
+        "sql": "WITH s(doc) AS (\n  SELECT json(readfile('docs/analysis/aa_sports_audit_snapshot.json'))\n)\nSELECT\n  CAST(json_extract(doc, '$.mlb.history.graded_v2') AS INTEGER) AS graded_v2,\n  json_extract(doc, '$.mlb.lock_gate_market_agree5_starter_v1.test.rate') AS oro_test_rate,\n  CAST(json_extract(doc, '$.mlb.lock_gate_market_agree5_starter_v1.test.n') AS INTEGER) AS oro_test_n,\n  CAST(json_extract(doc, '$.mlb.market_lab_shadow_v1.over.gate_passes') AS INTEGER)\n    + CAST(json_extract(doc, '$.mlb.market_lab_shadow_v1.f5.gate_passes') AS INTEGER)\n    + CAST(json_extract(doc, '$.mlb.market_lab_shadow_v1.pitcher_f5.gate_passes') AS INTEGER)\n    AS secondary_markets_ready,\n  CAST(json_extract(doc, '$.radar.alert_snapshot_before_change.rare_v1_eligible_if_evaluated_now') AS INTEGER)\n    AS telegram_eligible,\n  CAST(json_extract(doc, '$.radar.rare_v1_policy.max_per_et_day') AS INTEGER) AS telegram_max_day\nFROM s;",
+        "description": "One-row materialization of the report headline metrics.",
+        "executed_at": "2026-07-21T16:45:59.525Z",
+        "tables_used": [
+          "docs/analysis/aa_sports_audit_snapshot.json"
+        ],
+        "filters": [
+          "Bounded audit snapshot as of July 21, 2026",
+          "No secrets or wallet-level rows"
+        ]
+      }
+    },
+    {
+      "id": "selection_sql",
+      "label": "MLB selection comparison",
+      "path": "docs/analysis/aa_sports_report_source.sql",
+      "query": {
+        "engine": "SQLite 3.51",
+        "language": "SQL",
+        "sql": "WITH s(doc) AS (\n  SELECT json(readfile('docs/analysis/aa_sports_audit_snapshot.json'))\n), rows AS (\n  SELECT 1 AS sort_order, 'AA global' AS segment,\n    '$.mlb.global_forecast.aa_model' AS p, 'All priced v2 games' AS basis\n  UNION ALL SELECT 2, 'Market global', '$.mlb.global_forecast.market', 'De-vig favorite, same games'\n  UNION ALL SELECT 3, 'ORO production before change', '$.mlb.production_record_before_change.locks', 'Public live record'\n  UNION ALL SELECT 4, 'ORO v1 · train', '$.mlb.lock_gate_market_agree5_starter_v1.train', 'Before June 13 cut'\n  UNION ALL SELECT 5, 'ORO v1 · reserved test', '$.mlb.lock_gate_market_agree5_starter_v1.test', 'June 13 onward'\n)\nSELECT sort_order, segment,\n  json_extract(doc, p || '.rate') AS rate,\n  CAST(COALESCE(json_extract(doc, p || '.n'),\n    json_extract(doc, p || '.wins') + json_extract(doc, p || '.losses')) AS INTEGER) AS n,\n  CAST(json_extract(doc, p || '.wins') AS INTEGER) AS wins,\n  CAST(json_extract(doc, p || '.losses') AS INTEGER) AS losses,\n  json_extract(doc, p || '.wilson_lo') AS wilson_lo,\n  json_extract(doc, p || '.wilson_hi') AS wilson_hi,\n  basis\nFROM s CROSS JOIN rows\nORDER BY sort_order;",
+        "description": "Global model, market and ORO selection rates at their documented grains.",
+        "executed_at": "2026-07-21T16:45:59.525Z",
+        "tables_used": [
+          "docs/analysis/aa_sports_audit_snapshot.json"
+        ],
+        "filters": [
+          "Bounded audit snapshot as of July 21, 2026",
+          "No secrets or wallet-level rows"
+        ]
+      }
+    },
+    {
+      "id": "market_lab_sql",
+      "label": "Secondary-market gate table",
+      "path": "docs/analysis/aa_sports_report_source.sql",
+      "query": {
+        "engine": "SQLite 3.51",
+        "language": "SQL",
+        "sql": "WITH s(doc) AS (\n  SELECT json(readfile('docs/analysis/aa_sports_audit_snapshot.json'))\n), markets(market, p, needed) AS (\n  VALUES\n    ('F5 team ahead', '$.mlb.market_lab_shadow_v1.f5', 'Real F5 price + interval above threshold'),\n    ('Over', '$.mlb.market_lab_shadow_v1.over', '100+ forward decisions with opening line'),\n    ('Pitcher/F5', '$.mlb.market_lab_shadow_v1.pitcher_f5', 'Real F5 price + interval above threshold')\n)\nSELECT market,\n  printf('%d–%d (%.1f%%)', json_extract(doc, p || '.train.wins'),\n    json_extract(doc, p || '.train.losses'), 100 * json_extract(doc, p || '.train.rate')) AS train_record,\n  printf('%d–%d', json_extract(doc, p || '.test.wins'), json_extract(doc, p || '.test.losses')) AS test_record,\n  json_extract(doc, p || '.test.rate') AS test_rate,\n  printf('%.1f%%–%.1f%%', 100 * json_extract(doc, p || '.test.wilson_lo'),\n    100 * json_extract(doc, p || '.test.wilson_hi')) AS test_ci,\n  CAST(json_extract(doc, p || '.forward.n') AS INTEGER) AS forward_n,\n  CASE json_extract(doc, p || '.gate_passes') WHEN 1 THEN 'YES' ELSE 'NO' END AS gate,\n  needed\nFROM s CROSS JOIN markets\nORDER BY market;",
+        "description": "Chronological train/test results and publish-gate status for the private market lab.",
+        "executed_at": "2026-07-21T16:45:59.525Z",
+        "tables_used": [
+          "docs/analysis/aa_sports_audit_snapshot.json"
+        ],
+        "filters": [
+          "Bounded audit snapshot as of July 21, 2026",
+          "No secrets or wallet-level rows"
+        ]
+      }
+    },
+    {
+      "id": "radar_evidence_sql",
+      "label": "Radar evidence table",
+      "path": "docs/analysis/aa_sports_report_source.sql",
+      "query": {
+        "engine": "SQLite 3.51",
+        "language": "SQL",
+        "sql": "WITH s(doc) AS (\n  SELECT json(readfile('docs/analysis/aa_sports_audit_snapshot.json'))\n)\nSELECT 1 AS sort_order, 'Raw alerts in 24 hours' AS metric,\n  printf('%d', json_extract(doc, '$.radar.alert_snapshot_before_change.alerts_last_24h')) AS value,\n  'High-volume tape is noise, not a Telegram product.' AS interpretation FROM s\nUNION ALL SELECT 2, 'Past–future wallet rank correlation',\n  printf('ρ = %.3f (n=%s)', json_extract(doc, '$.radar.production_snapshot.honesty.spearman_past_vs_future'),\n    printf('%,d', json_extract(doc, '$.radar.production_snapshot.honesty.n'))),\n  'Past rank barely predicts future rank.' FROM s\nUNION ALL SELECT 3, 'Delayed copy edge at 5 minutes',\n  printf('%.3f/action', json_extract(doc, '$.radar.copy_study.copy_edge_5m_net')),\n  'The replication gate fails.' FROM s\nUNION ALL SELECT 4, 'Delayed copy edge at 60 minutes',\n  printf('%.3f/action', json_extract(doc, '$.radar.copy_study.copy_edge_60m_net')),\n  'Longer delay still loses in the study.' FROM s\nUNION ALL SELECT 5, 'Current consensuses passing rare_v1',\n  printf('%d of %d', json_extract(doc, '$.radar.alert_snapshot_before_change.rare_v1_eligible_if_evaluated_now'),\n    json_extract(doc, '$.radar.alert_snapshot_before_change.consensus')),\n  'Silence is the expected outcome when evidence is weak.' FROM s\nORDER BY sort_order;",
+        "description": "Alert-volume, persistence and delayed-copy evidence from the audited snapshot.",
+        "executed_at": "2026-07-21T16:45:59.525Z",
+        "tables_used": [
+          "docs/analysis/aa_sports_audit_snapshot.json"
+        ],
+        "filters": [
+          "Bounded audit snapshot as of July 21, 2026",
+          "No secrets or wallet-level rows"
+        ]
+      }
+    },
+    {
+      "id": "rollout_sql",
+      "label": "Release plan table",
+      "path": "docs/analysis/aa_sports_report_source.sql",
+      "query": {
+        "engine": "SQLite 3.51",
+        "language": "SQL",
+        "sql": "WITH rollout(phase, scope, state, trigger, guardrail) AS (\n  VALUES\n    ('1 · Deploy', 'ORO v1 + Radar anti-noise + Telegram rare_v1', 'Ready after QA',\n      'Merge and poke-deploy; poke daily robot', 'Zero is valid; no guarantee language'),\n    ('2 · Forward shadow', 'Over + F5 + pitcher/F5', 'Private only',\n      'Daily capture and grading', 'No frontend candidates or forced quota'),\n    ('3 · Gate review', 'Secondary markets', 'Blocked today',\n      '100+ forward decisions and real prices', 'Lower 95% bound above break-even'),\n    ('4 · Live monitoring', 'ORO and rare_v1', 'Continuous',\n      '30–50 new decisions / sufficient alert outcomes', 'Disable or keep shadow if the gate degrades')\n)\nSELECT * FROM rollout ORDER BY phase;",
+        "description": "Explicit implementation states, review triggers and guardrails.",
+        "executed_at": "2026-07-21T16:45:59.525Z",
+        "tables_used": [],
+        "filters": [
+          "Explicit rollout policy; no performance inference"
+        ]
+      }
+    }
+  ]
+}

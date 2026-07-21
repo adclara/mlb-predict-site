@@ -1,0 +1,150 @@
+{
+  "as_of": "2026-07-21T16:45:59.525Z",
+  "timezone": "America/New_York",
+  "mlb": {
+    "history": {
+      "files": 116,
+      "rows": 1544,
+      "graded_v2": 1506,
+      "first_date": "2026-03-25",
+      "last_date": "2026-07-20"
+    },
+    "global_forecast": {
+      "n": 1492,
+      "aa_model": {
+        "wins": 805,
+        "losses": 687,
+        "n": 1492,
+        "rate": 0.5395,
+        "wilson_lo": 0.5142,
+        "wilson_hi": 0.5647,
+        "logloss": 0.7201,
+        "brier": 0.2618
+      },
+      "market": {
+        "wins": 842,
+        "losses": 650,
+        "n": 1492,
+        "rate": 0.5643,
+        "wilson_lo": 0.539,
+        "wilson_hi": 0.5893,
+        "logloss": 0.6845,
+        "brier": 0.2457
+      },
+      "verdict": "market_better_globally"
+    },
+    "combined_oos": {
+      "n": 1398,
+      "classic_rate": 0.542,
+      "combined_rate": 0.539,
+      "classic_logloss": 0.721,
+      "combined_logloss": 0.694,
+      "combined_brier": 0.25,
+      "ece": 0.039,
+      "delta_logloss": -0.03,
+      "delta_logloss_ci95": [-0.043, -0.018]
+    },
+    "production_record_before_change": {
+      "all": { "wins": 26, "losses": 23, "rate": 0.531 },
+      "locks": { "wins": 11, "losses": 7, "n": 18, "rate": 0.6111, "wilson_lo": 0.3862, "wilson_hi": 0.797, "units": 0.26 },
+      "gems": { "wins": 3, "losses": 4, "rate": 0.429 }
+    },
+    "lock_gate_market_agree5_starter_v1": {
+      "max_per_day": 2,
+      "cut": "2026-06-13",
+      "train": { "wins": 47, "losses": 19, "n": 66, "days": 47, "rate": 0.7121, "wilson_lo": 0.5936, "wilson_hi": 0.8073 },
+      "test": { "wins": 29, "losses": 11, "n": 40, "days": 25, "rate": 0.725, "wilson_lo": 0.5716, "wilson_hi": 0.8389 },
+      "all": { "wins": 76, "losses": 30, "n": 106, "days": 72, "rate": 0.717, "wilson_lo": 0.6248, "wilson_hi": 0.794 },
+      "threshold": 0.5238,
+      "passes_retrospective_gate": true,
+      "rule": "market favorite + at least five AA factors + better recent starter ERA with at least two measured starts on both sides"
+    },
+    "market_lab_shadow_v1": {
+      "published": false,
+      "max_per_day": 2,
+      "cut": "2026-06-13",
+      "over": {
+        "train": { "wins": 81, "losses": 68, "rate": 0.544 },
+        "test": { "wins": 36, "losses": 30, "n": 66, "rate": 0.545, "wilson_lo": 0.426, "wilson_hi": 0.66 },
+        "forward": { "wins": 0, "losses": 0, "n": 0, "rate": null, "wilson_lo": null, "wilson_hi": null },
+        "gate_passes": false,
+        "reason": "insufficient independent forward sample with preserved opening line"
+      },
+      "f5": {
+        "train": { "wins": 71, "losses": 66, "rate": 0.518 },
+        "test": { "wins": 35, "losses": 23, "n": 58, "rate": 0.603, "wilson_lo": 0.475, "wilson_hi": 0.719 },
+        "forward": { "wins": 0, "losses": 0, "n": 0, "rate": null, "wilson_lo": null, "wilson_hi": null },
+        "gate_passes": false,
+        "reason": "no actual F5 price and confidence interval crosses 50%"
+      },
+      "pitcher_f5": {
+        "train": { "wins": 61, "losses": 58, "rate": 0.513 },
+        "test": { "wins": 37, "losses": 23, "n": 60, "rate": 0.617, "wilson_lo": 0.49, "wilson_hi": 0.729 },
+        "forward": { "wins": 0, "losses": 0, "n": 0, "rate": null, "wilson_lo": null, "wilson_hi": null },
+        "gate_passes": false,
+        "reason": "no actual F5 price and confidence interval crosses 50%"
+      }
+    }
+  },
+  "radar": {
+    "production_snapshot": {
+      "ran_at": "2026-07-21T14:21:15.516Z",
+      "window_days": 30,
+      "markets": 400,
+      "trades": 2560324,
+      "wallets_seen": 320003,
+      "qualified": 127,
+      "watchlist": 35,
+      "honesty": { "spearman_past_vs_future": 0.0707, "still_positive": 0.5424, "n": 1653 }
+    },
+    "alert_snapshot_before_change": {
+      "checked_at": "2026-07-21T16:45:59.525Z",
+      "watching": 25,
+      "retained_alerts": 100,
+      "alerts_last_1h": 17,
+      "alerts_last_6h": 80,
+      "alerts_last_24h": 98,
+      "consensus": 10,
+      "strong_signals": 8,
+      "likely_signals": 5,
+      "rare_v1_eligible_if_evaluated_now": 0
+    },
+    "copy_study": {
+      "date": "2026-07-16",
+      "markets": 320,
+      "trades": 997159,
+      "wallets": 92622,
+      "past_future_spearman": 0.1,
+      "past_winners_still_positive": 0.404,
+      "copy_edge_5m_net": -0.07,
+      "copy_edge_60m_net": -0.026,
+      "gate_passes": false
+    },
+    "rare_v1_policy": {
+      "max_per_et_day": 2,
+      "raw_trade_telegram": false,
+      "daily_summary_telegram": false,
+      "deploy_test_message": false,
+      "min_wallets": 3,
+      "min_informed_funded_wallets": 2,
+      "min_usd_per_informed_wallet": 100,
+      "min_aggregate_usd": 500,
+      "min_strength": 80,
+      "min_average_wilson_lower_bound": 0.6,
+      "price_range": [0.1, 0.9],
+      "max_age_hours": 6,
+      "dedupe_days": 7,
+      "framing": "descriptive statistical pattern; never a guarantee, recommendation, or accusation"
+    }
+  },
+  "sources": [
+    "data/history/games/*.json",
+    "data/history/learning.json",
+    "docs/MLB_SIMULATION.md",
+    "docs/POLY_STUDY.md",
+    "https://aa-sports-api.opsmira9.workers.dev/v1/mlb/today",
+    "https://aa-sports-api.opsmira9.workers.dev/v1/mlb/learning",
+    "https://aa-sports-api.opsmira9.workers.dev/v1/poly/radar",
+    "https://aa-sports-api.opsmira9.workers.dev/v1/poly/alerts"
+  ]
+}

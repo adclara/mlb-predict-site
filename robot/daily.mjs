@@ -10,6 +10,7 @@ import fs from 'fs'
 import { analyzeGame, leagueAttempts, selectLocks, selectPlays } from './adrian.js'
 import { eloProb, expectedRuns, simulateF5, simulateGame } from './engine.js'
 import { analysisToRow, aprendeOpinion, buildSnapshot, FORMULA_VERSION, marketBlend } from './learn.js'
+import { buildMarketLab, gradeMarketLab } from './market_lab.mjs'
 import { mergeOddsBlocks, riskScore, valueEdge } from './odds.js'
 import { buildOddsForDate } from './espn_odds.mjs'
 import { applyEloUpdates, loadEloState } from './elo_live.mjs'
@@ -52,6 +53,10 @@ const eloOf = (a) => priors.elo[a] ?? 1500
 // --- live MLB fetch ---------------------------------------------------------
 function parseGame(g) {
   const t = g.teams || {}, home = t.home || {}, away = t.away || {}, hp = home.probablePitcher || {}, ap = away.probablePitcher || {}
+  const first5 = (g.linescore?.innings || []).filter((inn) => Number(inn.num) <= 5)
+  const f5Known = first5.length >= 5 && first5.every((inn) => Number.isFinite(Number(inn.home?.runs)) && Number.isFinite(Number(inn.away?.runs)))
+  const f5Home = f5Known ? first5.reduce((s, inn) => s + Number(inn.home.runs), 0) : null
+  const f5Away = f5Known ? first5.reduce((s, inn) => s + Number(inn.away.runs), 0) : null
   return {
     game_pk: g.gamePk, game_date: g.officialDate || (g.gameDate || '').slice(0, 10), game_datetime: g.gameDate || null, day_night: g.dayNight || null,
     series_game: g.seriesGameNumber ?? null, series_len: g.gamesInSeries ?? null, // series context (was fetched & dropped)
@@ -63,6 +68,7 @@ function parseGame(g) {
     home_probable_pitcher_id: hp.id || null, away_probable_pitcher_id: ap.id || null,
     home_probable_pitcher_name: hp.fullName || null, away_probable_pitcher_name: ap.fullName || null,
     home_score: home.score ?? null, away_score: away.score ?? null,
+    f5_home_score: f5Home, f5_away_score: f5Away,
     // orden al bate {id,name} — solo cuando MLB publica el lineup (~2-3h antes); si no, []
     home_lineup: ((g.lineups || {}).homePlayers || []).map((p) => ({ id: p.id, name: p.fullName || null })),
     away_lineup: ((g.lineups || {}).awayPlayers || []).map((p) => ({ id: p.id, name: p.fullName || null })),
@@ -248,7 +254,13 @@ function buildBrief(a, prediction, f5, priors, g, homeHand, awayHand, hitters) {
       away: { ops: aOff.ops ?? null, runs: aOff.runs_pg ?? null },
     },
     hitters: { home: hitters?.home || [], away: hitters?.away || [] },
-    f5: f5?.f5_moneyline ? { home_lead: round3d(f5.f5_moneyline.home_lead), away_lead: round3d(f5.f5_moneyline.away_lead), nrfi: f5.nrfi != null ? round3d(f5.nrfi) : null } : null,
+    f5: f5?.f5_moneyline ? {
+      home_lead: round3d(f5.f5_moneyline.home_lead), away_lead: round3d(f5.f5_moneyline.away_lead),
+      nrfi: f5.nrfi != null ? round3d(f5.nrfi) : null,
+      total_line: f5.f5_total?.line ?? null, over: f5.f5_total?.over != null ? round3d(f5.f5_total.over) : null,
+      expected_home: f5.expected_f5_runs?.home != null ? round2d(f5.expected_f5_runs.home) : null,
+      expected_away: f5.expected_f5_runs?.away != null ? round2d(f5.expected_f5_runs.away) : null,
+    } : null,
   }
 }
 
@@ -430,6 +442,9 @@ async function computeDay(date) {
   const oddsByPk = new Map(rows.map((r) => [r.game_pk, r.odds]))
   const locks = selectLocks(analysesV2, oddsByPk)
   const gems = selectGems(rows)
+  // Nuevos mercados pedidos (Over/F5/abridor) se registran y gradúan en SOMBRA.
+  // buildMarketLab usa la línea O/U real capturada; no sale al normalizador/API.
+  const marketLab = buildMarketLab(rows)
   // Probable pitchers at compute time — the scratch validator compares later
   // runs against the pair frozen with the picks (a changed starter invalidates
   // the analysis a fijo was built on; we FLAG it, never silently swap picks).
@@ -439,6 +454,7 @@ async function computeDay(date) {
     plays: plays.map((p) => ({ game_pk: p.game_pk, matchup: p.matchup, market: p.market, side: p.side || null, line: p.line ?? null, pick: p.pick || null, label: p.label, prob: p.prob, prob_v2: p.prob_v2 ?? null, confidence: p.confidence, engine: p.engine ?? 'classic' })),
     locks,
     gems,
+    marketLab,
     pitcherMap,
     rows,
   }
@@ -455,7 +471,7 @@ function validateFrozenPitchers(rec, pitcherMap) {
     if (old.h && cur.h && old.h !== cur.h) notes.push(`local: ${old.hn || old.h} → ${cur.hn || cur.h}`)
     if (old.a && cur.a && old.a !== cur.a) notes.push(`visita: ${old.an || old.a} → ${cur.an || cur.a}`)
     if (!notes.length) continue
-    for (const list of [rec.plays, rec.locks, rec.gems]) {
+    for (const list of [rec.plays, rec.locks, rec.gems, rec.market_lab?.over, rec.market_lab?.f5, rec.market_lab?.pitcher_f5]) {
       for (const p of list || []) {
         if (String(p.game_pk) !== String(pk) || p.result || p.scratch_warning) continue
         p.scratch_warning = true
@@ -523,7 +539,11 @@ function upsertGames(date, rows) {
     // Merge the fresh capture over the stored block so the morning OPENING price
     // (p_home_open) and any win-prob curve survive the intraday/closing re-runs.
     const withOdds = { ...r, odds: mergeOddsBlocks(p?.odds, r.odds) }
-    return p && p.graded ? { ...withOdds, home_win: p.home_win, total_runs: p.total_runs, ml_result: p.ml_result, total_result: p.total_result, final: p.final, graded: true } : withOdds
+    return p && p.graded ? {
+      ...withOdds, home_win: p.home_win, total_runs: p.total_runs,
+      f5_home_score: p.f5_home_score ?? null, f5_away_score: p.f5_away_score ?? null,
+      ml_result: p.ml_result, total_result: p.total_result, final: p.final, graded: true,
+    } : withOdds
   })
   fs.writeFileSync(fp, JSON.stringify({ date, generated_at: new Date().toISOString(), schema: 'games_v1', formula_version: FORMULA_VERSION, games: merged }, null, 2))
 }
@@ -548,7 +568,8 @@ function gradePicks(rec, byPk) {
   const playsDone = gradeList(rec.plays, byPk)
   const locksDone = gradeList(rec.locks, byPk) // fijos share the ml grading logic
   const gemsDone = gradeList(rec.gems, byPk)   // 💎 gemas too
-  rec.graded = playsDone && locksDone && gemsDone
+  const marketLabDone = gradeMarketLab(rec.market_lab, byPk)
+  rec.graded = playsDone && locksDone && gemsDone && marketLabDone
   return rec.graded
 }
 
@@ -562,6 +583,8 @@ function gradeGames(rec, byPk) {
     const hs = g.home_score, as = g.away_score, tot = hs + as
     row.home_win = hs > as ? 1 : 0
     row.total_runs = tot
+    row.f5_home_score = g.f5_home_score ?? null
+    row.f5_away_score = g.f5_away_score ?? null
     row.final = `${as}-${hs}`
     row.ml_result = ((row.ml_pick === g.home_team_abbr) === (hs > as)) ? 'win' : 'loss'
     row.total_result = tot === row.line ? 'push' : (tot > row.line) === (row.side === 'over') ? 'win' : 'loss'
@@ -635,13 +658,14 @@ async function main() {
       const plays = frozen ? existingToday.plays : day.plays
       const locks = frozen ? (existingToday.locks ?? day.locks) : day.locks
       const gems = frozen ? (existingToday.gems ?? day.gems) : day.gems
+      const market_lab = frozen ? (existingToday.market_lab ?? day.marketLab) : day.marketLab
       const pitchers = frozen ? (existingToday.pitchers ?? day.pitcherMap) : day.pitcherMap
       const generated_at = frozen ? existingToday.generated_at : new Date().toISOString()
-      const rec = { date: today, generated_at, graded: false, plays, locks, gems, pitchers }
+      const rec = { date: today, generated_at, graded: false, plays, locks, gems, market_lab, pitchers }
       if (frozen) validateFrozenPitchers(rec, day.pitcherMap) // scratch flags on later runs
       fs.writeFileSync(`${HIST}/${today}.json`, JSON.stringify(rec, null, 2))
     }
-    // Always log the games (pre-8am ET this captures the EARLIEST opening line).
+    // Always log the games (pre-7am ET this captures the EARLIEST opening line).
     upsertGames(today, day.rows)
   }
 
@@ -678,6 +702,7 @@ async function main() {
   const idx = []
   let w = 0, l = 0, ps = 0, lw = 0, ll = 0, lps = 0, gw = 0, gloss = 0, units = 0
   const tierRec = { oro: { wins: 0, losses: 0 }, plata: { wins: 0, losses: 0 } }
+  const labRec = Object.fromEntries(['over', 'f5', 'pitcher_f5'].map((k) => [k, { wins: 0, losses: 0, pushes: 0 }]))
   for (const f of idxFiles) {
     const rec = j(`${HIST}/${f}`)
     const g = rec.plays.filter((p) => p.result)
@@ -695,6 +720,11 @@ async function main() {
       }
     }
     for (const p of (rec.gems || []).filter((x) => x.result)) { if (p.result === 'win') gw++; else if (p.result === 'loss') gloss++ }
+    for (const k of Object.keys(labRec)) for (const p of (rec.market_lab?.[k] || []).filter((x) => x.result)) {
+      if (p.result === 'win') labRec[k].wins++
+      else if (p.result === 'loss') labRec[k].losses++
+      else labRec[k].pushes++
+    }
     const gg = (rec.gems || []).filter((p) => p.result)
     idx.push({
       date: rec.date, n: rec.plays.length, graded: !!rec.graded,
@@ -714,6 +744,8 @@ async function main() {
       plata: { ...tierRec.plata, win_rate: rate(tierRec.plata.wins, tierRec.plata.losses) },
     },
     gems_record: { wins: gw, losses: gloss, win_rate: rate(gw, gloss) },
+    // Sombra privada: el normalizador público no expone este bloque.
+    market_lab_record: Object.fromEntries(Object.entries(labRec).map(([k, r]) => [k, { ...r, win_rate: rate(r.wins, r.losses) }])),
     days: idx.reverse(),
   }, null, 2))
 

@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import { join } from 'node:path';
 import { walkForwardEnsemble, bootstrapStability, probMetrics, reliability, FORMULA_VERSION } from './learn.js';
+import { marketLabReport } from './market_lab.mjs';
 
 const DATA = process.env.DATA_DIR || join(process.cwd(), 'data');
 const GAMES = join(DATA, 'history', 'games');
@@ -84,6 +85,13 @@ console.log(`\n══ 4) Modelo vs mercado (acierto global) ══`);
 if (mvm) console.log(`   modelo ${pctf(mvm.model.acc)} · mercado ${pctf(mvm.market.acc)} → ${mvm.verdict}. La ventaja del modelo NO está en el promedio, está en la SELECCIÓN (arriba).`);
 else console.log('   (sin market_vs_model en learning.json)');
 
+// ── 5) mercados secundarios pedidos: todavía en sombra ─────────────────────
+const lab = marketLabReport(rows);
+console.log(`\n══ 5) Laboratorio Over / F5 (top 2 por día; corte ${lab.cut}) ══`);
+for (const [key, x] of Object.entries(lab.markets)) {
+  console.log(`   ${key.padEnd(11)} train ${x.train.wins}-${x.train.losses} (${pctf(x.train.rate)}) · test histórico ${x.test.wins}-${x.test.losses} (${pctf(x.test.rate)}, IC95% ${pctf(x.test.lo)}–${pctf(x.test.hi)}) · forward n=${x.forward.n} · gate ${x.gate.passes ? 'PASA' : 'NO PASA: ' + x.gate.reason}`);
+}
+
 // ── reporte a docs/ ─────────────────────────────────────────────────────────
 const best = selRows.filter((s) => s.n >= 30).sort((a, b) => (b.roi || -9) - (a.roi || -9))[0];
 const md = `# 🔬 Simulación MLB — walk-forward (${run.first_date} → ${run.last_date})
@@ -115,6 +123,20 @@ ${best && best.lo > BE ? `**Ventaja OOS real** en el umbral ≥${(best.thr * 100
 ## 4 · Modelo vs mercado
 ${mvm ? `Acierto global: modelo ${pctf(mvm.model.acc)} vs mercado ${pctf(mvm.market.acc)} → **${mvm.verdict}**. La ventaja del modelo no está en el promedio, está en la selección.` : '—'}
 
+## 5 · Laboratorio de nuevos mercados (NO publicados)
+Corte cronológico 70/30: **${lab.cut}**. Se eligen como máximo dos candidatos por
+día; no se rellenan cupos. Over se evalúa contra la línea O/U disponible; F5 es
+equipo arriba al terminar cinco entradas (empate = push), no victoria del pitcher.
+
+| mercado sombra | train | test histórico | IC95% test | forward real | gate |
+|---|---:|---:|---:|---:|---|
+${Object.entries(lab.markets).map(([k, x]) => `| ${k} | ${x.train.wins}-${x.train.losses} (${pctf(x.train.rate)}) | ${x.test.wins}-${x.test.losses} (${pctf(x.test.rate)}) | ${pctf(x.test.lo)}–${pctf(x.test.hi)} | n=${x.forward.n} | ${x.gate.passes ? 'PASA' : `NO: ${x.gate.reason}`} |`).join('\n')}
+
+**Decisión:** permanecen en sombra. El test histórico usa la línea disponible al
+cierre de captura y sirve solo para exploración. Over empieza ahora su muestra
+forward con la apertura preservada; F5 no dispone de precio/línea real para medir
+valor. La app no los vende como boletos hasta que sus gates pasen.
+
 ---
 *Honesto por diseño: todo out-of-sample, nada de sobreajuste; se muestra lo que hay, gane o pierda. Generado por robot/simulate.mjs.*
 `;
@@ -137,6 +159,7 @@ const doc = {
     units: Math.round(s.units * 10) / 10, roi: p1(s.roi), lo: p1(s.lo), hi: p1(s.hi),
     edge: s.n >= 30 && s.lo != null && s.lo > BE })),
   market: mvm ? { model_acc: p1(mvm.model.acc), market_acc: p1(mvm.market.acc), verdict: mvm.verdict || null } : null,
+  market_lab: lab,
   attribution: 'Validación out-of-sample del propio modelo AA sobre todo el histórico. Cada día se entrena solo con el pasado. El algoritmo es privado.',
 };
 if (!API_TOKEN) console.log('Sin CLOUDFLARE_API_TOKEN; no publico a KV (reporte local generado).');

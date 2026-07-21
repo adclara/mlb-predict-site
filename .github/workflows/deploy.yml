@@ -21,8 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Regresión MLB — aislamiento de fechas live
-        run: node --test tests/mlb_live_date.test.mjs
+      - name: Regresión de lógica — MLB, mercados sombra y Radar/Telegram
+        run: node --test tests/mlb_live_date.test.mjs tests/mlb_lock_gate.test.mjs tests/mlb_market_lab.test.mjs tests/poly_telegram_gate.test.mjs
       - name: Producción = main (fix de production branch)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
@@ -56,7 +56,7 @@ jobs:
           else
             echo "⚠️ no se pudo leer schedules (API/token); no fallo el deploy por esto"
           fi
-      - name: Telegram del vigía (secretos al Worker + mensaje de prueba)
+      - name: Telegram del vigía (solo cargar secretos; sin mensaje de prueba)
         working-directory: cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
@@ -83,10 +83,7 @@ jobs:
           printf '%s' "$TG_BOT_TOKEN" | npx --yes wrangler@4 secret put TG_BOT_TOKEN
           printf '%s' "$CHAT" | npx --yes wrangler@4 secret put TG_CHAT_ID
           echo "✅ Secretos de Telegram cargados al Worker (chat …${CHAT: -4})."
-          curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
-            -H 'content-type: application/json' \
-            -d "{\"chat_id\":\"${CHAT}\",\"text\":\"✅ Radar AA conectado — recibirás aquí las alertas de las wallets vigiladas (🎯 posibles informados). Descriptivo, no recomendación.\"}" \
-            | grep -o '"ok":[a-z]*' || true
+          echo "Sin mensaje de prueba: el canal solo recibe el gate excepcional rare_v1 (máx. 2/día; puede ser 0)."
       - name: Deploy Pages (app)
         working-directory: cloudflare
         env:

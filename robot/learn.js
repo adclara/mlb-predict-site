@@ -860,6 +860,52 @@ export function signalAudit(rows, { minN = 60 } = {}) {
   return { baseline: { n: scored.length, rate: base.p, lo: base.lo, hi: base.hi }, min_n: minN, list }
 }
 
+// Gate de selección ORO v1: combinación de las tres señales que la auditoría
+// individual marcó robustas (mercado + 5 factores + mejor abridor reciente).
+// Replay cronológico, máximo 2/día, sin rellenar cupos. Esto mide ACIERTO; las
+// unidades reales siguen dependiendo del precio capturado.
+export function lockGateReport(rows, { split = 0.70, max = 2 } = {}) {
+  const graded = rows.filter((r) => r.graded && r.formula_version === FORMULA_VERSION && r.ml_result)
+  const dates = [...new Set(graded.map((r) => r.date))].sort()
+  const cut = dates[Math.floor(dates.length * split)] || null
+  const qualifies = (r) => {
+    if (r.adrian_p == null || (r.agree ?? 0) < 5 || !r.odds?.fav_side) return false
+    const pickHome = r.ml_pick === r.home
+    if (r.odds.fav_side !== (pickHome ? 'home' : 'away')) return false
+    const conf = Math.abs(r.adrian_p - 0.5) * 2 + ((r.agree ?? 0) / 6) * 0.45
+    if (conf <= 0.7) return false
+    const h = r.pitcher_recent?.home, a = r.pitcher_recent?.away
+    if (!h || !a || Number(h.n) < 2 || Number(a.n) < 2 || !Number.isFinite(Number(h.era)) || !Number.isFinite(Number(a.era))) return false
+    return pickHome ? Number(h.era) < Number(a.era) : Number(a.era) < Number(h.era)
+  }
+  const score = (r) => {
+    const pickHome = r.ml_pick === r.home
+    const model = mlPickProb(r)
+    const mh = r.odds?.consensus?.p_home ?? r.odds?.p_home_mkt
+    const market = mh == null ? model : (pickHome ? mh : 1 - mh)
+    return 0.5 * model + 0.4 * market + 0.1
+  }
+  const evaluate = (period) => {
+    const byDate = {}
+    for (const r of graded) {
+      if (period === 'train' && r.date >= cut) continue
+      if (period === 'test' && r.date < cut) continue
+      if (!qualifies(r)) continue
+      ;(byDate[r.date] = byDate[r.date] || []).push(r)
+    }
+    const picks = []
+    for (const day of Object.values(byDate)) picks.push(...day.sort((a, b) => score(b) - score(a)).slice(0, max))
+    const wins = picks.filter((r) => r.ml_result === 'win').length
+    const losses = picks.filter((r) => r.ml_result === 'loss').length
+    return { n: wins + losses, days: Object.keys(byDate).length, wins, losses, ...wilson(wins, wins + losses) }
+  }
+  const train = evaluate('train'), test = evaluate('test'), all = evaluate('all')
+  const passes = all.n >= 100 && test.n >= 30 && all.lo != null && all.lo > BREAK_EVEN_110
+    && train.p > BREAK_EVEN_110 && test.p > BREAK_EVEN_110
+  return { rule: 'market_agree5_starter_v1', cut, max_per_day: max, train, test, all,
+    gate: { passes, threshold: BREAK_EVEN_110, reason: passes ? 'pasa' : 'muestra/intervalo insuficiente' } }
+}
+
 // --- the canonical snapshot the robot writes and the app reads ---------------
 // `rows` = every logged games_v1 row (graded + ungraded). Everything is fit on
 // the graded subset of the CURRENT formula version. `now` is passed in (learn.js
@@ -894,6 +940,7 @@ export function buildSnapshot(rows, { now = null } = {}) {
     },
     segments: segmentReport(graded),
     signal_audit: signalAudit(graded),
+    lock_gate: lockGateReport(graded),
     // coverage of the reconstructed/fetched context blocks (the audit's aux_*
     // and platoon verdicts mature as these counts grow)
     context: {

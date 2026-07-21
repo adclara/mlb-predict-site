@@ -42,6 +42,7 @@ function build() {
   const mvm = L.market_vs_model || (L.odds && L.odds.market_vs_model) || null;
   const modelAcc = mvm && mvm.model ? mvm.model.acc : null;
   const marketAcc = mvm && mvm.market ? mvm.market.acc : null;
+  const lockGate = L.lock_gate || null;
 
   // Señales que el modelo APRENDIÓ que sí predicen (auditoría robusta, mayor ventaja)
   const signals = (L.signal_audit && L.signal_audit.list || [])
@@ -69,6 +70,10 @@ function build() {
     const top = signals.slice(0, 3).map((s) => `${s.label} (+${s.edge_pp} pts)`).join(', ');
     push(`Aprendí qué señales SÍ predicen de verdad: ${top}. Cuando coinciden, mi acierto sube de forma medible.`,
          `I've learned which signals truly predict: ${top}. When they line up, my hit rate rises measurably.`);
+  }
+  if (lockGate?.gate?.passes && lockGate.all?.n) {
+    push(`Encontré una combinación más selectiva para ORO: favorito del mercado + 5 factores AA + mejor ERA reciente del abridor. En el replay cronológico hizo ${lockGate.all.wins}-${lockGate.all.losses} (${r2(lockGate.all.p)}%); ahora me abstengo si falta una de las tres.`,
+         `I found a more selective GOLD combination: market favorite + 5 AA factors + the better recent starter ERA. Its chronological replay went ${lockGate.all.wins}-${lockGate.all.losses} (${r2(lockGate.all.p)}%); I now abstain when any of the three is missing.`);
   }
   if (modelAcc != null && marketAcc != null) {
     const win = modelAcc > marketAcc;
@@ -118,6 +123,11 @@ function build() {
     cal: { gap: gap != null ? r2(gap) : null, ece: ece != null ? r2(ece) : null, says: r2(seg.says), hits: r2(seg.hits),
       curve: curve.map((b) => ({ conf: r2(b.conf), emp: r2(b.emp), n: b.n })) },
     market: mvm ? { model_acc: r2(modelAcc), market_acc: r2(marketAcc), verdict: mvm.verdict || null } : null,
+    lock_gate: lockGate ? {
+      rule: lockGate.rule, passes: !!lockGate.gate?.passes, cut: lockGate.cut,
+      n: lockGate.all?.n ?? 0, wins: lockGate.all?.wins ?? 0, losses: lockGate.all?.losses ?? 0,
+      rate: lockGate.all?.p != null ? r2(lockGate.all.p) : null,
+    } : null,
     signals, state_es, state_en,
     log: log.slice(0, 20),
     history,
