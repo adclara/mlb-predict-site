@@ -116,6 +116,14 @@ jobs:
           echo "$BODY" | grep -q 'AA_MLB_LIVE_DATE_GUARD_V2' \
             && echo "✅ Pages contiene el candado MLB de fecha exacta" \
             || { echo "❌ Pages no contiene el candado MLB nuevo"; exit 1; }
+          CSP=$(curl -sI https://aasport.net/ | tr -d '\r' | grep -i '^content-security-policy:' || true)
+          echo "$CSP"
+          echo "$CSP" | grep -q 'https://static.cloudflareinsights.com' \
+            && echo "✅ CSP permite el script oficial de Cloudflare Web Analytics" \
+            || { echo "❌ CSP bloquea el script de Cloudflare Web Analytics"; exit 1; }
+          echo "$CSP" | grep -q 'https://cloudflareinsights.com' \
+            && echo "✅ CSP permite el envío oficial de Web Analytics" \
+            || { echo "❌ CSP bloquea el envío de Cloudflare Web Analytics"; exit 1; }
       - name: Diagnóstico semántico de producción
         run: node robot/prod_diag.mjs
       - name: Gate de datos de producción

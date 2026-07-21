@@ -3,7 +3,7 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://a.espncdn.com https://midfield.mlbstatic.com https://lh3.googleusercontent.com; connect-src 'self' https://aa-sports-api.opsmira9.workers.dev; base-uri 'self'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://a.espncdn.com https://midfield.mlbstatic.com https://lh3.googleusercontent.com; connect-src 'self' https://aa-sports-api.opsmira9.workers.dev https://cloudflareinsights.com; base-uri 'self'; form-action 'none'; frame-ancestors 'none'
 
 # El HTML se revalida siempre para que un deploy nuevo llegue al instante
 # (antes el navegador se quedaba con el index.html/JS viejo tras cada deploy).
