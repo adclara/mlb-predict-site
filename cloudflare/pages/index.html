@@ -282,6 +282,15 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .bolrec-i b.lo{color:var(--red)}
 .bolnote{margin-top:8px;font-size:11px;line-height:1.5;color:var(--faint)}
 .bolempty{font-size:12.5px;line-height:1.5;color:var(--dim);padding:2px 0 4px}
+/* Top señales AA: ranking relativo recibido del servidor, separado de jugadas verificadas. */
+.topsignals{padding:10px 12px 0}
+.topsignals+.boleto{padding-top:8px}
+.topsignals .boleto-in{border-color:rgba(94,168,255,.28);background:linear-gradient(180deg,rgba(94,168,255,.07),rgba(255,255,255,.02))}
+.topsignals .bolhead{margin-bottom:4px}
+.topsignals .boln{color:var(--sky);background:rgba(94,168,255,.14)}
+.topsigsub{font-size:11.5px;line-height:1.45;color:var(--dim);margin:0 0 9px}
+.topsigrank{font-size:10px;font-weight:800;color:var(--sky);background:rgba(94,168,255,.12);border:1px solid rgba(94,168,255,.26);border-radius:999px;padding:2px 7px;white-space:nowrap}
+.topsignals .bolnote{border-top:1px solid rgba(94,168,255,.16);padding-top:8px}
 /* Props a seguir (descriptivo) */
 .propsub{font-size:12px;font-weight:800;color:var(--dim);margin:8px 0 5px}
 .propgrid{display:flex;flex-direction:column;gap:5px}
@@ -1543,6 +1552,8 @@ const T = {
     sig_r_consensus: '🤝 {n} coinciden', sig_r_early: 'entra antes', sig_r_led: 'entró barato', sig_r_cheap: 'compra barata', sig_r_record: 'récord sólido', sig_r_insider: 'perfil informado', sig_r_longshot: 'gana baratas', sig_r_conviction: 'sube en aciertos', sig_r_reactive: 'compra reactiva', sig_r_chase: 'paga caro', sig_r_late: 'entra tarde', sig_r_churn: 'voltea mucho',
     bol_title: 'Boleto del día', bol_win: 'Gana', bol_none: 'Hoy el algoritmo no marca ninguna jugada de máxima confianza. No inventamos un boleto cuando no hay valor claro.',
     bol_rec: 'Cómo le ha ido a estos niveles', bol_note: 'Resumen de las mejores selecciones AA de hoy · no es recomendación de apuesta · tú decides.',
+    top_title: 'Top señales AA', top_sub: 'Las probabilidades calibradas más altas entre los juegos válidos de hoy.',
+    top_note: 'Ranking relativo · no son jugadas verificadas ni afirman valor contra la cuota · tú decides.',
     bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto',
     props_title: '🎯 Props a seguir', props_hr: 'Jonrones (más poder)', props_k: 'Ponches (K/9 del abridor)', props_note: 'Datos que informan estas props — no es una predicción AA.',
     tab_brain: '🧠 Cerebro', brain_title: 'Cerebro AA — qué aprende con el tiempo',
@@ -1572,6 +1583,7 @@ const T = {
     conf_high: 'Alta', conf_medium: 'Media', conf_low: 'Baja', conf_gold: 'ORO', conf_silver: 'PLATA', conf_gem: 'Gema', conf_lock: 'Fijo',
     more_in_list: 'más en la lista.', mlb_recentnote: 'Sin juegos de MLB hoy · mostrando los últimos resultados', mlb_fav_hint: 'Marca partidos con ⭐ para verlos aquí.', mlb_no_filter: 'Sin partidos en este filtro.', load_err_retry: 'No pude cargar las predicciones. Reintentando…', load_err_date: 'No pude cargar esa fecha.',
     d_moment: 'Momento del juego', d_why: 'Por qué esta jugada', d_metrics: 'Métricas AA', d_based: 'En base a los datos', d_risk: 'Índice de riesgo', d_duel: 'Duelo de señales AA', d_h2h: 'Comparación cara a cara', d_f5: 'Primeras 5 entradas · NRFI', d_injuries: 'Bajas por lesión o suspensión', d_injury_note: '★ = jugador clave (buenas estadísticas esta temporada). Informativo: el modelo AA no se altera con esto sin re-validación.',
+    metric_prob_cal: 'Prob. AA calibrada', metric_agree: 'Acuerdo', metric_risk: 'Riesgo', metric_edge: 'Ventaja vs mercado',
     d_starters: 'Abridores probables', d_form: 'Forma reciente (últimos {n})', d_bats5: 'Bateo últimos 5', d_lineup: 'Alineación al bate', d_hitters: 'Mejores bateadores', d_context: 'Contexto del juego',
     d_value: '¿Dónde está el valor? (moneyline)', d_vs_market: 'AA vs mercado', d_line_move: 'Movimiento de línea', d_ou: 'Línea O/U', d_ev_note: 'EV = retorno esperado por unidad apostada según el modelo AA. Positivo = el precio paga más de lo que el riesgo real amerita.', d_note: 'Predicción informativa del algoritmo AA. No es consejo de apuestas; la decisión es tuya. Juego responsable 18/21+.',
     d_rpg5: 'carreras/juego últimos 5', d_season: 'temporada',
@@ -1710,6 +1722,8 @@ const T = {
     sig_r_consensus: '🤝 {n} agree', sig_r_early: 'enters early', sig_r_led: 'got in low', sig_r_cheap: 'cheap buy', sig_r_record: 'solid record', sig_r_insider: 'informed profile', sig_r_longshot: 'wins longshots', sig_r_conviction: 'sizes up on wins', sig_r_reactive: 'reactive buy', sig_r_chase: 'pays up', sig_r_late: 'enters late', sig_r_churn: 'churns',
     bol_title: 'Ticket of the day', bol_win: 'Take', bol_none: "Today the model flags no top-confidence play. We don't fake a ticket when there's no clear value.",
     bol_rec: 'How these tiers have done', bol_note: "A summary of today's best AA picks · not a betting recommendation · you decide.",
+    top_title: 'AA Top signals', top_sub: "Today's highest calibrated probabilities among valid games.",
+    top_note: 'Relative ranking · these are not verified plays and make no price/value claim · you decide.',
     bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high',
     props_title: '🎯 Props to watch', props_hr: 'Home runs (most power)', props_k: 'Strikeouts (starter K/9)', props_note: 'Data that informs these props — not an AA prediction.',
     tab_brain: '🧠 Brain', brain_title: 'AA Brain — what it learns over time',
@@ -1738,6 +1752,7 @@ const T = {
     conf_high: 'High', conf_medium: 'Medium', conf_low: 'Low', conf_gold: 'GOLD', conf_silver: 'SILVER', conf_gem: 'Gem', conf_lock: 'Lock',
     more_in_list: 'more in the list.', mlb_recentnote: 'No MLB games today · showing the latest results', mlb_fav_hint: 'Star games with ⭐ to see them here.', mlb_no_filter: 'No games in this filter.', load_err_retry: 'Could not load predictions. Retrying…', load_err_date: 'Could not load that date.',
     d_moment: 'Game moment', d_why: 'Why this play', d_metrics: 'AA metrics', d_based: 'Based on the data', d_risk: 'Risk index', d_duel: 'AA signal duel', d_h2h: 'Head to head', d_f5: 'First 5 innings · NRFI', d_injuries: 'Injuries or suspensions', d_injury_note: '★ = key player (good stats this season). Informational: the AA model does not change from this without re-validation.',
+    metric_prob_cal: 'Calibrated AA prob.', metric_agree: 'Agreement', metric_risk: 'Risk', metric_edge: 'Edge vs market',
     d_starters: 'Probable starters', d_form: 'Recent form (last {n})', d_bats5: 'Batting, last 5', d_lineup: 'Batting lineup', d_hitters: 'Top hitters', d_context: 'Game context',
     d_value: 'Where is the value? (moneyline)', d_vs_market: 'AA vs market', d_line_move: 'Line movement', d_ou: 'O/U line', d_ev_note: 'EV = expected return per unit staked per the AA model. Positive = the price pays more than the real risk warrants.', d_note: 'Informational prediction by the AA model. Not betting advice; the decision is yours. Play responsibly 18/21+.',
     d_rpg5: 'runs/game last 5', d_season: 'season',
@@ -2358,6 +2373,25 @@ function boletoHtml(){
   const recBlk = rec ? `<div class="bolrec"><span class="bolrec-l">${t('bol_rec')}:</span>${rec}</div>` : '';
   return `<div class="boleto"><div class="boleto-in">${head}<div class="bollegs">${rows}</div>${recBlk}<div class="bolnote">${t('bol_note')}</div></div></div>`;
 }
+// El servidor decide y ordena estas señales. El navegador solo valida que el
+// evento siga por jugar y renderiza el rank recibido; nunca recalcula el modelo.
+function topSignalEvents(){
+  return events
+    .filter(ev => ev.top_signal && !ev.pending && !ev.prediction?.invalidated
+      && ev.prediction?.pick && ev.prediction?.prob_pct != null && effStatus(ev) === 'pre')
+    .sort((a, b) => Number(a.top_signal.rank || 999) - Number(b.top_signal.rank || 999))
+    .slice(0, 3);
+}
+function topSignalsHtml(){
+  const ranked = topSignalEvents();
+  if (!ranked.length) return '';
+  const head = `<div class="bolhead"><span class="boltt">📊 ${t('top_title')}</span><span class="boln num">${ranked.length}</span></div>`;
+  const rows = ranked.map(ev => `<button class="bleg" data-id="${esc(ev.event_id)}">
+    <span class="blteam">${logoImg(ev.prediction.pick)}<span class="blnm">${t('bol_win')} <b>${esc(tNick(ev.prediction.pick))}</b><span class="blmu">${esc(tNick(ev.away.code))} @ ${esc(tNick(ev.home.code))}</span></span></span>
+    <span class="blright"><span class="blpct num">AA ${ev.prediction.prob_pct}%</span><span class="topsigrank num">#${Number(ev.top_signal.rank)}</span></span>
+  </button>`).join('');
+  return `<div class="topsignals"><div class="boleto-in">${head}<div class="topsigsub">${t('top_sub')}</div><div class="bollegs">${rows}</div><div class="bolnote">${t('top_note')}</div></div></div>`;
+}
 function renderList(){
   if (sport !== 'mlb'){ renderOtherList(); return; }
   if (listTab === 'hist'){ renderHistList(); return; }
@@ -2379,9 +2413,10 @@ function renderList(){
     ? `<div class="recentnote">${t('future_note')}</div>`
     : (!viewDate && docStale && listTab !== 'favs' && events.length)
     ? `<div class="recentnote">${t('mlb_recentnote')}</div>` : '';
-  // Boleto del día: solo en la vista por defecto de HOY (sin filtro/pestaña ni día archivado).
-  const boleto = (!viewDate && !docStale && listTab === 'all' && filter === 'all' && events.length) ? boletoHtml() : '';
-  $('list').innerHTML = rows.length ? boleto + mlbBanner + rows.map((ev, i) => rowHtml(ev, i)).join('')
+  // Señales relativas y boleto verificado: solo en la vista por defecto de HOY.
+  const dailyCards = (!viewDate && !docStale && listTab === 'all' && filter === 'all' && events.length)
+    ? topSignalsHtml() + boletoHtml() : '';
+  $('list').innerHTML = rows.length ? dailyCards + mlbBanner + rows.map((ev, i) => rowHtml(ev, i)).join('')
     : `<div class="lempty">${listTab === 'favs' ? t('mlb_fav_hint') : t('mlb_no_filter')}</div>`;
   if (flipState){
     window.Flip.from(flipState, {
@@ -2720,6 +2755,8 @@ function renderDetail(){
     if (m.kind === 'edge') return String(m.value).startsWith('+') ? 'pos' : 'neg';
     return '';
   };
+  const metricLabel = m => m.key ? t(m.key) : m.label;
+  const metricValue = m => m.kind === 'risk' ? t('risk_' + m.value) : m.value;
 
   const snap = ev.snapshot || {};
   const invalidNotice = p.invalidated ? `<div class="pred-invalid-notice" role="alert"><span class="ic">⚠</span><span>${t('pred_invalid_detail')}</span></div>` : '';
@@ -2784,7 +2821,7 @@ function renderDetail(){
     </div>` : ''}
     ${wpChart}
     ${ev.metrics?.length ? `<div class="secttl">${t('d_metrics')}</div>
-      <div class="mgrid">${ev.metrics.map(m => `<div class="mcard"><div class="lb">${esc(m.label)}</div><div class="vl num ${metricCls(m)}">${esc(m.value)}</div></div>`).join('')}</div>` : ''}
+      <div class="mgrid">${ev.metrics.map(m => `<div class="mcard"><div class="lb">${esc(metricLabel(m))}</div><div class="vl num ${metricCls(m)}">${esc(metricValue(m))}</div></div>`).join('')}</div>` : ''}
     ${keysBlock(ev, lv)}
     ${whyList || (ev.summary_es ? `<div class="secttl">${t('d_based')}</div><div class="summary">${esc(ev.summary_es)}</div>` : '')}
     ${riskPct != null ? `<div class="secttl">${t('d_risk')}</div>

@@ -35,10 +35,11 @@ function event(id, start) {
     away: { code: 'MIN', name: 'Minnesota Twins' },
     home: { code: 'CLE', name: 'Cleveland Guardians' },
     prediction: { pick: 'CLE', prob: 0.57, prob_pct: 57, confidence: 'media' },
-    metrics: [], snapshot: {
+    metrics: [{ key: 'metric_prob_cal', label: 'Prob. AA calibrada', value: '57%', kind: 'pct' }], snapshot: {
       fielding: { away: { err_l10: 2, epg: 0.2, g: 10 }, home: { err_l10: 9, epg: 0.9, g: 10 } },
       context: { series: { game: 4, len: 4, home_wins: 0, away_wins: 3 } },
     }, risk: null, odds: null, badges: ['oro'], result: null, final: null,
+    top_signal: { event_id: id, rank: 1, basis: 'calibrated_probability', verified: true },
   };
 }
 
@@ -224,11 +225,18 @@ try {
     const state = await rowState(page, 'today-game');
     assert.notEqual(state.time, 'Final', `${viewport.name}: el final de ayer contaminó hoy`);
     assert.deepEqual(state.scores, ['', ''], `${viewport.name}: aparecen marcadores de ayer`);
+    const topEs = await page.locator('.topsignals').textContent();
+    assert.match(topEs, /Top señales AA/i, `${viewport.name}: falta Top señales ES`);
+    assert.match(topEs, /probabilidades calibradas más altas/i, `${viewport.name}: falta explicación calibrada ES`);
+    assert.match(topEs, /no son jugadas verificadas ni afirman valor contra la cuota/i, `${viewport.name}: falta deslinde ES`);
+    assert.match(topEs, /AA 57%/, `${viewport.name}: falta probabilidad AA ES`);
+    assert.equal(await page.locator('.topsignals .bleg').count(), 1, `${viewport.name}: pending/scratch entraron a Top señales`);
     await page.locator('.mrow[data-id="today-game"]').click();
     const detailEs = await page.locator('#dcard').textContent();
     assert.match(detailEs, /defensa floja: 9 errores en 10 juegos/i, `${viewport.name}: falta fielding ES`);
     assert.match(detailEs, /necesita ganar para evitar la barrida/i, `${viewport.name}: falta barrida ES`);
     assert.match(detailEs, /Confianza Media/i, `${viewport.name}: falta confianza ES`);
+    assert.match(detailEs, /Prob\. AA calibrada\s*57%/i, `${viewport.name}: falta métrica calibrada ES`);
     await page.locator('#dback').evaluate(el => el.click());
     assert.match(await page.locator('.mrow[data-id="pending-game"]').textContent(), /se publica ~7am ET/i, `${viewport.name}: falta pending ES`);
     const invalidRowEs = await page.locator('.mrow[data-id="invalidated-game"]').textContent();
@@ -259,11 +267,18 @@ try {
     await page.locator('.ltab[data-lt="all"]').click();
     await assertNoOverflow(page, viewport.name);
     await page.locator('#langbtn').click();
+    const topEn = await page.locator('.topsignals').textContent();
+    assert.match(topEn, /AA Top signals/i, `${viewport.name}: missing Top signals EN`);
+    assert.match(topEn, /highest calibrated probabilities/i, `${viewport.name}: missing calibrated explanation EN`);
+    assert.match(topEn, /not verified plays and make no price\/value claim/i, `${viewport.name}: missing Top signals disclaimer EN`);
+    assert.doesNotMatch(topEn, /señales|jugadas|cuota|tú decides/i, `${viewport.name}: Spanish leaked into Top signals EN`);
     await page.locator('.mrow[data-id="today-game"]').click();
     const detailEn = await page.locator('#dcard').textContent();
     assert.match(detailEn, /sloppy fielding: 9 errors in 10 games/i, `${viewport.name}: missing fielding EN`);
     assert.match(detailEn, /needs a win to avoid the sweep/i, `${viewport.name}: missing sweep EN`);
     assert.match(detailEn, /Confidence Medium/i, `${viewport.name}: confidence code was not translated in detail EN`);
+    assert.match(detailEn, /Calibrated AA prob\.\s*57%/i, `${viewport.name}: calibrated metric was not translated EN`);
+    assert.doesNotMatch(detailEn, /Prob\. AA calibrada/i, `${viewport.name}: Spanish metric label leaked into detail EN`);
     assert.doesNotMatch(detailEn, /\bmedia\b|\boro\b|\bfijo\b/i, `${viewport.name}: Spanish confidence or badge leaked into detail EN`);
     await page.locator('#dback').evaluate(el => el.click());
     assert.match(await page.locator('.mrow[data-id="pending-game"]').textContent(), /publishes around 7am ET/i, `${viewport.name}: missing pending EN`);

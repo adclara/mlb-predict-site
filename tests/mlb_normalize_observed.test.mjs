@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { normalizeDay, toD1Rows } from '../cloudflare/lib/normalize.mjs'
+import { normalizeDay, rankTopSignals, toD1Rows } from '../cloudflare/lib/normalize.mjs'
 
 const frozen = {
   game_pk: 7,
@@ -232,13 +232,77 @@ test('cambio de abridor observado después del inicio no borra el pick', () => {
   assert.notEqual(event.snapshot, null)
 })
 
-test('un daily legacy no puede pisar la probabilidad de una fila causal nueva', () => {
+test('p_final causal tiene prioridad y ninguna métrica vuelve a publicar el porcentaje clásico', () => {
   const row = { ...frozen, model_p: 0.60 }
   const legacyDaily = {
     selection_snapshot_verified: false,
     plays: [{ game_pk: 7, pick: 'NYY', prob_v2: 0.99, badge: 'fijo', record_scope: 'public_live', eligible_public_record: true }],
   }
   const event = normalizeDay('2026-07-21', { games: [row] }, legacyDaily, null, [], null).events[0]
-  assert.equal(event.prediction.prob, 0.535)
+  assert.equal(event.prediction.prob, 0.55)
+  assert.equal(event.prediction.prob_pct, 55)
+  assert.deepEqual(event.metrics, [
+    { key: 'metric_prob_cal', label: 'Prob. AA calibrada', value: '55%', kind: 'pct' },
+    { key: 'metric_edge', label: 'Ventaja vs mercado', value: '+1%', kind: 'edge' },
+  ])
+  assert.equal(event.metrics.some(metric => /modelo|adrián/i.test(metric.label)), false)
   assert.deepEqual(event.badges, [])
+})
+
+test('p_final HOME se convierte correctamente a la probabilidad del pick visitante', () => {
+  const row = {
+    ...frozen,
+    observed: null,
+    ml_pick: 'BOS',
+    p_final: 0.42,
+    model_p: 0.75,
+  }
+  const event = normalizeDay('2026-07-21', { games: [row] }, null, null, [], null).events[0]
+  assert.equal(event.prediction.pick, 'BOS')
+  assert.equal(event.prediction.prob, 0.58)
+  assert.equal(event.prediction.prob_pct, 58)
+})
+
+test('Top señales usa únicamente el ranking server-side de eventos válidos', () => {
+  const baseEvent = (id, prob, extra = {}) => ({
+    event_id: id, status: 'pre', start: `2026-07-21T${id.padStart(2, '0')}:00:00Z`,
+    pending: false, badges: [], prediction: { pick: 'NYY', prob, invalidated: false },
+    ...extra,
+  })
+  const ranked = rankTopSignals([
+    baseEvent('1', 0.54),
+    baseEvent('2', 0.61),
+    baseEvent('3', 0.59, { badges: ['fijo'] }),
+    baseEvent('4', 0.58),
+    baseEvent('5', 0.99, { pending: true }),
+    baseEvent('6', 0.98, { status: 'final' }),
+    baseEvent('7', 0.97, { prediction: { pick: null, prob: null, invalidated: true } }),
+  ])
+  assert.deepEqual(ranked, [
+    { event_id: '2', rank: 1, basis: 'calibrated_probability', verified: false },
+    { event_id: '3', rank: 2, basis: 'calibrated_probability', verified: true },
+    { event_id: '4', rank: 3, basis: 'calibrated_probability', verified: false },
+  ])
+})
+
+test('normalizeDay adjunta Top señales sin convertirlas en badges verificados', () => {
+  const games = [
+    { id: 21, p: 0.54 }, { id: 22, p: 0.62 },
+    { id: 23, p: 0.58 }, { id: 24, p: 0.56 },
+  ].map(({ id, p }) => ({
+    ...frozen,
+    game_pk: id,
+    observed: null,
+    p_final: p,
+    game_datetime: `2026-07-21T${String(id - 1).padStart(2, '0')}:00:00Z`,
+    first_pitch: `2026-07-21T${String(id - 1).padStart(2, '0')}:00:00Z`,
+  }))
+  const doc = normalizeDay('2026-07-21', { games }, null, null, [], null)
+  const signals = doc.events.filter(event => event.top_signal)
+    .sort((a, b) => a.top_signal.rank - b.top_signal.rank)
+  assert.deepEqual(signals.map(event => [event.event_id, event.top_signal.rank]), [
+    ['22', 1], ['23', 2], ['24', 3],
+  ])
+  assert.ok(signals.every(event => event.badges.length === 0))
+  assert.equal(doc.events.find(event => event.event_id === '21').top_signal, undefined)
 })

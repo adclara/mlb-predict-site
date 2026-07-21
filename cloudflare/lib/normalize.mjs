@@ -53,11 +53,14 @@ function pickProb(g) {
   return null;
 }
 
-// Prob de Adrián (heurístico) para el lado del pick. adrian_p es prob de HOME.
-function adrianForPick(g) {
-  if (typeof g.adrian_p !== 'number') return null;
+// p_final is stored as HOME win probability. Convert it to the side selected
+// by the sealed row before exposing it; this is the calibrated production
+// chain, not the classic/raw probability used only as a legacy fallback.
+function finalProbForPick(g) {
+  if (typeof g?.p_final !== 'number' || !Number.isFinite(g.p_final)) return null;
+  if (g.p_final < 0 || g.p_final > 1) return null;
   const side = g.ml_pick && g.ml_pick === g.home ? 'home' : 'away';
-  return side === 'home' ? g.adrian_p : 1 - g.adrian_p;
+  return side === 'home' ? g.p_final : 1 - g.p_final;
 }
 
 // Resumen en español a partir del brief del robot (máx 3 razones, tono humano).
@@ -82,14 +85,14 @@ function honestEdge(g, prob) {
 }
 function metricsFor(g, prob) {
   const out = [];
-  const pp = pickProb(g);
-  if (pp != null) out.push({ label: 'Prob. modelo', value: `${PCT(pp)}%`, kind: 'pct' });
-  const ap = adrianForPick(g);
-  if (ap != null) out.push({ label: 'Adrián', value: `${PCT(ap)}%`, kind: 'pct' });
-  if (typeof g.agree === 'number') out.push({ label: 'Acuerdo', value: `${g.agree}/6`, kind: 'agree' });
-  if (g.risk && g.risk.level) out.push({ label: 'Riesgo', value: g.risk.level, kind: 'risk', score: g.risk.score ?? null });
+  // Every user-facing probability uses the same calibrated value as the main
+  // prediction. Raw/classic percentages remain private because publishing them
+  // beside p_final would reintroduce the measured overconfidence we removed.
+  if (prob != null) out.push({ key: 'metric_prob_cal', label: 'Prob. AA calibrada', value: `${PCT(prob)}%`, kind: 'pct' });
+  if (typeof g.agree === 'number') out.push({ key: 'metric_agree', label: 'Acuerdo', value: `${g.agree}/6`, kind: 'agree' });
+  if (g.risk && g.risk.level) out.push({ key: 'metric_risk', label: 'Riesgo', value: g.risk.level, kind: 'risk', score: g.risk.score ?? null });
   const edge = honestEdge(g, prob);
-  if (edge != null) out.push({ label: 'Ventaja vs mercado', value: `${edge >= 0 ? '+' : ''}${PCT(edge)}%`, kind: 'edge' });
+  if (edge != null) out.push({ key: 'metric_edge', label: 'Ventaja vs mercado', value: `${edge >= 0 ? '+' : ''}${PCT(edge)}%`, kind: 'edge' });
   return out;
 }
 
@@ -480,9 +483,10 @@ function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
   }
 
   const pp = pickProb(g);
+  const finalProb = finalProbForPick(g);
   // Prob CALIBRADA del lado del pick (honestidad — ver calibratedProb). Antes se
   // mostraba la clásica sobre-confiada; ahora se prefiere prob_v2 / p_final.
-  const prob = calibratedProb(pickInfo, pp);
+  const prob = calibratedProb(finalProb, pickInfo, pp);
   const confidence = pickInfo && pickInfo.confidence ? pickInfo.confidence : confFromProb(prob);
   const badges = [];
   if (!invalidated && pickInfo && pickInfo.badge) badges.push(pickInfo.badge);
@@ -541,25 +545,44 @@ function confFromProb(p) {
 }
 
 // Probabilidad CALIBRADA del lado del pick para mostrar (honestidad: el número
-// que el sitio enseña debe cumplirse). El repo mide que la prob "clásica" está
-// sobre-confiada (~70% mostrado → ~57% real, ECE 0.108 en learning.json). Orden:
-//   1) prob_v2 = prob calibrada del cerebro v2 (p_final + Platt) — la buena.
-//   2) gema: su `prob` YA es p_final (calibrada) — se usa tal cual.
-//   3) fallback (sin prob_v2 y no-gema): encoger la clásica hacia 0.5 para quitar
-//      la sobre-confianza medida (pendiente ~0.35 de la curva de calibración).
-//   4) sin pick: pickProb es la MISMA prob clásica sobre-confiada (ECE 0.108 en
-//      learning.json: ~70% mostrado → ~57% real). Como los juegos se ordenan por
-//      prob desc, estos no-pick encabezan la lista, así que TAMBIÉN hay que
-//      encogerlos hacia 0.5 — si no, se muestra el número inflado (bug de honestidad).
+// que el sitio enseña debe cumplirse). Orden:
+//   1) p_final de la fila causal sellada — cubre TODOS los juegos válidos.
+//   2) prob_v2 del snapshot diario verificado — compatibilidad de ledger.
+//   3) gema: su `prob` ya es p_final — compatibilidad histórica.
+//   4) fallback legado: encoger la clásica hacia 0.5 con la sobreconfianza medida.
 const CAL_SHRINK = 0.35;
 const calShrink = (p) => (p == null ? null : 0.5 + (p - 0.5) * CAL_SHRINK);
-function calibratedProb(pickInfo, pp) {
+function calibratedProb(finalProb, pickInfo, pp) {
+  if (typeof finalProb === 'number') return finalProb;
   if (pickInfo) {
     if (typeof pickInfo.prob_v2 === 'number') return pickInfo.prob_v2;
     if (pickInfo.badge === 'gema' && typeof pickInfo.prob === 'number') return pickInfo.prob;
     if (typeof pickInfo.prob === 'number') return calShrink(pickInfo.prob);
   }
   return calShrink(pp);
+}
+
+// Server-side relative ranking for the informational "AA Top signals" layer.
+// This is deliberately separate from locks/gems: a high relative rank is not a
+// passed selection gate and makes no value/ROI claim. The browser only renders
+// these already-ranked results; no model or selection logic ships to Pages.
+export function rankTopSignals(events, max = 3) {
+  return (Array.isArray(events) ? events : [])
+    .filter((event) => event?.status === 'pre'
+      && event?.pending !== true
+      && event?.prediction?.invalidated !== true
+      && !!event?.prediction?.pick
+      && typeof event?.prediction?.prob === 'number')
+    .sort((a, b) => (b.prediction.prob - a.prediction.prob)
+      || String(a.start || '').localeCompare(String(b.start || ''))
+      || String(a.event_id || '').localeCompare(String(b.event_id || '')))
+    .slice(0, Math.max(0, max))
+    .map((event, index) => ({
+      event_id: String(event.event_id),
+      rank: index + 1,
+      basis: 'calibrated_probability',
+      verified: (event.badges || []).includes('fijo') || (event.badges || []).includes('gema'),
+    }));
 }
 
 // Solo persistimos cuotas americanas reales. Un null significa que no hubo una
@@ -645,6 +668,12 @@ export function normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs, 
     if (r !== 0) return r;
     return (b.prediction.prob ?? 0) - (a.prediction.prob ?? 0);
   });
+  const topSignals = rankTopSignals(events);
+  const topById = new Map(topSignals.map((signal) => [signal.event_id, signal]));
+  for (const event of events) {
+    const signal = topById.get(String(event.event_id));
+    if (signal) event.top_signal = signal;
+  }
 
   // Récord general + por nivel (fijos/gemas) — honestidad: se ven tal cual,
   // incluidas las unidades en rojo. Datos de data/history/index.json.
