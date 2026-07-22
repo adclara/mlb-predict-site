@@ -1,7 +1,8 @@
 # Corrida horaria corta: materializa el slate privado, gradúa finales y publica
-# solo cuando cambia el documento. La ingesta pública de 20 minutos vive en el
-# Worker/D1 y el refit diario en mlb-learning-daily.yml. Separar estas tres
-# cadencias evita la cola de ~45 minutos del antiguo watcher y reduce escrituras.
+# solo cuando cambia el documento. En el mismo run congela AA Lab en SOMBRA;
+# no publica su salida. La ingesta pública de 20 minutos vive en el Worker/D1
+# y el refit AA diario en mlb-learning-daily.yml. Separar estas tres cadencias
+# evita la cola de ~45 minutos del antiguo watcher y reduce escrituras.
 name: adrian-daily
 on:
   schedule:
@@ -40,7 +41,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           AA_INGEST_SNAPSHOT: /tmp/aa-mlb-ingest.json
         run: node robot/mlb_ingest_consumer.mjs
-      - name: Compute + grade (sin refit intradía)
+      - name: Compute + grade AA y AA Lab sombra (sin refit intradía)
         env:
           AA_SKIP_LEARNING: '1'
           AA_INGEST_SNAPSHOT: /tmp/aa-mlb-ingest.json

@@ -107,6 +107,10 @@ las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
   - `robot/learn.js` + `robot/mlb_learn_daily.mjs` — re-ajuste diario causal +
     walk-forward; `FORMULA_VERSION = 'v2'`;
     calibración Platt → `prob_v2` (el número calibrado que se muestra).
+  - `robot/aa_lab.mjs` + `robot/models/aa_lab_mlb_v1.json` — challenger
+    multitemporada 2021–2025. Corre cada hora dentro de `adrian-daily`, congela
+    predicciones forward en `shadow.aa_lab` y escribe el reporte privado
+    `data/history/aa_lab_forward.json`. Nunca cambia ni se expone junto a AA.
   - `robot/adrian.js` — selección de fijos (locks/ORO/PLATA) y gemas.
   - `robot/learning_journal.mjs` — "Cerebro AA" (qué aprende; KV mlb:learning).
   - `robot/simulate.mjs` — validación OOS completa (KV mlb:simulation; semanal).
@@ -125,6 +129,10 @@ las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
   acierto y ECE ~3.8%. El mercado histórico gana en promedio; la hipótesis de
   mejora por selección sigue en validación forward. ORO, Over, F5 y abridor/F5
   no se publican mientras sus gates permanezcan cerrados.
+- **AA Lab MLB** (sombra): logit compacto multitemporada, seleccionado con
+  holdouts rolling 2022–2025 y examen intacto 2026. Registra máximo dos señales
+  diarias para validación forward; no se publica aunque el gate estadístico
+  llegue a pasar hasta recibir aprobación humana explícita.
 - **Fútbol** (público): Dixon-Coles validado en **16,059 partidos** (Brier pasa
   gate, calibrado). Número = prob del mercado **des-vigada y calibrada** (≈ mercado;
   no promete ganarle al cierre). El récord EN VIVO se muestra tal cual.
