@@ -19,6 +19,7 @@ import { applyEloUpdates, loadEloState } from './elo_live.mjs'
 import { fetchForecasts } from './weather.mjs'
 import { auxForGame, buildTeamContext } from './context.mjs'
 import { backfillSeasons, buildHistoryStudy } from './backfill_history.mjs'
+import { buildAaLabForwardReport, buildAaLabSlate } from './aa_lab.mjs'
 
 const API = 'https://statsapi.mlb.com/api/v1'
 const DATA = process.env.DATA_DIR || 'data'
@@ -830,6 +831,11 @@ const shadowMarketLab = (lab, postedAt, startByPk) => {
     .map((play) => shadowCandidate(play, postedAt, startByPk, 'shadow_experiment'))
   return out
 }
+const shadowAaLab = (lab, postedAt, startByPk) => lab ? {
+  ...lab,
+  predictions: (lab.predictions || []).map((prediction) =>
+    shadowCandidate(prediction, postedAt, startByPk, 'shadow_forward_gate')),
+} : null
 
 // The very first publication freezes the complete slate, including an empty
 // selection. Subsequent hourly runs may append scratch warnings/observations,
@@ -884,6 +890,7 @@ export function buildSlateRecord(existing, day, { date, publishedAt } = {}) {
       late_gems: gems.excluded,
       locks: (day?.locks || []).map((play) => shadowCandidate(play, publishedAt, startByPk, 'shadow_forward_gate')),
       market_lab: shadowMarketLab(day?.marketLab, publishedAt, startByPk),
+      aa_lab: shadowAaLab(day?.aaLab, publishedAt, startByPk),
     },
   }
 }
@@ -1169,8 +1176,9 @@ function gradePicks(rec, byPk) {
   const shadowLocksDone = gradeList(rec.shadow?.locks, byPk)
   const shadowMarketPlaysDone = gradeList(rec.shadow?.market_plays, byPk)
   const shadowLabDone = gradeMarketLab(rec.shadow?.market_lab, byPk)
+  const aaLabDone = gradeList(rec.shadow?.aa_lab?.predictions, byPk)
   rec.graded = playsDone && locksDone && gemsDone && marketLabDone
-    && latePlaysDone && lateGemsDone && shadowLocksDone && shadowMarketPlaysDone && shadowLabDone
+    && latePlaysDone && lateGemsDone && shadowLocksDone && shadowMarketPlaysDone && shadowLabDone && aaLabDone
   return rec.graded
 }
 
@@ -1324,8 +1332,16 @@ async function main() {
   const posting = !!process.argv[2] || et.hour >= 7 // manual runs always post
 
   const existingToday = fs.existsSync(`${HIST}/${today}.json`) ? j(`${HIST}/${today}.json`) : null
+  const aaLabHistoryRows = readAllGameRows({ purpose: 'context' })
   const day = await computeDay(today)
   if (day) {
+    // AA Lab is a frozen, private forward challenger. It consumes only final
+    // games from dates strictly before today's slate and never changes AA.
+    if (today.startsWith('2026-')) {
+      day.aaLab = buildAaLabSlate({
+        date: today, games: day.rows, historyRows: aaLabHistoryRows, generatedAt: runAt,
+      })
+    }
     let slateRecord = existingToday
     if (posting || existingToday) {
       slateRecord = buildSlateRecord(existingToday, day, { date: today, publishedAt: runAt })
@@ -1373,8 +1389,10 @@ async function main() {
   // captures and experimental shadow candidates can never inflate this number.
   const idxFiles = pickFiles.sort()
   const publicIndex = buildPublicIndex(idxFiles.map((f) => j(`${HIST}/${f}`)), { updatedAt: runAt })
+  const aaLabForward = buildAaLabForwardReport(idxFiles.map((f) => j(`${HIST}/${f}`)), { updatedAt: runAt })
   const { wins: w, losses: l, pushes: ps } = publicIndex.record
   fs.writeFileSync(`${HIST}/index.json`, JSON.stringify(publicIndex, null, 2))
+  fs.writeFileSync(`${HIST}/aa_lab_forward.json`, JSON.stringify(aaLabForward, null, 2))
 
   // One-time: historical seasons (2023-25) + multi-season context study — 10×
   // the statistical power for the pre-registered signals. Skipped once done.
