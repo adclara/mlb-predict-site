@@ -15,7 +15,9 @@ test('ledger público cuenta únicamente decisiones anteriores al primer lanzami
   let wins = 0, losses = 0, pushes = 0
   for (const file of historyFiles) {
     const doc = read(`data/history/${file}`)
-    assert.equal(doc.selection_snapshot_verified, false)
+    // El histórico migrado conserva false; los slates nativos nuevos usan true.
+    // Ambos deben obedecer las guardas temporales pick por pick de abajo.
+    assert.equal(typeof doc.selection_snapshot_verified, 'boolean')
     for (const pick of doc.plays || []) {
       if (pick.eligible_public_record && pick.scratch_warning !== true) {
         assert.equal(pick.record_scope, 'public_live')
