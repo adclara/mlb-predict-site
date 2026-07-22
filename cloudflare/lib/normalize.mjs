@@ -585,6 +585,43 @@ export function rankTopSignals(events, max = 3) {
     }));
 }
 
+// Indicadores descriptivos de carreras. Se ordenan server-side usando únicamente
+// la proyección total y la línea que ya forman parte del snapshot público. Esto
+// NO publica los candidatos/probabilidades del Market Lab ni convierte un lean
+// en una jugada verificada mientras el gate forward de Altas siga cerrado.
+export function rankRunIndicators(events, max = 2) {
+  return (Array.isArray(events) ? events : [])
+    .filter((event) => {
+      const total = event?.snapshot?.total;
+      return event?.status === 'pre'
+        && event?.pending !== true
+        && event?.prediction?.invalidated !== true
+        && total?.lean === 'over'
+        && typeof total?.line === 'number'
+        && typeof total?.aa_total === 'number'
+        && total.aa_total > total.line;
+    })
+    .sort((a, b) => {
+      const ta = a.snapshot.total;
+      const tb = b.snapshot.total;
+      return ((tb.aa_total - tb.line) - (ta.aa_total - ta.line))
+        || ((tb.prob_pct ?? 0) - (ta.prob_pct ?? 0))
+        || String(a.start || '').localeCompare(String(b.start || ''))
+        || String(a.event_id || '').localeCompare(String(b.event_id || ''));
+    })
+    .slice(0, Math.max(0, max))
+    .map((event, index) => ({
+      event_id: String(event.event_id),
+      rank: index + 1,
+      basis: 'projected_total_vs_market_line',
+      market_line: event.snapshot.total.line,
+      projected_runs: event.snapshot.total.aa_total,
+      delta_runs: Math.round((event.snapshot.total.aa_total - event.snapshot.total.line) * 10) / 10,
+      verified: false,
+      status: 'observation',
+    }));
+}
+
 // Solo persistimos cuotas americanas reales. Un null significa que no hubo una
 // cuota auditable al capturar la selección; jamás se sustituye por -110.
 export function normalizeAmericanPrice(value) {
@@ -674,6 +711,29 @@ export function normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs, 
     const signal = topById.get(String(event.event_id));
     if (signal) event.top_signal = signal;
   }
+  const runIndicators = rankRunIndicators(events);
+  const runById = new Map(runIndicators.map((indicator) => [indicator.event_id, indicator]));
+  for (const event of events) {
+    const indicator = runById.get(String(event.event_id));
+    if (indicator) event.run_indicator = indicator;
+  }
+
+  // Solo se expone el estado agregado/auditable del experimento forward. Nunca
+  // salen sus candidatos privados ni prob_raw. La muestra incluye pushes porque
+  // también son resultados resueltos del mercado de totales.
+  const overRecord = indexDoc?.market_lab_record?.over || null;
+  const overGate = dailyDoc?.shadow?.market_lab?.gates?.over || null;
+  const runIndicatorMeta = overRecord || overGate ? {
+    status: 'observation',
+    verified: false,
+    gate_passes: typeof overGate?.passes === 'boolean' ? overGate.passes : null,
+    record: overRecord ? {
+      wins: overRecord.wins ?? null,
+      losses: overRecord.losses ?? null,
+      pushes: overRecord.pushes ?? null,
+      sample_n: (overRecord.wins ?? 0) + (overRecord.losses ?? 0) + (overRecord.pushes ?? 0),
+    } : null,
+  } : null;
 
   // Récord general + por nivel (fijos/gemas) — honestidad: se ven tal cual,
   // incluidas las unidades en rojo. Datos de data/history/index.json.
@@ -698,6 +758,7 @@ export function normalizeDay(date, gamesDoc, dailyDoc, indexDoc, prevGamesDocs, 
     date,
     updated_at: (gamesDoc && gamesDoc.generated_at) || (dailyDoc && dailyDoc.generated_at) || null,
     record,
+    run_indicator_meta: runIndicatorMeta,
     events,
   };
 }

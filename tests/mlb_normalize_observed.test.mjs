@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { normalizeDay, rankTopSignals, toD1Rows } from '../cloudflare/lib/normalize.mjs'
+import { normalizeDay, rankRunIndicators, rankTopSignals, toD1Rows } from '../cloudflare/lib/normalize.mjs'
 
 const frozen = {
   game_pk: 7,
@@ -305,4 +305,63 @@ test('normalizeDay adjunta Top señales sin convertirlas en badges verificados',
   ])
   assert.ok(signals.every(event => event.badges.length === 0))
   assert.equal(doc.events.find(event => event.event_id === '21').top_signal, undefined)
+})
+
+test('Indicadores de carreras ordena dos Altas descriptivas sin publicar el Market Lab', () => {
+  const baseEvent = (id, lean, line, aaTotal, probPct, extra = {}) => ({
+    event_id: id, status: 'pre', start: `2026-07-21T${id.padStart(2, '0')}:00:00Z`,
+    pending: false, prediction: { invalidated: false },
+    snapshot: { total: { lean, line, aa_total: aaTotal, prob_pct: probPct } },
+    ...extra,
+  })
+  const ranked = rankRunIndicators([
+    baseEvent('1', 'over', 8.5, 9.2, 59),
+    baseEvent('2', 'over', 8, 9.9, 62),
+    baseEvent('3', 'over', 7.5, 8.7, 61),
+    baseEvent('4', 'under', 9, 7.8, 63),
+    baseEvent('5', 'over', 8, 10, 70, { pending: true }),
+    baseEvent('6', 'over', 8, 10, 70, { status: 'final' }),
+    baseEvent('7', 'over', 8, 10, 70, { prediction: { invalidated: true } }),
+  ])
+  assert.deepEqual(ranked, [
+    { event_id: '2', rank: 1, basis: 'projected_total_vs_market_line', market_line: 8, projected_runs: 9.9, delta_runs: 1.9, verified: false, status: 'observation' },
+    { event_id: '3', rank: 2, basis: 'projected_total_vs_market_line', market_line: 7.5, projected_runs: 8.7, delta_runs: 1.2, verified: false, status: 'observation' },
+  ])
+})
+
+test('normalizeDay expone indicadores y solo el estado agregado del gate Over', () => {
+  const games = [
+    { id: 31, line: 8, total: 9.9, p: 0.62 },
+    { id: 32, line: 8.5, total: 9.4, p: 0.58 },
+    { id: 33, line: 9, total: 8.2, p: 0.44 },
+  ].map(({ id, line, total, p }, index) => ({
+    ...frozen,
+    game_pk: id,
+    observed: null,
+    line,
+    side: p > 0.5 ? 'over' : 'under',
+    p_over: p,
+    adj_total: total,
+    game_datetime: `2026-07-21T${18 + index}:00:00Z`,
+    first_pitch: `2026-07-21T${18 + index}:00:00Z`,
+  }))
+  const daily = {
+    shadow: { market_lab: {
+      gates: { over: { passes: false, reason: 'private reason' } },
+      over: [{ game_pk: 31, prob_raw: 0.99, private_feature: 'never expose' }],
+    } },
+  }
+  const index = { market_lab_record: { over: { wins: 2, losses: 0, pushes: 0, win_rate: 1 } } }
+  const doc = normalizeDay('2026-07-21', { games }, daily, index, [], null)
+  const indicators = doc.events.filter(event => event.run_indicator)
+    .sort((a, b) => a.run_indicator.rank - b.run_indicator.rank)
+
+  assert.deepEqual(indicators.map(event => [event.event_id, event.run_indicator.rank]), [['31', 1], ['32', 2]])
+  assert.deepEqual(doc.run_indicator_meta, {
+    status: 'observation', verified: false, gate_passes: false,
+    record: { wins: 2, losses: 0, pushes: 0, sample_n: 2 },
+  })
+  assert.equal(JSON.stringify(doc).includes('prob_raw'), false)
+  assert.equal(JSON.stringify(doc).includes('private_feature'), false)
+  assert.equal(JSON.stringify(doc).includes('private reason'), false)
 })

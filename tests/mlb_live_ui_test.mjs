@@ -38,8 +38,10 @@ function event(id, start) {
     metrics: [{ key: 'metric_prob_cal', label: 'Prob. AA calibrada', value: '57%', kind: 'pct' }], snapshot: {
       fielding: { away: { err_l10: 2, epg: 0.2, g: 10 }, home: { err_l10: 9, epg: 0.9, g: 10 } },
       context: { series: { game: 4, len: 4, home_wins: 0, away_wins: 3 } },
+      total: { lean: 'over', line: 8.5, aa_total: 9.4, prob_pct: 58 },
     }, risk: null, odds: null, badges: ['oro'], result: null, final: null,
     top_signal: { event_id: id, rank: 1, basis: 'calibrated_probability', verified: true },
+    run_indicator: { event_id: id, rank: 1, basis: 'projected_total_vs_market_line', market_line: 8.5, projected_runs: 9.4, delta_runs: 0.9, verified: false, status: 'observation' },
   };
 }
 
@@ -83,7 +85,11 @@ async function installApiMocks(page, date, events, games) {
   await page.route('**/v1/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === '/v1/mlb/today') {
-      return json(route, { sport: 'mlb', date, record: null, events });
+      return json(route, {
+        sport: 'mlb', date, record: null,
+        run_indicator_meta: { status: 'observation', verified: false, gate_passes: false, record: { wins: 2, losses: 0, pushes: 0, sample_n: 2 } },
+        events,
+      });
     }
     if (path === '/v1/mlb/live') {
       return json(route, { sport: 'mlb', date, updated_at: new Date().toISOString(), games });
@@ -231,6 +237,14 @@ try {
     assert.match(topEs, /no son jugadas verificadas ni afirman valor contra la cuota/i, `${viewport.name}: falta deslinde ES`);
     assert.match(topEs, /AA 57%/, `${viewport.name}: falta probabilidad AA ES`);
     assert.equal(await page.locator('.topsignals .bleg').count(), 1, `${viewport.name}: pending/scratch entraron a Top señales`);
+    const runEs = await page.locator('.runindicators').textContent();
+    assert.match(runEs, /Indicadores AA de Altas/i, `${viewport.name}: faltan indicadores de Altas ES`);
+    assert.match(runEs, /Alta 8[,.]5/i, `${viewport.name}: falta línea de Alta ES`);
+    assert.match(runEs, /Proyección AA 9[,.]4/i, `${viewport.name}: falta proyección total ES`);
+    assert.match(runEs, /gate de Altas cerrado/i, `${viewport.name}: falta estado del gate ES`);
+    assert.match(runEs, /récord forward 2-0 \(n=2\)/i, `${viewport.name}: falta muestra forward ES`);
+    assert.match(runEs, /no es una jugada verificada ni recomendación/i, `${viewport.name}: falta deslinde de Altas ES`);
+    assert.equal(await page.locator('.runindicators .bleg').count(), 1, `${viewport.name}: pending/scratch entraron a indicadores de Altas`);
     await page.locator('.mrow[data-id="today-game"]').click();
     const detailEs = await page.locator('#dcard').textContent();
     assert.match(detailEs, /defensa floja: 9 errores en 10 juegos/i, `${viewport.name}: falta fielding ES`);
@@ -272,6 +286,14 @@ try {
     assert.match(topEn, /highest calibrated probabilities/i, `${viewport.name}: missing calibrated explanation EN`);
     assert.match(topEn, /not verified plays and make no price\/value claim/i, `${viewport.name}: missing Top signals disclaimer EN`);
     assert.doesNotMatch(topEn, /señales|jugadas|cuota|tú decides/i, `${viewport.name}: Spanish leaked into Top signals EN`);
+    const runEn = await page.locator('.runindicators').textContent();
+    assert.match(runEn, /AA Over indicators/i, `${viewport.name}: missing Over indicators EN`);
+    assert.match(runEn, /Over 8\.5/i, `${viewport.name}: missing Over line EN`);
+    assert.match(runEn, /AA projection 9\.4/i, `${viewport.name}: missing total projection EN`);
+    assert.match(runEn, /Over gate closed/i, `${viewport.name}: missing Over gate status EN`);
+    assert.match(runEn, /forward record 2-0 \(n=2\)/i, `${viewport.name}: missing forward sample EN`);
+    assert.match(runEn, /not a verified play or recommendation/i, `${viewport.name}: missing Over disclaimer EN`);
+    assert.doesNotMatch(runEn, /Altas|línea|proyección|jugada|récord/i, `${viewport.name}: Spanish leaked into Over indicators EN`);
     await page.locator('.mrow[data-id="today-game"]').click();
     const detailEn = await page.locator('#dcard').textContent();
     assert.match(detailEn, /sloppy fielding: 9 errors in 10 games/i, `${viewport.name}: missing fielding EN`);
