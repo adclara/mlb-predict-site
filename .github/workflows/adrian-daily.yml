@@ -73,6 +73,19 @@ jobs:
                 pushed=1
                 break
               fi
+              # Dos crons atrasados pueden arrancar casi juntos. Si el rebase
+              # choca en el ledger generado, el otro run ya ganó y persistió
+              # una versión equivalente/más nueva. Abandona solo ESTE commit
+              # efímero, adopta origin/main y deja que el paso de upload publique
+              # esos bytes; no conviertas una reparación exitosa en run rojo.
+              if git status --porcelain | grep -q '^UU\|^AA'; then
+                git rebase --abort || true
+                git fetch origin "$GITHUB_REF_NAME"
+                git checkout -B "$GITHUB_REF_NAME" "origin/$GITHUB_REF_NAME"
+                echo "otro run ya persistió el ledger; se adopta origin/$GITHUB_REF_NAME"
+                pushed=1
+                break
+              fi
               sleep 5
             done
             if [ "$pushed" -ne 1 ]; then
