@@ -291,6 +291,14 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .topsigsub{font-size:11.5px;line-height:1.45;color:var(--dim);margin:0 0 9px}
 .topsigrank{font-size:10px;font-weight:800;color:var(--sky);background:rgba(94,168,255,.12);border:1px solid rgba(94,168,255,.26);border-radius:999px;padding:2px 7px;white-space:nowrap}
 .topsignals .bolnote{border-top:1px solid rgba(94,168,255,.16);padding-top:8px}
+/* Indicadores AA de Altas: observación descriptiva, no jugadas verificadas. */
+.runindicators{padding:8px 12px 0}
+.runindicators .boleto-in{border-color:rgba(255,197,61,.28);background:linear-gradient(180deg,rgba(255,197,61,.07),rgba(255,255,255,.02))}
+.runindicators .bolhead{margin-bottom:4px}
+.runindicators .boln{color:var(--amber);background:rgba(255,197,61,.14)}
+.runindicators .bolnote{border-top:1px solid rgba(255,197,61,.16);padding-top:8px}
+.runindicators .blpct{color:var(--amber)}
+.runindicators+.boleto{padding-top:8px}
 /* Props a seguir (descriptivo) */
 .propsub{font-size:12px;font-weight:800;color:var(--dim);margin:8px 0 5px}
 .propgrid{display:flex;flex-direction:column;gap:5px}
@@ -1561,6 +1569,10 @@ const T = {
     bol_rec: 'Cómo le ha ido a estos niveles', bol_note: 'Resumen de las mejores selecciones AA de hoy · no es recomendación de apuesta · tú decides.',
     top_title: 'Top señales AA', top_sub: 'Las probabilidades calibradas más altas entre los juegos válidos de hoy.',
     top_note: 'Ranking relativo · no son jugadas verificadas ni afirman valor contra la cuota · tú decides.',
+    runind_title: 'Indicadores AA de Altas', runind_sub: 'Los dos mayores márgenes entre la proyección total AA y la línea real de hoy.',
+    runind_over: 'Alta', runind_projection: 'Proyección AA', runind_forward: 'récord forward', runind_push: 'push',
+    runind_gate_closed: 'gate de Altas cerrado', runind_gate_review: 'gate aprobado; pendiente de revisión humana', runind_gate_unknown: 'gate aún sin dato',
+    runind_note: 'En observación · no es una jugada verificada ni recomendación.',
     bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto',
     props_title: '🎯 Props a seguir', props_hr: 'Jonrones (más poder)', props_k: 'Ponches (K/9 del abridor)', props_note: 'Datos que informan estas props — no es una predicción AA.',
     tab_brain: '🧠 Cerebro', brain_title: 'Cerebro AA — qué aprende con el tiempo',
@@ -1731,6 +1743,10 @@ const T = {
     bol_rec: 'How these tiers have done', bol_note: "A summary of today's best AA picks · not a betting recommendation · you decide.",
     top_title: 'AA Top signals', top_sub: "Today's highest calibrated probabilities among valid games.",
     top_note: 'Relative ranking · these are not verified plays and make no price/value claim · you decide.',
+    runind_title: 'AA Over indicators', runind_sub: "Today's two largest gaps between the AA total projection and the actual line.",
+    runind_over: 'Over', runind_projection: 'AA projection', runind_forward: 'forward record', runind_push: 'push',
+    runind_gate_closed: 'Over gate closed', runind_gate_review: 'gate passed; awaiting human review', runind_gate_unknown: 'gate data pending',
+    runind_note: 'Under observation · not a verified play or recommendation.',
     bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high',
     props_title: '🎯 Props to watch', props_hr: 'Home runs (most power)', props_k: 'Strikeouts (starter K/9)', props_note: 'Data that informs these props — not an AA prediction.',
     tab_brain: '🧠 Brain', brain_title: 'AA Brain — what it learns over time',
@@ -1964,6 +1980,7 @@ function injuryRows(sportKey, code){
 /* ── estado ──────────────────────────────────────────────── */
 let events = [], liveByKey = new Map();
 let todayRecord = null; // récord AA por nivel del doc de hoy (para el Boleto del día)
+let runIndicatorMeta = null; // estado agregado del experimento forward de Altas
 let injuriesDoc = null; // bajas por equipo (mlb/nba), del robot cada hora
 async function loadInjuries(){
   try{
@@ -2399,6 +2416,44 @@ function topSignalsHtml(){
   </button>`).join('');
   return `<div class="topsignals"><div class="boleto-in">${head}<div class="topsigsub">${t('top_sub')}</div><div class="bollegs">${rows}</div><div class="bolnote">${t('top_note')}</div></div></div>`;
 }
+// Igual que Top señales, el servidor selecciona y ordena. Pages solo muestra la
+// línea/proyección recibidas y el gate/muestra forward, sin lógica del modelo.
+function runIndicatorEvents(){
+  return events
+    .filter(ev => ev.run_indicator && ev.run_indicator.status === 'observation'
+      && ev.run_indicator.verified !== true && !ev.pending && !ev.prediction?.invalidated
+      && ev.snapshot?.total?.lean === 'over' && effStatus(ev) === 'pre')
+    .sort((a, b) => Number(a.run_indicator.rank || 999) - Number(b.run_indicator.rank || 999))
+    .slice(0, 2);
+}
+function runIndicatorNumber(value){
+  return Number(value).toLocaleString(LOCALE(), { maximumFractionDigits: 1 });
+}
+function runIndicatorNote(){
+  const gate = runIndicatorMeta?.gate_passes === false ? t('runind_gate_closed')
+    : runIndicatorMeta?.gate_passes === true ? t('runind_gate_review') : t('runind_gate_unknown');
+  const r = runIndicatorMeta?.record;
+  const pushes = Number(r?.pushes || 0);
+  const record = r && r.wins != null && r.losses != null
+    ? ` · ${t('runind_forward')} ${Number(r.wins)}-${Number(r.losses)}${pushes ? `-${pushes} ${t('runind_push')}` : ''} (n=${Number(r.sample_n ?? Number(r.wins) + Number(r.losses) + pushes)})`
+    : '';
+  return `${gate}${record} · ${t('runind_note')}`;
+}
+function runIndicatorsHtml(){
+  const ranked = runIndicatorEvents();
+  if (!ranked.length) return '';
+  const head = `<div class="bolhead"><span class="boltt">📈 ${t('runind_title')}</span><span class="boln num">${ranked.length}</span></div>`;
+  const rows = ranked.map(ev => {
+    const indicator = ev.run_indicator;
+    const line = runIndicatorNumber(indicator.market_line);
+    const projected = runIndicatorNumber(indicator.projected_runs);
+    return `<button class="bleg" data-id="${esc(ev.event_id)}">
+      <span class="blteam">${logoImg(ev.away.code)}<span class="blnm"><b>${esc(tNick(ev.away.code))} @ ${esc(tNick(ev.home.code))}</b><span class="blmu">${t('runind_over')} ${line}</span></span></span>
+      <span class="blright"><span class="blpct num">${t('runind_projection')} ${projected}</span><span class="topsigrank num">#${Number(indicator.rank)}</span></span>
+    </button>`;
+  }).join('');
+  return `<div class="runindicators"><div class="boleto-in">${head}<div class="topsigsub">${t('runind_sub')}</div><div class="bollegs">${rows}</div><div class="bolnote">${runIndicatorNote()}</div></div></div>`;
+}
 function renderList(){
   if (sport !== 'mlb'){ renderOtherList(); return; }
   if (listTab === 'hist'){ renderHistList(); return; }
@@ -2422,7 +2477,7 @@ function renderList(){
     ? `<div class="recentnote">${t('mlb_recentnote')}</div>` : '';
   // Señales relativas y boleto verificado: solo en la vista por defecto de HOY.
   const dailyCards = (!viewDate && !docStale && listTab === 'all' && filter === 'all' && events.length)
-    ? topSignalsHtml() + boletoHtml() : '';
+    ? topSignalsHtml() + runIndicatorsHtml() + boletoHtml() : '';
   $('list').innerHTML = rows.length ? dailyCards + mlbBanner + rows.map((ev, i) => rowHtml(ev, i)).join('')
     : `<div class="lempty">${listTab === 'favs' ? t('mlb_fav_hint') : t('mlb_no_filter')}</div>`;
   if (flipState){
@@ -3330,6 +3385,7 @@ async function loadToday(){
     const d = await r.json();
     events = d.events || [];
     todayRecord = d.record || null;
+    runIndicatorMeta = d.run_indicator_meta || null;
     todayDate = d.date || todayDate;
     // Fecha REAL (reloj, horario del Este) vs la fecha del doc: si el doc es de
     // un día pasado (p. ej. no hay juegos hoy — receso del Juego de Estrellas o
