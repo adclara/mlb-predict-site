@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
 
 import { selectLocks, starterRecentGate } from '../robot/adrian.js';
 import { lockGateReport } from '../robot/learn.js';
@@ -58,10 +57,19 @@ test('no rellena cupos con PLATA cuando el gate fuerte no pasa', () => {
 });
 
 test('replay de ORO falla cerrado cuando el precio histórico no tiene apertura auditable', () => {
-  const rows = [];
-  for (const file of readdirSync('data/history/games').filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))) {
-    rows.push(...(JSON.parse(readFileSync(`data/history/games/${file}`, 'utf8')).games || []));
-  }
+  // Fixture causal deliberadamente fuerte, pero con una línea histórica sin
+  // provenance/timestamp. El test no puede depender de que el ledger vivo siga
+  // teniendo exactamente cero aperturas auditables: esa muestra crece a diario.
+  const rows = [{
+    game_pk: 99, date: '2026-07-01', home: 'CLE', away: 'MIN', status: 'Final',
+    graded: true, home_win: 1, final: '2-4', ml_result: 'win',
+    formula_version: 'v2', adrian_p: 0.70, agree: 6, ml_pick: 'CLE',
+    pitcher_recent: { home: { era: 3.1, n: 3 }, away: { era: 5.2, n: 3 } },
+    odds: { p_home_open: 0.59 }, // legacy: no explicit_pregame or captured_at_open
+    capture_phase: 'pregame', feature_as_of: '2026-07-01T12:00:00Z',
+    first_pitch: '2026-07-01T23:00:00Z', feature_hash: 'a'.repeat(64),
+    integrity: { training_eligible: true, cohort: 'native_pregame_immutable' },
+  }];
   const report = lockGateReport(rows);
   assert.equal(report.rule, 'market_agree5_starter_v1');
   assert.deepEqual({ n: report.all.n, wins: report.all.wins, losses: report.all.losses }, { n: 0, wins: 0, losses: 0 });
