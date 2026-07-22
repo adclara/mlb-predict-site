@@ -57,7 +57,8 @@ path dispara el workflow. Mapa verificado (poke → workflow):
 - `.github/poke-deploy` → **deploy.yml** (Deploy Worker + Deploy Pages + "Verificar
   y diagnosticar producción" en aasport.net) ← el deploy principal
 - `.github/poke-qa` → qa.yml (qa_check.mjs contra producción)
-- `.github/poke` → adrian-daily.yml (slate + gradación + publicación; cron horario)
+- `.github/poke` → adrian-daily.yml (slate + gradación + publicación; cron horario
+  + watchdog redundante 7–8am ET que corre solo si producción sigue pendiente)
 - `.github/poke-learn` → mlb-learning-daily.yml (refit + Cerebro AA una vez al día)
 - `.github/poke-live` → mlb-live-observer.yml (multi-book/WP en vivo; no bloquea daily)
 - `.github/poke-poly` → poly-study.yml (poly_radar.mjs; cron 2×/día)
@@ -104,6 +105,8 @@ las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
 - **Robot** (corre en Actions, Node stdlib, sin deps):
   - `robot/daily.mjs` — arma/gradúa el MLB del día y congela un ledger pregame
     inmutable. `robot/mlb_ingest_consumer.mjs` consume los slots públicos D1.
+    `robot/mlb_publish_watchdog.mjs` comprueba producción varias veces entre
+    7–8am ET y reintenta la publicación solo si hoy tiene 0 predicciones AA.
   - `robot/learn.js` + `robot/mlb_learn_daily.mjs` — re-ajuste diario causal +
     walk-forward; `FORMULA_VERSION = 'v2'`;
     calibración Platt → `prob_v2` (el número calibrado que se muestra).

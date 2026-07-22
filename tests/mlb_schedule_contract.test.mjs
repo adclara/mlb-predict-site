@@ -12,6 +12,8 @@ test('contrato de frescura conserva sus tres capas sin cron duplicado', () => {
   const worker = read('cloudflare/worker/index.js')
   assert.match(wrangler, /crons\s*=\s*\["\*\/5 \* \* \* \*", "\*\/20 \* \* \* \*", "0 13 \* \* \*"\]/)
   assert.match(daily, /cron:\s*'7 \* \* \* \*'/)
+  assert.match(daily, /cron:\s*'12,27,42,57 11,12 \* \* \*'/)
+  assert.match(daily, /node robot\/mlb_publish_watchdog\.mjs/)
   assert.match(learning, /cron:\s*'37 9,10 \* \* \*'/)
   assert.match(live, /cron:\s*'27 \* \* \* \*'/)
   assert.match(worker, /pipeline:\s*'mlb_ingest_20m'/)

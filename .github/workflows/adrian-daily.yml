@@ -7,6 +7,9 @@ name: adrian-daily
 on:
   schedule:
     - cron: '7 * * * *' # hourly (offset :07 to dodge the top-of-hour Actions rush)
+    # Redundant 7–8am ET watchdog. Both UTC hours cover DST; a public-API
+    # preflight below skips every attempt once today's AA predictions exist.
+    - cron: '12,27,42,57 11,12 * * *'
   workflow_dispatch: {}
   # Manual "poke": committing any change to .github/poke to main fires a run
   # immediately (the GitHub App token can't call workflow_dispatch, and a brand
@@ -28,25 +31,36 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Watchdog de publicación 7am ET
+        id: publish_gate
+        env:
+          AA_GITHUB_EVENT_NAME: ${{ github.event_name }}
+          AA_GITHUB_EVENT_SCHEDULE: ${{ github.event.schedule }}
+        run: node robot/mlb_publish_watchdog.mjs
       - name: Verificar secreto de publicación
+        if: steps.publish_gate.outputs.run == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
       - name: Git identity (robot)
+        if: steps.publish_gate.outputs.run == 'true'
         run: |
           git config user.name "adrian-robot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
       - name: Consumir snapshots públicos D1 (best-effort)
+        if: steps.publish_gate.outputs.run == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           AA_INGEST_SNAPSHOT: /tmp/aa-mlb-ingest.json
         run: node robot/mlb_ingest_consumer.mjs
       - name: Compute + grade AA y AA Lab sombra (sin refit intradía)
+        if: steps.publish_gate.outputs.run == 'true'
         env:
           AA_SKIP_LEARNING: '1'
           AA_INGEST_SNAPSHOT: /tmp/aa-mlb-ingest.json
         run: DATA_DIR="$PWD/data" node robot/daily.mjs
       - name: Commit picks/history
+        if: steps.publish_gate.outputs.run == 'true'
         run: |
           git add data/history data/elo.json data/elo_state.json 2>/dev/null || git add data/history
           if git diff --cached --quiet; then
@@ -69,6 +83,7 @@ jobs:
       # AA Sports: publica los resultados del día a Cloudflare (KV + D1) vía API
       # REST. El preflight evita un run verde que deje producción congelada.
       - name: Publicar a Cloudflare (AA Sports)
+        if: steps.publish_gate.outputs.run == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: node cloudflare/upload.mjs
