@@ -1,53 +1,75 @@
 {
   "schema": "aa_lab_forward_report_v1",
   "version": "aa_lab_mlb_v1",
-  "updated_at": "2026-07-23T00:08:59.296Z",
+  "updated_at": "2026-07-23T04:22:21.276Z",
   "status": "collecting",
   "published": false,
   "changes_public_model": false,
   "observed_predictions": 17,
   "excluded_nonpregame": 0,
   "all": {
-    "n": 0,
-    "dates": 0,
-    "wins": 0,
-    "losses": 0,
-    "accuracy": null,
-    "logloss": null,
-    "brier": null,
-    "ece": null
+    "n": 17,
+    "dates": 1,
+    "wins": 10,
+    "losses": 7,
+    "accuracy": 0.5882352941176471,
+    "logloss": 0.6765783455888666,
+    "brier": 0.24182017677635295,
+    "ece": 0.1664963529411764
   },
   "aa_comparator": {
-    "n": 0,
-    "dates": 0,
-    "wins": 0,
-    "losses": 0,
-    "accuracy": null,
-    "logloss": null,
-    "brier": null,
-    "ece": null
+    "n": 17,
+    "dates": 1,
+    "wins": 9,
+    "losses": 8,
+    "accuracy": 0.5294117647058824,
+    "logloss": 0.7046317940185657,
+    "brier": 0.2557292723529412,
+    "ece": 0.17748823529411764
   },
   "selected_top_two": {
-    "n": 0,
-    "dates": 0,
-    "wins": 0,
-    "losses": 0,
-    "accuracy": null,
-    "logloss": null,
-    "brier": null,
-    "ece": null
+    "n": 2,
+    "dates": 1,
+    "wins": 1,
+    "losses": 1,
+    "accuracy": 0.5,
+    "logloss": 0.6876150336274806,
+    "brier": 0.24756823662849997,
+    "ece": 0.4867775
   },
   "selected_agreement": {
-    "n": 0,
-    "dates": 0,
-    "wins": 0,
-    "losses": 0,
-    "accuracy": null,
-    "logloss": null,
-    "brier": null,
-    "ece": null
+    "n": 2,
+    "dates": 1,
+    "wins": 1,
+    "losses": 1,
+    "accuracy": 0.5,
+    "logloss": 0.6876150336274806,
+    "brier": 0.24756823662849997,
+    "ece": 0.4867775
   },
-  "paired_delta_lab_minus_aa": null,
+  "paired_delta_lab_minus_aa": {
+    "accuracy": {
+      "mean": 0.05882352941176612,
+      "ci95": [
+        0.05882352941176472,
+        0.05882352941176472
+      ]
+    },
+    "logloss": {
+      "mean": -0.028053448429698653,
+      "ci95": [
+        -0.028053448429699035,
+        -0.028053448429699035
+      ]
+    },
+    "brier": {
+      "mean": -0.013909095576588346,
+      "ci95": [
+        -0.013909095576588232,
+        -0.013909095576588232
+      ]
+    }
+  },
   "gate": {
     "min_games": 300,
     "min_dates": 30,
