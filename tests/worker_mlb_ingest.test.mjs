@@ -141,13 +141,29 @@ class MockStatement {
       }
       return { success: true, meta: { changes } };
     }
+    if (/^\s*INSERT\s+INTO\s+sports_ingest_slots/i.test(this.sql)) {
+      const [sport, slot_id, date, scheduled_at, captured_at, status, source_hash, n_games, missingness, payload, error] = this.values;
+      const key = `${sport}:${slot_id}`;
+      const shouldWrite = !this.db.sportsRows.has(key);
+      if (shouldWrite) this.db.sportsRows.set(key, { sport, slot_id, date, scheduled_at, captured_at, status, source_hash, n_games, missingness, payload, error });
+      return { success: true, meta: { changes: shouldWrite ? 1 : 0 } };
+    }
+    if (/^\s*DELETE\s+FROM\s+sports_ingest_slots/i.test(this.sql)) {
+      const cutoff = this.values[0];
+      let changes = 0;
+      for (const [key, row] of this.db.sportsRows) if (row.scheduled_at < cutoff) { this.db.sportsRows.delete(key); changes++; }
+      return { success: true, meta: { changes } };
+    }
     throw new Error('DML inesperado');
   }
+
+  async run() { return this.execute(); }
 }
 
 class MockD1 {
   constructor() {
     this.rows = new Map();
+    this.sportsRows = new Map();
   }
 
   prepare(sql) {
@@ -359,7 +375,7 @@ test('pipeline-health publica frescura y missingness con caché corta', async ()
   }
 });
 
-test('scheduled enruta únicamente el cron de 20 minutos al ingestor MLB', async () => {
+test('scheduled enruta el cron de 20 minutos a MLB y los cuatro feeds públicos US', async () => {
   const DB = new MockD1();
   const originalFetch = globalThis.fetch;
   let pending = null;
@@ -373,6 +389,7 @@ test('scheduled enruta únicamente el cron de 20 minutos al ingestor MLB', async
     assert.ok(pending instanceof Promise);
     await pending;
     assert.equal(DB.rows.size, 1);
+    assert.equal(DB.sportsRows.size, 4);
     assert.equal(DB.latest().status, 'ok');
   } finally {
     globalThis.fetch = originalFetch;

@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AA Sports">
 <meta property="og:title" content="AA Sports — Los datos deciden">
-<meta property="og:description" content="Predicciones deportivas con IA y marcadores en vivo: MLB, NBA, soccer y tenis. Datos honestos, medidos y transparentes.">
+<meta property="og:description" content="Predicciones deportivas y marcadores en vivo: MLB, NFL, NHL, college, NBA, soccer y tenis. Datos honestos, medidos y transparentes.">
 <meta property="og:url" content="https://aasport.net/">
 <meta property="og:image" content="https://aasport.net/assets/og.png">
 <meta property="og:image:width" content="1200">
@@ -1245,6 +1245,22 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 2.5 3 15.5 0 18M12 3c-3 2.5-3 15.5 0 18" stroke-linecap="round"/></svg>
       NBA <span class="soon">LIVE</span>
     </button>
+    <button class="sp" data-sport="nfl">
+      <span aria-hidden="true" style="font-size:20px">🏈</span>
+      NFL <span class="soon">LIVE</span>
+    </button>
+    <button class="sp" data-sport="ncaaf">
+      <span aria-hidden="true" style="font-size:20px">🏈</span>
+      <span data-i18n="sport_ncaaf">Fútbol College</span> <span class="soon">LIVE</span>
+    </button>
+    <button class="sp" data-sport="nhl">
+      <span aria-hidden="true" style="font-size:20px">🏒</span>
+      NHL <span class="soon">LIVE</span>
+    </button>
+    <button class="sp" data-sport="ncaam">
+      <span aria-hidden="true" style="font-size:20px">🏀</span>
+      <span data-i18n="sport_ncaam">Basket College</span> <span class="soon">LIVE</span>
+    </button>
     <button class="sp" data-sport="soccer">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="m12 7 4.75 3.45-1.8 5.6h-5.9l-1.8-5.6z"/><path d="M12 3v4M20.5 9.3l-3.75 1.15M17.2 20l-2.25-3.35M9.05 16.65 6.8 20M7.25 10.45 3.5 9.3" stroke-linecap="round"/></svg>
       Soccer <span class="soon">LIVE</span>
@@ -1479,7 +1495,8 @@ const T = {
     w_gems: '💎 Gemas de hoy', w_locks: '🔒 Fijos del día', w_resp: 'Juego responsable',
     w_resp_p: '<b>AA Sports informa, no facilita apuestas.</b> Te damos los datos y nuestra lectura; la decisión es tuya. 18/21+ según tu jurisdicción. Los datos no garantizan resultados.',
     how_link: '¿Cómo funciona el algoritmo AA? →', legal_link2: 'Aviso legal y términos de uso →',
-    back_games: 'Partidos', sport_baseball: 'Baseball', sport_tennis: 'Tenis',
+    back_games: 'Partidos', sport_baseball: 'Baseball', sport_tennis: 'Tenis', sport_ncaaf: 'Fútbol College', sport_ncaam: 'Basket College',
+    sport_training_gate: 'Entrenamiento · gate cerrado', sport_top2: 'Top 2 AA · mayor confianza',
     foot: '<b>AA Sports</b> — inteligencia deportiva basada en datos. Publicamos predicciones del algoritmo AA, métricas y resúmenes para que decidas informado. No somos casa de apuestas, no tomamos dinero y no colocamos apuestas. Si decides jugar, hazlo con responsabilidad (18/21+). Los resultados pasados no garantizan resultados futuros.',
     foot_legal: 'Aviso legal y términos', foot_how: '¿Cómo funciona?',
     lang_btn: 'EN', lang_title: 'Switch to English',
@@ -1653,7 +1670,8 @@ const T = {
     w_gems: '💎 Today\'s gems', w_locks: '🔒 Locks of the day', w_resp: 'Responsible gaming',
     w_resp_p: '<b>AA Sports informs, it does not facilitate betting.</b> We give you the data and our read; the decision is yours. 18/21+ per your jurisdiction. Data does not guarantee results.',
     how_link: 'How does the AA algorithm work? →', legal_link2: 'Legal notice & terms of use →',
-    back_games: 'Games', sport_baseball: 'Baseball', sport_tennis: 'Tennis',
+    back_games: 'Games', sport_baseball: 'Baseball', sport_tennis: 'Tennis', sport_ncaaf: 'College Football', sport_ncaam: 'College Basketball',
+    sport_training_gate: 'Training · gate closed', sport_top2: 'AA Top 2 · highest confidence',
     foot: '<b>AA Sports</b> — data-driven sports intelligence. We publish AA algorithm predictions, metrics and summaries so you decide informed. We are not a sportsbook, we take no money and we place no bets. If you choose to play, do it responsibly (18/21+). Past results do not guarantee future results.',
     foot_legal: 'Legal notice & terms', foot_how: 'How it works?',
     lang_btn: 'ES', lang_title: 'Cambiar a Español',
@@ -3416,9 +3434,11 @@ async function loadToday(){
 let sport = 'mlb';
 let soccerLeague = 'fifa.world';
 const SOCCER_LEAGUES = { 'fifa.world': 'Mundial', 'uefa.champions': 'Champions', 'eng.1': 'Premier', 'esp.1': 'LaLiga', 'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1', 'usa.1': 'MLS', 'mex.1': 'Liga MX' };
-const SPORT_LABEL = { nba: 'NBA', soccer: 'Soccer', tennis: 'Tenis', radar: 'Radar' };
+const SPORT_LABEL = { nba: 'NBA', nfl: 'NFL', ncaaf: 'College Football', nhl: 'NHL', ncaam: 'College Basketball', soccer: 'Soccer', tennis: 'Tenis', radar: 'Radar' };
+const sportLabel = (key) => key === 'ncaaf' ? t('sport_ncaaf') : key === 'ncaam' ? t('sport_ncaam') : (SPORT_LABEL[key] || key);
 let otherGames = [], otherSel = null, otherLoading = false;
 let otherRecent = false;                 // true = mostrando últimos resultados (no hay juegos hoy)
+const sportModelDocs = new Map();        // docs públicos, siempre saneados por el Worker
 const standingsCache = new Map();        // 'nba' | 'soccer:<liga>' → doc de posiciones
 
 async function loadOther(){
@@ -3430,6 +3450,18 @@ async function loadOther(){
     const r = await fetch(`${API}/v1/${sport}/live${q}`);
     const d = await r.json();
     otherGames = d.games || [];
+    if (['nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
+      try{
+        const mr = await fetch(`${API}/v1/${sport}/today`);
+        const md = await mr.json();
+        sportModelDocs.set(sport, md);
+        const byId = new Map((md.events || []).map(e => [String(e.espn_id || e.event_id || e.id), e]));
+        otherGames = otherGames.map(g => {
+          const model = byId.get(String(g.espn_id));
+          return model ? { ...g, prediction: model.prediction || null } : g;
+        });
+      }catch(e){ sportModelDocs.delete(sport); }
+    }
     otherRecent = false;
     // sin juegos hoy → últimos resultados (aunque sean de la temporada pasada)
     if (!otherGames.length){
@@ -3447,6 +3479,21 @@ async function loadOther(){
   loadStandings();
   if (sport === 'soccer') loadSoccerPreds();
   if (sport !== 'mlb') renderAll();
+}
+
+function usPredFor(g){
+  if (!g || !['nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return null;
+  const p = g.prediction;
+  if (!p || p.prob == null || !p.pick) return null;
+  return { ...p, pct: Math.round(Number(p.prob) * 1000) / 10 };
+}
+
+function top2Banner(){
+  if (!['nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return '';
+  const doc = sportModelDocs.get(sport);
+  const picks = Array.isArray(doc?.top2) ? doc.top2.slice(0, 2) : [];
+  if (!picks.length) return `<div class="recentnote">🧪 ${t('sport_training_gate')}</div>`;
+  return `<div class="recentnote"><b>🎯 ${t('sport_top2')}</b> · ${picks.map(p => `${esc(p.pick)}${p.line != null ? ` ${esc(p.line)}` : ''} <span class="num">${Math.round(Number(p.prob) * 1000) / 10}%</span>`).join(' · ')}</div>`;
 }
 
 // ⚽ Predicciones AA de soccer (KV soccer:today): número calibrado por partido +
@@ -3500,7 +3547,7 @@ function soccerPredCard(g){
 }
 
 async function loadStandings(){
-  if (!['nba', 'soccer', 'tennis', 'mlb'].includes(sport)) return;
+  if (!['nba', 'soccer', 'tennis', 'mlb', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return;
   const key = sport === 'soccer' ? `soccer:${soccerLeague}` : sport;
   if (standingsCache.has(key)) return;
   try{
@@ -3522,7 +3569,7 @@ const summaryCache = new Map();          // 'sport:liga:eventId' → {at, doc}
 const summaryPending = new Set();
 function summaryKey(g){ return `${sport}:${sport === 'soccer' ? soccerLeague : '-'}:${g.espn_id}`; }
 function loadSummary(g){
-  if (!g || (sport !== 'soccer' && sport !== 'nba')) return;
+  if (!g || !['soccer', 'nba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return;
   const k = summaryKey(g);
   const ent = summaryCache.get(k);
   const ttl = g.status === 'final' ? 6e5 : 6e4;
@@ -4455,8 +4502,8 @@ function renderOtherList(){
   }
   const order = { live: 0, pre: 1, final: 2 };
   rows = [...rows].sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3));
-  const banner = otherRecent && rows.length
-    ? `<div class="recentnote">${t('o_recentnote')}</div>` : '';
+  const banner = top2Banner() + (otherRecent && rows.length
+    ? `<div class="recentnote">${t('o_recentnote')}</div>` : '');
   const pickTtl = t('sc_pickttl');   // (t global; dentro del map se sombrea con la hora)
   $('list').innerHTML = otherLoading && !rows.length
     ? '<div class="skel"></div><div class="skel"></div><div class="skel"></div>'
@@ -4467,9 +4514,9 @@ function renderOtherList(){
         : (g.start ? new Date(g.start).toLocaleTimeString(LOCALE(), {hour: '2-digit', minute: '2-digit'}) : 'Hoy');
       const setsA = sport === 'tennis' && g.away.sets ? ` <span class="stdet num">(${g.away.sets.join('-')})</span>` : '';
       const setsH = sport === 'tennis' && g.home.sets ? ` <span class="stdet num">(${g.home.sets.join('-')})</span>` : '';
-      const pr = sport === 'soccer' ? predFor(g) : null;
+      const pr = sport === 'soccer' ? predFor(g) : usPredFor(g);
       const aachip = pr && pr.pct != null
-        ? `<span class="aachip" title="${esc(pickTtl)}">AA <b>${esc(tNick(pr.pick))}</b> ${pr.pct}%</span>` : '';
+        ? `<span class="aachip" title="${esc(pickTtl)}">AA <b>${esc(sport === 'soccer' ? tNick(pr.pick) : pr.pick)}</b> ${pr.pct}%</span>` : '';
       return `<button class="mrow" data-oid="${esc(g.espn_id)}" style="--i:${i}">
         <span class="mtime num">${t}</span>
         <span class="mteams">
@@ -4482,7 +4529,7 @@ function renderOtherList(){
         </span>
         <span>${aachip}</span>
       </button>`;
-    }).join('') : `<div class="lempty">${t('o_no_events').replace('{s}', esc(SPORT_LABEL[sport] || sport))}</div>`;
+    }).join('') : banner + `<div class="lempty">${t('o_no_events').replace('{s}', esc(sportLabel(sport)))}</div>`;
 }
 
 function renderOtherDetail(){
@@ -4494,15 +4541,20 @@ function renderOtherDetail(){
   if (!g){
     const st0 = standingsHtml();
     dc.innerHTML = st0
-      ? `<div class="dtop"><span class="crumb">${esc(SPORT_LABEL[sport] || sport)}</span></div><div class="dbody">${st0}</div>`
+      ? `<div class="dtop"><span class="crumb">${esc(sportLabel(sport))}</span></div><div class="dbody">${st0}</div>`
       : `<div class="dempty">${otherLoading ? t('o_loading') : t('o_no_events2')}</div>`;
     return;
   }
   const scored = g.home.score != null && g.status !== 'pre';
+  const usPr = usPredFor(g);
+  const usPredCard = usPr ? `<div class="scpred">
+    <div class="scph"><span class="q">${t('sc_pickttl')}</span><span class="eng">${t('sc_eng')}</span></div>
+    <div class="ww-pick"><span class="bigpick">${esc(usPr.market === 'total' ? `${usPr.side || usPr.pick} ${usPr.line ?? ''}` : usPr.pick)}</span><span class="bigprob num">${usPr.pct}%</span></div>
+  </div>` : '';
 
   // Comparación cara a cara descriptiva (datos reales de posiciones/ranking; sin predicciones).
   let h2hRows = '';
-  if (sport === 'soccer' || sport === 'nba'){
+  if (['soccer', 'nba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
     const a = stRow(g.away.code), h = stRow(g.home.code);
     if (a && h){
       const signed = (x) => { const n = parseFloat(String(x).replace('+', '')); return Number.isFinite(n) ? (n > 0 ? '+' : '') + n : x; };
@@ -4557,13 +4609,16 @@ function renderOtherDetail(){
       if (S.stats && S.stats.length)
         summaryHtml += `<div class="secttl">${t('o_team_stats')}</div>${statHead}
           <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.label, s.away, s.home)).join('')}</div>`;
+    } else if (S && S.stats && S.stats.length){
+      summaryHtml += `<div class="secttl">${t('o_team_stats')}</div>${statHead}
+        <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.label, s.away, s.home)).join('')}</div>`;
     }
   } else if (sport === 'tennis'){
     summaryHtml += tennisSetline(g);
   }
 
   dc.innerHTML = `
-    <div class="dtop"><span class="crumb">${esc(SPORT_LABEL[sport] || sport)}${g.league ? `<span class="sep">›</span><b>${esc(g.league)}</b>` : ''}</span>${sport === 'soccer' && predFor(g) ? `<button class="sharebtn" data-share="soccer" data-shid="${esc(g.espn_id)}" title="${t('share')}" aria-label="${t('share')}">${SHARE_SVG}</button>` : ''}</div>
+    <div class="dtop"><span class="crumb">${esc(sportLabel(sport))}${g.league ? `<span class="sep">›</span><b>${esc(g.league)}</b>` : ''}</span>${sport === 'soccer' && predFor(g) ? `<button class="sharebtn" data-share="soccer" data-shid="${esc(g.espn_id)}" title="${t('share')}" aria-label="${t('share')}">${SHARE_SVG}</button>` : ''}</div>
     <div class="dhero">
       <span class="dwhen num">${g.start ? esc(new Date(g.start).toLocaleString(LOCALE(), {dateStyle: 'medium', timeStyle: 'short'})) : ''}</span>
       <div class="dgrid">
@@ -4577,6 +4632,7 @@ function renderOtherDetail(){
     </div>
     <div class="dbody">
       ${sport === 'soccer' ? soccerPredCard(g) : ''}
+      ${usPredCard}
       ${otherH2H}
       ${summaryHtml}
       ${(g.away.form || g.home.form) ? `
@@ -4614,8 +4670,8 @@ function renderOtherDetail(){
         <div class="formside"><div class="fh">${oLogo(g.away)}${esc(oName(g.away))}</div>${injuryRows('nba', g.away.code)}</div>
         <div class="formside"><div class="fh">${oLogo(g.home)}${esc(oName(g.home))}</div>${injuryRows('nba', g.home.code)}</div>
       </div>` : ''}
-      ${(sport === 'soccer' && predFor(g)) ? '' : `<div class="verdict"><span class="ic">🧪</span>
-        <p><span class="vt">${t('w_train')}</span>${t('sc_train_p').replace('{sport}', esc(SPORT_LABEL[sport] || sport))}</p>
+      ${((sport === 'soccer' && predFor(g)) || usPr) ? '' : `<div class="verdict"><span class="ic">🧪</span>
+        <p><span class="vt">${t('w_train')}</span>${t('sc_train_p').replace('{sport}', esc(sportLabel(sport)))}</p>
       </div>`}
       ${standingsHtml()}
       <p class="dnote">${t('o_note')}</p>
@@ -4642,13 +4698,13 @@ function setSport(sp2){
   $('wRecord').style.display = sport === 'mlb' ? '' : 'none';
   updateTrainWidget();
   $('ticker').hidden = sport !== 'mlb' || !$('tk').children.length;
-  document.querySelector('.lghead .ttl').textContent = sport === 'mlb' ? 'MLB' : (SPORT_LABEL[sport] || sport);
+  document.querySelector('.lghead .ttl').textContent = sport === 'mlb' ? 'MLB' : sportLabel(sport);
   document.querySelector('.lghead .sub').textContent = sport === 'mlb' ? t('season')
     : sport === 'radar' ? t('radar_sub')
     : sport === 'soccer' ? (SOCCER_LEAGUES[soccerLeague] || '') : t('live_via_espn');
   // el logo de la liga acompaña al deporte (antes se quedaba pegado el de MLB)
   const lgi = $('lgicon');
-  const LEAGUE_ICON = { mlb: 'mlb', nba: 'nba' };
+  const LEAGUE_ICON = { mlb: 'mlb', nba: 'nba', nfl: 'nfl', nhl: 'nhl' };
   if (LEAGUE_ICON[sport]){
     lgi.style.display = ''; lgi.style.visibility = '';
     lgi.src = `https://a.espncdn.com/i/teamlogos/leagues/500/${LEAGUE_ICON[sport]}.png`;
@@ -4834,12 +4890,12 @@ loadToday(); loadLive(); loadInjuries(); loadMe();
 // PWA: registra el service worker (instalable + arranque offline; solo cachea el shell).
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 // Deep-links (links compartidos): ?w=<0x…> wallet · ?g=<id> juego MLB ·
-// ?tab=soccer&sc=<id> partido de fútbol · ?tab=radar Radar.
+// ?tab=<sport> abre cualquier vertical · ?tab=soccer&sc=<id> partido de fútbol.
 { const qp = new URLSearchParams(location.search);
   const _wp = (qp.get('w') || '').match(/0x[0-9a-fA-F]{40}/);
   const gid = qp.get('g'), tab = qp.get('tab'), scid = qp.get('sc');
   if (_wp){ try { setSport('radar'); loadWalletSearch(_wp[0]); } catch (e) {} }
-  else if (tab === 'soccer'){ try { setSport('soccer'); if (scid) pendingOther = scid; } catch (e) {} }
+  else if (['soccer', 'nba', 'tennis', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(tab)){ try { setSport(tab); if (scid) pendingOther = scid; } catch (e) {} }
   else if (/^radar\./i.test(location.hostname) || tab === 'radar'){ try { setSport('radar'); } catch (e) {} }
   else if (gid){ pendingGame = gid; }   // se aplica cuando cargan los eventos
 }

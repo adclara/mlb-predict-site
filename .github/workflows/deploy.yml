@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 22
       - name: Regresión de lógica — MLB causal, ingesta, mercados sombra y Radar/Telegram
-        run: node --test tests/mlb_live_date.test.mjs tests/mlb_lock_gate.test.mjs tests/mlb_market_lab.test.mjs tests/mlb_selection_policy.test.mjs tests/mlb_ledger_migration.test.mjs tests/mlb_ledger_integrity.test.mjs tests/mlb_model_integrity.test.mjs tests/mlb_aa_lab.test.mjs tests/mlb_publish_watchdog.test.mjs tests/mlb_schedule_contract.test.mjs tests/mlb_ingest_consumer.test.mjs tests/mlb_normalize_observed.test.mjs tests/mlb_content_hash.test.mjs tests/mlb_upload_guard.test.mjs tests/worker_mlb_ingest.test.mjs tests/poly_telegram_gate.test.mjs
+        run: node --test tests/mlb_live_date.test.mjs tests/mlb_lock_gate.test.mjs tests/mlb_market_lab.test.mjs tests/mlb_selection_policy.test.mjs tests/mlb_ledger_migration.test.mjs tests/mlb_ledger_integrity.test.mjs tests/mlb_model_integrity.test.mjs tests/mlb_aa_lab.test.mjs tests/mlb_publish_watchdog.test.mjs tests/mlb_schedule_contract.test.mjs tests/mlb_ingest_consumer.test.mjs tests/mlb_normalize_observed.test.mjs tests/mlb_content_hash.test.mjs tests/mlb_upload_guard.test.mjs tests/worker_mlb_ingest.test.mjs tests/us_sports_foundation.test.mjs tests/poly_telegram_gate.test.mjs
       - name: Producción = main (fix de production branch)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
@@ -76,7 +76,7 @@ jobs:
           const actual = new Set(rows.map((row) => row?.cron).filter(Boolean))
           const required = [
             ['*/5 * * * *', 'Radar en vivo: el vigía corre cada 5 min'],
-            ['*/20 * * * *', 'MLB: captura pública cada 20 min'],
+            ['*/20 * * * *', 'MLB + NFL/NCAAF/NHL/NCAAM: captura pública cada 20 min'],
             ['0 13 * * *', 'Radar: archivo diario 13:00 UTC'],
           ]
           let missing = false
@@ -167,5 +167,13 @@ jobs:
             exit 1
           fi
           echo "✅ ingesta MLB completa y fresca"
+          for sport in nfl ncaaf nhl ncaam; do
+            BODY=$(curl -fsS "https://aa-sports-api.opsmira9.workers.dev/v1/$sport/pipeline-health")
+            echo "$sport pipeline: $BODY"
+            BODY="$BODY" SPORT="$sport" node -e 'const j=JSON.parse(process.env.BODY); if(j.sport!==process.env.SPORT || j.ok!==true) process.exit(1)'
+          done
+          echo "✅ ingesta pública NFL/NCAAF/NHL/NCAAM completa y fresca"
       - name: Gate de datos de producción
-        run: node robot/qa_check.mjs
+        run: |
+          node robot/qa_check.mjs
+          node robot/us_sports_qa.mjs
