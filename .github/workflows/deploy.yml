@@ -167,11 +167,26 @@ jobs:
             exit 1
           fi
           echo "✅ ingesta MLB completa y fresca"
-          for sport in nfl ncaaf nhl ncaam; do
-            BODY=$(curl -fsS "https://aa-sports-api.opsmira9.workers.dev/v1/$sport/pipeline-health")
-            echo "$sport pipeline: $BODY"
-            BODY="$BODY" SPORT="$sport" node -e 'const j=JSON.parse(process.env.BODY); if(j.sport!==process.env.SPORT || j.ok!==true) process.exit(1)'
+          us_healthy=0
+          for i in $(seq 1 80); do
+            all_ok=1
+            for sport in nfl ncaaf nhl ncaam; do
+              BODY=$(curl -fsS "https://aa-sports-api.opsmira9.workers.dev/v1/$sport/pipeline-health" || true)
+              echo "$sport pipeline intento $i/80: $BODY"
+              if ! BODY="$BODY" SPORT="$sport" node -e 'const j=JSON.parse(process.env.BODY); if(j.sport!==process.env.SPORT || j.ok!==true) process.exit(1)'; then
+                all_ok=0
+              fi
+            done
+            if [ "$all_ok" -eq 1 ]; then
+              us_healthy=1
+              break
+            fi
+            sleep 30
           done
+          if [ "$us_healthy" -ne 1 ]; then
+            echo "❌ la ingesta NFL/NCAAF/NHL/NCAAM no produjo slots frescos dentro de 40 minutos"
+            exit 1
+          fi
           echo "✅ ingesta pública NFL/NCAAF/NHL/NCAAM completa y fresca"
       - name: Gate de datos de producción
         run: |
