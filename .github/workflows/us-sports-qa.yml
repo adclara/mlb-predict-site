@@ -1,0 +1,29 @@
+name: US sports freshness QA
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '17 */6 * * *'
+  push:
+    branches: [main]
+    paths: ['.github/poke-us-sports']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: us-sports-qa
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Contratos locales fail-closed
+        run: node --test tests/us_sports_foundation.test.mjs
+      - name: Frescura y contratos en producción
+        run: node robot/us_sports_qa.mjs

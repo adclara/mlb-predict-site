@@ -21,6 +21,31 @@ const MLB_INGEST_STALE_SECONDS = 45 * 60;
 const MLB_INGEST_TIMEOUT_MS = 8000;
 const MLB_PREGAME_WINDOW_MS = 3 * 60 * 60 * 1000;
 
+// Public, keyless score feeds for the four new US sports. These identifiers
+// are also the only sport values accepted by the generic routes and D1 tables.
+export const US_SPORTS = Object.freeze({
+  nfl: {
+    label: 'NFL', scoreboard: 'football/nfl/scoreboard',
+    standings: 'https://site.api.espn.com/apis/v2/sports/football/nfl/standings',
+    summary: 'football/nfl/summary', season: 'NFL',
+  },
+  ncaaf: {
+    label: 'NCAAF · FBS', scoreboard: 'football/college-football/scoreboard',
+    standings: 'https://site.api.espn.com/apis/v2/sports/football/college-football/standings',
+    summary: 'football/college-football/summary', season: 'FBS',
+  },
+  nhl: {
+    label: 'NHL', scoreboard: 'hockey/nhl/scoreboard',
+    standings: 'https://site.api.espn.com/apis/v2/sports/hockey/nhl/standings',
+    summary: 'hockey/nhl/summary', season: 'NHL',
+  },
+  ncaam: {
+    label: 'NCAAM · D-I', scoreboard: 'basketball/mens-college-basketball/scoreboard',
+    standings: 'https://site.api.espn.com/apis/v2/sports/basketball/mens-college-basketball/standings',
+    summary: 'basketball/mens-college-basketball/summary', season: 'NCAA D-I',
+  },
+});
+
 // ESPN, antes de que empiece la jornada, deja su scoreboard sin parámetros en
 // el último día completado. Siempre fijamos el día calendario ET que AA Sports
 // está mostrando y filtramos la respuesta: un resultado de ayer nunca debe
@@ -324,6 +349,93 @@ export async function runMlbIngest(env, {
   return report;
 }
 
+// Normalized public facts for NFL/NCAAF/NHL/NCAAM. This is deliberately a
+// data contract, not a model: no feature weights, probability or pick exists
+// in this payload. Keeping it pure makes the causal timestamp testable.
+export function compactUsSportsIngest(data, sport, date) {
+  if (!US_SPORTS[sport]) throw new Error(`unsupported sport: ${sport}`);
+  const events = Array.isArray(data?.events) ? data.events : [];
+  const games = events
+    .filter((event) => !event?.date || etDate(event.date) === date)
+    .map((event) => {
+      const competition = event?.competitions?.[0] || {};
+      const competitors = competition.competitors || [];
+      const home = competitors.find((team) => team.homeAway === 'home') || competitors[0] || {};
+      const away = competitors.find((team) => team.homeAway === 'away') || competitors[1] || {};
+      const statusType = competition.status?.type || event?.status?.type || {};
+      const oddsList = Array.isArray(competition.odds) ? competition.odds : [];
+      const odds = oddsList.find((item) => item && (item.homeTeamOdds || item.awayTeamOdds || item.overUnder != null)) || oddsList[0] || null;
+      const market = odds ? compactEspnGame(event).market : null;
+      const side = (team) => ({
+        id: team?.team?.id ?? null,
+        code: ingestText(team?.team?.abbreviation || team?.team?.shortDisplayName, 16),
+        name: ingestText(team?.team?.displayName || team?.team?.shortDisplayName, 80),
+        score: ingestNumber(team?.score),
+        record: ingestText(team?.records?.[0]?.summary, 24),
+      });
+      return {
+        id: String(event?.id || ''), start: event?.date || null,
+        status: ingestStatus(statusType.name || statusType.state || statusType.description),
+        detail: ingestText(statusType.shortDetail || statusType.detail, 64),
+        period: ingestNumber(competition.status?.period), neutral: !!competition.neutralSite,
+        conference_competition: !!competition.conferenceCompetition,
+        home: side(home), away: side(away), market,
+      };
+    })
+    .filter((game) => game.id && game.home.code && game.away.code)
+    .sort((a, b) => String(a.start || '').localeCompare(String(b.start || '')) || a.id.localeCompare(b.id));
+  const missingness = {
+    games: games.length,
+    market_missing: games.filter((game) => !game.market || (
+      game.market.home_ml == null && game.market.away_ml == null && game.market.total == null
+    )).length,
+    team_code_missing: games.reduce((count, game) => count + (!game.home.code ? 1 : 0) + (!game.away.code ? 1 : 0), 0),
+  };
+  return { games, missingness };
+}
+
+export async function runUsSportsIngest(env, {
+  scheduledTime = Date.now(), now = new Date(), fetcher = fetch, timeoutMs = MLB_INGEST_TIMEOUT_MS,
+} = {}) {
+  const scheduledMs = Number(scheduledTime);
+  const scheduledAt = new Date(scheduledMs).toISOString();
+  const capturedAt = new Date(now).toISOString();
+  const date = etDate(new Date(scheduledMs));
+  const slotId = mlbIngestSlotId(scheduledMs);
+  const reports = [];
+  for (const [sport, config] of Object.entries(US_SPORTS)) {
+    const url = `https://site.api.espn.com/apis/site/v2/sports/${config.scoreboard}?dates=${date.replaceAll('-', '')}&limit=400`;
+    let compact = { games: [], missingness: { games: 0, market_missing: 0, team_code_missing: 0 } };
+    let status = 'ok', error = null;
+    try {
+      const data = await fetchMlbIngestJson(url, fetcher, timeoutMs, (body) => body && Array.isArray(body.events));
+      compact = compactUsSportsIngest(data, sport, date);
+    } catch (caught) {
+      status = 'error'; error = ingestError(caught);
+    }
+    const sourceHash = await mlbIngestSourceHash({ sport, date, games: compact.games });
+    const payload = {
+      schema: 'us_sports_ingest_v1', sport, slot_id: slotId, date,
+      scheduled_at: scheduledAt, captured_at: capturedAt, status,
+      source: 'espn', games: compact.games,
+    };
+    const result = await env.DB.prepare(`
+      INSERT INTO sports_ingest_slots
+        (sport, slot_id, date, scheduled_at, captured_at, status, source, source_hash, n_games, missingness, payload, error)
+      VALUES (?, ?, ?, ?, ?, ?, 'espn', ?, ?, ?, ?, ?)
+      ON CONFLICT(sport, slot_id) DO NOTHING
+    `).bind(
+      sport, slotId, date, scheduledAt, capturedAt, status, sourceHash,
+      compact.games.length, JSON.stringify(compact.missingness), JSON.stringify(payload), error,
+    ).run();
+    reports.push({ sport, status, slot_id: slotId, n_games: compact.games.length, source_hash: sourceHash, inserted: Number(result?.meta?.changes || 0), error });
+  }
+  const cutoff = new Date(scheduledMs - MLB_INGEST_RETENTION_MS).toISOString();
+  await env.DB.prepare('DELETE FROM sports_ingest_slots WHERE scheduled_at < ?').bind(cutoff).run();
+  console.log(JSON.stringify({ message: 'us sports ingest complete', date, reports }));
+  return reports;
+}
+
 const parseHealthJson = (value, fallback) => {
   try { return value ? JSON.parse(value) : fallback; } catch (e) { return fallback; }
 };
@@ -405,7 +517,7 @@ export default {
     try {
       if (path === '/' || path === '/v1' || path === '/v1/health') {
         return json(
-          { service: 'aa-sports-api', ok: true, sports: ['mlb'], routes: ['/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live', '/v1/mlb/pipeline-health', '/v1/injuries'] },
+          { service: 'aa-sports-api', ok: true, sports: ['mlb', 'soccer', 'nba', 'tennis', ...Object.keys(US_SPORTS)], routes: ['/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live', '/v1/mlb/pipeline-health', '/v1/:sport/today', '/v1/:sport/live', '/v1/:sport/recent', '/v1/:sport/standings', '/v1/:sport/summary', '/v1/:sport/history', '/v1/:sport/learning', '/v1/:sport/simulation', '/v1/:sport/pipeline-health', '/v1/injuries'] },
           200, origin,
         );
       }
@@ -418,6 +530,27 @@ export default {
       if (dm) return await day(dm[1], env, origin);
       if (path === '/v1/mlb/live') return await live(ctx, origin);
       if (path === '/v1/mlb/history') return await history(url, env, origin);
+      const usRoute = path.match(/^\/v1\/(nfl|ncaaf|nhl|ncaam)\/(today|live|recent|standings|summary|history|learning|simulation|pipeline-health)$/);
+      if (usRoute) {
+        const [, sport, action] = usRoute;
+        const config = US_SPORTS[sport];
+        const upstream = `${ESPN_BASE}/${config.scoreboard}`;
+        if (action === 'today') return await usSportsToday(env, sport, origin);
+        if (action === 'live') {
+          const today = etDate(new Date()).replaceAll('-', '');
+          return await otherLive(ctx, origin, sport, `${upstream}?dates=${today}&limit=400`);
+        }
+        if (action === 'recent') return await recentGames(ctx, origin, sport, upstream);
+        if (action === 'standings') return await standings(ctx, origin, sport, config.standings);
+        if (action === 'history') return await usSportsHistory(url, env, sport, origin);
+        if (action === 'learning' || action === 'simulation') return await usSportsKv(env, sport, action, origin);
+        if (action === 'pipeline-health') return await usSportsPipelineHealth(env, sport, origin);
+        if (action === 'summary') {
+          const eid = url.searchParams.get('event');
+          if (!eid || !/^\d+$/.test(eid)) return json({ error: 'bad_event' }, 400, origin);
+          return await summary(ctx, origin, sport, eid, `${ESPN_BASE}/${config.summary}?event=${eid}`);
+        }
+      }
       if (path === '/v1/nba/live') return await otherLive(ctx, origin, 'nba', `${ESPN_BASE}/basketball/nba/scoreboard`);
       if (path === '/v1/tennis/live') return await tennisLive(ctx, origin);
       if (path === '/v1/soccer/live') {
@@ -495,7 +628,10 @@ export default {
   //    viva + wallets nuevas en el top y publica poly:track (sin push diario).
   async scheduled(controller, env, ctx) {
     if (controller && controller.cron === MLB_INGEST_CRON) {
-      ctx.waitUntil(runMlbIngest(env, { scheduledTime: controller.scheduledTime }));
+      ctx.waitUntil(Promise.all([
+        runMlbIngest(env, { scheduledTime: controller.scheduledTime }),
+        runUsSportsIngest(env, { scheduledTime: controller.scheduledTime }),
+      ]));
     } else if (controller && controller.cron === '0 13 * * *') {
       ctx.waitUntil(polyDaily(env));
     } else if (controller && controller.cron === '*/5 * * * *') {
@@ -1608,6 +1744,81 @@ async function otherLive(ctx, origin, cacheTag, upstream) {
   return withCors(payload, origin);
 }
 
+function publicGateOpen(doc) {
+  return doc?.gate?.public === true && doc?.gate?.approved === true && doc?.gate?.passed === true;
+}
+
+// Public projection for a new sport. A malformed or premature private blob is
+// fail-closed: scores remain visible, but picks and probabilities are removed.
+export function sanitizeUsSportsToday(doc, sport, fallbackGames = [], date = etDate(new Date())) {
+  const source = doc && typeof doc === 'object' ? doc : {};
+  const open = publicGateOpen(source);
+  const events = Array.isArray(source.events) ? source.events : fallbackGames;
+  const safeEvents = events.map((event) => open ? event : ({ ...event, prediction: null }));
+  return {
+    sport, date: source.date || date, updated_at: source.updated_at || null,
+    gate: source.gate || { passed: false, approved: false, public: false, state: 'training', reason: 'forward_validation_pending' },
+    sample: source.sample || null, record: open ? (source.record || null) : null,
+    events: safeEvents, top2: open && Array.isArray(source.top2) ? source.top2.slice(0, 2) : [],
+    training: !open,
+  };
+}
+
+async function usSportsToday(env, sport, origin) {
+  const date = etDate(new Date());
+  let doc = null, fallbackGames = [];
+  try { const raw = await env.AA_LATEST.get(`${sport}:today`); if (raw) doc = JSON.parse(raw); } catch (e) { /* fail closed */ }
+  try {
+    const row = await env.DB.prepare(
+      'SELECT payload FROM sports_ingest_slots WHERE sport = ? AND date = ? ORDER BY slot_id DESC LIMIT 1',
+    ).bind(sport, date).first();
+    if (row?.payload) fallbackGames = JSON.parse(row.payload)?.games || [];
+  } catch (e) { /* first deploy before migration or storage outage */ }
+  return json(sanitizeUsSportsToday(doc, sport, fallbackGames, date), 200, origin, 60);
+}
+
+async function usSportsHistory(url, env, sport, origin) {
+  const days = Math.min(365, Math.max(1, parseInt(url.searchParams.get('days') || '30', 10) || 30));
+  const cutoff = new Date(); cutoff.setUTCDate(cutoff.getUTCDate() - days);
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT date, event_id, selection_key, market, pick, side, line, price, market_prob, prob,
+              confidence, home, away, start_time, result, engine_version, gate_version, updated_at
+       FROM sports_predictions
+       WHERE sport = ? AND public_scope = 'public' AND invalidated = 0 AND date >= ?
+       ORDER BY date DESC, start_time DESC, selection_key ASC LIMIT 1000`,
+    ).bind(sport, cutoff.toISOString().slice(0, 10)).all();
+    return json({ sport, days, count: results?.length || 0, predictions: results || [] }, 200, origin, 120);
+  } catch (e) {
+    return json({ sport, days, count: 0, predictions: [], note: 'history_not_initialized' }, 200, origin, 60);
+  }
+}
+
+async function usSportsKv(env, sport, kind, origin) {
+  const raw = await env.AA_LATEST.get(`${sport}:${kind}`);
+  if (!raw) return json({ sport, state: 'training', note: 'not_published_yet' }, 200, origin, 300);
+  return new Response(raw, { status: 200, headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=300' } });
+}
+
+async function usSportsPipelineHealth(env, sport, origin) {
+  try {
+    const row = await env.DB.prepare(
+      `SELECT sport, slot_id, date, scheduled_at, captured_at, status, source_hash, n_games, missingness, error
+       FROM sports_ingest_slots WHERE sport = ? ORDER BY slot_id DESC LIMIT 1`,
+    ).bind(sport).first();
+    if (!row) return json({ sport, ok: false, state: 'empty', interval_minutes: 20 }, 200, origin, 30);
+    const ageSeconds = Math.max(0, Math.floor((Date.now() - Date.parse(row.captured_at)) / 1000));
+    return json({
+      sport, ok: row.status === 'ok' && ageSeconds <= MLB_INGEST_STALE_SECONDS,
+      state: ageSeconds > MLB_INGEST_STALE_SECONDS ? 'stale' : row.status,
+      interval_minutes: 20, age_seconds: ageSeconds,
+      latest: { ...row, missingness: parseHealthJson(row.missingness, {}), error: parseHealthJson(row.error, row.error || null) },
+    }, 200, origin, 30);
+  } catch (e) {
+    return json({ sport, ok: false, state: 'unavailable', interval_minutes: 20 }, 200, origin, 15);
+  }
+}
+
 // Detalle de un partido (alineaciones/formación + estadísticas + eventos para
 // soccer; box score por jugador + estadísticas de equipo para NBA). Proxy con
 // caché del endpoint summary de ESPN. Todo descriptivo (datos reales), sin
@@ -1623,11 +1834,26 @@ async function summary(ctx, origin, sport, eid, upstream) {
   let data;
   try { data = await res.json(); } catch (e) { return json({ ok: false, note: 'summary non-json' }, 200, origin, 30); }
 
-  const payloadObj = sport === 'soccer' ? soccerSummary(data) : nbaSummary(data);
+  const payloadObj = sport === 'soccer' ? soccerSummary(data)
+    : sport === 'nba' ? nbaSummary(data)
+      : genericTeamSummary(data, sport);
   const payload = JSON.stringify({ ok: true, updated_at: new Date().toISOString(), ...payloadObj });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=60' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin, 60);
+}
+
+function genericTeamSummary(data, sport) {
+  const teams = data?.boxscore?.teams || [];
+  const home = teams.find((team) => team.homeAway === 'home') || teams[0] || {};
+  const away = teams.find((team) => team.homeAway === 'away') || teams[1] || {};
+  const statsOf = (team) => new Map((team.statistics || []).map((stat) => [stat.name || stat.label, stat.displayValue ?? stat.value ?? null]));
+  const hs = statsOf(home), as = statsOf(away);
+  const labels = new Map();
+  for (const team of teams) for (const stat of (team.statistics || [])) labels.set(stat.name || stat.label, stat.label || stat.abbreviation || stat.name);
+  const stats = [...labels.entries()].filter(([key]) => hs.has(key) || as.has(key)).slice(0, 18)
+    .map(([key, label]) => ({ label, home: hs.get(key) ?? null, away: as.get(key) ?? null }));
+  return { sport, stats: stats.length ? stats : null };
 }
 
 // Elige el bloque home/away de un array cuyos elementos traen homeAway (o cae

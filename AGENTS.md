@@ -61,6 +61,7 @@ path dispara el workflow. Mapa verificado (poke → workflow):
   + watchdog redundante 7–8am ET que corre solo si producción sigue pendiente)
 - `.github/poke-learn` → mlb-learning-daily.yml (refit + Cerebro AA una vez al día)
 - `.github/poke-live` → mlb-live-observer.yml (multi-book/WP en vivo; no bloquea daily)
+- `.github/poke-us-sports` → us-sports-qa.yml (frescura NFL/NCAAF/NHL/NCAAM; cron 4×/día)
 - `.github/poke-poly` → poly-study.yml (poly_radar.mjs; cron 2×/día)
 - `.github/poke-soccer` → soccer-shadow.yml (soccer_shadow.mjs; publica soccer:today)
 - `.github/poke-nba` → nba-shadow.yml · `.github/poke-sim` → mlb-sim.yml (semanal)
@@ -92,7 +93,7 @@ simulation, standings}`, `/v1/injuries`,
 `/v1/tennis/{live, recent, rankings, summary}`,
 `/v1/poly/{radar, alerts, track}`, `/v1/auth/google`.
 El Worker corre tres `scheduled()`: cada 5 min vigila el Radar; cada 20 min
-captura hechos públicos MLB (StatsAPI + ESPN) en `mlb_ingest_slots` de D1; y a
+captura hechos públicos MLB y NFL/NCAAF/NHL/NCAAM (sin lógica de modelo) en D1; y a
 las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
 
 ## Archivos clave
@@ -142,6 +143,9 @@ las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
 - **NBA / Tenis** (sombra): registran picks en D1 sin publicar. **No publicar
   predicciones** hasta pasar gate (calibración + muestra en vivo suficiente) y con
   aprobación humana. NBA se enciende ~octubre; tenis stats depende de TENNIS_API_KEY.
+- **NFL / NCAAF / NHL / NCAAM**: marcadores y captura factual activos; modelos
+  privados en `adclara/aa-sports-models-private`, con gates cerrados. No publicar
+  Top 2 hasta validación forward suficiente + aprobación humana explícita.
 
 ## Testing (Playwright)
 - Playwright está **global** en `/opt/node22/lib/node_modules` (corre con

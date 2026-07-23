@@ -123,6 +123,21 @@ async function installApiMocks(page, date, events, games) {
     ] });
     if (path === '/v1/injuries') return json(route, { players: [] });
     if (path === '/v1/me') return json(route, { enabled: false, user: null });
+    const us = path.match(/^\/v1\/(nfl|ncaaf|nhl|ncaam)\/(live|recent|standings|today|summary)$/);
+    if (us) {
+      const [, sport, action] = us;
+      if (action === 'today') return json(route, {
+        sport, date, training: true, gate: { state: 'training', passed: false, approved: false, public: false }, events: [], top2: [],
+      });
+      if (action === 'standings') return json(route, { sport, sections: [] });
+      if (action === 'summary') return json(route, { ok: true, sport, stats: [{ label: 'Total yards', away: 320, home: 350 }] });
+      if (action === 'recent') return json(route, { sport, games: [] });
+      return json(route, { sport, games: [{
+        espn_id: `${sport}-1`, start: `${date}T23:00:00Z`, status: 'pre', status_detail: 'Scheduled',
+        away: { code: 'AWY', name: 'Away Team', score: null, logo: null, rec: '0-0' },
+        home: { code: 'HME', name: 'Home Team', score: null, logo: null, rec: '0-0' },
+      }] });
+    }
     return json(route, {});
   });
 
@@ -336,6 +351,13 @@ try {
     assert.match(brainText, /Confidence selection \(no assumed price\)/, `${viewport.name}: simulation still assumes a price`);
     assert.match(brainText, /hit rate >50% \(CI\)/, `${viewport.name}: missing accuracy-only signal`);
     await assertNoOverflow(page, `${viewport.name}-brain-en`);
+    for (const newSport of ['nfl', 'ncaaf', 'nhl', 'ncaam']) {
+      await page.locator(`.sp[data-sport="${newSport}"]`).click();
+      await page.locator(`.mrow[data-oid="${newSport}-1"]`).waitFor({ state: 'visible' });
+      assert.match(await page.locator('#list').textContent(), /Training · gate closed/i, `${viewport.name}: ${newSport} missing fail-closed banner`);
+      assert.match(await page.locator('#dcard').textContent(), /AA model in training/i, `${viewport.name}: ${newSport} missing training disclosure`);
+      await assertNoOverflow(page, `${viewport.name}-${newSport}`);
+    }
     assert.deepEqual(errors, [], `${viewport.name}: errores de consola/red de la app`);
     await context.close();
   }
