@@ -293,6 +293,26 @@ async function fetchMlbIngestJson(url, fetcher, timeoutMs, valid) {
 
 const ingestError = (reason) => ingestText(reason && reason.message || reason || 'unknown', 180);
 
+export async function fetchUsSportsScoreboard(config, date, fetcher = fetch, timeoutMs = MLB_INGEST_TIMEOUT_MS) {
+  const path = `/apis/site/v2/sports/${config.scoreboard}?dates=${date.replaceAll('-', '')}&limit=400`;
+  const candidates = [
+    { source: 'espn_site', url: `https://site.api.espn.com${path}` },
+    { source: 'espn_web', url: `https://site.web.api.espn.com${path}` },
+  ];
+  const errors = [];
+  for (const candidate of candidates) {
+    try {
+      const data = await fetchMlbIngestJson(
+        candidate.url, fetcher, timeoutMs, (body) => body && Array.isArray(body.events),
+      );
+      return { data, source: candidate.source };
+    } catch (error) {
+      errors.push(`${candidate.source}:${ingestError(error)}`);
+    }
+  }
+  throw new Error(errors.join(';'));
+}
+
 export async function runMlbIngest(env, {
   scheduledTime = Date.now(), now = new Date(), fetcher = fetch, timeoutMs = MLB_INGEST_TIMEOUT_MS,
 } = {}) {
@@ -404,12 +424,12 @@ export async function runUsSportsIngest(env, {
   const slotId = mlbIngestSlotId(scheduledMs);
   const reports = [];
   for (const [sport, config] of Object.entries(US_SPORTS)) {
-    const url = `https://site.api.espn.com/apis/site/v2/sports/${config.scoreboard}?dates=${date.replaceAll('-', '')}&limit=400`;
     let compact = { games: [], missingness: { games: 0, market_missing: 0, team_code_missing: 0 } };
-    let status = 'ok', error = null;
+    let status = 'ok', error = null, source = 'espn_site';
     try {
-      const data = await fetchMlbIngestJson(url, fetcher, timeoutMs, (body) => body && Array.isArray(body.events));
-      compact = compactUsSportsIngest(data, sport, date);
+      const fetched = await fetchUsSportsScoreboard(config, date, fetcher, timeoutMs);
+      source = fetched.source;
+      compact = compactUsSportsIngest(fetched.data, sport, date);
     } catch (caught) {
       status = 'error'; error = ingestError(caught);
     }
@@ -417,18 +437,18 @@ export async function runUsSportsIngest(env, {
     const payload = {
       schema: 'us_sports_ingest_v1', sport, slot_id: slotId, date,
       scheduled_at: scheduledAt, captured_at: capturedAt, status,
-      source: 'espn', games: compact.games,
+      source, games: compact.games,
     };
     const result = await env.DB.prepare(`
       INSERT INTO sports_ingest_slots
         (sport, slot_id, date, scheduled_at, captured_at, status, source, source_hash, n_games, missingness, payload, error)
-      VALUES (?, ?, ?, ?, ?, ?, 'espn', ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(sport, slot_id) DO NOTHING
     `).bind(
-      sport, slotId, date, scheduledAt, capturedAt, status, sourceHash,
+      sport, slotId, date, scheduledAt, capturedAt, status, source, sourceHash,
       compact.games.length, JSON.stringify(compact.missingness), JSON.stringify(payload), error,
     ).run();
-    reports.push({ sport, status, slot_id: slotId, n_games: compact.games.length, source_hash: sourceHash, inserted: Number(result?.meta?.changes || 0), error });
+    reports.push({ sport, status, source, slot_id: slotId, n_games: compact.games.length, source_hash: sourceHash, inserted: Number(result?.meta?.changes || 0), error });
   }
   const cutoff = new Date(scheduledMs - MLB_INGEST_RETENTION_MS).toISOString();
   await env.DB.prepare('DELETE FROM sports_ingest_slots WHERE scheduled_at < ?').bind(cutoff).run();
@@ -538,7 +558,9 @@ export default {
         if (action === 'today') return await usSportsToday(env, sport, origin);
         if (action === 'live') {
           const today = etDate(new Date()).replaceAll('-', '');
-          return await otherLive(ctx, origin, sport, `${upstream}?dates=${today}&limit=400`);
+          const primary = `${upstream}?dates=${today}&limit=400`;
+          const fallback = primary.replace('https://site.api.espn.com', 'https://site.web.api.espn.com');
+          return await otherLive(ctx, origin, sport, primary, fallback);
         }
         if (action === 'recent') return await recentGames(ctx, origin, sport, upstream);
         if (action === 'standings') return await standings(ctx, origin, sport, config.standings);
@@ -1690,14 +1712,23 @@ async function live(ctx, origin) {
 }
 
 // Live genérico (NBA y soccer): mismo esquema que MLB live, sin situation.
-async function otherLive(ctx, origin, cacheTag, upstream) {
+async function otherLive(ctx, origin, cacheTag, upstream, fallbackUpstream = null) {
   const cache = caches.default;
   const cacheKey = new Request('https://aa-sports.cache/' + cacheTag + '/live', { method: 'GET' });
   const cached = await cache.match(cacheKey);
   if (cached) return withCors(await cached.text(), origin);
 
-  const res = await fetch(upstream, { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 30 } });
-  if (!res.ok) return json({ games: [], note: 'live upstream ' + res.status }, 200, origin, 15);
+  let res = null, lastError = 'unknown';
+  for (const candidate of [upstream, fallbackUpstream].filter(Boolean)) {
+    try {
+      const attempt = await fetch(candidate, { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 30 } });
+      if (attempt.ok) { res = attempt; break; }
+      lastError = String(attempt.status);
+    } catch (error) {
+      lastError = ingestError(error);
+    }
+  }
+  if (!res) return json({ games: [], note: 'live upstream ' + lastError }, 200, origin, 15);
   const data = await res.json();
 
   const games = (data.events || []).map((ev) => {

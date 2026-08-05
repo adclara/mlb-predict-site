@@ -142,10 +142,10 @@ class MockStatement {
       return { success: true, meta: { changes } };
     }
     if (/^\s*INSERT\s+INTO\s+sports_ingest_slots/i.test(this.sql)) {
-      const [sport, slot_id, date, scheduled_at, captured_at, status, source_hash, n_games, missingness, payload, error] = this.values;
+      const [sport, slot_id, date, scheduled_at, captured_at, status, source, source_hash, n_games, missingness, payload, error] = this.values;
       const key = `${sport}:${slot_id}`;
       const shouldWrite = !this.db.sportsRows.has(key);
-      if (shouldWrite) this.db.sportsRows.set(key, { sport, slot_id, date, scheduled_at, captured_at, status, source_hash, n_games, missingness, payload, error });
+      if (shouldWrite) this.db.sportsRows.set(key, { sport, slot_id, date, scheduled_at, captured_at, status, source, source_hash, n_games, missingness, payload, error });
       return { success: true, meta: { changes: shouldWrite ? 1 : 0 } };
     }
     if (/^\s*DELETE\s+FROM\s+sports_ingest_slots/i.test(this.sql)) {
