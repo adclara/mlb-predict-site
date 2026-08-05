@@ -2,6 +2,8 @@
 // No secret and no writes: it verifies API shape, exact ET slate dates and the
 // 20-minute factual pipeline. Empty off-season slates are valid.
 
+import { assessUsSportsPipeline } from './lib/us_sports_qa.mjs';
+
 const API = process.env.AA_API || 'https://aa-sports-api.opsmira9.workers.dev';
 const SPORTS = ['nfl', 'ncaaf', 'nhl', 'ncaam'];
 const ET_TODAY = new Intl.DateTimeFormat('en-CA', {
@@ -9,6 +11,7 @@ const ET_TODAY = new Intl.DateTimeFormat('en-CA', {
 }).format(new Date());
 
 let failed = 0;
+let warned = 0;
 async function get(path) {
   const response = await fetch(`${API}${path}`, { headers: { 'user-agent': 'aa-sports-us-qa/1.0' } });
   const text = await response.text();
@@ -36,8 +39,14 @@ for (const sport of SPORTS) {
 
     const health = await get(`/v1/${sport}/pipeline-health`);
     if (!health.response.ok || health.body?.sport !== sport) throw new Error(`pipeline contract ${health.response.status}`);
-    if (!health.body.ok) throw new Error(`pipeline ${health.body.state || 'unknown'} age=${health.body.age_seconds ?? 'n/a'}s`);
-    console.log(`✅ ingesta 20m: ${health.body.latest?.n_games ?? 0} juegos · ${health.body.age_seconds}s`);
+    const assessment = assessUsSportsPipeline({ live: live.body, today: today.body, health: health.body });
+    if (assessment.level === 'error') throw new Error(assessment.reason);
+    if (assessment.level === 'warning') {
+      warned++;
+      console.warn(`⚠️ ${assessment.reason}`);
+    } else {
+      console.log(`✅ ingesta 20m: ${health.body.latest?.n_games ?? 0} juegos · ${health.body.age_seconds}s`);
+    }
   } catch (error) {
     failed++;
     console.error(`❌ ${error.message}`);
@@ -48,4 +57,4 @@ if (failed) {
   console.error(`\nUS Sports QA: ${failed}/${SPORTS.length} deportes con fallo`);
   process.exit(1);
 }
-console.log('\nUS Sports QA: todo verde');
+console.log(`\nUS Sports QA: sin fallos${warned ? ` · ${warned} advertencias de jornada vacía` : ''}`);

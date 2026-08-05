@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
+import worker, {
   US_SPORTS,
   compactUsSportsIngest,
+  fetchUsSportsScoreboard,
   sanitizeUsSportsToday,
 } from '../cloudflare/worker/index.js';
 
@@ -48,6 +49,54 @@ test('ingestion rejects unsupported sports and off-date events', () => {
   assert.throws(() => compactUsSportsIngest({ events: [] }, 'fcs', '2026-09-09'));
   const result = compactUsSportsIngest({ events: [espnEvent()] }, 'nfl', '2026-09-10');
   assert.equal(result.games.length, 0);
+});
+
+test('US sports ingestion falls back after a transient ESPN 403', async () => {
+  const calls = [];
+  const fetcher = async (url) => {
+    calls.push(String(url));
+    if (String(url).includes('site.api.espn.com')) return new Response('{}', { status: 403 });
+    return new Response(JSON.stringify({ events: [espnEvent()] }), { status: 200 });
+  };
+  const result = await fetchUsSportsScoreboard(US_SPORTS.nfl, '2026-09-09', fetcher, 1000);
+  assert.equal(result.source, 'espn_web');
+  assert.equal(result.data.events.length, 1);
+  assert.equal(calls.length, 2);
+});
+
+test('US sports ingestion reports both ESPN failures', async () => {
+  const fetcher = async () => new Response('{}', { status: 403 });
+  await assert.rejects(
+    fetchUsSportsScoreboard(US_SPORTS.nfl, '2026-09-09', fetcher, 1000),
+    /espn_site:http_403;espn_web:http_403/,
+  );
+});
+
+test('US sports live route retries the alternate ESPN host', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalCaches = globalThis.caches;
+  const calls = [];
+  globalThis.caches = { default: { async match() { return null; }, async put() {} } };
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    if (String(url).includes('site.api.espn.com')) return new Response('{}', { status: 403 });
+    return new Response(JSON.stringify({ events: [] }), { status: 200 });
+  };
+  try {
+    const response = await worker.fetch(
+      new Request('https://aa-sports-api.test/v1/nfl/live'),
+      { ALLOWED_ORIGIN: '*' }, { waitUntil() {} },
+    );
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.deepEqual(body.games, []);
+    assert.equal(body.note, undefined);
+    assert.equal(calls.length, 2);
+    assert.match(calls[1], /site\.web\.api\.espn\.com/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    globalThis.caches = originalCaches;
+  }
 });
 
 test('today projection fails closed until all three gate flags are true', () => {
