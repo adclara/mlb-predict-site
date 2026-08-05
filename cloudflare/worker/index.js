@@ -313,6 +313,26 @@ export async function fetchUsSportsScoreboard(config, date, fetcher = fetch, tim
   throw new Error(errors.join(';'));
 }
 
+export async function fetchMlbEspnScoreboard(date, fetcher = fetch, timeoutMs = MLB_INGEST_TIMEOUT_MS) {
+  const primary = mlbScoreboardUrl(date);
+  const candidates = [
+    { source: 'espn_site', url: primary },
+    { source: 'espn_web', url: primary.replace('https://site.api.espn.com', 'https://site.web.api.espn.com') },
+  ];
+  const errors = [];
+  for (const candidate of candidates) {
+    try {
+      const data = await fetchMlbIngestJson(
+        candidate.url, fetcher, timeoutMs, (body) => body && Array.isArray(body.events),
+      );
+      return { data, source: candidate.source };
+    } catch (error) {
+      errors.push(`${candidate.source}:${ingestError(error)}`);
+    }
+  }
+  throw new Error(errors.join(';'));
+}
+
 export async function runMlbIngest(env, {
   scheduledTime = Date.now(), now = new Date(), fetcher = fetch, timeoutMs = MLB_INGEST_TIMEOUT_MS,
 } = {}) {
@@ -323,16 +343,24 @@ export async function runMlbIngest(env, {
   const statsUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=probablePitcher,team,linescore,lineups,venue`;
   const results = await Promise.allSettled([
     fetchMlbIngestJson(statsUrl, fetcher, timeoutMs, (data) => data && Array.isArray(data.dates)),
-    fetchMlbIngestJson(mlbScoreboardUrl(date), fetcher, timeoutMs, (data) => data && Array.isArray(data.events)),
+    fetchMlbEspnScoreboard(date, fetcher, timeoutMs),
   ]);
   const statsOk = results[0].status === 'fulfilled';
   const espnOk = results[1].status === 'fulfilled';
   const sourceMask = (statsOk ? 2 : 0) | (espnOk ? 1 : 0);
   const sources = {
     mlb: { status: statsOk ? 'ok' : 'error', error: statsOk ? null : ingestError(results[0].reason) },
-    espn: { status: espnOk ? 'ok' : 'error', error: espnOk ? null : ingestError(results[1].reason) },
+    espn: {
+      status: espnOk ? 'ok' : 'error',
+      source: espnOk ? results[1].value.source : null,
+      error: espnOk ? null : ingestError(results[1].reason),
+    },
   };
-  const compact = compactMlbIngest(statsOk ? results[0].value : null, espnOk ? results[1].value : null, date);
+  const compact = compactMlbIngest(
+    statsOk ? results[0].value : null,
+    espnOk ? results[1].value.data : null,
+    date,
+  );
   const status = sourceMask === 3 ? 'ok' : sourceMask ? 'partial' : 'error';
   const stage = mlbIngestStage(compact.games, Date.parse(capturedAt));
   const slotId = mlbIngestSlotId(scheduledMs);

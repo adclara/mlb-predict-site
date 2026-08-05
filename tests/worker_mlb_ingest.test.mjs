@@ -88,10 +88,11 @@ function response(body, status = 200) {
   });
 }
 
-function fixtureFetch({ statsStatus = 200, espnStatus = 200 } = {}) {
+function fixtureFetch({ statsStatus = 200, espnStatus = 200, espnWebStatus = espnStatus } = {}) {
   return async (url) => {
     const value = String(url);
     if (value.includes('statsapi.mlb.com')) return response(statsFixture, statsStatus);
+    if (value.includes('site.web.api.espn.com')) return response(espnFixture, espnWebStatus);
     if (value.includes('site.api.espn.com')) return response(espnFixture, espnStatus);
     throw new Error(`URL inesperada: ${value}`);
   };
@@ -250,6 +251,19 @@ test('un slot de 20 minutos es idempotente en D1', async () => {
   assert.equal(JSON.parse(DB.latest().payload).games.length, 1);
 });
 
+test('la ingesta MLB usa el host ESPN alterno tras un 403', async () => {
+  const DB = new MockD1();
+  const report = await runMlbIngest({ DB }, {
+    scheduledTime: SCHEDULED_TIME,
+    now: CAPTURED_TIME,
+    fetcher: fixtureFetch({ espnStatus: 403, espnWebStatus: 200 }),
+  });
+
+  assert.equal(report.status, 'ok');
+  assert.equal(report.sources.espn.source, 'espn_web');
+  assert.equal(report.sources.espn.error, null);
+});
+
 test('un retry parcial nunca reemplaza un slot completo', async () => {
   const DB = new MockD1();
   const base = { scheduledTime: SCHEDULED_TIME, now: CAPTURED_TIME };
@@ -327,7 +341,10 @@ test('una caída total se persiste como error sin lanzar', async () => {
   const row = DB.latest();
   assert.equal(row.status, 'error');
   assert.equal(row.stage, 'early');
-  assert.deepEqual(JSON.parse(row.error), { mlb: 'http_503', espn: 'http_502' });
+  assert.deepEqual(JSON.parse(row.error), {
+    mlb: 'http_503',
+    espn: 'espn_site:http_502;espn_web:http_502',
+  });
 });
 
 test('pipeline-health publica frescura y missingness con caché corta', async () => {
