@@ -293,6 +293,38 @@ async function fetchMlbIngestJson(url, fetcher, timeoutMs, valid) {
 
 const ingestError = (reason) => ingestText(reason && reason.message || reason || 'unknown', 180);
 
+// ESPN exposes the same public, keyless payloads through two site hosts. Some
+// Cloudflare egress ranges intermittently receive 403 from the primary even
+// while the alternate remains healthy. Normal traffic still makes one fetch;
+// the second host is used only after a network/non-2xx failure.
+export async function fetchEspnPublicResponse(upstream, {
+  fetcher = fetch, fallbackUpstream = null, timeoutMs = MLB_INGEST_TIMEOUT_MS, init = {},
+} = {}) {
+  const derivedFallback = String(upstream).replace('https://site.api.espn.com', 'https://site.web.api.espn.com');
+  const candidates = [
+    { source: 'espn_site', url: String(upstream) },
+    { source: 'espn_web', url: fallbackUpstream || (derivedFallback !== String(upstream) ? derivedFallback : null) },
+  ].filter((candidate, index, all) => candidate.url && all.findIndex((item) => item.url === candidate.url) === index);
+  const errors = [];
+  for (const candidate of candidates) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort('timeout'), timeoutMs);
+    try {
+      const headers = new Headers(init.headers);
+      if (!headers.has('accept')) headers.set('accept', 'application/json');
+      if (!headers.has('user-agent')) headers.set('user-agent', 'aa-sports/1.0');
+      const response = await fetcher(candidate.url, { ...init, headers, signal: controller.signal });
+      if (response.ok) return { response, source: candidate.source };
+      errors.push(`${candidate.source}:http_${response.status}`);
+    } catch (error) {
+      errors.push(`${candidate.source}:${ingestError(error)}`);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  throw new Error(errors.join(';') || 'espn_no_candidate');
+}
+
 export async function fetchUsSportsScoreboard(config, date, fetcher = fetch, timeoutMs = MLB_INGEST_TIMEOUT_MS) {
   const path = `/apis/site/v2/sports/${config.scoreboard}?dates=${date.replaceAll('-', '')}&limit=400`;
   const candidates = [
@@ -1666,9 +1698,13 @@ async function live(ctx, origin) {
     return withCors(body, origin);
   }
 
-  const res = await fetch(mlbScoreboardUrl(date), { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 30 } });
-  if (!res.ok) return json({ sport: 'mlb', games: [], note: 'live upstream ' + res.status }, 200, origin, 15);
-  const data = await res.json();
+  let fetched;
+  try {
+    fetched = await fetchEspnPublicResponse(mlbScoreboardUrl(date), { init: { cf: { cacheTtl: 30 } } });
+  } catch (error) {
+    return json({ sport: 'mlb', games: [], note: 'live upstream ' + ingestError(error) }, 200, origin, 15);
+  }
+  const data = await fetched.response.json();
 
   const games = mlbLiveEventsForDate(data, date).map((ev) => {
     const c = (ev.competitions && ev.competitions[0]) || {};
@@ -1718,8 +1754,9 @@ async function live(ctx, origin) {
   if (liveIds.length) {
     const wps = await Promise.all(liveIds.map(async (id) => {
       try {
-        const r = await fetch(`${ESPN_BASE}/baseball/mlb/summary?event=${id}`, { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 30 } });
-        if (!r.ok) return [id, null];
+        const { response: r } = await fetchEspnPublicResponse(`${ESPN_BASE}/baseball/mlb/summary?event=${id}`, {
+          init: { cf: { cacheTtl: 30 } },
+        });
         const d = await r.json();
         const arr = d && d.winprobability;
         if (!Array.isArray(arr) || !arr.length) return [id, null];
@@ -1733,7 +1770,7 @@ async function live(ctx, origin) {
     for (const g of games) { const v = wpMap.get(g.espn_id); if (v != null) g.win_prob_home = v; }
   }
 
-  const payload = JSON.stringify({ sport: 'mlb', date, updated_at: new Date().toISOString(), games });
+  const payload = JSON.stringify({ sport: 'mlb', date, updated_at: new Date().toISOString(), source: fetched.source, games });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=30' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin);
@@ -1746,18 +1783,15 @@ async function otherLive(ctx, origin, cacheTag, upstream, fallbackUpstream = nul
   const cached = await cache.match(cacheKey);
   if (cached) return withCors(await cached.text(), origin);
 
-  let res = null, lastError = 'unknown';
-  for (const candidate of [upstream, fallbackUpstream].filter(Boolean)) {
-    try {
-      const attempt = await fetch(candidate, { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 30 } });
-      if (attempt.ok) { res = attempt; break; }
-      lastError = String(attempt.status);
-    } catch (error) {
-      lastError = ingestError(error);
-    }
+  let fetched;
+  try {
+    fetched = await fetchEspnPublicResponse(upstream, {
+      fallbackUpstream, init: { cf: { cacheTtl: 30 } },
+    });
+  } catch (error) {
+    return json({ games: [], note: 'live upstream ' + ingestError(error) }, 200, origin, 15);
   }
-  if (!res) return json({ games: [], note: 'live upstream ' + lastError }, 200, origin, 15);
-  const data = await res.json();
+  const data = await fetched.response.json();
 
   const games = (data.events || []).map((ev) => {
     const c = (ev.competitions && ev.competitions[0]) || {};
@@ -1797,7 +1831,7 @@ async function otherLive(ctx, origin, cacheTag, upstream, fallbackUpstream = nul
     };
   });
 
-  const payload = JSON.stringify({ updated_at: new Date().toISOString(), games });
+  const payload = JSON.stringify({ updated_at: new Date().toISOString(), source: fetched.source, games });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=30' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin);
@@ -1888,15 +1922,19 @@ async function summary(ctx, origin, sport, eid, upstream) {
   const cached = await cache.match(cacheKey);
   if (cached) return withCors(await cached.text(), origin, 60);
 
-  const res = await fetch(upstream, { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 60 } });
-  if (!res.ok) return json({ ok: false, note: 'summary upstream ' + res.status }, 200, origin, 30);
+  let fetched;
+  try {
+    fetched = await fetchEspnPublicResponse(upstream, { init: { cf: { cacheTtl: 60 } } });
+  } catch (error) {
+    return json({ ok: false, note: 'summary upstream ' + ingestError(error) }, 200, origin, 30);
+  }
   let data;
-  try { data = await res.json(); } catch (e) { return json({ ok: false, note: 'summary non-json' }, 200, origin, 30); }
+  try { data = await fetched.response.json(); } catch (e) { return json({ ok: false, note: 'summary non-json' }, 200, origin, 30); }
 
   const payloadObj = sport === 'soccer' ? soccerSummary(data)
     : sport === 'nba' ? nbaSummary(data)
       : genericTeamSummary(data, sport);
-  const payload = JSON.stringify({ ok: true, updated_at: new Date().toISOString(), ...payloadObj });
+  const payload = JSON.stringify({ ok: true, updated_at: new Date().toISOString(), source: fetched.source, ...payloadObj });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=60' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin, 60);
@@ -2042,9 +2080,13 @@ async function recentGames(ctx, origin, cacheTag, upstream) {
   if (cached) return withCors(await cached.text(), origin, 300);
 
   const to = new Date(), from = new Date(Date.now() - 60 * 86400000);
-  const res = await fetch(`${upstream}?dates=${ymd(from)}-${ymd(to)}&limit=350`, { headers: { 'user-agent': 'aa-sports/1.0' } });
-  if (!res.ok) return json({ games: [], note: 'recent upstream ' + res.status }, 200, origin, 60);
-  const data = await res.json();
+  let fetched;
+  try {
+    fetched = await fetchEspnPublicResponse(`${upstream}?dates=${ymd(from)}-${ymd(to)}&limit=350`);
+  } catch (error) {
+    return json({ games: [], note: 'recent upstream ' + ingestError(error) }, 200, origin, 60);
+  }
+  const data = await fetched.response.json();
 
   const games = (data.events || []).map((ev) => {
     const c = (ev.competitions && ev.competitions[0]) || {};
@@ -2071,7 +2113,7 @@ async function recentGames(ctx, origin, cacheTag, upstream) {
     .sort((a, b) => String(b.start).localeCompare(String(a.start)))
     .slice(0, 30);
 
-  const payload = JSON.stringify({ updated_at: new Date().toISOString(), games });
+  const payload = JSON.stringify({ updated_at: new Date().toISOString(), source: fetched.source, games });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=1800' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin, 300);
@@ -2086,11 +2128,12 @@ async function tennisRecent(ctx, origin) {
 
   const to = new Date(), from = new Date(Date.now() - 7 * 86400000);
   const out = [];
+  let successfulTours = 0;
   for (const tour of ['atp', 'wta']) {
     try {
-      const res = await fetch(`${ESPN_BASE}/tennis/${tour}/scoreboard?dates=${ymd(from)}-${ymd(to)}&limit=150`, { headers: { 'user-agent': 'aa-sports/1.0' } });
-      if (!res.ok) continue;
-      const data = await res.json();
+      const fetched = await fetchEspnPublicResponse(`${ESPN_BASE}/tennis/${tour}/scoreboard?dates=${ymd(from)}-${ymd(to)}&limit=150`);
+      const data = await fetched.response.json();
+      successfulTours++;
       for (const ev of (data.events || [])) {
         const comps = ev.competitions || (ev.groupings || []).flatMap((g) => g.competitions || []);
         for (const c of comps) {
@@ -2122,6 +2165,7 @@ async function tennisRecent(ctx, origin) {
       }
     } catch (e) { /* un tour caído no tumba el otro */ }
   }
+  if (!successfulTours) return json({ games: [], note: 'tennis recent upstream' }, 200, origin, 60);
   out.sort((a, b) => String(b.start).localeCompare(String(a.start)));
   const payload = JSON.stringify({ updated_at: new Date().toISOString(), games: out.slice(0, 30) });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=1800' } });
@@ -2138,11 +2182,12 @@ async function tennisRankings(ctx, origin) {
   if (cached) return withCors(await cached.text(), origin, 3600);
 
   const sections = [];
+  let successfulTours = 0;
   for (const tour of ['atp', 'wta']) {
     try {
-      const res = await fetch(`${ESPN_BASE}/tennis/${tour}/rankings`, { headers: { 'user-agent': 'aa-sports/1.0' } });
-      if (!res.ok) continue;
-      const data = await res.json();
+      const fetched = await fetchEspnPublicResponse(`${ESPN_BASE}/tennis/${tour}/rankings`);
+      const data = await fetched.response.json();
+      successfulTours++;
       const rk = (data.rankings || []).find((r) => Array.isArray(r.ranks) && r.ranks.length) || null;
       if (!rk) continue;
       const rows = rk.ranks.slice(0, 50).map((r) => {
@@ -2162,6 +2207,8 @@ async function tennisRankings(ctx, origin) {
       if (rows.length) sections.push({ name: tour.toUpperCase(), rows });
     } catch (e) { /* un tour caído no tumba el otro */ }
   }
+
+  if (!successfulTours) return json({ sections: [], note: 'tennis rankings upstream' }, 200, origin, 300);
 
   const payload = JSON.stringify({ updated_at: new Date().toISOString(), sections });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=21600' } });
@@ -2204,8 +2251,10 @@ async function standings(ctx, origin, cacheTag, upstream, altUpstream) {
     return { season: (data.season && (data.season.displayName || data.season.year)) || null, sections };
   };
   const grab = async (url) => {
-    try { const r = await fetch(url, { headers: { 'user-agent': 'aa-sports/1.0' } }); if (!r.ok) return null; return parse(await r.json()); }
-    catch (e) { return null; }
+    try {
+      const fetched = await fetchEspnPublicResponse(url);
+      return { ...parse(await fetched.response.json()), source: fetched.source };
+    } catch (e) { return null; }
   };
 
   // Se prefiere el desglose con MÁS secciones (p.ej. las divisiones de MLB con
@@ -2214,7 +2263,7 @@ async function standings(ctx, origin, cacheTag, upstream, altUpstream) {
   if (altUpstream) { const alt = await grab(altUpstream); if (alt && (!best || alt.sections.length > best.sections.length)) best = alt; }
   if (!best) return json({ sections: [], note: 'standings upstream' }, 200, origin, 120);
 
-  const payload = JSON.stringify({ updated_at: new Date().toISOString(), season: best.season, sections: best.sections });
+  const payload = JSON.stringify({ updated_at: new Date().toISOString(), source: best.source, season: best.season, sections: best.sections });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=3600' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin, 600);
@@ -2227,11 +2276,14 @@ async function tennisLive(ctx, origin) {
   if (cached) return withCors(await cached.text(), origin);
 
   const out = [];
+  let successfulTours = 0;
   for (const tour of ['atp', 'wta']) {
     try {
-      const res = await fetch(`${ESPN_BASE}/tennis/${tour}/scoreboard`, { headers: { 'user-agent': 'aa-sports/1.0' }, cf: { cacheTtl: 45 } });
-      if (!res.ok) continue;
-      const data = await res.json();
+      const fetched = await fetchEspnPublicResponse(`${ESPN_BASE}/tennis/${tour}/scoreboard`, {
+        init: { cf: { cacheTtl: 45 } },
+      });
+      const data = await fetched.response.json();
+      successfulTours++;
       for (const ev of (data.events || [])) {
         const comps = ev.competitions || (ev.groupings || []).flatMap((g) => g.competitions || []);
         for (const c of comps) {
@@ -2265,6 +2317,8 @@ async function tennisLive(ctx, origin) {
       }
     } catch (e) { /* torneo caído: seguimos con el otro tour */ }
   }
+
+  if (!successfulTours) return json({ games: [], note: 'tennis live upstream' }, 200, origin, 15);
 
   const payload = JSON.stringify({ updated_at: new Date().toISOString(), games: out });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=45' } });
