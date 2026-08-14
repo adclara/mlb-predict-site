@@ -251,6 +251,8 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .mscore{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
 .ms{font-size:17px;font-weight:800;color:var(--text);line-height:20px;min-width:16px;text-align:right}
 .ms.win{color:var(--text)} .ms.lv{color:var(--red)}
+.ms.marketpct{font-size:13px;line-height:17px;color:var(--sky)}
+.marketpct-source{font-size:8px;line-height:1;font-weight:850;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
 .mstar{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;color:var(--faint);transition:color .15s,background .15s}
 .mstar:hover{background:var(--inner);color:var(--amber)}
 .mstar.faved{color:var(--amber)}
@@ -1575,7 +1577,7 @@ const T = {
     sport_training_gate: 'Entrenamiento · gate cerrado', sport_top2: 'Top 2 AA · mayor confianza',
     sport_model_evidence: 'Evidencia histórica del modelo', sport_hist_accuracy: 'Acierto histórico OOS', sport_hist_sample: 'Juegos históricos', sport_hist_brier: 'Brier histórico', sport_forward_progress: 'Muestra forward', sport_no_game_pct: 'Las probabilidades AA por partido siguen cerradas hasta completar el gate; este porcentaje describe el examen histórico, no el juego de hoy.',
     market_compare: 'Comparador de mercados', market_winner: 'Ganador', market_total: 'Total', market_players: 'Jugadores', market_combos: 'Combos',
-    market_gate_closed: 'Gate cerrado', market_gate_public: 'Público', market_gate_qa: 'QA sombra', market_prob_title: 'Probabilidad de victoria', market_prob_aa: 'Modelo AA validado', market_prob_qa: 'Modelo AA en validación · no público', market_prob_espn: 'ESPN · probabilidad en vivo', market_balance: 'Línea de equilibrio: 50%',
+    market_gate_closed: 'Gate cerrado', market_gate_public: 'Público', market_gate_qa: 'QA sombra', market_prob_title: 'Probabilidad de victoria', market_prob_aa: 'Modelo AA validado', market_prob_qa: 'Modelo AA en validación · no público', market_prob_espn: 'ESPN · probabilidad en vivo', market_prob_market_title: 'Probabilidad de mercado', market_prob_market: 'Mercado desvigado · no es probabilidad AA', market_source_short: 'Mercado', market_balance: 'Línea de equilibrio: 50%',
     market_only_measured: 'Solo publicamos mercados medidos', market_locked_title: 'Este mercado sigue en validación', market_sample: 'Muestra forward', market_dates: 'fechas', market_pending_sample: 'Muestra en construcción', market_public_info: 'Señal informativa medida · tú decides', o_box_score: 'Estadísticas por jugador',
     qa_banner_active: 'QA PRIVADO · predicciones sombra medidas; no están publicadas ni aprobadas', qa_banner_login: 'QA privado · inicia sesión con la cuenta autorizada', qa_banner_denied: 'Esta cuenta no tiene acceso al QA privado', qa_login: 'Entrar a QA', qa_menu_badge: 'QA autorizado', qa_signal_count: 'señales sombra medidas', qa_honesty: 'Vista de validación privada · gate público cerrado',
     gate_reason_forward_validation_pending: 'Falta completar la muestra forward y sus fechas mínimas.', gate_reason_winner_forward_validation_pending: 'El ganador continúa acumulando resultados forward antes de publicarse.', gate_reason_total_forward_validation_pending: 'El modelo de totales se valida por separado con líneas pregame reales.', gate_reason_players_forward_validation_pending: 'Cada familia de props necesita 200 observaciones forward y líneas auditables.', gate_reason_combos_forward_validation_pending: 'Los combos requieren 100 resultados conjuntos y dos selecciones individuales ya públicas.', gate_reason_forward_sample_pending: 'La muestra forward todavía no llega al mínimo.', gate_reason_forward_calibration_pending: 'La calibración forward todavía no pasa el límite.', gate_reason_market_benchmark_pending: 'Falta demostrar no inferioridad frente al mercado real.', gate_reason_human_approval_pending: 'La evidencia pasó; falta aprobación humana explícita.', gate_reason_historical_gate_failed: 'La validación histórica todavía no pasa el gate.', gate_reason_learning_snapshot_pending: 'El snapshot medido del Cerebro aún se está publicando.', gate_reason_market_lines_unavailable: 'No hay cobertura histórica auditable de línea y precio pregame; por eso no se autoriza Alta/Baja.', gate_reason_player_boxscore_backfill_pending: 'El backfill causal de box scores por jugadora aún está en construcción.', gate_reason_individual_markets_not_public: 'Un combo no puede abrir hasta que sus dos selecciones individuales sean públicas.',
@@ -1766,7 +1768,7 @@ const T = {
     sport_training_gate: 'Training · gate closed', sport_top2: 'AA Top 2 · highest confidence',
     sport_model_evidence: 'Historical model evidence', sport_hist_accuracy: 'Historical OOS accuracy', sport_hist_sample: 'Historical games', sport_hist_brier: 'Historical Brier', sport_forward_progress: 'Forward sample', sport_no_game_pct: 'Per-game AA probabilities remain closed until the gate is complete; this percentage describes the historical exam, not today\'s game.',
     market_compare: 'Market comparator', market_winner: 'Winner', market_total: 'Total', market_players: 'Players', market_combos: 'Combos',
-    market_gate_closed: 'Gate closed', market_gate_public: 'Public', market_gate_qa: 'Shadow QA', market_prob_title: 'Win probability', market_prob_aa: 'Validated AA model', market_prob_qa: 'AA model under validation · not public', market_prob_espn: 'ESPN · live probability', market_balance: 'Neutral line: 50%',
+    market_gate_closed: 'Gate closed', market_gate_public: 'Public', market_gate_qa: 'Shadow QA', market_prob_title: 'Win probability', market_prob_aa: 'Validated AA model', market_prob_qa: 'AA model under validation · not public', market_prob_espn: 'ESPN · live probability', market_prob_market_title: 'Market win probability', market_prob_market: 'De-vigged market · not an AA probability', market_source_short: 'Market', market_balance: 'Neutral line: 50%',
     market_only_measured: 'We only publish measured markets', market_locked_title: 'This market remains under validation', market_sample: 'Forward sample', market_dates: 'dates', market_pending_sample: 'Sample in progress', market_public_info: 'Measured informational signal · you decide', o_box_score: 'Box score',
     qa_banner_active: 'PRIVATE QA · measured shadow predictions; not published or approved', qa_banner_login: 'Private QA · sign in with the authorized account', qa_banner_denied: 'This account does not have private QA access', qa_login: 'Enter QA', qa_menu_badge: 'QA authorized', qa_signal_count: 'measured shadow signals', qa_honesty: 'Private validation view · public gate remains closed',
     gate_reason_forward_validation_pending: 'The minimum forward sample and dates are not complete yet.', gate_reason_winner_forward_validation_pending: 'The winner model is still accumulating forward results before publication.', gate_reason_total_forward_validation_pending: 'The totals model is validated separately with real pregame lines.', gate_reason_players_forward_validation_pending: 'Each prop family needs 200 forward observations and auditable lines.', gate_reason_combos_forward_validation_pending: 'Combos need 100 jointly graded results and two already-public individual selections.', gate_reason_forward_sample_pending: 'The forward sample has not reached its minimum.', gate_reason_forward_calibration_pending: 'Forward calibration has not passed its limit yet.', gate_reason_market_benchmark_pending: 'Non-inferiority against the real market is not demonstrated yet.', gate_reason_human_approval_pending: 'The evidence passed; explicit human approval is still required.', gate_reason_historical_gate_failed: 'Historical validation has not passed the gate yet.', gate_reason_learning_snapshot_pending: 'The measured Brain snapshot is still being published.', gate_reason_market_lines_unavailable: 'Auditable historical pregame line and price coverage is missing, so no Over/Under signal is authorized.', gate_reason_player_boxscore_backfill_pending: 'The causal player box-score backfill is still being built.', gate_reason_individual_markets_not_public: 'A combo cannot open until both individual selections are public.',
@@ -3055,14 +3057,25 @@ function marketComparator({ activeSport, blocks, away, home, awayPct, homePct, l
     return `<button class="market-tab ${selected === kind ? 'on' : ''}" data-market-kind="${kind}" role="tab" aria-selected="${selected === kind}">
       <b>${t(labels[kind])}</b><small>${publicState ? t('market_gate_public') : qaState ? t('market_gate_qa') : t('market_gate_closed')}</small></button>`;
   }).join('');
+  const probabilitySource = source === 'espn' ? {
+    title: `${t('market_prob_title')} (ESPN)`, detail: t('market_prob_espn'), model: true,
+  } : source === 'qa' ? {
+    title: `${t('market_prob_title')} (AA · QA)`, detail: t('market_prob_qa'), model: true,
+  } : source === 'market' ? {
+    title: t('market_prob_market_title'), detail: t('market_prob_market'), model: false,
+  } : {
+    title: `${t('market_prob_title')} (AA)`, detail: t('market_prob_aa'), model: true,
+  };
+  const probabilityBody = selected === 'winner' && awayPct != null && homePct != null
+    ? `<div class="market-panel-head"><h3>${probabilitySource.title}</h3><p>${probabilitySource.detail}</p></div>
+      ${probabilityColumns({ away, home, awayPct, homePct, logo })}` : '';
   let body;
-  if (!['public', 'qa'].includes(block.state)) body = gatePanel(block, selected, activeSport);
+  if (!['public', 'qa'].includes(block.state)) body = `${probabilityBody}${gatePanel(block, selected, activeSport)}`;
   else if (selected === 'winner' && awayPct != null && homePct != null) {
     const pickName = pick ? (pick === home.code || canon(pick) === canon(home.code) ? oName(home) : oName(away)) : '';
     const pickPct = pickName ? (canon(pick) === canon(home.code) ? homePct : awayPct) : null;
-    body = `<div class="market-panel-head"><h3>${t('market_prob_title')} (${source === 'espn' ? 'ESPN' : source === 'qa' ? 'AA · QA' : 'AA'})</h3><p>${source === 'espn' ? t('market_prob_espn') : source === 'qa' ? t('market_prob_qa') : t('market_prob_aa')}</p></div>
-      ${probabilityColumns({ away, home, awayPct, homePct, logo })}
-      ${source !== 'espn' && pickName && pickPct != null ? `<div class="market-callout"><span class="aa">AA</span><b>${esc(pickName)} ${Number(pickPct).toFixed(Number(pickPct) % 1 ? 1 : 0)}%</b>${risk ? `<span>·</span><span class="risk">${t('bol_risk')}: ${esc(risk)}</span>` : ''}</div>` : ''}`;
+    body = `${probabilityBody}
+      ${probabilitySource.model && source !== 'espn' && pickName && pickPct != null ? `<div class="market-callout"><span class="aa">AA</span><b>${esc(pickName)} ${Number(pickPct).toFixed(Number(pickPct) % 1 ? 1 : 0)}%</b>${risk ? `<span>·</span><span class="risk">${t('bol_risk')}: ${esc(risk)}</span>` : ''}</div>` : ''}`;
   } else body = publicMarketItems(block);
   return `<section class="market-first" aria-label="${t('market_compare')}">
     <div class="market-tabs" role="tablist">${tabs}</div><div class="market-panel" role="tabpanel">${body}${selected === 'winner' && supplemental ? `<div class="market-supplement">${supplemental}</div>` : ''}</div>
@@ -4847,6 +4860,15 @@ function oLogo(side){
   return `<span class="tfall">${esc(ini)}</span>`;
 }
 function oName(side){ return side.name || side.code || '—'; }
+function marketWinPcts(game){
+  const market = game && game.market;
+  const home = Number(market && market.home_prob), away = Number(market && market.away_prob);
+  if (!Number.isFinite(home) || !Number.isFinite(away) || home < 0 || away < 0 || home > 1 || away > 1) return null;
+  const total = home + away;
+  if (total < .999 || total > 1.001) return null;
+  const homePct = Math.round(home * 1000) / 10;
+  return { home: homePct, away: Math.round((100 - homePct) * 10) / 10 };
+}
 
 function renderOtherList(){
   const n = { all: otherGames.length, live: 0, pre: 0, final: 0 };
@@ -4867,6 +4889,7 @@ function renderOtherList(){
   const banner = top2Banner() + (otherRecent && rows.length
     ? `<div class="recentnote">${t('o_recentnote')}</div>` : '');
   const pickTtl = t('sc_pickttl');   // (t global; dentro del map se sombrea con la hora)
+  const marketSourceLabel = t('market_source_short');
   $('list').innerHTML = otherLoading && !rows.length
     ? '<div class="skel"></div><div class="skel"></div><div class="skel"></div>'
     : rows.length ? banner + rows.map((g, i) => {
@@ -4879,6 +4902,8 @@ function renderOtherList(){
       const pr = sport === 'soccer' ? predFor(g) : usPredFor(g);
       const aachip = pr && pr.pct != null
         ? `<span class="aachip" title="${esc(pickTtl)}">AA <b>${esc(sport === 'soccer' ? tNick(pr.pick) : pr.pick)}</b> ${pr.pct}%</span>` : '';
+      const marketPct = !scored && !pr && ['wnba', 'nfl'].includes(sport) ? marketWinPcts(g) : null;
+      const displayPct = (value) => Number(value).toFixed(Number(value) % 1 ? 1 : 0) + '%';
       return `<button class="mrow" data-oid="${esc(g.espn_id)}" style="--i:${i}">
         <span class="mtime num">${t}</span>
         <span class="mteams">
@@ -4886,8 +4911,9 @@ function renderOtherList(){
           <span class="mt ${g.home.winner ? 'win' : ''}">${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}</span>${rankChip(g.home)}${setsH}</span>
         </span>
         <span class="mscore num">
-          <span class="ms ${g.status === 'live' ? 'lv' : ''}">${scored ? g.away.score : ''}</span>
-          <span class="ms ${g.status === 'live' ? 'lv' : ''}">${scored ? g.home.score : ''}</span>
+          <span class="ms ${marketPct ? 'marketpct' : ''} ${g.status === 'live' ? 'lv' : ''}">${scored ? g.away.score : marketPct ? displayPct(marketPct.away) : ''}</span>
+          <span class="ms ${marketPct ? 'marketpct' : ''} ${g.status === 'live' ? 'lv' : ''}">${scored ? g.home.score : marketPct ? displayPct(marketPct.home) : ''}</span>
+          ${marketPct ? `<span class="marketpct-source">${marketSourceLabel}</span>` : ''}
         </span>
         <span>${aachip}</span>
       </button>`;
@@ -4920,12 +4946,15 @@ function renderOtherDetail(){
   const otherMarketBlocks = Object.fromEntries(MARKET_KEYS.map((kind) => [kind, measuredMarketBlock(
     sourceBlocks[kind], kind, kind === 'winner' ? brainSample : null, kind === 'winner' ? brain.gate : null,
   )]));
+  const factualMarketPct = !usPr ? marketWinPcts(g) : null;
   const otherHomePct = usPr && usPr.pct != null
-    ? (canon(usPr.pick) === canon(g.home.code) ? usPr.pct : 100 - usPr.pct) : null;
+    ? (canon(usPr.pick) === canon(g.home.code) ? usPr.pct : 100 - usPr.pct)
+    : factualMarketPct && factualMarketPct.home;
   const otherAwayPct = otherHomePct != null ? Math.round((100 - otherHomePct) * 10) / 10 : null;
+  const probabilitySource = usPr ? (qaMode ? 'qa' : 'aa') : factualMarketPct ? 'market' : (qaMode ? 'qa' : 'aa');
   const usMarketCard = (['wnba', 'nfl'].includes(sport) || (qaMode && ['ncaaf', 'nhl', 'ncaam'].includes(sport))) ? marketComparator({
     activeSport: sport, blocks: otherMarketBlocks, away: g.away, home: g.home,
-    awayPct: otherAwayPct, homePct: otherHomePct, logo: oLogo, source: qaMode ? 'qa' : 'aa', pick: usPr && usPr.pick, risk: null,
+    awayPct: otherAwayPct, homePct: otherHomePct, logo: oLogo, source: probabilitySource, pick: usPr && usPr.pick, risk: null,
   }) : legacyUsPredCard;
 
   // Comparación cara a cara descriptiva (datos reales de posiciones/ranking; sin predicciones).

@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import worker, {
   MARKET_KINDS,
   US_SPORTS,
+  compactOtherLiveGames,
   compactUsSportsIngest,
+  devigAmericanMoneyline,
   fallbackSportBrain,
   fetchUsSportsScoreboard,
   learningFreshnessDoc,
@@ -327,6 +330,42 @@ test('public ingestion keeps factual teams, schedule and real market only', () =
   assert.equal('prob' in result.games[0], false);
   assert.equal('prediction' in result.games[0], false);
   assert.equal(result.missingness.market_missing, 0);
+});
+
+test('WNBA/NFL scoreboard moneylines become factual de-vigged win probabilities while AA stays closed', () => {
+  const data = { events: [{
+    ...espnEvent('wnba-1'),
+    competitions: [{
+      ...espnEvent('wnba-1').competitions[0],
+      odds: [{
+        provider: { name: 'DraftKings' }, overUnder: 186.5,
+        moneyline: {
+          home: { close: { odds: -325 } },
+          away: { close: { odds: 260 } },
+        },
+      }],
+    }],
+  }] };
+  const games = compactOtherLiveGames(data);
+  assert.equal(games[0].market.home_ml, -325);
+  assert.equal(games[0].market.away_ml, 260);
+  const probabilities = devigAmericanMoneyline(-325, 260);
+  assert.ok(Math.abs(probabilities.home + probabilities.away - 1) < 1e-12);
+  assert.ok(probabilities.home > .73 && probabilities.home < .74);
+  const publicDoc = sanitizeUsSportsToday(null, 'wnba', games, '2026-09-09');
+  assert.equal(publicDoc.events[0].prediction, null);
+  assert.equal(publicDoc.events[0].markets.winner.state, 'closed');
+  assert.equal(publicDoc.events[0].market.probability_source, 'market_devigged');
+  assert.ok(publicDoc.events[0].market.home_prob > .73 && publicDoc.events[0].market.home_prob < .74);
+  assert.equal(publicDoc.events[0].market.home_prob + publicDoc.events[0].market.away_prob, 1);
+});
+
+test('WNBA player-aware winner uses the D1-supported winner market family', () => {
+  const shadow = readFileSync(new URL('../robot/nba_shadow.mjs', import.meta.url), 'utf8');
+  const publish = readFileSync(new URL('../robot/wnba_publish_simulation.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(shadow, /marketKey:\s*['"]winner_challenger['"]/);
+  assert.match(shadow, /marketKey:\s*['"]winner['"],\s*selectionKey:\s*['"]winner:player-aware['"]/);
+  assert.match(publish, /market_key='winner' AND selection_key='winner:player-aware'/);
 });
 
 test('ingestion rejects unsupported sports and off-date events', () => {

@@ -1953,7 +1953,7 @@ async function otherLive(ctx, origin, cacheTag, upstream, fallbackUpstream = nul
   return withCors(payload, origin);
 }
 
-function compactOtherLiveGames(data) {
+export function compactOtherLiveGames(data) {
   return (data?.events || []).map((ev) => {
     const c = (ev.competitions && ev.competitions[0]) || {};
     const comp = c.competitors || [];
@@ -1980,6 +1980,7 @@ function compactOtherLiveGames(data) {
       form: (typeof t.form === 'string' && t.form) ? t.form.slice(0, 6) : null,
       leaders: (() => { const l = leadersOf(t); return l && l.length ? l : null; })(),
     });
+    const market = compactEspnGame(ev).market;
     return {
       espn_id: ev.id,
       start: ev.date || null,
@@ -1989,6 +1990,7 @@ function compactOtherLiveGames(data) {
       clock: (c.status && c.status.displayClock) || null,
       period: (c.status && c.status.period) || null,
       home: side(home), away: side(away),
+      market,
     };
   });
 }
@@ -2105,6 +2107,17 @@ function safeSportSide(side) {
   return out;
 }
 
+export function devigAmericanMoneyline(homePrice, awayPrice) {
+  const implied = (price) => {
+    const value = finiteMarketNumber(price);
+    if (value == null || value === 0) return null;
+    return value < 0 ? (-value) / ((-value) + 100) : 100 / (value + 100);
+  };
+  const home = implied(homePrice), away = implied(awayPrice);
+  if (home == null || away == null || home + away <= 0) return null;
+  return { home: home / (home + away), away: away / (home + away) };
+}
+
 function safeSportEventFacts(event) {
   const source = event && typeof event === 'object' ? event : {};
   const out = {};
@@ -2120,9 +2133,16 @@ function safeSportEventFacts(event) {
   out.away = safeSportSide(source.away);
   if (source.market && typeof source.market === 'object') {
     const market = {};
-    for (const key of ['total', 'home_ml', 'away_ml', 'spread', 'provider']) {
+    for (const key of ['total', 'home_ml', 'away_ml', 'spread', 'home_prob', 'away_prob', 'provider', 'probability_source']) {
       if (key === 'provider' && typeof source.market[key] === 'string') market[key] = source.market[key].slice(0, 80);
+      else if (key === 'probability_source' && typeof source.market[key] === 'string') market[key] = source.market[key].slice(0, 40);
       else { const value = finiteMarketNumber(source.market[key]); if (value != null) market[key] = value; }
+    }
+    const deVigged = devigAmericanMoneyline(market.home_ml, market.away_ml);
+    if (deVigged) {
+      market.home_prob = Math.round(deVigged.home * 10000) / 10000;
+      market.away_prob = Math.round(deVigged.away * 10000) / 10000;
+      market.probability_source = 'market_devigged';
     }
     if (Object.keys(market).length) out.market = market;
   }
