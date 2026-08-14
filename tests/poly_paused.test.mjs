@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
 import worker from '../cloudflare/worker/index.js';
 
@@ -34,4 +35,12 @@ test('crons antiguos de Radar se ignoran sin programar trabajo', async () => {
     await worker.scheduled({ cron, scheduledTime: Date.now() }, {}, { waitUntil() { scheduled++; } });
     assert.equal(scheduled, 0);
   }
+});
+
+test('deploy no exige crons Radar ni configura Telegram', () => {
+  const workflow = fs.readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /CRON RADAR AÚN ACTIVO/);
+  assert.doesNotMatch(workflow, /wrangler@[^\n]+ secret put TG_BOT_TOKEN/);
+  assert.doesNotMatch(workflow, /api\.telegram\.org/);
+  assert.doesNotMatch(workflow, /UPDATE poly_telegram_policy/);
 });

@@ -21,8 +21,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Regresión de lógica — MLB causal, ingesta, mercados sombra y Radar/Telegram
-        run: node --test tests/mlb_live_date.test.mjs tests/mlb_lock_gate.test.mjs tests/mlb_market_lab.test.mjs tests/mlb_selection_policy.test.mjs tests/mlb_ledger_migration.test.mjs tests/mlb_ledger_integrity.test.mjs tests/mlb_model_integrity.test.mjs tests/mlb_aa_lab.test.mjs tests/mlb_publish_watchdog.test.mjs tests/mlb_schedule_contract.test.mjs tests/mlb_ingest_consumer.test.mjs tests/mlb_normalize_observed.test.mjs tests/mlb_content_hash.test.mjs tests/mlb_upload_guard.test.mjs tests/mlb_learning_guard.test.mjs tests/sport_brain.test.mjs tests/wnba_model.test.mjs tests/wnba_market_model.test.mjs tests/worker_mlb_ingest.test.mjs tests/worker_espn_public_fallback.test.mjs tests/us_sports_foundation.test.mjs tests/poly_telegram_gate.test.mjs
+      - name: Regresión de lógica — MLB causal, ingesta, mercados sombra y Radar pausado
+        run: node --test tests/mlb_live_date.test.mjs tests/mlb_lock_gate.test.mjs tests/mlb_market_lab.test.mjs tests/mlb_selection_policy.test.mjs tests/mlb_ledger_migration.test.mjs tests/mlb_ledger_integrity.test.mjs tests/mlb_model_integrity.test.mjs tests/mlb_aa_lab.test.mjs tests/mlb_publish_watchdog.test.mjs tests/mlb_schedule_contract.test.mjs tests/mlb_ingest_consumer.test.mjs tests/mlb_normalize_observed.test.mjs tests/mlb_content_hash.test.mjs tests/mlb_upload_guard.test.mjs tests/mlb_learning_guard.test.mjs tests/sport_brain.test.mjs tests/wnba_model.test.mjs tests/wnba_market_model.test.mjs tests/wnba_player_winner.test.mjs tests/worker_mlb_ingest.test.mjs tests/worker_espn_public_fallback.test.mjs tests/us_sports_foundation.test.mjs tests/poly_paused.test.mjs
       - name: Producción = main (fix de production branch)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
@@ -40,14 +40,13 @@ jobs:
           VERIFY=$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$URL")
           VERIFY="$VERIFY" node -e 'const j=JSON.parse(process.env.VERIFY); if(j.success!==true || j.result?.production_branch!=="main") process.exit(1)'
           echo "✅ rama de producción verificada: main"
-      - name: Preparar D1 (migraciones + corte seguro de Telegram)
+      - name: Preparar D1 (migraciones)
         working-directory: cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
         run: |
           npx --yes wrangler@4.112.0 d1 migrations apply aa-sports --remote
-          npx --yes wrangler@4.112.0 d1 execute aa-sports --remote --command "UPDATE poly_telegram_policy SET cutover_at = datetime('now') WHERE id = 1"
       - name: Sincronizar ledger público MLB por selección en D1
         working-directory: cloudflare
         env:
@@ -72,7 +71,7 @@ jobs:
           fi
           printf '%s' "$QA_ALLOWED_EMAILS" | npx --yes wrangler@4.112.0 secret put QA_ALLOWED_EMAILS
           echo "✅ allowlist QA cargada al Worker (valor no impreso)."
-      - name: Verificar crons del vigía y la ingesta MLB
+      - name: Verificar cron deportivo y ausencia de crons Radar
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: |
@@ -88,43 +87,27 @@ jobs:
           const rows = Array.isArray(body.result) ? body.result : (body.result?.schedules || [])
           const actual = new Set(rows.map((row) => row?.cron).filter(Boolean))
           const required = [
-            ['*/5 * * * *', 'Radar en vivo: el vigía corre cada 5 min'],
             ['*/20 * * * *', 'MLB + NFL/NCAAF/NHL/NCAAM: captura pública cada 20 min'],
-            ['0 13 * * *', 'Radar: archivo diario 13:00 UTC'],
+          ]
+          const forbidden = [
+            ['*/5 * * * *', 'vigía Radar'],
+            ['0 13 * * *', 'archivo diario Radar'],
           ]
           let missing = false
           for (const [cron, label] of required) {
             if (actual.has(cron)) console.log(`✅ ${label} — ${cron} REGISTRADO`)
             else { console.error(`❌ FALTA ${cron} — ${label}`); missing = true }
           }
+          for (const [cron, label] of forbidden) {
+            if (actual.has(cron)) { console.error(`❌ CRON RADAR AÚN ACTIVO ${cron} — ${label}`); missing = true }
+            else console.log(`✅ ${label} detenido — ${cron} AUSENTE`)
+          }
           if (missing) process.exit(1)
           NODE
-      - name: Telegram del vigía (solo cargar secretos; sin mensaje de prueba)
-        working-directory: cloudflare
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN || secrets.CHAT_BOT }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+      - name: Confirmar Radar y Telegram detenidos
         run: |
-          if [ -z "$TG_BOT_TOKEN" ]; then
-            echo "Telegram sin configurar (falta el secreto TG_BOT_TOKEN) — salto."
-            exit 0
-          fi
-          # chat id: usa el secreto si existe; si no, lo descubre solo con getUpdates
-          CHAT="$TG_CHAT_ID"
-          if [ -z "$CHAT" ]; then
-            CHAT=$(curl -s "https://api.telegram.org/bot${TG_BOT_TOKEN}/getUpdates" \
-              | grep -o '"chat":{"id":[-0-9]*' | grep -o '[-0-9]*$' | sort -u | head -1 || true)
-          fi
-          if [ -z "$CHAT" ]; then
-            echo "⚠️ El bot aún no tiene mensajes: envíale cualquier texto a t.me/POLYSIBOT y re-dispara el deploy."
-            exit 0
-          fi
-          printf '%s' "$TG_BOT_TOKEN" | npx --yes wrangler@4.112.0 secret put TG_BOT_TOKEN
-          printf '%s' "$CHAT" | npx --yes wrangler@4.112.0 secret put TG_CHAT_ID
-          echo "✅ Secretos de Telegram cargados al Worker (chat …${CHAT: -4})."
-          echo "Sin mensaje de prueba: el canal solo recibe el gate excepcional rare_v1 (máx. 2/día; puede ser 0)."
+          echo "✅ deploy no carga secretos Telegram ni llama servicios externos del bot"
+          echo "✅ Radar solo puede reactivarse mediante otro cambio de código"
       - name: Deploy Pages (app)
         working-directory: cloudflare
         env:
