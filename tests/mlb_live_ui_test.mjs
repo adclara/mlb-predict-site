@@ -168,13 +168,16 @@ async function installApiMocks(page, date, events, games) {
             players: { n: 0, dates: 0, min_forward: 200 }, combos: { n: 0, dates: 0, min_forward: 100 },
           };
           const markets = Object.fromEntries(Object.keys(gates).map(kind => [kind, { state: 'closed', gate: gates[kind], sample: samples[kind] }]));
-          return json(route, { sport, date, gate: gates.winner, sample: samples.winner, gates, samples, markets, events: [{ event_id: '401857140', espn_id: '401857140', markets }], top2: [] });
+          return json(route, { sport, date, gate: gates.winner, sample: samples.winner, gates, samples, markets, events: [{
+            event_id: '401857140', espn_id: '401857140', markets,
+            market: { away_ml: 260, home_ml: -325, away_prob: .2664, home_prob: .7336, probability_source: 'market_devigged' },
+          }], top2: [] });
         }
         return json(route, { sport, games: [{
           espn_id: '401857140', start: `${date}T23:00:00Z`, status: 'live', status_detail: '3rd Qtr',
           away: { code: 'AWY', name: 'Away Team', score: 61, logo: null, rec: '16-9' },
           home: { code: 'HME', name: 'Home Team', score: 67, logo: null, rec: '18-7' },
-          market: { away_ml: 260, home_ml: -325, away_prob: .2664, home_prob: .7336, probability_source: 'market_devigged' },
+          market: { away_ml: 260, home_ml: -325 },
         }, {
           espn_id: '401857141', start: `${date}T20:00:00Z`, status: 'pre', status_detail: 'Scheduled',
           away: { code: 'AW2', name: 'Second Away', score: null, logo: null, rec: '15-10' },

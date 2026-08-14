@@ -3791,7 +3791,12 @@ async function loadOther(){
         const byId = new Map((md.events || []).map(e => [String(e.espn_id || e.event_id || e.id), e]));
         if (otherGames.length) otherGames = otherGames.map(g => {
           const model = byId.get(String(g.espn_id));
-          return model ? { ...g, prediction: model.prediction || null, markets: model.markets || md.markets || null } : { ...g, markets: md.markets || null };
+          return model ? {
+            ...g,
+            market: g.market?.home_prob != null ? g.market : (model.market || g.market || null),
+            prediction: model.prediction || null,
+            markets: model.markets || md.markets || null,
+          } : { ...g, markets: md.markets || null };
         });
         else if (qaTarget) otherGames = (md.events || []).map(g => ({ ...g, espn_id: g.espn_id || g.event_id || g.id }));
       }catch(e){ sportModelDocs.delete(sport); }
