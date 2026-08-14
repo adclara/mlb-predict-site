@@ -1,7 +1,7 @@
 {
   "schema": "aa_multisport_simulation_v1",
   "sport": "wnba",
-  "generated_at": "2026-08-14T03:27:15.696Z",
+  "generated_at": "2026-08-14T13:58:51.983Z",
   "seasons": [
     "2021",
     "2022",
@@ -31,6 +31,216 @@
         "n": 66,
         "brier": 0.1911,
         "acc": 0.712
+      }
+    },
+    "player_aware_shadow": {
+      "validation": {
+        "lambda": 30,
+        "weight": 0.55,
+        "n": 836,
+        "accuracy": 0.6782296650717703,
+        "brier": 0.20973712786709073,
+        "logloss": 0.6074033486057353,
+        "ece": 0.04306553023266584,
+        "calibration": "Platt fit on 2023-2025 rolling predictions only"
+      },
+      "elo_validation": {
+        "n": 836,
+        "accuracy": 0.6674641148325359,
+        "brier": 0.21242029070824753,
+        "logloss": 0.6137929290483465,
+        "ece": 0.03184653594289789
+      },
+      "heldout_2026": {
+        "n": 253,
+        "accuracy": 0.6719367588932806,
+        "brier": 0.21821236418480633,
+        "logloss": 0.627930371161308,
+        "ece": 0.04887816730294562
+      },
+      "elo_heldout_2026": {
+        "n": 253,
+        "accuracy": 0.6442687747035574,
+        "brier": 0.21624763920401183,
+        "logloss": 0.6242959025787785,
+        "ece": 0.0756040190347071
+      },
+      "delta_vs_elo": {
+        "accuracy": 0.02766798418972327,
+        "brier": 0.001964724980794502,
+        "logloss": 0.003634468582529471,
+        "brier_ci95": [
+          -0.004055915643286573,
+          0.007771492343271231
+        ]
+      },
+      "selection": {
+        "policy": {
+          "minimum_probability": 0.6,
+          "player_weight": 2,
+          "n": 446,
+          "dates": 275,
+          "accuracy": 0.7488789237668162,
+          "wilson_lower_95": 0.7066221916606289,
+          "mean_base_probability": 0.7268941925931287,
+          "mean_player_confirmation": 0.22128647725931092
+        },
+        "heldout_2026": {
+          "n": 130,
+          "dates": 79,
+          "accuracy": 0.7230769230769231,
+          "wilson_lower_95": 0.640593110665016,
+          "mean_base_probability": 0.7198078609297633,
+          "mean_player_confirmation": 0.21217039528825507
+        },
+        "elo_only_heldout_2026": {
+          "n": 130,
+          "dates": 79,
+          "accuracy": 0.7230769230769231,
+          "wilson_lower_95": 0.640593110665016,
+          "mean_base_probability": 0.721148047611414,
+          "mean_player_confirmation": 0.2028331279190517
+        },
+        "heldout_accuracy_delta": 0,
+        "candidates": [
+          {
+            "minimum_probability": 0.55,
+            "player_weight": 0.25,
+            "n": 513,
+            "dates": 306,
+            "accuracy": 0.723196881091618,
+            "wilson_lower_95": 0.682928553665525,
+            "mean_base_probability": 0.7080678395458453,
+            "mean_player_confirmation": 0.19751362577370354
+          },
+          {
+            "minimum_probability": 0.55,
+            "player_weight": 0.5,
+            "n": 513,
+            "dates": 306,
+            "accuracy": 0.7192982456140351,
+            "wilson_lower_95": 0.6788944251334769,
+            "mean_base_probability": 0.7074516494879328,
+            "mean_player_confirmation": 0.19898912457018333
+          },
+          {
+            "minimum_probability": 0.55,
+            "player_weight": 1,
+            "n": 513,
+            "dates": 306,
+            "accuracy": 0.7173489278752436,
+            "wilson_lower_95": 0.6768787041695721,
+            "mean_base_probability": 0.7068368505642958,
+            "mean_player_confirmation": 0.19983265457436425
+          },
+          {
+            "minimum_probability": 0.55,
+            "player_weight": 2,
+            "n": 513,
+            "dates": 306,
+            "accuracy": 0.7192982456140351,
+            "wilson_lower_95": 0.6788944251334769,
+            "mean_base_probability": 0.706101204105001,
+            "mean_player_confirmation": 0.20040688095540016
+          },
+          {
+            "minimum_probability": 0.6,
+            "player_weight": 0.25,
+            "n": 446,
+            "dates": 275,
+            "accuracy": 0.7443946188340808,
+            "wilson_lower_95": 0.7019435124180718,
+            "mean_base_probability": 0.7284846506226986,
+            "mean_player_confirmation": 0.21923863838030472
+          },
+          {
+            "minimum_probability": 0.6,
+            "player_weight": 0.5,
+            "n": 446,
+            "dates": 275,
+            "accuracy": 0.742152466367713,
+            "wilson_lower_95": 0.6996062516127622,
+            "mean_base_probability": 0.7280773169786118,
+            "mean_player_confirmation": 0.22018924021865047
+          },
+          {
+            "minimum_probability": 0.6,
+            "player_weight": 1,
+            "n": 446,
+            "dates": 275,
+            "accuracy": 0.7466367713004485,
+            "wilson_lower_95": 0.7042821551187788,
+            "mean_base_probability": 0.7276349530741396,
+            "mean_player_confirmation": 0.2207177540935072
+          },
+          {
+            "minimum_probability": 0.6,
+            "player_weight": 2,
+            "n": 446,
+            "dates": 275,
+            "accuracy": 0.7488789237668162,
+            "wilson_lower_95": 0.7066221916606289,
+            "mean_base_probability": 0.7268941925931287,
+            "mean_player_confirmation": 0.22128647725931092
+          },
+          {
+            "minimum_probability": 0.65,
+            "player_weight": 0.25,
+            "n": 377,
+            "dates": 245,
+            "accuracy": 0.7374005305039788,
+            "wilson_lower_95": 0.6907450555776964,
+            "mean_base_probability": 0.7475754925325055,
+            "mean_player_confirmation": 0.23722271998796232
+          },
+          {
+            "minimum_probability": 0.65,
+            "player_weight": 0.5,
+            "n": 377,
+            "dates": 245,
+            "accuracy": 0.7374005305039788,
+            "wilson_lower_95": 0.6907450555776964,
+            "mean_base_probability": 0.747354438898676,
+            "mean_player_confirmation": 0.23770768415069188
+          },
+          {
+            "minimum_probability": 0.65,
+            "player_weight": 1,
+            "n": 377,
+            "dates": 245,
+            "accuracy": 0.7400530503978779,
+            "wilson_lower_95": 0.6935139087314538,
+            "mean_base_probability": 0.7471461232522368,
+            "mean_player_confirmation": 0.23793757419773823
+          },
+          {
+            "minimum_probability": 0.65,
+            "player_weight": 2,
+            "n": 377,
+            "dates": 245,
+            "accuracy": 0.7453580901856764,
+            "wilson_lower_95": 0.6990578254219092,
+            "mean_base_probability": 0.7465517660116091,
+            "mean_player_confirmation": 0.23845484669129202
+          }
+        ]
+      },
+      "data_audit": {
+        "schedule_games": 1543,
+        "matched": 1539,
+        "ambiguous": 4,
+        "missing": 0,
+        "match_coverage": 0.9974076474400518,
+        "player_rows": 29200,
+        "both_team_feature_coverage": 0.98180636777128,
+        "timestamp_violations": 0
+      },
+      "gate": {
+        "passed": false,
+        "approved": false,
+        "public": false,
+        "state": "shadow",
+        "reason": "forward_sample_pending"
       }
     },
     "gate": {

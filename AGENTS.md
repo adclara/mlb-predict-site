@@ -10,8 +10,8 @@ Cloudflare. Marca: **"AA Sports · Los datos deciden"**. Deportes: **MLB**
 **NBA/tenis** (marcadores + posiciones; modelos en sombra, sin publicar) y
 **WNBA** (marcadores, resultados, posiciones, box score y comparador de mercados;
 modelos en sombra, sin predicciones públicas) y **NFL** (cobertura factual +
-comparador con gates cerrados). Más un
-**"Radar"**: observatorio de wallets de Polymarket (descriptivo, no recomienda).
+comparador con gates cerrados). El **Radar de Polymarket está pausado**: no hay
+consultas, crons, alertas ni Telegram hasta una reactivación explícita.
 
 ## ADN NO NEGOCIABLE (aplica a TODO cambio)
 - **$0**: solo free tiers (Cloudflare Workers/KV/D1/Pages + GitHub Actions + APIs
@@ -71,7 +71,7 @@ path dispara el workflow. Mapa verificado (poke → workflow):
 - `.github/poke-learn` → mlb-learning-daily.yml (refit + Cerebro AA una vez al día)
 - `.github/poke-live` → mlb-live-observer.yml (multi-book/WP en vivo; no bloquea daily)
 - `.github/poke-us-sports` → us-sports-qa.yml (frescura NFL/NCAAF/NHL/NCAAM; cron 4×/día)
-- `.github/poke-poly` → poly-study.yml (poly_radar.mjs; cron 2×/día)
+- `.github/poke-poly` → sin efecto mientras `poly-study.yml` permanece pausado
 - `.github/poke-soccer` → soccer-shadow.yml (soccer_shadow.mjs; publica soccer:today)
 - `.github/poke-nba` → nba-shadow.yml · `.github/poke-sim` → mlb-sim.yml (semanal)
 - `.github/poke-wnba` → wnba-shadow.yml (ganador/totales WNBA en sombra + Cerebro
@@ -113,10 +113,11 @@ simulation,pipeline-health}`,
 `/v1/qa/{wnba,nfl,ncaaf,nhl,ncaam}/{today,history,learning,simulation,
 pipeline-health}` (sesión Google verificada + allowlist; `no-store`),
 `/v1/tennis/{live, recent, rankings, summary, learning}`,
-`/v1/poly/{radar, alerts, track}`, `/v1/auth/google`.
-El Worker corre tres `scheduled()`: cada 5 min vigila el Radar; cada 20 min
-captura hechos públicos MLB y NFL/NCAAF/NHL/NCAAM (sin lógica de modelo) en D1; y a
-las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
+`/v1/poly/{radar, alerts, track}` (pausadas: responden `state:paused` sin consultar
+Polymarket), `/v1/auth/google`.
+El Worker corre un `scheduled()` cada 20 min para capturar hechos públicos MLB y
+NFL/NCAAF/NHL/NCAAM (sin lógica de modelo) en D1. Radar, sus snapshots y Telegram
+están detenidos por decisión del operador. La captura MLB no contiene lógica del modelo.
 La única ruta HTTP de escritura es `/v1/internal/model-publish`: exige un JWT
 OIDC RS256 de GitHub con audience propio, repository id del repo privado, `main`
 y `hourly-shadow.yml`; vuelve a sanitizar el payload y nunca acepta aprobación

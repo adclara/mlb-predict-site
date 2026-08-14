@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Auditoría player-aware · AA Sports</title>
+  <style>
+    :root{color-scheme:dark;--bg:#081018;--panel:#101b26;--line:#26384a;--text:#eef5fa;--muted:#9fb0bf;--aa:#20d7a7;--base:#6d8094;--warn:#ffbf4a}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,#173047 0,transparent 32%),var(--bg);font:15px/1.55 system-ui,-apple-system,sans-serif;color:var(--text)}
+    main{max-width:1080px;margin:auto;padding:42px 24px 70px}h1{font-size:clamp(30px,5vw,54px);line-height:1.04;margin:0 0 12px}h2{margin-top:34px}p{max-width:850px}.eyebrow{color:var(--aa);letter-spacing:.14em;text-transform:uppercase;font-weight:800}.muted,small{color:var(--muted)}
+    .callout,.card{background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:18px;padding:20px}.callout{border-left:4px solid var(--warn)}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.metric strong{display:block;font-size:28px;color:var(--aa)}
+    table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:12px;text-transform:uppercase}.good{color:var(--aa)}.bad{color:#ff7b83}
+    .chart{display:grid;gap:14px}.row{display:grid;grid-template-columns:120px 1fr 72px;gap:10px;align-items:center}.bar{height:13px;border-radius:99px;background:#1a2b3a;overflow:hidden}.bar i{display:block;height:100%;background:var(--base)}.bar i.aa{background:var(--aa)}
+    code{color:#bcd8ec}@media(max-width:720px){.grid{grid-template-columns:1fr}.row{grid-template-columns:84px 1fr 60px}th:nth-child(4),td:nth-child(4){display:none}}
+  </style>
+</head>
+<body><main>
+  <div class="eyebrow">AA Sports · auditoría técnica · 14 ago 2026</div>
+  <h1>Más datos de jugadores sí ayudan, pero no autorizan promesas</h1>
+  <p class="muted">Auditoría causal de MLB, WNBA y NFL. El objetivo es mejorar probabilidades y selección sin filtrar información futura ni abrir recomendaciones antes de medirlas.</p>
+
+  <section class="callout">
+    <strong>Decisión:</strong> NFL player-aware pasa a challenger operativo en sombra; WNBA player-aware sigue en estudio; MLB comienza a congelar alineaciones oficiales como contexto forward con peso cero. Radar de Polymarket queda totalmente pausado.
+  </section>
+
+  <h2>Lo que realmente cambió</h2>
+  <div class="grid">
+    <div class="card metric"><small>NFL · profundidad histórica</small><strong>92,078</strong>filas de jugador, 5 temporadas</div>
+    <div class="card metric"><small>WNBA · box scores</small><strong>29,200</strong>filas de jugador, 6 temporadas</div>
+    <div class="card metric"><small>MLB · nuevo control</small><strong>9 + 9</strong>bateadores congelados antes del juego</div>
+  </div>
+
+  <h2>Exámenes intactos</h2>
+  <table>
+    <thead><tr><th>Deporte/modelo</th><th>n</th><th>Acierto</th><th>Brier ↓</th><th>ECE ↓</th><th>Veredicto</th></tr></thead>
+    <tbody>
+      <tr><td>NFL Elo/MOV</td><td>284</td><td>63.38%</td><td>0.22582</td><td>0.04879</td><td>Base</td></tr>
+      <tr><td>NFL + jugadores</td><td>284</td><td class="good">63.73%</td><td class="good">0.22409</td><td class="good">0.03424</td><td>Sombra</td></tr>
+      <tr><td>WNBA Elo/MOV</td><td>253</td><td>64.43%</td><td class="good">0.21625</td><td>0.07560</td><td>Base</td></tr>
+      <tr><td>WNBA + jugadoras</td><td>253</td><td class="good">67.19%</td><td class="bad">0.21821</td><td class="good">0.04888</td><td>Sombra</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Brier: menor es mejor</h2>
+  <div class="card chart" aria-label="Comparación de Brier">
+    <div class="row"><span>NFL base</span><div class="bar"><i style="width:90.3%"></i></div><b>0.2258</b></div>
+    <div class="row"><span>NFL jugadores</span><div class="bar"><i class="aa" style="width:89.6%"></i></div><b>0.2241</b></div>
+    <div class="row"><span>WNBA base</span><div class="bar"><i style="width:86.5%"></i></div><b>0.2162</b></div>
+    <div class="row"><span>WNBA jugadoras</span><div class="bar"><i class="aa" style="width:87.3%"></i></div><b>0.2182</b></div>
+  </div>
+  <p class="muted">WNBA acierta más clasificaciones, pero asigna probabilidades ligeramente peores. Esa contradicción es exactamente por qué AA debe mirar Brier, log-loss y calibración, no solo victorias.</p>
+
+  <h2>Controles de causalidad</h2>
+  <ul>
+    <li>Las estadísticas del partido actual se agregan solo después de producir su predicción.</li>
+    <li>NFL usa profundidad, QB titular, producción reciente, continuidad e inactivos; si falta QB o cobertura suficiente, no crea la fila.</li>
+    <li>MLB congela la probabilidad matutina. La alineación oficial posterior se adjunta con otro timestamp y nunca reescribe ese porcentaje.</li>
+    <li>Los intervalos pareados de Brier de NFL y WNBA cruzan cero; por tanto, ambos siguen cerrados al público.</li>
+  </ul>
+
+  <h2>Próxima evidencia que decide</h2>
+  <p>El “Cerebro” debe comparar diariamente los challengers contra el campeón y contra líneas reales pregame. La promoción exige muestra forward, ECE aceptable, proper scores no inferiores al mercado y aprobación humana. Un día sin pick sigue siendo una salida correcta.</p>
+  <p class="muted">Fuentes internas: <code>robot/daily.mjs</code>, <code>robot/aa_lab.mjs</code>, <code>robot/wnba_player_winner.mjs</code> y reportes privados NFL. Los números son resultados medidos, no garantía futura ni recomendación.</p>
+</main></body></html>

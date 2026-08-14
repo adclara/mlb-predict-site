@@ -36,10 +36,11 @@ async function d1Rows(sql, params = []) {
   return body?.result?.[0]?.results || []
 }
 
-let winnerRows = [], totalRows = []
+let winnerRows = [], playerWinnerRows = [], totalRows = []
 try {
-  ;[winnerRows, totalRows] = await Promise.all([
+  ;[winnerRows, playerWinnerRows, totalRows] = await Promise.all([
     d1Rows("SELECT date,result,prob,market_prob FROM predictions WHERE sport='wnba' AND result IN ('win','loss') ORDER BY date,event_id"),
+    d1Rows("SELECT date,result,prob,market_prob FROM sport_market_predictions WHERE sport='wnba' AND market_key='winner_challenger' AND result IN ('win','loss') ORDER BY date,event_id"),
     d1Rows("SELECT date,result,prob,market_prob FROM sport_market_predictions WHERE sport='wnba' AND market_key='total' AND result IS NOT NULL ORDER BY date,event_id"),
   ])
 } catch { /* fail closed with a zero sample; never invent evidence */ }
@@ -47,6 +48,7 @@ let backtest = null
 try { backtest = JSON.parse(fs.readFileSync(path.join(DATA, 'fase2', 'wnba', 'wnba_backtest.json'), 'utf8')) } catch { /* historical gate stays closed */ }
 const brain = buildSportBrain({ sport: 'wnba', backtest, rows: winnerRows, now: report.generated_at })
 const winnerForward = brain.forward
+const playerWinnerForward = forwardMetrics(playerWinnerRows)
 const totalForward = forwardMetrics(totalRows)
 const totalFinalN = totalRows.filter((row) => ['win', 'loss', 'push', 'void'].includes(row.result)).length
 const totalMarketN = totalRows.filter((row) => ['win', 'loss', 'push'].includes(row.result)
@@ -68,7 +70,15 @@ const totalGate = { passed: totalPassed, approved: false, public: false, state: 
 const publicDoc = {
   schema: 'aa_multisport_simulation_public_v1', sport: 'wnba', generated_at: report.generated_at,
   seasons: report.seasons, burn_in: report.burn_in,
-  winner: { historical: brain.historical, forward: winnerForward, gate: brain.gate },
+  winner: {
+    historical: brain.historical, forward: winnerForward,
+    player_aware_shadow: report.winner?.player_aware_shadow ? {
+      ...report.winner.player_aware_shadow,
+      forward: playerWinnerForward,
+      public: false,
+    } : null,
+    gate: brain.gate,
+  },
   total: {
     historical: report.total.historical, per_season: report.total.per_season,
     market_line_coverage: totalLineCoverage, forward: totalForward, gate: totalGate,

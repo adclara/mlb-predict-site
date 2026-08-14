@@ -11,6 +11,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { loadSeasons } from './nba_model.mjs'
 import { backtestWnbaPlayers } from './wnba_player_model.mjs'
+import { backtestWnbaPlayerWinner } from './wnba_player_winner.mjs'
 
 const DATA = process.env.DATA_DIR || path.join(process.cwd(), 'data')
 const DIR = path.join(DATA, 'fase2', 'wnba')
@@ -214,11 +215,25 @@ export function backtestWnbaMarkets({ burnInSeasons = 2, write = true } = {}) {
   let winner = null
   try { winner = JSON.parse(fs.readFileSync(path.join(DIR, 'wnba_backtest.json'), 'utf8')) } catch { /* report remains independently usable */ }
   const playerReport = backtestWnbaPlayers({ write })
+  const playerWinner = backtestWnbaPlayerWinner({ write })
   const closed = (reason, minForward) => ({ passed: false, approved: false, public: false, reason, min_forward: minForward, min_dates: 30 })
   const report = {
     schema: 'aa_multisport_simulation_v1', sport: 'wnba', generated_at: new Date().toISOString(),
     seasons: seasons.map((season) => String(season.season)), burn_in: seasons.slice(0, burnInSeasons).map((season) => String(season.season)),
-    winner: { historical: winner ? { n: winner.n_eval, ...winner.metrics } : null, gate: closed('forward_sample_pending', 200) },
+    winner: {
+      historical: winner ? { n: winner.n_eval, ...winner.metrics } : null,
+      player_aware_shadow: playerWinner ? {
+        validation: playerWinner.selected,
+        elo_validation: playerWinner.elo_rolling_2023_2025,
+        heldout_2026: playerWinner.heldout_2026,
+        elo_heldout_2026: playerWinner.elo_heldout_2026,
+        delta_vs_elo: playerWinner.delta_vs_elo,
+        selection: playerWinner.player_aware_selection,
+        data_audit: playerWinner.data_audit,
+        gate: playerWinner.gate,
+      } : null,
+      gate: closed('forward_sample_pending', 200),
+    },
     total: {
       model: 'causal_ridge_team_form_v1', selected_lambda: best.lambda, tune_mae: best.mae,
       historical: overall, per_season: perSeason, market_line_coverage: 0, forward: { n: 0, dates: 0 },

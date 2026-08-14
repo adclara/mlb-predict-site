@@ -478,6 +478,17 @@ try {
     assert.match(wnbaBrainEn, /model remains in shadow/i, `${viewport.name}: missing WNBA shadow disclosure EN`);
     assert.doesNotMatch(wnbaBrainEn, /Cerebro|Histórico|muestra|cerrado|entrenamiento/i, `${viewport.name}: Spanish leaked into WNBA Brain EN`);
     await assertNoOverflow(page, `${viewport.name}-wnba-en`);
+    await page.locator('.sp[data-sport="radar"]').click();
+    const radarEn = await page.locator('#list').textContent();
+    assert.match(radarEn, /Polymarket Radar paused/i, `${viewport.name}: missing Radar pause EN`);
+    assert.match(radarEn, /Telegram notifications are fully stopped/i, `${viewport.name}: missing Telegram stop EN`);
+    assert.equal(await page.locator('#list .mrow').count(), 0, `${viewport.name}: Radar rendered stale rows while paused`);
+    await page.locator('#langbtn').evaluate((el) => el.click());
+    const radarEs = await page.locator('#list').textContent();
+    assert.match(radarEs, /Radar de Polymarket pausado/i, `${viewport.name}: falta pausa Radar ES`);
+    assert.match(radarEs, /notificaciones de Telegram[^.]*detuvimos|alertas y las notificaciones de Telegram/i, `${viewport.name}: falta detención Telegram ES`);
+    assert.doesNotMatch(radarEs, /Wallet monitoring|fully stopped/i, `${viewport.name}: English leaked into Radar ES`);
+    await assertNoOverflow(page, `${viewport.name}-radar-paused`);
     assert.deepEqual(errors, [], `${viewport.name}: errores de consola/red de la app`);
     await context.close();
   }

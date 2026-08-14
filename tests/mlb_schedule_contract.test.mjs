@@ -4,13 +4,14 @@ import fs from 'node:fs'
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('contrato de frescura conserva sus tres capas sin cron duplicado', () => {
+test('contrato de frescura conserva MLB y deja Radar fuera de los crons', () => {
   const wrangler = read('cloudflare/wrangler.toml')
   const daily = read('.github/workflows/adrian-daily.yml')
   const learning = read('.github/workflows/mlb-learning-daily.yml')
   const live = read('.github/workflows/mlb-live-observer.yml')
   const worker = read('cloudflare/worker/index.js')
-  assert.match(wrangler, /crons\s*=\s*\["\*\/5 \* \* \* \*", "\*\/20 \* \* \* \*", "0 13 \* \* \*"\]/)
+  assert.match(wrangler, /crons\s*=\s*\["\*\/20 \* \* \* \*"\]/)
+  assert.doesNotMatch(wrangler, /"\*\/5 \* \* \* \*"|"0 13 \* \* \*"/)
   assert.match(daily, /cron:\s*'7 \* \* \* \*'/)
   assert.match(daily, /cron:\s*'12,27,42,57 11,12 \* \* \*'/)
   assert.match(daily, /node robot\/mlb_publish_watchdog\.mjs/)
@@ -21,4 +22,6 @@ test('contrato de frescura conserva sus tres capas sin cron duplicado', () => {
   assert.match(worker, /pipeline:\s*'mlb_ingest_20m'/)
   assert.match(worker, /\/v1\/mlb\/pipeline-health/)
   assert.match(worker, /statsapi\.mlb\.com\/api\/v1\/schedule\?sportId=1&date=/)
+  assert.match(worker, /POLY_RADAR_PAUSED/)
+  assert.doesNotMatch(worker, /ctx\.waitUntil\(poly(?:Watch|Daily)/)
 })

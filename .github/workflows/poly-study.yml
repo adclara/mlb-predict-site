@@ -1,48 +1,18 @@
-# AA Sports — Polymarket: piloto de medición + Radar de wallets.
-# - Radar (poly_radar.mjs): cada 2 HORAS por cron → re-analiza los mercados
-#   resueltos y publica KV poly:radar (ranking, vigiladas, top transacciones).
-#   La capa de 5 MINUTOS es el vigía del Worker (alertas de trades nuevos).
-# - Estudio (poly_study.mjs): solo a mano/poke (el gate ya corrió).
-# Sin dinero, sin copiar: solo lectura de datos públicos.
-name: poly-study
+# AA Sports — Radar de Polymarket pausado por decisión del operador.
+# Se conserva un workflow manual sin red ni publicación para que el historial
+# quede intacto y reanudar requiera un cambio de código explícito.
+name: poly-study-paused
 on:
-  schedule:
-    - cron: '13 */2 * * *'
   workflow_dispatch: {}
-  push:
-    branches: [main]
-    paths: ['.github/poke-poly']
 permissions:
   contents: read
 concurrency:
   group: poly-study
   cancel-in-progress: false
 jobs:
-  run:
+  paused:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - name: Sonda Polymarket (gate)
-        if: github.event_name != 'schedule'
-        shell: /bin/bash {0}
-        run: node robot/poly_probe.mjs
-      - name: Estudio de wallets + simulación de copiado (medición)
-        if: github.event_name != 'schedule'
-        shell: /bin/bash {0}
-        run: node robot/poly_study.mjs
-      - name: Radar de wallets (publica KV poly:radar)
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
-        shell: /bin/bash {0}
-        run: node robot/poly_radar.mjs
-      - name: Guardar JSONs (artifact)
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: poly-study
-          path: data/fase2/polymarket/*.json
-          if-no-files-found: ignore
+      - name: Radar detenido
+        run: echo "Radar de Polymarket pausado; no se consulta ni publica ningún dato."
