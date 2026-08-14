@@ -1245,6 +1245,10 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 2.5 3 15.5 0 18M12 3c-3 2.5-3 15.5 0 18" stroke-linecap="round"/></svg>
       NBA <span class="soon">LIVE</span>
     </button>
+    <button class="sp" data-sport="wnba">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 2.5 3 15.5 0 18M12 3c-3 2.5-3 15.5 0 18" stroke-linecap="round"/></svg>
+      WNBA <span class="soon">LIVE</span>
+    </button>
     <button class="sp" data-sport="nfl">
       <span aria-hidden="true" style="font-size:20px">🏈</span>
       NFL <span class="soon">LIVE</span>
@@ -1629,6 +1633,7 @@ const T = {
     pick_hit: 'pick acertado', pick_miss: 'pick fallado', tab_analysis: 'Análisis AA', tab_sim: 'Simulación', postponed: 'Pospuesto',
     sim_ntimes: 'Simulamos este juego {n} veces', sim_top: 'Marcador más probable', sim_freq: 'Marcadores más frecuentes', sim_runs: 'Carreras totales por juego', sim_margin: '¿Por cuánto gana {t}?', sim_by1: 'Por 1 carrera', sim_by23: 'Por 2-3', sim_by4: 'Por 4+', sim_loses: 'Pierde', sim_of_sims: 'de las simulaciones',
     o_recentnote: 'Sin juegos hoy · mostrando los últimos resultados', o_no_events: 'Sin eventos ahora mismo en {s}.', o_loading: 'Cargando…', o_no_events2: 'Sin eventos por ahora. Vuelve más tarde.', o_compare: 'Comparación', o_lineups: 'Alineaciones', o_match_stats: 'Estadísticas del partido', o_events: 'Eventos', o_team_stats: 'Estadísticas del equipo', o_today: 'HOY', o_toplay: 'Por jugar', o_recent_form: 'Racha reciente', o_leaders: 'Líderes del partido', o_injuries: 'Bajas reportadas', o_note: 'Datos en vivo vía AA Sports API. Actualización automática cada 45s.', no_data: 'Sin datos.',
+    stat_fg: 'Tiros de campo', stat_fg_pct: '% Tiros de campo', stat_3pt: 'Triples', stat_3pt_pct: '% Triples', stat_ft: 'Tiros libres', stat_rebounds: 'Rebotes', stat_assists: 'Asistencias', stat_steals: 'Robos', stat_blocks: 'Tapones', stat_turnovers: 'Pérdidas', stat_fast_break: 'Puntos al contragolpe', stat_paint: 'Puntos en la pintura',
     hd_crumb: 'Historial AA', hd_measured: 'Picks medidos', hd_30d: 'últimos 30 días', hd_record: 'Récord', hd_wl: 'ganados–perdidos', hd_acc: 'Acierto', hd_acc_sub: 'todo medido, nada oculto', hd_streak: 'Racha actual', hd_streak_sub: 'según hora programada', hd_byday: 'Por día (últimos 14)', hd_noday: 'Sin días calificados aún.', hd_byconf: 'Por nivel de confianza', hist_public_rec: 'récord del boleto', hist_cohort_play: 'boleto', hist_cohort_lock: 'fijo', hist_cohort_gem: 'gema',
     cm_ops: 'OPS temporada', cm_rpg: 'Carreras/juego', cm_rpg5: 'C/juego últimos 5', cm_starter_fip: 'Abridor FIP', cm_form: 'Forma (V de 5)', cm_rest: 'Descanso (días)', d_set_score: 'Marcador por set',
     co_pos: 'Posición', co_pts: 'Puntos', co_gd: 'Dif. de gol', co_wins: 'Victorias', co_pos_conf: 'Posición conf.', co_winpct: '% Victorias', co_ptdiff: 'Dif. puntos', co_world_rank: 'Ranking mundial',
@@ -1803,6 +1808,7 @@ const T = {
     pick_hit: 'pick hit', pick_miss: 'pick missed', tab_analysis: 'AA analysis', tab_sim: 'Simulation', postponed: 'Postponed',
     sim_ntimes: 'We simulated this game {n} times', sim_top: 'Most likely score', sim_freq: 'Most frequent scores', sim_runs: 'Total runs per game', sim_margin: 'By how much does {t} win?', sim_by1: 'By 1 run', sim_by23: 'By 2-3', sim_by4: 'By 4+', sim_loses: 'Loses', sim_of_sims: 'of the simulations',
     o_recentnote: 'No games today · showing the latest results', o_no_events: 'No events right now in {s}.', o_loading: 'Loading…', o_no_events2: 'No events for now. Check back later.', o_compare: 'Comparison', o_lineups: 'Lineups', o_match_stats: 'Match stats', o_events: 'Events', o_team_stats: 'Team stats', o_today: 'TODAY', o_toplay: 'Upcoming', o_recent_form: 'Recent form', o_leaders: 'Match leaders', o_injuries: 'Reported injuries', o_note: 'Live data via AA Sports API. Auto-refresh every 45s.', no_data: 'No data.',
+    stat_fg: 'Field goals', stat_fg_pct: 'Field goal %', stat_3pt: 'Three-pointers', stat_3pt_pct: 'Three-point %', stat_ft: 'Free throws', stat_rebounds: 'Rebounds', stat_assists: 'Assists', stat_steals: 'Steals', stat_blocks: 'Blocks', stat_turnovers: 'Turnovers', stat_fast_break: 'Fast-break points', stat_paint: 'Points in the paint',
     hd_crumb: 'AA History', hd_measured: 'Picks tracked', hd_30d: 'last 30 days', hd_record: 'Record', hd_wl: 'won–lost', hd_acc: 'Hit rate', hd_acc_sub: 'all tracked, nothing hidden', hd_streak: 'Current streak', hd_streak_sub: 'by scheduled start', hd_byday: 'By day (last 14)', hd_noday: 'No graded days yet.', hd_byconf: 'By confidence level', hist_public_rec: 'ticket record', hist_cohort_play: 'ticket', hist_cohort_lock: 'lock', hist_cohort_gem: 'gem',
     cm_ops: 'Season OPS', cm_rpg: 'Runs/game', cm_rpg5: 'R/game last 5', cm_starter_fip: 'Starter FIP', cm_form: 'Form (W of 5)', cm_rest: 'Rest (days)', d_set_score: 'Score by set',
     co_pos: 'Position', co_pts: 'Points', co_gd: 'Goal diff', co_wins: 'Wins', co_pos_conf: 'Conf. position', co_winpct: 'Win %', co_ptdiff: 'Point diff', co_world_rank: 'World ranking',
@@ -3434,9 +3440,9 @@ async function loadToday(){
 let sport = 'mlb';
 let soccerLeague = 'fifa.world';
 const SOCCER_LEAGUES = { 'fifa.world': 'Mundial', 'uefa.champions': 'Champions', 'eng.1': 'Premier', 'esp.1': 'LaLiga', 'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1', 'usa.1': 'MLS', 'mex.1': 'Liga MX' };
-const SPORT_LABEL = { nba: 'NBA', nfl: 'NFL', ncaaf: 'College Football', nhl: 'NHL', ncaam: 'College Basketball', soccer: 'Soccer', tennis: 'Tenis', radar: 'Radar' };
+const SPORT_LABEL = { nba: 'NBA', wnba: 'WNBA', nfl: 'NFL', ncaaf: 'College Football', nhl: 'NHL', ncaam: 'College Basketball', soccer: 'Soccer', tennis: 'Tenis', radar: 'Radar' };
 const sportLabel = (key) => key === 'ncaaf' ? t('sport_ncaaf') : key === 'ncaam' ? t('sport_ncaam') : (SPORT_LABEL[key] || key);
-let otherGames = [], otherSel = null, otherLoading = false;
+let otherGames = [], otherSel = null, otherLoading = false, otherLoadSeq = 0;
 let otherRecent = false;                 // true = mostrando últimos resultados (no hay juegos hoy)
 const sportModelDocs = new Map();        // docs públicos, siempre saneados por el Worker
 const standingsCache = new Map();        // 'nba' | 'soccer:<liga>' → doc de posiciones
@@ -3444,11 +3450,13 @@ const standingsCache = new Map();        // 'nba' | 'soccer:<liga>' → doc de p
 async function loadOther(){
   if (sport === 'mlb' || sport === 'radar') return;
   otherLoading = true;
+  const loadSeq = ++otherLoadSeq;
   const mySport = sport, myLeague = soccerLeague;
   try{
     const q = sport === 'soccer' ? `?league=${encodeURIComponent(soccerLeague)}` : '';
     const r = await fetch(`${API}/v1/${sport}/live${q}`);
     const d = await r.json();
+    if (loadSeq !== otherLoadSeq || mySport !== sport || myLeague !== soccerLeague) return;
     otherGames = d.games || [];
     if (['nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
       try{
@@ -3467,12 +3475,13 @@ async function loadOther(){
     if (!otherGames.length){
       const r2 = await fetch(`${API}/v1/${mySport}/recent${q}`);
       const d2 = await r2.json();
-      if (mySport === sport && myLeague === soccerLeague){
+      if (loadSeq === otherLoadSeq && mySport === sport && myLeague === soccerLeague){
         otherGames = (d2.games || []).map(g => ({ ...g, _recent: true }));
         otherRecent = otherGames.length > 0;
       }
     }
-  }catch(err){ otherGames = []; otherRecent = false; }
+  }catch(err){ if (loadSeq === otherLoadSeq){ otherGames = []; otherRecent = false; } }
+  if (loadSeq !== otherLoadSeq || mySport !== sport || myLeague !== soccerLeague) return;
   otherLoading = false;
   // link compartido ?sc=<id>: selecciona ese partido si está en la lista
   if (pendingOther){ const hit = otherGames.find(x => String(x.espn_id) === String(pendingOther)); if (hit){ otherSel = hit.espn_id; } pendingOther = null; }
@@ -3547,7 +3556,7 @@ function soccerPredCard(g){
 }
 
 async function loadStandings(){
-  if (!['nba', 'soccer', 'tennis', 'mlb', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return;
+  if (!['nba', 'wnba', 'soccer', 'tennis', 'mlb', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return;
   const key = sport === 'soccer' ? `soccer:${soccerLeague}` : sport;
   if (standingsCache.has(key)) return;
   try{
@@ -3569,7 +3578,7 @@ const summaryCache = new Map();          // 'sport:liga:eventId' → {at, doc}
 const summaryPending = new Set();
 function summaryKey(g){ return `${sport}:${sport === 'soccer' ? soccerLeague : '-'}:${g.espn_id}`; }
 function loadSummary(g){
-  if (!g || !['soccer', 'nba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return;
+  if (!g || !['soccer', 'nba', 'wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return;
   const k = summaryKey(g);
   const ent = summaryCache.get(k);
   const ttl = g.status === 'final' ? 6e5 : 6e4;
@@ -4554,7 +4563,7 @@ function renderOtherDetail(){
 
   // Comparación cara a cara descriptiva (datos reales de posiciones/ranking; sin predicciones).
   let h2hRows = '';
-  if (['soccer', 'nba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
+  if (['soccer', 'nba', 'wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
     const a = stRow(g.away.code), h = stRow(g.home.code);
     if (a && h){
       const signed = (x) => { const n = parseFloat(String(x).replace('+', '')); return Number.isFinite(n) ? (n > 0 ? '+' : '') + n : x; };
@@ -4587,7 +4596,7 @@ function renderOtherDetail(){
   // Detalle del partido (alineaciones/formación + estadísticas + eventos para
   // soccer; box score + estadísticas de equipo para NBA). Datos reales de ESPN.
   let summaryHtml = '';
-  if (sport === 'soccer' || sport === 'nba'){
+  if (sport === 'soccer' || sport === 'nba' || sport === 'wnba'){
     loadSummary(g);
     const ent = summaryCache.get(summaryKey(g));
     const S = ent && ent.doc;
@@ -4598,20 +4607,20 @@ function renderOtherDetail(){
           <div class="formgrid">${soccerLineupCard(S.lineups.away)}${soccerLineupCard(S.lineups.home)}</div>`;
       if (S.stats && S.stats.length)
         summaryHtml += `<div class="secttl">${t('o_match_stats')}</div>${statHead}
-          <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.label, s.away, s.home)).join('')}</div>`;
+          <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.key ? t(s.key) : s.label, s.away, s.home)).join('')}</div>`;
       if (S.events && S.events.length)
         summaryHtml += `<div class="secttl">${t('o_events')}</div>
           <div class="evbox glass-in">${S.events.map(soccerEventRow).join('')}</div>`;
-    } else if (S && sport === 'nba'){
+    } else if (S && (sport === 'nba' || sport === 'wnba')){
       if (S.players && (S.players.home || S.players.away))
         summaryHtml += `<div class="secttl">Box score</div>
           <div class="boxgrid">${nbaBoxCard(S.players.away)}${nbaBoxCard(S.players.home)}</div>`;
       if (S.stats && S.stats.length)
         summaryHtml += `<div class="secttl">${t('o_team_stats')}</div>${statHead}
-          <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.label, s.away, s.home)).join('')}</div>`;
+          <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.key ? t(s.key) : s.label, s.away, s.home)).join('')}</div>`;
     } else if (S && S.stats && S.stats.length){
       summaryHtml += `<div class="secttl">${t('o_team_stats')}</div>${statHead}
-        <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.label, s.away, s.home)).join('')}</div>`;
+        <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.key ? t(s.key) : s.label, s.away, s.home)).join('')}</div>`;
     }
   } else if (sport === 'tennis'){
     summaryHtml += tennisSetline(g);
@@ -4704,7 +4713,7 @@ function setSport(sp2){
     : sport === 'soccer' ? (SOCCER_LEAGUES[soccerLeague] || '') : t('live_via_espn');
   // el logo de la liga acompaña al deporte (antes se quedaba pegado el de MLB)
   const lgi = $('lgicon');
-  const LEAGUE_ICON = { mlb: 'mlb', nba: 'nba', nfl: 'nfl', nhl: 'nhl' };
+  const LEAGUE_ICON = { mlb: 'mlb', nba: 'nba', wnba: 'wnba', nfl: 'nfl', nhl: 'nhl' };
   if (LEAGUE_ICON[sport]){
     lgi.style.display = ''; lgi.style.visibility = '';
     lgi.src = `https://a.espncdn.com/i/teamlogos/leagues/500/${LEAGUE_ICON[sport]}.png`;
@@ -4895,13 +4904,24 @@ if ('serviceWorker' in navigator) addEventListener('load', () => navigator.servi
   const _wp = (qp.get('w') || '').match(/0x[0-9a-fA-F]{40}/);
   const gid = qp.get('g'), tab = qp.get('tab'), scid = qp.get('sc');
   if (_wp){ try { setSport('radar'); loadWalletSearch(_wp[0]); } catch (e) {} }
-  else if (['soccer', 'nba', 'tennis', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(tab)){ try { setSport(tab); if (scid) pendingOther = scid; } catch (e) {} }
+  else if (['soccer', 'nba', 'wnba', 'tennis', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(tab)){ try { setSport(tab); if (scid) pendingOther = scid; } catch (e) {} }
   else if (/^radar\./i.test(location.hostname) || tab === 'radar'){ try { setSport('radar'); } catch (e) {} }
   else if (gid){ pendingGame = gid; }   // se aplica cuando cargan los eventos
 }
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
 setInterval(() => { sport === 'mlb' ? loadLive() : sport === 'radar' ? loadAlerts() : loadOther(); }, 45 * 1000);
 setInterval(loadInjuries, 30 * 60 * 1000);
+// Safari/iOS pausa timers cuando la app queda en segundo plano. Al volver —o
+// al recuperar conexión— refrescamos de inmediato en vez de esperar el próximo
+// intervalo, manteniendo resultados y marcadores actuales.
+const refreshActiveSport = () => {
+  if (document.hidden) return;
+  if (sport === 'mlb'){ loadToday(); loadLive(); }
+  else if (sport === 'radar'){ loadRadar(); loadAlerts(); }
+  else loadOther();
+};
+document.addEventListener('visibilitychange', refreshActiveSport);
+addEventListener('online', refreshActiveSport);
 </script>
 </body>
 </html>

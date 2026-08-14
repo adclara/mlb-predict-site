@@ -168,12 +168,13 @@ async function qaSoccer() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// 4) STANDINGS NBA/Soccer vs ESPN (fila top)
+// 4) STANDINGS NBA/WNBA/Soccer vs ESPN (fila top)
 // ─────────────────────────────────────────────────────────────────────────
 async function qaStandings() {
   H('5) Standings vs ESPN (spot-check)');
   for (const [sp, wurl, surl] of [
     ['nba', `${API}/v1/nba/standings`, 'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings'],
+    ['wnba', `${API}/v1/wnba/standings`, 'https://site.api.espn.com/apis/v2/sports/basketball/wnba/standings'],
     ['soccer', `${API}/v1/soccer/standings?league=fifa.world`, 'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings'],
   ]) {
     const w = await getJson(wurl);
@@ -188,10 +189,29 @@ async function qaStandings() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// 5) SUMMARY nuevo (soccer/nba) vs ESPN — la feature recién desplegada
+// 5) WNBA factual: slate de hoy + resultados recientes
+// ─────────────────────────────────────────────────────────────────────────
+async function qaWnba() {
+  H('6) WNBA factual /live + /recent vs ESPN');
+  const [w, src] = await Promise.all([
+    getJson(`${API}/v1/wnba/live`),
+    getJson(`${ESPN}/basketball/wnba/scoreboard?dates=${TODAY.replace(/-/g, '')}&limit=100`),
+  ]);
+  if (w.status !== 200 || !w.data) { F(`Worker WNBA/live no respondió (status ${w.status})`); return; }
+  if (w.data.note) { F(`Worker WNBA/live degradado: ${w.data.note}`); return; }
+  const wg = w.data.games || [], eg = (src.data && src.data.events) || [];
+  if (wg.length === eg.length) P(`WNBA hoy consistente (${wg.length} juegos)`);
+  else W(`WNBA hoy: Worker ${wg.length} vs ESPN ${eg.length}`);
+  const recent = await getJson(`${API}/v1/wnba/recent`);
+  if (recent.status === 200 && recent.data && !recent.data.note) P(`WNBA recientes responde (${(recent.data.games || []).length} finales)`);
+  else F(`WNBA recientes degradado: ${recent.data?.note || recent.status}`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 6) SUMMARY nuevo (soccer/nba) vs ESPN — la feature recién desplegada
 // ─────────────────────────────────────────────────────────────────────────
 async function qaSummary() {
-  H('6) Detalle /v1/soccer/summary vs ESPN (feature nueva)');
+  H('7) Detalle /v1/soccer/summary vs ESPN (feature nueva)');
   // tomar un evento reciente/en vivo del Mundial
   const rec = await getJson(`${API}/v1/soccer/recent?league=fifa.world`);
   const live = await getJson(`${API}/v1/soccer/live?league=fifa.world`);
@@ -222,10 +242,10 @@ async function qaSummary() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// 6) Rankings tenis + injuries presentes
+// 7) Rankings tenis + injuries presentes
 // ─────────────────────────────────────────────────────────────────────────
 async function qaMisc() {
-  H('7) Tenis rankings + bajas');
+  H('8) Tenis rankings + bajas');
   const rk = await getJson(`${API}/v1/tennis/rankings`);
   const secs = (rk.data && rk.data.sections) || [];
   if (secs.length) P(`ranking de tenis: ${secs.map(s => `${s.name} ${s.rows?.length||0}`).join(', ')}`);
@@ -234,7 +254,7 @@ async function qaMisc() {
   if (inj.status === 200) P('/v1/injuries responde'); else W(`/v1/injuries status ${inj.status}`);
 }
 
-for (const fn of [qaMlbToday, qaMlbLive, qaMlbPipeline, qaSoccer, qaStandings, qaSummary, qaMisc]) {
+for (const fn of [qaMlbToday, qaMlbLive, qaMlbPipeline, qaSoccer, qaStandings, qaWnba, qaSummary, qaMisc]) {
   try { await fn(); } catch (e) { F(`excepción en ${fn.name}: ${e.message}`); }
 }
 

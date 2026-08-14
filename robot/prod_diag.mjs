@@ -87,6 +87,14 @@ try {
   if (r0) console.log(`  ej: ${s0.name} → ${r0.name || r0.code} ${r0.w}-${r0.l} (${r0.pct})`);
   console.log('  vista:', secs.length >= 4 ? '✅ por DIVISIÓN' : secs.length ? 'por liga (fallback)' : '⚠️ vacía');
 } catch (e) { console.log('no-json:', String(e).slice(0, 120)); }
+console.log('\n== /v1/wnba/live + standings (feed factual) ==');
+try {
+  const wnbaLive = JSON.parse((await get(`${API}/v1/wnba/live`)).text);
+  const wnbaStandings = JSON.parse((await get(`${API}/v1/wnba/standings`)).text);
+  const rows = (wnbaStandings.sections || []).reduce((n, section) => n + (section.rows || []).length, 0);
+  console.log('juegos hoy:', (wnbaLive.games || []).length, '| fuente:', wnbaLive.source || '—', wnbaLive.note ? '| note: ' + wnbaLive.note : '');
+  console.log('posiciones:', rows, 'equipos en', (wnbaStandings.sections || []).length, 'secciones', wnbaStandings.note ? '| note: ' + wnbaStandings.note : '');
+} catch (e) { console.log('no-json:', String(e).slice(0, 120)); }
 console.log('\n== /v1/poly/radar + /v1/poly/alerts (Radar de wallets) ==');
 const pr = await get(`${API}/v1/poly/radar`);
 try {

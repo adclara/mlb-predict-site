@@ -7,7 +7,8 @@
 Sitio de predicciones deportivas data-driven, **$0 de infraestructura**, sobre
 Cloudflare. Marca: **"AA Sports · Los datos deciden"**. Deportes: **MLB**
 (completo, con predicciones), **fútbol** (predicciones públicas desde jul-2026),
-**NBA/tenis** (marcadores + posiciones; modelos en sombra, sin publicar). Más un
+**NBA/tenis** (marcadores + posiciones; modelos en sombra, sin publicar) y
+**WNBA** (marcadores, resultados, posiciones y box score factuales). Más un
 **"Radar"**: observatorio de wallets de Polymarket (descriptivo, no recomienda).
 
 ## ADN NO NEGOCIABLE (aplica a TODO cambio)
@@ -90,6 +91,7 @@ path dispara el workflow. Mapa verificado (poke → workflow):
 simulation, standings}`, `/v1/injuries`,
 `/v1/soccer/{today, live, recent, standings, leagues, summary}`,
 `/v1/nba/{live, recent, standings}`,
+`/v1/wnba/{live, recent, standings, summary}`,
 `/v1/tennis/{live, recent, rankings, summary}`,
 `/v1/poly/{radar, alerts, track}`, `/v1/auth/google`.
 El Worker corre tres `scheduled()`: cada 5 min vigila el Radar; cada 20 min
@@ -143,6 +145,9 @@ las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
 - **NBA / Tenis** (sombra): registran picks en D1 sin publicar. **No publicar
   predicciones** hasta pasar gate (calibración + muestra en vivo suficiente) y con
   aprobación humana. NBA se enciende ~octubre; tenis stats depende de TENNIS_API_KEY.
+- **WNBA**: cobertura factual pública (marcadores, resultados, posiciones y box
+  score), sin modelo ni predicciones públicas. Cualquier modelo futuro requiere
+  validación forward y aprobación humana explícita.
 - **NFL / NCAAF / NHL / NCAAM**: marcadores y captura factual activos; modelos
   privados en `adclara/aa-sports-models-private`, con gates cerrados. No publicar
   Top 2 hasta validación forward suficiente + aprobación humana explícita.

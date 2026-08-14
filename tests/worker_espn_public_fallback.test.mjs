@@ -106,6 +106,39 @@ test('generic live routes derive the alternate host automatically', async () => 
   });
 });
 
+test('WNBA exposes today, standings and basketball detail through factual public routes', async () => {
+  const calls = [];
+  await withWorkerMocks(async (url) => {
+    calls.push(String(url));
+    if (String(url).includes('site.api.espn.com')) return response({}, 403);
+    if (String(url).includes('/standings')) return response(standingsFixture);
+    if (String(url).includes('/summary?')) return response({ boxscore: { players: [], teams: [] } });
+    return response(scoreboard('wnba'));
+  }, async () => {
+    const ctx = { waitUntil(value) { return value; } };
+    const liveResult = await worker.fetch(new Request('https://aa-sports-api.test/v1/wnba/live'), {}, ctx);
+    const liveBody = await liveResult.json();
+    assert.equal(liveBody.note, undefined);
+    assert.equal(liveBody.source, 'espn_web');
+    assert.equal(liveBody.games.length, 1);
+    assert.ok(calls.some((url) => /basketball\/wnba\/scoreboard\?dates=\d{8}&limit=100/.test(url)));
+
+    const standingsResult = await worker.fetch(new Request('https://aa-sports-api.test/v1/wnba/standings'), {}, ctx);
+    const standingsBody = await standingsResult.json();
+    assert.equal(standingsBody.source, 'espn_web');
+    assert.equal(standingsBody.sections.length, 1);
+
+    const summaryResult = await worker.fetch(new Request('https://aa-sports-api.test/v1/wnba/summary?event=401857140'), {}, ctx);
+    const summaryBody = await summaryResult.json();
+    assert.equal(summaryBody.ok, true);
+    assert.equal(summaryBody.sport, 'wnba');
+
+    const healthResult = await worker.fetch(new Request('https://aa-sports-api.test/v1/health'), {}, ctx);
+    const healthBody = await healthResult.json();
+    assert.ok(healthBody.sports.includes('wnba'));
+  });
+});
+
 test('standings retries both ESPN hosts and preserves real sections', async () => {
   const calls = [];
   await withWorkerMocks(async (url) => {
