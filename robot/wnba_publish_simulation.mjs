@@ -40,7 +40,7 @@ let winnerRows = [], playerWinnerRows = [], totalRows = []
 try {
   ;[winnerRows, playerWinnerRows, totalRows] = await Promise.all([
     d1Rows("SELECT date,result,prob,market_prob FROM predictions WHERE sport='wnba' AND result IN ('win','loss') ORDER BY date,event_id"),
-    d1Rows("SELECT date,result,prob,market_prob FROM sport_market_predictions WHERE sport='wnba' AND market_key='winner_challenger' AND result IN ('win','loss') ORDER BY date,event_id"),
+    d1Rows("SELECT date,result,prob,market_prob FROM sport_market_predictions WHERE sport='wnba' AND market_key='winner' AND selection_key='winner:player-aware' AND result IN ('win','loss') ORDER BY date,event_id"),
     d1Rows("SELECT date,result,prob,market_prob FROM sport_market_predictions WHERE sport='wnba' AND market_key='total' AND result IS NOT NULL ORDER BY date,event_id"),
   ])
 } catch { /* fail closed with a zero sample; never invent evidence */ }

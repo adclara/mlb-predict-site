@@ -174,6 +174,12 @@ async function installApiMocks(page, date, events, games) {
           espn_id: '401857140', start: `${date}T23:00:00Z`, status: 'live', status_detail: '3rd Qtr',
           away: { code: 'AWY', name: 'Away Team', score: 61, logo: null, rec: '16-9' },
           home: { code: 'HME', name: 'Home Team', score: 67, logo: null, rec: '18-7' },
+          market: { away_ml: 260, home_ml: -325, away_prob: .2664, home_prob: .7336, probability_source: 'market_devigged' },
+        }, {
+          espn_id: '401857141', start: `${date}T20:00:00Z`, status: 'pre', status_detail: 'Scheduled',
+          away: { code: 'AW2', name: 'Second Away', score: null, logo: null, rec: '15-10' },
+          home: { code: 'HM2', name: 'Second Home', score: null, logo: null, rec: '17-8' },
+          market: { away_ml: 124, home_ml: -148, away_prob: .445, home_prob: .555, probability_source: 'market_devigged' },
         }] });
       }
       if (action === 'learning' && sport === 'nfl') return json(route, {
@@ -212,6 +218,7 @@ async function installApiMocks(page, date, events, games) {
         espn_id: `${sport}-1`, start: `${date}T23:00:00Z`, status: 'pre', status_detail: 'Scheduled',
         away: { code: 'AWY', name: 'Away Team', score: null, logo: null, rec: '0-0' },
         home: { code: 'HME', name: 'Home Team', score: null, logo: null, rec: '0-0' },
+        market: { away_ml: 150, home_ml: -175, away_prob: .4, home_prob: .6, probability_source: 'market_devigged' },
       }] });
     }
     return json(route, {});
@@ -391,11 +398,13 @@ try {
     const wnbaListEs = await page.locator('#list').textContent();
     assert.match(wnbaListEs, /Away Team/i, `${viewport.name}: falta visitante WNBA ES`);
     assert.match(wnbaListEs, /61[\s\S]*67/, `${viewport.name}: faltan marcadores WNBA ES`);
+    assert.match(wnbaListEs, /44[,.]5%[\s\S]*55[,.]5%[\s\S]*Mercado/i, `${viewport.name}: faltan porcentajes por partido del mercado WNBA ES`);
     assert.match(wnbaListEs, /66[,.]3%[\s\S]*1[,.]?091[\s\S]*0[,.]2132/i, `${viewport.name}: falta evidencia histórica visible WNBA ES`);
     assert.match(wnbaListEs, /no el juego de hoy/i, `${viewport.name}: falta distinguir histórico de probabilidad del partido WNBA ES`);
     await page.waitForFunction(() => /Tiros de campo/i.test(document.querySelector('#dcard')?.textContent || ''));
     const wnbaDetailEs = await page.locator('#dcard').textContent();
     assert.match(wnbaDetailEs, /Gate cerrado/i, `${viewport.name}: falta gate honesto WNBA ES`);
+    assert.match(wnbaDetailEs, /Probabilidad de mercado[\s\S]*Mercado desvigado[\s\S]*26[,.]6%[\s\S]*73[,.]4%/i, `${viewport.name}: falta probabilidad de mercado WNBA ES`);
     assert.equal(await page.locator('#dcard .market-tab').count(), 4, `${viewport.name}: faltan cuatro mercados WNBA ES`);
     assert.match(wnbaDetailEs, /37\s*\/\s*200/i, `${viewport.name}: falta progreso medido de ganador WNBA ES`);
     assert.match(wnbaDetailEs, /66[,.]3%[\s\S]*1[,.]?091[\s\S]*0[,.]2132/i, `${viewport.name}: el detalle WNBA no muestra evidencia histórica medida`);
@@ -406,7 +415,7 @@ try {
     await page.locator('#dcard .market-tab[data-market-kind="combos"]').evaluate(el => el.click());
     assert.match(await page.locator('#dcard .market-first').textContent(), /combo no puede abrir[\s\S]*0\s*\/\s*100/i, `${viewport.name}: combos WNBA no explican su bloqueo ES`);
     await page.locator('#dcard .market-tab[data-market-kind="winner"]').evaluate(el => el.click());
-    assert.doesNotMatch(wnbaDetailEs, /AA\s*\d+(?:[,.]\d+)?%/i, `${viewport.name}: se publicó una predicción WNBA no validada`);
+    assert.equal(await page.locator('#dcard .market-callout').count(), 0, `${viewport.name}: se publicó una predicción WNBA no validada`);
     assert.equal(await page.locator('.ltab[data-lt="brain"]').isVisible(), true, `${viewport.name}: pestaña Cerebro WNBA oculta`);
     assert.equal(await page.locator('.ltab[data-lt="hist"]').isVisible(), false, `${viewport.name}: historial MLB apareció en WNBA`);
     await page.locator('.ltab[data-lt="brain"]').click();
@@ -485,9 +494,11 @@ try {
       if (newSport === 'nfl') {
         await page.waitForFunction(() => /Historical model evidence[\s\S]*63\.7%/i.test(document.querySelector('#list')?.textContent || ''));
         const nflList = await page.locator('#list').textContent();
+        assert.match(nflList, /40%[\s\S]*60%[\s\S]*Market/i, `${viewport.name}: NFL per-game market percentages missing`);
         assert.match(nflList, /63\.7%[\s\S]*284[\s\S]*0\.2241/i, `${viewport.name}: NFL historical evidence is not visible`);
         assert.match(nflList, /not today'?s game/i, `${viewport.name}: NFL historical percentage is not clearly scoped`);
         assert.equal(await page.locator('#dcard .market-tab').count(), 4, `${viewport.name}: NFL missing four markets`);
+        assert.match(await page.locator('#dcard .market-first').textContent(), /Market win probability[\s\S]*De-vigged market[\s\S]*40%[\s\S]*60%/i, `${viewport.name}: NFL detail missing market win percentages`);
         assert.match(await page.locator('#dcard .market-first').textContent(), /63\.7%[\s\S]*284[\s\S]*0\.2241/i, `${viewport.name}: NFL detail lacks measured historical evidence`);
         await page.locator('#dcard .market-tab[data-market-kind="total"]').evaluate(el => el.click());
         assert.match(await page.locator('#dcard .market-first').textContent(), /Auditable historical pregame line[\s\S]*0\s*\/\s*200/i, `${viewport.name}: NFL total gate lacks evidence`);
@@ -505,10 +516,11 @@ try {
     await page.waitForFunction(() => /Team stats[\s\S]*Field goals/i.test(document.querySelector('#dcard')?.textContent || ''));
     const wnbaDetailEn = await page.locator('#dcard').textContent();
     assert.match(wnbaDetailEn, /Gate closed/i, `${viewport.name}: missing honest WNBA gate EN`);
+    assert.match(wnbaDetailEn, /Market win probability[\s\S]*De-vigged market[\s\S]*26\.6%[\s\S]*73\.4%/i, `${viewport.name}: missing WNBA market win percentages EN`);
     assert.match(wnbaDetailEn, /Field goals/i, `${viewport.name}: missing WNBA stat translation EN`);
     assert.doesNotMatch(wnbaDetailEn, /Tiros de campo/i, `${viewport.name}: Spanish WNBA stat leaked into EN`);
     assert.doesNotMatch(wnbaDetailEn, /Modelo|entrenamiento|Marcadores|predicciones/i, `${viewport.name}: Spanish leaked into WNBA EN`);
-    assert.doesNotMatch(wnbaDetailEn, /AA\s*\d+(?:\.\d+)?%/i, `${viewport.name}: unvalidated WNBA prediction became public`);
+    assert.equal(await page.locator('#dcard .market-callout').count(), 0, `${viewport.name}: unvalidated WNBA prediction became public`);
     await page.locator('.ltab[data-lt="brain"]').click();
     await page.locator('#list .sportbrain').waitFor({ state: 'visible' });
     const wnbaBrainEn = await page.locator('#list').textContent();

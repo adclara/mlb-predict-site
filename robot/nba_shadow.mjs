@@ -219,7 +219,7 @@ async function gradeUnifiedMarkets(today) {
       const game = gameFromEvent(event, date);
       if (!String(game._status.name || '').toUpperCase().includes('FINAL') || game.hs == null || game.as == null || game.hs === game.as) continue;
       let result = 'void';
-      if (['winner', 'winner_challenger'].includes(row.market_key) && row.pick) result = (game.hs > game.as ? game.home : game.away) === row.pick ? 'win' : 'loss';
+      if (row.market_key === 'winner' && row.pick) result = (game.hs > game.as ? game.home : game.away) === row.pick ? 'win' : 'loss';
       if (row.market_key === 'total' && ['over', 'under'].includes(row.side) && num(row.line) != null) {
         const actual = game.hs + game.as;
         result = actual === Number(row.line) ? 'push' : ((row.side === 'over') === (actual > Number(row.line)) ? 'win' : 'loss');
@@ -313,7 +313,7 @@ async function main() {
             ? { code: g.home, side: 'home', prob: playerWinner.home_prob, price: homePrice, market: mkt?.pH }
             : { code: g.away, side: 'away', prob: 1 - playerWinner.home_prob, price: awayPrice, market: mkt?.pA };
           await insertUnifiedMarket({
-            date: d, eventId: g._id, marketKey: 'winner_challenger', selectionKey: 'winner:player-aware',
+            date: d, eventId: g._id, marketKey: 'winner', selectionKey: 'winner:player-aware',
             pick: challengerSide.code, side: challengerSide.side, line: null, price: challengerSide.price,
             marketProb: challengerSide.market ?? null, prob: challengerSide.prob,
             edge: challengerSide.market == null ? null : challengerSide.prob - challengerSide.market,
