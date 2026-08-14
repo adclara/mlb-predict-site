@@ -349,6 +349,8 @@ test('WNBA/NFL scoreboard moneylines become factual de-vigged win probabilities 
   const games = compactOtherLiveGames(data);
   assert.equal(games[0].market.home_ml, -325);
   assert.equal(games[0].market.away_ml, 260);
+  assert.equal(games[0].market.probability_source, 'market_devigged');
+  assert.ok(games[0].market.home_prob > .73 && games[0].market.home_prob < .74);
   const probabilities = devigAmericanMoneyline(-325, 260);
   assert.ok(Math.abs(probabilities.home + probabilities.away - 1) < 1e-12);
   assert.ok(probabilities.home > .73 && probabilities.home < .74);

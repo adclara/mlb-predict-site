@@ -1980,7 +1980,14 @@ export function compactOtherLiveGames(data) {
       form: (typeof t.form === 'string' && t.form) ? t.form.slice(0, 6) : null,
       leaders: (() => { const l = leadersOf(t); return l && l.length ? l : null; })(),
     });
-    const market = compactEspnGame(ev).market;
+    const rawMarket = compactEspnGame(ev).market;
+    const deVigged = rawMarket && devigAmericanMoneyline(rawMarket.home_ml, rawMarket.away_ml);
+    const market = deVigged ? {
+      ...rawMarket,
+      home_prob: Math.round(deVigged.home * 10000) / 10000,
+      away_prob: Math.round(deVigged.away * 10000) / 10000,
+      probability_source: 'market_devigged',
+    } : rawMarket;
     return {
       espn_id: ev.id,
       start: ev.date || null,
