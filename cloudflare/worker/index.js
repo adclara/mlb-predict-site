@@ -58,6 +58,8 @@ const MODEL_PUBLISH_WORKFLOW =
   'adclara/aa-sports-models-private/.github/workflows/hourly-shadow.yml@refs/heads/main';
 const GITHUB_OIDC_ISSUER = 'https://token.actions.githubusercontent.com';
 const GITHUB_OIDC_JWKS = `${GITHUB_OIDC_ISSUER}/.well-known/jwks`;
+const GOOGLE_OIDC_DISCOVERY = 'https://accounts.google.com/.well-known/openid-configuration';
+const GOOGLE_OIDC_ISSUERS = new Set(['https://accounts.google.com', 'accounts.google.com']);
 const MODEL_PUBLISH_MAX_BYTES = 512 * 1024;
 const MODEL_PUBLISH_EVENTS = new Set(['push', 'schedule', 'workflow_dispatch']);
 
@@ -617,6 +619,7 @@ export default {
 
     const path = url.pathname.replace(/\/+$/, '') || '/';
     const isAccount = path.startsWith('/v1/auth') || path.startsWith('/v1/me');
+    const isQa = path.startsWith('/v1/qa/');
     const isModelPublish = path === MODEL_PUBLISH_PATH;
 
     // Wrangler puede exponer esta ruta al simular scheduled() en desarrollo.
@@ -624,20 +627,25 @@ export default {
     if (path === '/__scheduled') return json({ error: 'not_found' }, 404, origin);
 
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: isAccount ? credCors(request, env) : cors(origin) });
+      return new Response(null, { status: 204, headers: (isAccount || isQa) ? credCors(request, env) : cors(origin) });
     }
     if (isModelPublish && request.method !== 'POST') {
       return json({ error: 'method_not_allowed' }, 405, origin);
     }
-    if (request.method !== 'GET' && request.method !== 'HEAD' && !isAccount && !isModelPublish) {
+    if (isQa && request.method !== 'GET' && request.method !== 'HEAD') {
+      return credJson({ error: 'method_not_allowed' }, 405, request, env);
+    }
+    if (request.method !== 'GET' && request.method !== 'HEAD' && !isAccount && !isQa && !isModelPublish) {
       return json({ error: 'method_not_allowed' }, 405, origin);
     }
 
     try {
       if (isModelPublish) return await internalModelPublish(request, env, origin);
+      const qaRoute = path.match(/^\/v1\/qa\/(wnba|nfl|ncaaf|nhl|ncaam)\/(today|history|learning|simulation|pipeline-health)$/);
+      if (qaRoute) return await qaSportRoute(url, request, env, qaRoute[1], qaRoute[2]);
       if (path === '/' || path === '/v1' || path === '/v1/health') {
         return json(
-          { service: 'aa-sports-api', ok: true, sports: ['mlb', 'soccer', 'nba', 'wnba', 'tennis', ...Object.keys(US_SPORTS)], routes: ['/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live', '/v1/mlb/pipeline-health', '/v1/:sport/today', '/v1/:sport/live', '/v1/:sport/recent', '/v1/:sport/standings', '/v1/:sport/summary', '/v1/:sport/history', '/v1/:sport/learning', '/v1/:sport/simulation', '/v1/:sport/pipeline-health', '/v1/injuries'] },
+          { service: 'aa-sports-api', ok: true, sports: ['mlb', 'soccer', 'nba', 'wnba', 'tennis', ...Object.keys(US_SPORTS)], routes: ['/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live', '/v1/mlb/pipeline-health', '/v1/:sport/today', '/v1/:sport/live', '/v1/:sport/recent', '/v1/:sport/standings', '/v1/:sport/summary', '/v1/:sport/history', '/v1/:sport/learning', '/v1/:sport/simulation', '/v1/:sport/pipeline-health', '/v1/qa/:sport/:view (authenticated)', '/v1/injuries'] },
           200, origin,
         );
       }
@@ -2288,6 +2296,184 @@ export function sanitizeSportsSimulation(doc, sport) {
   };
 }
 
+// ── QA privado: inspección de predicciones shadow ──────────────────────────
+// D1 conserva la selección medida para validación causal. La API pública la
+// elimina; esta segunda frontera solo la reconstruye para una sesión Google
+// verificada cuyo email figure explícitamente en QA_ALLOWED_EMAILS.
+const QA_SPORTS = new Set(['wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam']);
+
+function qaAllowedEmails(env) {
+  return new Set(String(env?.QA_ALLOWED_EMAILS || '').split(',')
+    .map((email) => email.trim().toLowerCase()).filter(Boolean));
+}
+
+function qaSessionAllowed(session, env) {
+  const allowed = qaAllowedEmails(env);
+  return allowed.size > 0 && session?.email_verified === true
+    && typeof session?.email === 'string' && allowed.has(session.email.toLowerCase());
+}
+
+const qaText = (value, max = 160) => typeof value === 'string' && value ? value.slice(0, max) : null;
+
+export function sanitizeQaMarketRow(row) {
+  const source = row && typeof row === 'object' ? row : {};
+  const out = {};
+  for (const key of ['date', 'event_id', 'market_key', 'selection_key', 'family', 'player_id', 'player_name',
+    'pick', 'side', 'league', 'home', 'away', 'start_time', 'feature_as_of', 'frozen_at', 'status', 'result',
+    'engine_version', 'gate_version', 'updated_at']) {
+    const value = qaText(source[key], key === 'selection_key' ? 140 : 160);
+    if (value != null) out[key] = value;
+  }
+  for (const key of ['line', 'price', 'market_prob', 'prob', 'edge', 'projection']) {
+    const value = finiteMarketNumber(source[key]);
+    if (value != null) out[key] = value;
+  }
+  return out;
+}
+
+function qaEvidenceFor(kind, todayDoc, simulationDoc, learningDoc, rows) {
+  const simulationBlock = kind === 'players'
+    ? Object.values(simulationDoc?.players || {})[0]
+    : simulationDoc?.[kind];
+  const gate = safeMarketGate(
+    todayDoc?.gates?.[kind] || todayDoc?.markets?.[kind]?.gate || simulationBlock?.gate
+      || (kind === 'winner' ? learningDoc?.gate : null), kind,
+  );
+  const sample = safeMarketSample(
+    todayDoc?.samples?.[kind] || todayDoc?.markets?.[kind]?.sample || simulationBlock?.forward
+      || (kind === 'winner' ? learningDoc?.forward : null),
+  ) || { n: rows.length };
+  return { gate: { ...gate, public: false, approved: false, state: 'closed' }, sample };
+}
+
+function qaMarketItem(row, event) {
+  const item = sanitizeQaMarketRow(row);
+  if (row?.market_key === 'winner' && (item.side === 'home' || item.side === 'away')) {
+    const team = event?.[item.side];
+    if (team?.code) item.pick = team.code;
+  }
+  return item;
+}
+
+function qaMarketBlock(kind, rows, evidence, event) {
+  const items = rows.map((row) => qaMarketItem(row, event));
+  if (!items.length) return { state: 'closed', qa: true, ...evidence };
+  return { state: 'qa', qa: true, public: false, ...evidence, ...items[0], items };
+}
+
+async function qaRawDocs(env, sport) {
+  const [todayRaw, learningRaw, simulationRaw] = await Promise.all([
+    env.AA_LATEST.get(`${sport}:today`), env.AA_LATEST.get(`${sport}:learning`), env.AA_LATEST.get(`${sport}:simulation`),
+  ]);
+  const parse = (raw) => { try { return raw ? JSON.parse(raw) : {}; } catch (error) { return {}; } };
+  return { today: parse(todayRaw), learning: parse(learningRaw), simulation: parse(simulationRaw) };
+}
+
+async function qaTodayFacts(env, sport, date, todayDoc) {
+  let facts = (Array.isArray(todayDoc?.events) ? todayDoc.events : [])
+    .filter((event) => !event?.date || event.date === date).map(safeSportEventFacts);
+  if (!facts.length && Object.hasOwn(US_SPORTS, sport)) {
+    try {
+      const row = await env.DB.prepare(
+        'SELECT payload FROM sports_ingest_slots WHERE sport = ? AND date = ? ORDER BY slot_id DESC LIMIT 1',
+      ).bind(sport, date).first();
+      if (row?.payload) facts = (JSON.parse(row.payload)?.games || []).map(safeSportEventFacts);
+    } catch (error) { /* facts are optional; measured D1 rows still remain auditable */ }
+  }
+  return facts;
+}
+
+async function qaToday(env, sport, request) {
+  const date = etDate(new Date());
+  const docs = await qaRawDocs(env, sport);
+  let rows = [];
+  try {
+    const result = await env.DB.prepare(
+      `SELECT date,event_id,market_key,selection_key,family,player_id,player_name,pick,side,line,price,
+              market_prob,prob,edge,projection,league,home,away,start_time,feature_as_of,frozen_at,
+              status,result,engine_version,gate_version,updated_at
+       FROM sport_market_predictions
+       WHERE sport = ? AND date = ? AND public_scope = 'shadow' AND human_approved = 0 AND invalidated = 0
+       ORDER BY start_time ASC, event_id ASC, market_key ASC, selection_key ASC LIMIT 1000`,
+    ).bind(sport, date).all();
+    rows = result?.results || [];
+  } catch (error) { /* migration/storage outage: return a measured empty state */ }
+
+  const facts = await qaTodayFacts(env, sport, date, docs.today);
+  const byId = new Map(facts.map((event) => [String(event.espn_id || event.event_id || event.id || ''), event]));
+  for (const row of rows) {
+    const key = String(row.event_id || '');
+    if (!byId.has(key)) byId.set(key, safeSportEventFacts({
+      event_id: key, espn_id: key, date: row.date, start: row.start_time, status: row.status,
+      home: { code: row.home, name: row.home }, away: { code: row.away, name: row.away },
+    }));
+  }
+  const events = [...byId.values()].map((event) => {
+    const id = String(event.espn_id || event.event_id || event.id || '');
+    const eventRows = rows.filter((row) => String(row.event_id) === id);
+    const grouped = {
+      winner: eventRows.filter((row) => row.market_key === 'winner'),
+      total: eventRows.filter((row) => row.market_key === 'total'),
+      players: eventRows.filter((row) => row.market_key === 'player_prop'),
+      combos: eventRows.filter((row) => row.market_key === 'combo'),
+    };
+    const markets = Object.fromEntries(MARKET_KINDS.map((kind) => [kind, qaMarketBlock(
+      kind, grouped[kind], qaEvidenceFor(kind, docs.today, docs.simulation, docs.learning, grouped[kind]), event,
+    )]));
+    const winner = markets.winner.state === 'qa' ? markets.winner : null;
+    return { ...event, markets, prediction: winner ? {
+      pick: winner.pick || null, side: winner.side || null, prob: winner.prob ?? null,
+      line: winner.line ?? null, price: winner.price ?? null, edge: winner.edge ?? null,
+      engine_version: winner.engine_version || null, qa: true,
+    } : null };
+  });
+  const markets = Object.fromEntries(MARKET_KINDS.map((kind) => {
+    const kindRows = rows.filter((row) => row.market_key === (kind === 'players' ? 'player_prop' : kind === 'combos' ? 'combo' : kind));
+    return [kind, qaMarketBlock(kind, kindRows, qaEvidenceFor(kind, docs.today, docs.simulation, docs.learning, kindRows), null)];
+  }));
+  return credJson({
+    schema: 'aa_qa_shadow_today_v1', qa: true, public: false, scope: 'shadow', sport, date,
+    updated_at: docs.today?.updated_at || rows[0]?.updated_at || null, row_count: rows.length,
+    markets, events, top2: [], training: true,
+  }, 200, request, env);
+}
+
+async function qaHistory(url, env, sport, request) {
+  const days = Math.min(365, Math.max(1, parseInt(url.searchParams.get('days') || '30', 10) || 30));
+  const cutoff = new Date(); cutoff.setUTCDate(cutoff.getUTCDate() - days);
+  let rows = [];
+  try {
+    const result = await env.DB.prepare(
+      `SELECT date,event_id,market_key,selection_key,family,player_id,player_name,pick,side,line,price,
+              market_prob,prob,edge,projection,league,home,away,start_time,feature_as_of,frozen_at,
+              status,result,engine_version,gate_version,updated_at
+       FROM sport_market_predictions
+       WHERE sport = ? AND date >= ? AND public_scope = 'shadow' AND human_approved = 0 AND invalidated = 0
+       ORDER BY date DESC,start_time DESC,market_key ASC,selection_key ASC LIMIT 1000`,
+    ).bind(sport, cutoff.toISOString().slice(0, 10)).all();
+    rows = (result?.results || []).map(sanitizeQaMarketRow);
+  } catch (error) { /* explicit empty state below */ }
+  return credJson({ schema: 'aa_qa_shadow_history_v1', qa: true, public: false, scope: 'shadow', sport, days, count: rows.length, predictions: rows }, 200, request, env);
+}
+
+async function qaSportRoute(url, request, env, sport, action) {
+  if (!QA_SPORTS.has(sport)) return credJson({ error: 'not_found' }, 404, request, env);
+  const session = await sessionUser(request, env);
+  if (!session) return credJson({ error: 'qa_auth_required' }, 401, request, env);
+  if (!qaSessionAllowed(session, env)) return credJson({ error: 'qa_forbidden' }, 403, request, env);
+  if (action === 'today') return qaToday(env, sport, request);
+  if (action === 'history') return qaHistory(url, env, sport, request);
+  const docs = await qaRawDocs(env, sport);
+  if (action === 'learning') return credJson({ ...sanitizeModelPublisherLearning(docs.learning, sport), qa: true, public: false }, 200, request, env);
+  if (action === 'simulation') return credJson({ ...sanitizeSportsSimulation(docs.simulation, sport), qa: true, public: false }, 200, request, env);
+  if (action === 'pipeline-health') {
+    const latest = [docs.today?.updated_at, docs.learning?.updated_at, docs.simulation?.generated_at].filter(Boolean).sort().at(-1) || null;
+    const ageSeconds = latest && Number.isFinite(Date.parse(latest)) ? Math.max(0, Math.floor((Date.now() - Date.parse(latest)) / 1000)) : null;
+    return credJson({ qa: true, public: false, sport, state: latest ? 'available' : 'empty', latest_at: latest, age_seconds: ageSeconds }, 200, request, env);
+  }
+  return credJson({ error: 'not_found' }, 404, request, env);
+}
+
 function base64UrlBytes(value) {
   const source = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
   const padded = source + '='.repeat((4 - (source.length % 4)) % 4);
@@ -2351,6 +2537,64 @@ export async function verifyGithubModelPublisher(token, fetcher = fetch, nowMs =
   if (typeof claims?.jti !== 'string' || claims.jti.length < 8 || !/^[0-9a-f]{40}$/i.test(String(claims?.sha || ''))) {
     throw oidcFailure('identity');
   }
+  return claims;
+}
+
+// Google ID tokens protect both the optional account and the privileged QA
+// view. Verifying only the decoded payload would let an attacker forge a JWT;
+// this follows Google's discovery/JWKS flow and validates the OIDC claims.
+export async function verifyGoogleIdToken(token, clientId, expectedNonce, fetcher = fetch, nowMs = Date.now()) {
+  if (typeof token !== 'string' || token.length < 100 || token.length > 16000) throw oidcFailure('google_token_shape');
+  const parts = token.split('.');
+  if (parts.length !== 3) throw oidcFailure('google_token_shape');
+  let header, claims;
+  try { header = jwtJson(parts[0]); claims = jwtJson(parts[1]); }
+  catch (error) { throw oidcFailure('google_token_json'); }
+  if (header?.alg !== 'RS256' || typeof header?.kid !== 'string' || !header.kid) throw oidcFailure('google_header');
+
+  const discoveryResponse = await fetcher(GOOGLE_OIDC_DISCOVERY, {
+    headers: { accept: 'application/json', 'user-agent': 'aa-sports-worker/google-oidc' },
+    cf: { cacheTtl: 3600, cacheEverything: true },
+  });
+  if (!discoveryResponse?.ok) throw oidcFailure('google_discovery_http');
+  const discovery = await discoveryResponse.json();
+  if (!GOOGLE_OIDC_ISSUERS.has(discovery?.issuer) || typeof discovery?.jwks_uri !== 'string') {
+    throw oidcFailure('google_discovery');
+  }
+  let jwksUrl;
+  try { jwksUrl = new URL(discovery.jwks_uri); } catch (error) { throw oidcFailure('google_jwks_url'); }
+  if (jwksUrl.protocol !== 'https:' || !['www.googleapis.com', 'accounts.google.com'].includes(jwksUrl.hostname)) {
+    throw oidcFailure('google_jwks_url');
+  }
+  const jwksResponse = await fetcher(jwksUrl.toString(), {
+    headers: { accept: 'application/json', 'user-agent': 'aa-sports-worker/google-oidc' },
+    cf: { cacheTtl: 3600, cacheEverything: true },
+  });
+  if (!jwksResponse?.ok) throw oidcFailure('google_jwks_http');
+  const jwks = await jwksResponse.json();
+  const jwk = Array.isArray(jwks?.keys)
+    ? jwks.keys.find((key) => key?.kid === header.kid && key?.kty === 'RSA' && (!key.use || key.use === 'sig'))
+    : null;
+  if (!jwk) throw oidcFailure('google_key');
+  let cryptoKey;
+  try {
+    cryptoKey = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+  } catch (error) { throw oidcFailure('google_key_import'); }
+  const verified = await crypto.subtle.verify(
+    'RSASSA-PKCS1-v1_5', cryptoKey, base64UrlBytes(parts[2]),
+    new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
+  );
+  if (!verified) throw oidcFailure('google_signature');
+
+  const now = Math.floor(nowMs / 1000);
+  const audience = Array.isArray(claims?.aud) ? claims.aud : [claims?.aud];
+  if (!GOOGLE_OIDC_ISSUERS.has(claims?.iss) || !audience.includes(clientId)) throw oidcFailure('google_issuer_audience');
+  if (claims?.azp && claims.azp !== clientId) throw oidcFailure('google_azp');
+  if (!Number.isFinite(claims?.exp) || claims.exp <= now - 30) throw oidcFailure('google_expired');
+  if (!Number.isFinite(claims?.iat) || claims.iat > now + 60 || claims.iat < now - 7200) throw oidcFailure('google_issued_at');
+  if (typeof claims?.sub !== 'string' || !claims.sub) throw oidcFailure('google_sub');
+  if (typeof expectedNonce !== 'string' || !expectedNonce || claims?.nonce !== expectedNonce) throw oidcFailure('google_nonce');
+  if (claims?.email && claims.email_verified !== true) throw oidcFailure('google_email_unverified');
   return claims;
 }
 
@@ -3184,24 +3428,40 @@ async function sessionUser(request, env) {
 }
 
 // — flujo OAuth de Google —
+function safeReturnTo(value, env) {
+  const fallback = siteOrigin(env);
+  if (!value) return fallback;
+  try {
+    const candidate = new URL(value);
+    const base = new URL(fallback);
+    const legacy = candidate.host === LEGACY_HOST || candidate.host.endsWith(`.${LEGACY_HOST}`);
+    const own = candidate.host === base.host || candidate.host.endsWith(`.${base.host}`);
+    const local = candidate.protocol === 'http:' && (candidate.hostname === 'localhost' || candidate.hostname === '127.0.0.1');
+    return ((candidate.protocol === 'https:' && (own || legacy)) || local) ? candidate.toString() : fallback;
+  } catch (error) { return fallback; }
+}
+
 function authStart(url, env) {
   if (!authEnabled(env)) return new Response('auth no configurado', { status: 503 });
   const redirect = `${url.origin}/v1/auth/callback`;
   const state = crypto.randomUUID();
+  const nonce = crypto.randomUUID();
+  const returnTo = safeReturnTo(url.searchParams.get('return_to'), env);
   const auth = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   auth.searchParams.set('client_id', env.GOOGLE_CLIENT_ID);
   auth.searchParams.set('redirect_uri', redirect);
   auth.searchParams.set('response_type', 'code');
   auth.searchParams.set('scope', 'openid email profile');
   auth.searchParams.set('state', state);
+  auth.searchParams.set('nonce', nonce);
   auth.searchParams.set('prompt', 'select_account');
+  const headers = new Headers({ location: auth.toString() });
+  headers.append('set-cookie', `aa_state=${state}; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=None`);
+  headers.append('set-cookie', `aa_nonce=${nonce}; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=None`);
+  headers.append('set-cookie', `aa_return=${encodeURIComponent(returnTo)}; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=None`);
   return new Response(null, {
     status: 302,
-    headers: {
-      location: auth.toString(),
-      // cookie corta anti-CSRF para validar el state al volver
-      'set-cookie': `aa_state=${state}; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=None`,
-    },
+    headers,
   });
 }
 
@@ -3222,11 +3482,12 @@ async function authCallback(url, request, env) {
   });
   const tok = await tokRes.json().catch(() => ({}));
   if (!tokRes.ok || !tok.id_token) return new Response('login falló (token)', { status: 502 });
-  // id_token llega directo de Google por TLS en el canal servidor-a-servidor
   let claims;
-  try { claims = JSON.parse(b64urlToStr(tok.id_token.split('.')[1])); }
-  catch (e) { return new Response('login falló (claims)', { status: 502 }); }
-  if (!claims.sub) return new Response('login falló (sub)', { status: 502 });
+  try { claims = await verifyGoogleIdToken(tok.id_token, env.GOOGLE_CLIENT_ID, getCookie(request, 'aa_nonce')); }
+  catch (error) {
+    console.warn(JSON.stringify({ message: 'google oidc rejected', reason: String(error?.message || error) }));
+    return new Response('login falló (verificación)', { status: 502 });
+  }
 
   await env.DB.prepare(
     `INSERT INTO users (provider, provider_id, email, name, picture, created_at)
@@ -3237,11 +3498,16 @@ async function authCallback(url, request, env) {
 
   const token = await makeToken(env, {
     uid: row.id, name: claims.name || null, pic: claims.picture || null, email: claims.email || null,
+    email_verified: claims.email_verified === true,
     exp: Math.floor(Date.now() / 1000) + SESSION_DAYS * 86400,
   });
-  const headers = new Headers({ location: siteOrigin(env) });
+  let returnTo = siteOrigin(env);
+  try { returnTo = safeReturnTo(decodeURIComponent(getCookie(request, 'aa_return') || ''), env); } catch (error) { /* fallback */ }
+  const headers = new Headers({ location: returnTo });
   headers.append('set-cookie', sessionCookie(token, SESSION_DAYS * 86400));
   headers.append('set-cookie', 'aa_state=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=None');
+  headers.append('set-cookie', 'aa_nonce=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=None');
+  headers.append('set-cookie', 'aa_return=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=None');
   return new Response(null, { status: 302, headers });
 }
 
@@ -3252,7 +3518,10 @@ function authLogout(request, env) {
 async function me(request, env) {
   if (!authEnabled(env)) return credJson({ enabled: false, user: null }, 200, request, env);
   const s = await sessionUser(request, env);
-  return credJson({ enabled: true, user: s ? { name: s.name, email: s.email, pic: s.pic } : null }, 200, request, env);
+  return credJson({
+    enabled: true, user: s ? { name: s.name, email: s.email, pic: s.pic } : null,
+    qa: qaSessionAllowed(s, env), qa_configured: qaAllowedEmails(env).size > 0,
+  }, 200, request, env);
 }
 
 async function meFavs(request, env) {

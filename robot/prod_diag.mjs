@@ -137,6 +137,14 @@ try {
 console.log('\n== Contrato de mercados WNBA/NFL (4 módulos, fail-closed) ==');
 await diagnoseMarkets('wnba');
 await diagnoseMarkets('nfl');
+console.log('\n== Frontera QA privada (anónimo nunca ve shadow) ==');
+const qaApi = await get(`${API}/v1/qa/nfl/today`);
+const qaSite = await get('https://qa.aasport.net/?prod-diag=1');
+const qaApiClosed = qaApi.status === 401;
+const qaSiteReady = qaSite.status === 200 && qaSite.text.includes('qaRequested') && qaSite.text.includes('qaBanner');
+console.log(qaApiClosed ? '✅ API QA exige sesión autenticada (401)' : `❌ API QA anónima respondió ${qaApi.status}`);
+console.log(qaSiteReady ? '✅ qa.aasport.net sirve la interfaz QA' : `⚠️ qa.aasport.net aún propagando (status ${qaSite.status})`);
+if (!qaApiClosed) marketContractFailures++;
 console.log('\n== /v1/poly/radar + /v1/poly/alerts (Radar de wallets) ==');
 const pr = await get(`${API}/v1/poly/radar`);
 try {

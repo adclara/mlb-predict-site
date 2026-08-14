@@ -1021,6 +1021,9 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .authbtn:hover{border-color:rgba(255,255,255,.3)}
 .authbtn img{width:20px;height:20px;border-radius:50%}
 .authbtn .afall{width:20px;height:20px;border-radius:50%;background:var(--grad);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#0B0E14}
+.qa-banner{display:flex;align-items:center;justify-content:center;gap:10px;min-height:42px;padding:9px 18px;background:linear-gradient(90deg,rgba(255,197,61,.14),rgba(255,77,28,.1));border-bottom:1px solid rgba(255,197,61,.28);color:#F8E7B0;font-size:12.5px;font-weight:700;text-align:center}
+.qa-banner[hidden]{display:none}.qa-banner b{color:#FFC53D;letter-spacing:.08em}.qa-banner button{border:1px solid rgba(255,197,61,.4);border-radius:999px;background:rgba(0,0,0,.18);color:#FFF3CE;padding:5px 10px;font:inherit;cursor:pointer}
+.qa-badge{display:inline-flex;margin:0 0 8px;padding:3px 7px;border-radius:999px;background:rgba(255,197,61,.12);border:1px solid rgba(255,197,61,.3);color:#FFC53D;font-size:10px;font-weight:900;letter-spacing:.08em}
 .authmenu{position:absolute;top:calc(100% + 8px);right:0;min-width:230px;background:var(--panel,#12161f);border:1px solid var(--hair-2);border-radius:12px;padding:10px;z-index:300;box-shadow:0 16px 40px rgba(0,0,0,.5)}
 .authmenu .am-name{font-size:13.5px;font-weight:800}
 .authmenu .am-mail{font-size:11.5px;color:var(--faint);margin-bottom:8px;word-break:break-all}
@@ -1284,6 +1287,8 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   </div>
 </header>
 
+<div class="qa-banner" id="qaBanner" hidden></div>
+
 <div class="ticker" id="ticker" hidden><div class="tk" id="tk"></div></div>
 
 <nav class="sports" aria-label="Deportes" data-i18n-aria="aria_sports">
@@ -1527,6 +1532,9 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 <script>
 'use strict';
 const API = 'https://aa-sports-api.opsmira9.workers.dev';
+const qaRequested = /^qa\./i.test(location.hostname) || new URLSearchParams(location.search).get('qa') === '1';
+let qaMode = false;
+let qaConfigured = false;
 
 /* ── i18n: Español / English ─────────────────────────────────
    lang guía t(k) (textos), LOCALE (fechas/números) y applyI18n()
@@ -1554,8 +1562,9 @@ const T = {
     back_games: 'Partidos', sport_baseball: 'Baseball', sport_tennis: 'Tenis', sport_ncaaf: 'Fútbol College', sport_ncaam: 'Basket College',
     sport_training_gate: 'Entrenamiento · gate cerrado', sport_top2: 'Top 2 AA · mayor confianza',
     market_compare: 'Comparador de mercados', market_winner: 'Ganador', market_total: 'Total', market_players: 'Jugadores', market_combos: 'Combos',
-    market_gate_closed: 'Gate cerrado', market_gate_public: 'Público', market_prob_title: 'Probabilidad de victoria', market_prob_aa: 'Modelo AA validado', market_prob_espn: 'ESPN · probabilidad en vivo', market_balance: 'Línea de equilibrio: 50%',
+    market_gate_closed: 'Gate cerrado', market_gate_public: 'Público', market_gate_qa: 'QA sombra', market_prob_title: 'Probabilidad de victoria', market_prob_aa: 'Modelo AA validado', market_prob_qa: 'Modelo AA en validación · no público', market_prob_espn: 'ESPN · probabilidad en vivo', market_balance: 'Línea de equilibrio: 50%',
     market_only_measured: 'Solo publicamos mercados medidos', market_locked_title: 'Este mercado sigue en validación', market_sample: 'Muestra forward', market_dates: 'fechas', market_pending_sample: 'Muestra en construcción', market_public_info: 'Señal informativa medida · tú decides', o_box_score: 'Estadísticas por jugador',
+    qa_banner_active: 'QA PRIVADO · predicciones sombra medidas; no están publicadas ni aprobadas', qa_banner_login: 'QA privado · inicia sesión con la cuenta autorizada', qa_banner_denied: 'Esta cuenta no tiene acceso al QA privado', qa_login: 'Entrar a QA', qa_menu_badge: 'QA autorizado', qa_signal_count: 'señales sombra medidas', qa_honesty: 'Vista de validación privada · gate público cerrado',
     gate_reason_forward_validation_pending: 'Falta completar la muestra forward y sus fechas mínimas.', gate_reason_winner_forward_validation_pending: 'El ganador continúa acumulando resultados forward antes de publicarse.', gate_reason_total_forward_validation_pending: 'El modelo de totales se valida por separado con líneas pregame reales.', gate_reason_players_forward_validation_pending: 'Cada familia de props necesita 200 observaciones forward y líneas auditables.', gate_reason_combos_forward_validation_pending: 'Los combos requieren 100 resultados conjuntos y dos selecciones individuales ya públicas.', gate_reason_forward_sample_pending: 'La muestra forward todavía no llega al mínimo.', gate_reason_forward_calibration_pending: 'La calibración forward todavía no pasa el límite.', gate_reason_market_benchmark_pending: 'Falta demostrar no inferioridad frente al mercado real.', gate_reason_human_approval_pending: 'La evidencia pasó; falta aprobación humana explícita.', gate_reason_historical_gate_failed: 'La validación histórica todavía no pasa el gate.', gate_reason_learning_snapshot_pending: 'El snapshot medido del Cerebro aún se está publicando.', gate_reason_market_lines_unavailable: 'No hay cobertura histórica auditable de línea y precio pregame; por eso no se autoriza Alta/Baja.', gate_reason_player_boxscore_backfill_pending: 'El backfill causal de box scores por jugadora aún está en construcción.', gate_reason_individual_markets_not_public: 'Un combo no puede abrir hasta que sus dos selecciones individuales sean públicas.',
     nfl_passing: 'Pase', nfl_rushing: 'Carrera', nfl_receiving: 'Recepciones', nfl_defensive: 'Defensa',
     foot: '<b>AA Sports</b> — inteligencia deportiva basada en datos. Publicamos predicciones del algoritmo AA, métricas y resúmenes para que decidas informado. No somos casa de apuestas, no tomamos dinero y no colocamos apuestas. Si decides jugar, hazlo con responsabilidad (18/21+). Los resultados pasados no garantizan resultados futuros.',
@@ -1741,8 +1750,9 @@ const T = {
     back_games: 'Games', sport_baseball: 'Baseball', sport_tennis: 'Tennis', sport_ncaaf: 'College Football', sport_ncaam: 'College Basketball',
     sport_training_gate: 'Training · gate closed', sport_top2: 'AA Top 2 · highest confidence',
     market_compare: 'Market comparator', market_winner: 'Winner', market_total: 'Total', market_players: 'Players', market_combos: 'Combos',
-    market_gate_closed: 'Gate closed', market_gate_public: 'Public', market_prob_title: 'Win probability', market_prob_aa: 'Validated AA model', market_prob_espn: 'ESPN · live probability', market_balance: 'Neutral line: 50%',
+    market_gate_closed: 'Gate closed', market_gate_public: 'Public', market_gate_qa: 'Shadow QA', market_prob_title: 'Win probability', market_prob_aa: 'Validated AA model', market_prob_qa: 'AA model under validation · not public', market_prob_espn: 'ESPN · live probability', market_balance: 'Neutral line: 50%',
     market_only_measured: 'We only publish measured markets', market_locked_title: 'This market remains under validation', market_sample: 'Forward sample', market_dates: 'dates', market_pending_sample: 'Sample in progress', market_public_info: 'Measured informational signal · you decide', o_box_score: 'Box score',
+    qa_banner_active: 'PRIVATE QA · measured shadow predictions; not published or approved', qa_banner_login: 'Private QA · sign in with the authorized account', qa_banner_denied: 'This account does not have private QA access', qa_login: 'Enter QA', qa_menu_badge: 'QA authorized', qa_signal_count: 'measured shadow signals', qa_honesty: 'Private validation view · public gate remains closed',
     gate_reason_forward_validation_pending: 'The minimum forward sample and dates are not complete yet.', gate_reason_winner_forward_validation_pending: 'The winner model is still accumulating forward results before publication.', gate_reason_total_forward_validation_pending: 'The totals model is validated separately with real pregame lines.', gate_reason_players_forward_validation_pending: 'Each prop family needs 200 forward observations and auditable lines.', gate_reason_combos_forward_validation_pending: 'Combos need 100 jointly graded results and two already-public individual selections.', gate_reason_forward_sample_pending: 'The forward sample has not reached its minimum.', gate_reason_forward_calibration_pending: 'Forward calibration has not passed its limit yet.', gate_reason_market_benchmark_pending: 'Non-inferiority against the real market is not demonstrated yet.', gate_reason_human_approval_pending: 'The evidence passed; explicit human approval is still required.', gate_reason_historical_gate_failed: 'Historical validation has not passed the gate yet.', gate_reason_learning_snapshot_pending: 'The measured Brain snapshot is still being published.', gate_reason_market_lines_unavailable: 'Auditable historical pregame line and price coverage is missing, so no Over/Under signal is authorized.', gate_reason_player_boxscore_backfill_pending: 'The causal player box-score backfill is still being built.', gate_reason_individual_markets_not_public: 'A combo cannot open until both individual selections are public.',
     nfl_passing: 'Passing', nfl_rushing: 'Rushing', nfl_receiving: 'Receiving', nfl_defensive: 'Defense',
     foot: '<b>AA Sports</b> — data-driven sports intelligence. We publish AA algorithm predictions, metrics and summaries so you decide informed. We are not a sportsbook, we take no money and we place no bets. If you choose to play, do it responsibly (18/21+). Past results do not guarantee future results.',
@@ -1966,7 +1976,7 @@ function setLang(l){
   localStorage.setItem('aa_lang', lang);
   applyI18n();
   // renderAuth y renderRecord viven fuera del re-render normal → hay que llamarlos aquí
-  try { renderAll(); if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); } renderAuth(); renderRecord(); } catch(e){}
+  try { renderAll(); if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); } renderAuth(); renderQaBanner(); renderRecord(); } catch(e){}
 }
 
 /* ── equipos ─────────────────────────────────────────────── */
@@ -2092,15 +2102,35 @@ async function loadInjuries(){
 let me2 = null;           // {name,email,pic} o null
 let authOn = false;       // el Worker tiene el login configurado
 let favPushTimer = null;
+const authHref = () => `${API}/v1/auth/google?return_to=${encodeURIComponent(location.href)}`;
+function renderQaBanner(){
+  const banner = $('qaBanner');
+  if (!banner || !qaRequested){ if (banner) banner.hidden = true; return; }
+  banner.hidden = false;
+  if (qaMode){ banner.innerHTML = `<b>QA</b><span>${t('qa_banner_active')}</span>`; return; }
+  if (!me2){
+    banner.innerHTML = `<span>${t('qa_banner_login')}</span><button id="qaLogin">${t('qa_login')}</button>`;
+    const button = $('qaLogin'); if (button) button.onclick = () => { location.href = authHref(); };
+    return;
+  }
+  banner.innerHTML = `<b>QA</b><span>${t('qa_banner_denied')}</span>`;
+}
 async function loadMe(){
   try{
     const r = await fetch(API + '/v1/me', { credentials: 'include' });
     const d = await r.json();
+    const wasQa = qaMode;
     authOn = !!d.enabled;
     me2 = d.user || null;
+    qaConfigured = !!d.qa_configured;
+    qaMode = !!(qaRequested && d.qa);
     renderAuth();
+    renderQaBanner();
     if (me2) await syncFavs();
-  }catch(err){ renderAuth(); }
+    if (qaMode !== wasQa && !['mlb', 'radar'].includes(sport)){
+      sportModelDocs.delete(sport); sportLearningDocs.delete(sport); loadOther();
+    }
+  }catch(err){ renderAuth(); renderQaBanner(); }
 }
 // Récord del algoritmo (#record + #recNums). Vive fuera del re-render normal, así que
 // cacheamos el dato (lastRec) y lo repintamos con t() desde loadToday y desde setLang.
@@ -2130,7 +2160,7 @@ function renderAuth(){
     box.innerHTML = `<button class="authbtn" id="loginbtn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></svg>
       ${t('auth_login')}</button>`;
-    $('loginbtn').onclick = () => { location.href = API + '/v1/auth/google'; };
+    $('loginbtn').onclick = () => { location.href = authHref(); };
     return;
   }
   const ini = (me2.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
@@ -2140,6 +2170,7 @@ function renderAuth(){
     <div class="authmenu" id="authmenu" hidden>
       <div class="am-name">${esc(me2.name || '')}</div>
       <div class="am-mail">${esc(me2.email || '')}</div>
+      ${qaMode ? `<div class="qa-badge">${t('qa_menu_badge')}</div>` : ''}
       <button id="alogout">${t('auth_logout')}</button>
       <button id="adelete" class="danger">${t('auth_delete')}</button>
       <div class="am-note">${t('auth_note')}</div>
@@ -2147,12 +2178,12 @@ function renderAuth(){
   $('userbtn').onclick = () => { $('authmenu').hidden = !$('authmenu').hidden; };
   $('alogout').onclick = async () => {
     try{ await fetch(API + '/v1/auth/logout', { credentials: 'include' }); }catch(e){}
-    me2 = null; renderAuth();
+    me2 = null; qaMode = false; renderAuth(); renderQaBanner();
   };
   $('adelete').onclick = async () => {
     if (!confirm(t('auth_del_confirm'))) return;
     try{ await fetch(API + '/v1/me/delete', { method: 'POST', credentials: 'include' }); }catch(e){}
-    me2 = null; renderAuth();
+    me2 = null; qaMode = false; renderAuth(); renderQaBanner();
   };
 }
 // fusiona favoritos locales + servidor (unión) y sube el resultado
@@ -2386,7 +2417,8 @@ async function loadLearning(){
   if (sportLearningLoading.has(target)) return;
   sportLearningLoading.add(target);
   try{
-    const r = await fetch(`${API}/v1/${encodeURIComponent(target)}/learning`);
+    const qaTarget = qaMode && ['wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(target);
+    const r = await fetch(`${API}${qaTarget ? '/v1/qa/' : '/v1/'}${encodeURIComponent(target)}/learning`, qaTarget ? { credentials: 'include' } : undefined);
     if (!r.ok) throw new Error('sport learning');
     sportLearningDocs.set(target, await r.json());
   }catch(err){ sportLearningDocs.set(target, { note: 'err' }); }
@@ -2919,8 +2951,9 @@ function measuredMarketBlock(block, kind, fallbackSample, fallbackGate){
   const b = block && typeof block === 'object' ? block : {};
   const gate = b.gate && typeof b.gate === 'object' ? b.gate : (fallbackGate || {});
   const isPublic = b.state === 'public' && gate.passed === true && gate.approved === true && gate.public === true;
+  const isQa = qaMode && b.state === 'qa' && b.qa === true;
   return {
-    ...b, state: isPublic ? 'public' : 'closed',
+    ...b, state: isPublic ? 'public' : isQa ? 'qa' : 'closed',
     gate: { ...gate, passed: gate.passed === true, approved: gate.approved === true, public: gate.public === true,
       reason: gate.reason || `${kind}_forward_validation_pending` },
     sample: b.sample || fallbackSample || null,
@@ -2989,21 +3022,22 @@ function marketComparator({ activeSport, blocks, away, home, awayPct, homePct, l
   const labels = { winner: 'market_winner', total: 'market_total', players: 'market_players', combos: 'market_combos' };
   const tabs = MARKET_KEYS.map((kind) => {
     const publicState = normalized[kind].state === 'public';
+    const qaState = normalized[kind].state === 'qa';
     return `<button class="market-tab ${selected === kind ? 'on' : ''}" data-market-kind="${kind}" role="tab" aria-selected="${selected === kind}">
-      <b>${t(labels[kind])}</b><small>${publicState ? t('market_gate_public') : t('market_gate_closed')}</small></button>`;
+      <b>${t(labels[kind])}</b><small>${publicState ? t('market_gate_public') : qaState ? t('market_gate_qa') : t('market_gate_closed')}</small></button>`;
   }).join('');
   let body;
-  if (block.state !== 'public') body = gatePanel(block, selected, activeSport);
+  if (!['public', 'qa'].includes(block.state)) body = gatePanel(block, selected, activeSport);
   else if (selected === 'winner' && awayPct != null && homePct != null) {
     const pickName = pick ? (pick === home.code || canon(pick) === canon(home.code) ? oName(home) : oName(away)) : '';
     const pickPct = pickName ? (canon(pick) === canon(home.code) ? homePct : awayPct) : null;
-    body = `<div class="market-panel-head"><h3>${t('market_prob_title')} (${source === 'espn' ? 'ESPN' : 'AA'})</h3><p>${source === 'espn' ? t('market_prob_espn') : t('market_prob_aa')}</p></div>
+    body = `<div class="market-panel-head"><h3>${t('market_prob_title')} (${source === 'espn' ? 'ESPN' : source === 'qa' ? 'AA · QA' : 'AA'})</h3><p>${source === 'espn' ? t('market_prob_espn') : source === 'qa' ? t('market_prob_qa') : t('market_prob_aa')}</p></div>
       ${probabilityColumns({ away, home, awayPct, homePct, logo })}
       ${source !== 'espn' && pickName && pickPct != null ? `<div class="market-callout"><span class="aa">AA</span><b>${esc(pickName)} ${Number(pickPct).toFixed(Number(pickPct) % 1 ? 1 : 0)}%</b>${risk ? `<span>·</span><span class="risk">${t('bol_risk')}: ${esc(risk)}</span>` : ''}</div>` : ''}`;
   } else body = publicMarketItems(block);
   return `<section class="market-first" aria-label="${t('market_compare')}">
     <div class="market-tabs" role="tablist">${tabs}</div><div class="market-panel" role="tabpanel">${body}${selected === 'winner' && supplemental ? `<div class="market-supplement">${supplemental}</div>` : ''}</div>
-    <div class="market-honesty">${t('market_only_measured')} · ${t('market_public_info')}</div>
+    <div class="market-honesty">${qaMode ? t('qa_honesty') : `${t('market_only_measured')} · ${t('market_public_info')}`}</div>
   </section>`;
 }
 
@@ -3707,14 +3741,17 @@ async function loadOther(){
     otherGames = d.games || [];
     if (['wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
       try{
-        const mr = await fetch(`${API}/v1/${sport}/today`);
+        const qaTarget = qaMode;
+        const mr = await fetch(`${API}${qaTarget ? '/v1/qa/' : '/v1/'}${sport}/today`, qaTarget ? { credentials: 'include' } : undefined);
+        if (!mr.ok) throw new Error(`model today ${mr.status}`);
         const md = await mr.json();
         sportModelDocs.set(sport, md);
         const byId = new Map((md.events || []).map(e => [String(e.espn_id || e.event_id || e.id), e]));
-        otherGames = otherGames.map(g => {
+        if (otherGames.length) otherGames = otherGames.map(g => {
           const model = byId.get(String(g.espn_id));
           return model ? { ...g, prediction: model.prediction || null, markets: model.markets || md.markets || null } : { ...g, markets: md.markets || null };
         });
+        else if (qaTarget) otherGames = (md.events || []).map(g => ({ ...g, espn_id: g.espn_id || g.event_id || g.id }));
       }catch(e){ sportModelDocs.delete(sport); }
     }
     otherRecent = false;
@@ -3733,7 +3770,7 @@ async function loadOther(){
   // link compartido ?sc=<id>: selecciona ese partido si está en la lista
   if (pendingOther){ const hit = otherGames.find(x => String(x.espn_id) === String(pendingOther)); if (hit){ otherSel = hit.espn_id; } pendingOther = null; }
   loadStandings();
-  if (['wnba', 'nfl'].includes(sport)) loadLearning();
+  if (['wnba', 'nfl'].includes(sport) || (qaMode && ['ncaaf', 'nhl', 'ncaam'].includes(sport))) loadLearning();
   if (sport === 'soccer') loadSoccerPreds();
   if (sport !== 'mlb') renderAll();
 }
@@ -3748,6 +3785,10 @@ function usPredFor(g){
 function top2Banner(){
   if (!['wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return '';
   const doc = sportModelDocs.get(sport);
+  if (qaMode && doc?.qa){
+    const n = Number(doc.row_count || 0);
+    return `<div class="recentnote"><b>🧪 QA</b> · <span class="num">${n}</span> ${t('qa_signal_count')}</div>`;
+  }
   const picks = Array.isArray(doc?.top2) ? doc.top2.slice(0, 2) : [];
   if (!picks.length) return `<div class="recentnote">🧪 ${t('sport_training_gate')}</div>`;
   return `<div class="recentnote"><b>🎯 ${t('sport_top2')}</b> · ${picks.map(p => `${esc(p.pick)}${p.line != null ? ` ${esc(p.line)}` : ''} <span class="num">${Math.round(Number(p.prob) * 1000) / 10}%</span>`).join(' · ')}</div>`;
@@ -4818,9 +4859,9 @@ function renderOtherDetail(){
   const otherHomePct = usPr && usPr.pct != null
     ? (canon(usPr.pick) === canon(g.home.code) ? usPr.pct : 100 - usPr.pct) : null;
   const otherAwayPct = otherHomePct != null ? Math.round((100 - otherHomePct) * 10) / 10 : null;
-  const usMarketCard = ['wnba', 'nfl'].includes(sport) ? marketComparator({
+  const usMarketCard = (['wnba', 'nfl'].includes(sport) || (qaMode && ['ncaaf', 'nhl', 'ncaam'].includes(sport))) ? marketComparator({
     activeSport: sport, blocks: otherMarketBlocks, away: g.away, home: g.home,
-    awayPct: otherAwayPct, homePct: otherHomePct, logo: oLogo, source: 'aa', pick: usPr && usPr.pick, risk: null,
+    awayPct: otherAwayPct, homePct: otherHomePct, logo: oLogo, source: qaMode ? 'qa' : 'aa', pick: usPr && usPr.pick, risk: null,
   }) : legacyUsPredCard;
 
   // Comparación cara a cara descriptiva (datos reales de posiciones/ranking; sin predicciones).
@@ -4947,7 +4988,7 @@ function renderOtherDetail(){
         <div class="formside"><div class="fh">${oLogo(g.away)}${esc(oName(g.away))}</div>${injuryRows('nba', g.away.code)}</div>
         <div class="formside"><div class="fh">${oLogo(g.home)}${esc(oName(g.home))}</div>${injuryRows('nba', g.home.code)}</div>
       </div>` : ''}
-      ${((sport === 'soccer' && predFor(g)) || usPr || ['wnba', 'nfl'].includes(sport)) ? '' : `<div class="verdict"><span class="ic">🧪</span>
+      ${((sport === 'soccer' && predFor(g)) || usPr || ['wnba', 'nfl'].includes(sport) || (qaMode && ['ncaaf', 'nhl', 'ncaam'].includes(sport))) ? '' : `<div class="verdict"><span class="ic">🧪</span>
         <p><span class="vt">${t('w_train')}</span>${t('sc_train_p').replace('{sport}', esc(sportLabel(sport)))}</p>
       </div>`}
       ${standingsHtml()}
