@@ -1547,7 +1547,7 @@ const T = {
     tab_all: 'Todos', tab_favs: 'Favoritos', tab_hist: 'Historial', today: 'Hoy',
     f_all: 'Todos', f_live: 'En vivo', f_final: 'Finales', f_pre: 'Por jugar',
     season: 'USA · Temporada 2026', matches: 'Partidos',
-    radar_sub: 'Observatorio de wallets · Polymarket', live_via_espn: 'En vivo · vía ESPN',
+    radar_sub: 'Radar pausado · sin monitoreo', live_via_espn: 'En vivo · vía ESPN',
     detail_empty: 'Elige un partido para ver el análisis completo del algoritmo AA.',
     w_perf: 'Rendimiento del algoritmo', w_train: '🧪 Modelo AA en entrenamiento',
     w_train_p: 'Ya te mostramos los marcadores en vivo de este deporte. Las <b>predicciones AA</b> llegarán cuando el modelo pase nuestra validación con datos históricos (walk-forward, intervalos de confianza). No publicamos números que no estén medidos.',
@@ -1572,6 +1572,8 @@ const T = {
     lang_btn: 'EN', lang_title: 'Switch to English',
     r_prep: 'Radar en preparación — el observatorio publica sus primeros datos pronto.',
     r_loading: 'Cargando el radar…', r_pm_title: 'Ver el perfil real en Polymarket',
+    r_paused_title: 'Radar de Polymarket pausado',
+    r_paused_body: 'Detuvimos por completo el monitoreo, las alertas y las notificaciones de Telegram. No se consultan wallets ni mercados mientras enfocamos el trabajo en los modelos deportivos.',
     r_no_history: 'aún sin historial suficiente', r_equity: 'Ganancia acumulada', r_equity_card: '📈 Ganancia acumulada',
     kind_golpe: '⚡ Un solo golpe', kind_golpe_t: 'Ganó casi todo en una sola jugada — puede ser suerte, no señal.',
     kind_racha: '🔥 En racha', kind_racha_t: 'Varias jugadas ganadoras seguidas — patrón más sólido.',
@@ -1735,7 +1737,7 @@ const T = {
     tab_all: 'All', tab_favs: 'Favorites', tab_hist: 'History', today: 'Today',
     f_all: 'All', f_live: 'Live', f_final: 'Final', f_pre: 'Upcoming',
     season: 'USA · 2026 Season', matches: 'Games',
-    radar_sub: 'Wallet observatory · Polymarket', live_via_espn: 'Live · via ESPN',
+    radar_sub: 'Radar paused · no monitoring', live_via_espn: 'Live · via ESPN',
     detail_empty: 'Pick a game to see the full AA algorithm analysis.',
     w_perf: 'Algorithm performance', w_train: '🧪 AA model in training',
     w_train_p: 'We already show live scores for this sport. <b>AA predictions</b> arrive once the model passes our validation on historical data (walk-forward, confidence intervals). We don\'t publish numbers we haven\'t measured.',
@@ -1760,6 +1762,8 @@ const T = {
     lang_btn: 'ES', lang_title: 'Cambiar a Español',
     r_prep: 'Radar getting ready — the observatory publishes its first data soon.',
     r_loading: 'Loading the radar…', r_pm_title: 'See the real profile on Polymarket',
+    r_paused_title: 'Polymarket Radar paused',
+    r_paused_body: 'Wallet monitoring, alerts, and Telegram notifications are fully stopped. No wallets or markets are queried while work stays focused on the sports models.',
     r_no_history: 'not enough history yet', r_equity: 'Cumulative profit', r_equity_card: '📈 Cumulative profit',
     kind_golpe: '⚡ One big hit', kind_golpe_t: 'Won almost everything in a single play — could be luck, not signal.',
     kind_racha: '🔥 On a streak', kind_racha_t: 'Several winning plays in a row — a stronger pattern.',
@@ -3882,6 +3886,7 @@ function loadSummary(g){
 }
 
 /* ── 📡 Radar de wallets (Polymarket) — observatorio descriptivo ─────────── */
+const RADAR_PAUSED = true;
 let radarDoc = null, radarAt = 0, radarLoading = false, radarSel = null;
 let alertsDoc = null, alertsAt = 0, alertsLoading = false;
 let trackDoc = null, trackAt = 0; // persistencia viva + wallets nuevas (poly:track)
@@ -3918,6 +3923,7 @@ const openRadarOverlay = () => { if (window.matchMedia('(max-width:900px)').matc
 // Busca CUALQUIER wallet en vivo (Data API vía Worker). Acepta dirección 0x… o
 // una URL de perfil de Polymarket pegada.
 async function loadWalletSearch(q){
+  if (RADAR_PAUSED){ walletSearch = null; walletSearchLoading = false; renderRadarDetail(); openRadarOverlay(); return; }
   const m = String(q || '').trim().match(/0x[0-9a-fA-F]{40}/);
   radarSel = null; compareSel = [];
   if (!m){ walletSearch = { ok: false }; walletSearchLoading = false; renderRadarDetail(); openRadarOverlay(); return; }
@@ -3982,6 +3988,12 @@ const agoTxt = (ts) => {
   return m < 1 ? t('ago_now') : m < 60 ? `${pre}${m} ${t('ago_min_s')}` : m < 1440 ? `${pre}${Math.round(m / 60)} ${t('ago_h')}` : `${pre}${Math.round(m / 1440)} ${t('ago_d')}`;
 };
 async function loadAlerts(force){
+  if (RADAR_PAUSED){
+    alertsDoc = null; alertsLoading = false;
+    $('cntRadar').hidden = true; $('cntRadar').textContent = '';
+    if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); }
+    return;
+  }
   if (alertsLoading || (!force && alertsDoc && Date.now() - alertsAt < 55e3)) return;
   alertsLoading = true;
   try{
@@ -4013,6 +4025,7 @@ const alertRow = (a) => `<div class="alrow${pfollow.has(a.wallet) ? ' followed' 
   <span class="q" title="${esc(a.title || '')}">${esc(a.title || '')}</span>
 </div>`;
 async function loadRadar(){
+  if (RADAR_PAUSED){ radarDoc = null; trackDoc = null; radarLoading = false; renderRadarList(); renderRadarDetail(); return; }
   if (radarLoading || (radarDoc && Date.now() - radarAt < 6e5)) return;
   radarLoading = true;
   try{
@@ -4225,6 +4238,12 @@ const walletCard = (w, i) => `<div class="wcard" data-rw="${esc(w.w)}" role="but
 </div>`;
 function renderRadarList(){
   if (sport !== 'radar') return;
+  if (RADAR_PAUSED){
+    $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
+    $('lgcount').innerHTML = '';
+    $('list').innerHTML = `<div class="lempty"><b>${t('r_paused_title')}</b><br><br>${t('r_paused_body')}</div>`;
+    return;
+  }
   const ws = ((radarDoc && radarDoc.wallets) || []).slice().sort((a, b) => netReal(b) - netReal(a));
   $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
   $('lgcount').innerHTML = ws.length ? `<b>${ws.length}</b>` : '';
@@ -4669,6 +4688,11 @@ function compareHtml(ws){
 function renderRadarDetail(){
   if (sport !== 'radar') return;
   const dc = $('dcard');
+  if (RADAR_PAUSED){
+    dc.classList.remove('enter');
+    dc.innerHTML = `<div class="dempty"><b>${t('r_paused_title')}</b><br><br>${t('r_paused_body')}</div>`;
+    return;
+  }
   if (walletSearch !== null || walletSearchLoading){
     const ak = 'radar|ws|' + (walletSearch && walletSearch.addr ? walletSearch.addr : 'x');
     dc.classList.toggle('enter', ak !== lastAnimKey); lastAnimKey = ak;

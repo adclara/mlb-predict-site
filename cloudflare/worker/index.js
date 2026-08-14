@@ -23,6 +23,12 @@ const MLB_INGEST_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const MLB_INGEST_STALE_SECONDS = 45 * 60;
 const MLB_INGEST_TIMEOUT_MS = 8000;
 const MLB_PREGAME_WINDOW_MS = 3 * 60 * 60 * 1000;
+const POLY_RADAR_PAUSED = Object.freeze({
+  ok: false,
+  paused: true,
+  state: 'paused',
+  reason: 'operator_paused',
+});
 
 // Public, keyless score feeds for the four new US sports. These identifiers
 // are also the only sport values accepted by the generic routes and D1 tables.
@@ -754,12 +760,11 @@ export default {
         return await summary(ctx, origin, sport, eid, up);
       }
       if (path === '/v1/injuries') return await injuries(env, origin);
-      if (path === '/v1/poly/radar') return await polyRadar(env, origin);
+      if (/^\/v1\/poly\/(radar|alerts|track|wallet)$/.test(path)) {
+        return json(POLY_RADAR_PAUSED, 200, origin, 300);
+      }
       if (path === '/v1/mlb/learning') return await mlbLearning(env, origin);
       if (path === '/v1/mlb/simulation') return await mlbSimulation(env, origin);
-      if (path === '/v1/poly/alerts') return await polyAlerts(env, origin);
-      if (path === '/v1/poly/track') return await polyTrack(env, origin);
-      if (path === '/v1/poly/wallet') return await polyWallet(url, ctx, origin);
 
       // ── cuentas opcionales (Fase 5) ──
       if (path === '/v1/auth/google') return authStart(url, env);
@@ -778,23 +783,16 @@ export default {
     }
   },
 
-  // Crons del Worker:
-  //  · "*/5 * * * *"  → vigía: transacciones nuevas de las wallets vigiladas → KV
-  //    poly:alerts; Telegram solo si una señal supera el gate raro rare_v1.
+  // Cron del Worker:
   //  · "*/20 * * * *" → captura hechos públicos MLB en D1. No calcula ni
   //    publica predicciones y no contiene pesos privados del modelo.
-  //  · "0 13 * * *"   → diario (9am ET): archiva snapshot en D1, mide persistencia
-  //    viva + wallets nuevas en el top y publica poly:track (sin push diario).
+  // Radar de Polymarket queda pausado: no se ejecutan polyWatch/polyDaily.
   async scheduled(controller, env, ctx) {
     if (controller && controller.cron === MLB_INGEST_CRON) {
       ctx.waitUntil(Promise.all([
         runMlbIngest(env, { scheduledTime: controller.scheduledTime }),
         runUsSportsIngest(env, { scheduledTime: controller.scheduledTime }),
       ]));
-    } else if (controller && controller.cron === '0 13 * * *') {
-      ctx.waitUntil(polyDaily(env));
-    } else if (controller && controller.cron === '*/5 * * * *') {
-      ctx.waitUntil(polyWatch(env));
     } else {
       console.warn(JSON.stringify({ message: 'scheduled cron ignored', cron: controller && controller.cron || null }));
     }

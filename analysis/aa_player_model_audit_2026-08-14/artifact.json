@@ -1,0 +1,45 @@
+{
+  "schema": "aa_model_audit_v1",
+  "as_of": "2026-08-14",
+  "decision": "keep_every_player_aware_challenger_shadow_until_proper_score_and_forward_gates_pass",
+  "radar": {
+    "state": "paused",
+    "worker_crons": ["*/20 * * * *"],
+    "telegram_active": false
+  },
+  "models": [
+    {
+      "sport": "NFL",
+      "test_season": 2025,
+      "n": 284,
+      "baseline": {"accuracy": 0.6338028, "brier": 0.2258191, "logloss": 0.6445477, "ece": 0.0487859},
+      "player_aware": {"accuracy": 0.6373239, "brier": 0.2240858, "logloss": 0.6393265, "ece": 0.0342398},
+      "paired_brier_delta_ci95": [-0.0050423, 0.0015891],
+      "decision": "shadow"
+    },
+    {
+      "sport": "WNBA",
+      "test_season": 2026,
+      "n": 253,
+      "baseline": {"accuracy": 0.6442688, "brier": 0.2162476, "logloss": 0.6242959, "ece": 0.0756040},
+      "player_aware": {"accuracy": 0.6719368, "brier": 0.2182124, "logloss": 0.6279304, "ece": 0.0488782},
+      "paired_brier_delta_ci95": [-0.0040559, 0.0077715],
+      "top2_accuracy_delta": 0,
+      "decision": "shadow"
+    },
+    {
+      "sport": "MLB",
+      "test_season": "causal OOS combined",
+      "baseline": {"accuracy": 0.532, "ece": 0.038},
+      "player_aware": null,
+      "decision": "capture official lineups forward with zero model weight"
+    }
+  ],
+  "sources": [
+    "../../robot/daily.mjs",
+    "../../robot/aa_lab.mjs",
+    "../../robot/wnba_player_winner.mjs",
+    "../../../aa-sports-models-private/reports/nfl-five-season.json",
+    "../../../aa-sports-models-private/reports/nfl-player-data-audit.json"
+  ]
+}

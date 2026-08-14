@@ -196,15 +196,27 @@ export function buildAaLabSlate({ date, games, historyRows, generatedAt, model =
     // using p_final keeps the paired forward audit apples-to-apples.
     const aaHomeProb = finite(game.p_final)
     const pick = homeProb >= 0.5 ? game.home : game.away
+    const lineup = game.lineup_features || null
+    const lineupDiff = finite(lineup?.ops_diff)
+    const lineupLean = lineupDiff == null || lineupDiff === 0 ? null : lineupDiff > 0 ? game.home : game.away
+    const playerContext = lineup ? {
+      both_complete: lineup.both_complete === true,
+      home_coverage: finite(lineup.home?.coverage), away_coverage: finite(lineup.away?.coverage),
+      home_lineup_ops: finite(lineup.home?.lineup_ops), away_lineup_ops: finite(lineup.away?.lineup_ops),
+      ops_diff: lineupDiff, state: 'forward_shadow', model_weight: 0,
+      changes_public_probability: false,
+    } : null
     return {
       game_pk: game.game_pk, matchup: `${game.away} @ ${game.home}`, market: 'ml',
       home: game.home, away: game.away, pick, home_prob: homeProb,
       raw_home_prob: round6(probability.raw), margin: round6(Math.abs(homeProb - 0.5)),
       aa_pick: game.ml_pick || null, aa_home_prob: aaHomeProb == null ? null : round6(aaHomeProb),
       agrees_with_aa: game.ml_pick ? pick === game.ml_pick : null,
+      player_context: playerContext,
+      lineup_agrees_with_lab: lineupLean == null ? null : lineupLean === pick,
       scheduled_start_utc: start, feature_as_of: generatedAt,
       features: Object.fromEntries(Object.entries(features).map(([key, value]) => [key, round6(value)])),
-      feature_hash: hash({ version: model.version, date, game_pk: game.game_pk, features }),
+      feature_hash: hash({ version: model.version, date, game_pk: game.game_pk, features, playerContext }),
       selected: false,
     }
   })
@@ -284,6 +296,9 @@ export function buildAaLabForwardReport(dailyDocs, { updatedAt = new Date().toIS
   const graded = causal.filter((prediction) => ['win', 'loss'].includes(prediction.result))
   const selected = graded.filter((prediction) => prediction.selected === true)
   const agreementSelected = selected.filter((prediction) => prediction.agrees_with_aa === true)
+  const lineupComplete = graded.filter((prediction) => prediction.player_context?.both_complete === true)
+  const lineupAgreement = selected.filter((prediction) => prediction.player_context?.both_complete === true
+    && prediction.lineup_agrees_with_lab === true)
   const all = metricBlock(graded), aa = metricBlock(graded, 'aa_home_prob')
   const topTwo = metricBlock(selected), agreement = metricBlock(agreementSelected)
   const paired = pairedBootstrap(graded)
@@ -297,6 +312,12 @@ export function buildAaLabForwardReport(dailyDocs, { updatedAt = new Date().toIS
     observed_predictions: predictions.length,
     excluded_nonpregame: predictions.length - causal.length,
     all, aa_comparator: aa, selected_top_two: topTwo, selected_agreement: agreement,
+    player_context: {
+      complete_lineup_predictions: lineupComplete.length,
+      complete_lineup_rate: causal.length ? lineupComplete.length / causal.length : null,
+      selected_lineup_agreement: metricBlock(lineupAgreement),
+      state: 'forward_shadow', changes_public_model: false,
+    },
     paired_delta_lab_minus_aa: paired,
     gate: {
       min_games: 300, min_dates: 30, ece_max: 0.05,

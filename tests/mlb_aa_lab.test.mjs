@@ -8,7 +8,7 @@ import {
   buildAaLabSlate,
   replayAaLabState,
 } from '../robot/aa_lab.mjs'
-import { buildSlateRecord } from '../robot/daily.mjs'
+import { buildSlateRecord, lineupPlayerFeatures, mergeAaLabPlayerContext } from '../robot/daily.mjs'
 import { normalizeDay } from '../cloudflare/lib/normalize.mjs'
 
 const parity = {
@@ -68,6 +68,51 @@ test('slate AA Lab selecciona máximo dos y sigue privado al congelarse', () => 
   assert.equal(rec.shadow.aa_lab.predictions.length, 3)
   assert.ok(rec.shadow.aa_lab.predictions.every((prediction) => prediction.record_scope === 'shadow_forward_gate'))
   assert.ok(rec.shadow.aa_lab.predictions.every((prediction) => prediction.eligible_public_record === false))
+})
+
+test('contexto de lineup es causal, medible y no cambia la probabilidad AA Lab', () => {
+  const roster = new Map(Array.from({ length: 10 }, (_, index) => [index + 1, {
+    ops: 0.68 + index / 100, ab: 100,
+  }]))
+  const lineup = Array.from({ length: 9 }, (_, index) => ({ id: index + 1 }))
+  const features = lineupPlayerFeatures(lineup, roster)
+  assert.equal(features.complete, true)
+  assert.equal(features.players_with_data, 9)
+  assert.equal(features.model_weight, 0)
+  assert.equal(features.changes_public_probability, undefined)
+
+  const game = {
+    game_pk: 91, home: 'NYY', away: 'BOS', ml_pick: 'NYY', p_final: 0.54,
+    first_pitch: '2026-07-22T23:00:00Z',
+  }
+  const plain = buildAaLabSlate({ date: '2026-07-22', games: [game], historyRows: [], generatedAt: '2026-07-22T11:00:00Z' })
+  const contextual = buildAaLabSlate({
+    date: '2026-07-22', historyRows: [], generatedAt: '2026-07-22T11:00:00Z',
+    games: [{ ...game, lineup_features: { home: features, away: features, both_complete: true, ops_diff: 0.04 } }],
+  })
+  assert.equal(contextual.predictions[0].home_prob, plain.predictions[0].home_prob)
+  assert.equal(contextual.predictions[0].player_context.model_weight, 0)
+  assert.equal(contextual.predictions[0].player_context.changes_public_probability, false)
+})
+
+test('lineup tardío se adjunta antes del juego sin reescribir la predicción congelada', () => {
+  const frozen = { predictions: [{
+    game_pk: 7, home: 'NYY', away: 'BOS', pick: 'NYY', home_prob: 0.57,
+    selected: true, feature_hash: 'immutable-probability', scheduled_start_utc: '2026-07-22T23:00:00Z',
+    player_context: { both_complete: false, model_weight: 0 },
+  }] }
+  const fresh = { predictions: [{
+    game_pk: 7, player_context: { both_complete: true, ops_diff: -0.04, model_weight: 0 },
+  }] }
+  const merged = mergeAaLabPlayerContext(frozen, fresh, '2026-07-22T20:00:00Z', new Map())
+  assert.equal(merged.predictions[0].home_prob, 0.57)
+  assert.equal(merged.predictions[0].selected, true)
+  assert.equal(merged.predictions[0].feature_hash, 'immutable-probability')
+  assert.equal(merged.predictions[0].player_context.temporal_scope, 'pregame_context')
+  assert.equal(merged.predictions[0].lineup_agrees_with_lab, false)
+
+  const late = mergeAaLabPlayerContext(frozen, fresh, '2026-07-23T00:00:00Z', new Map())
+  assert.equal(late.predictions[0].player_context.both_complete, false)
 })
 
 test('reporte forward nunca autoriza publicación automática', () => {

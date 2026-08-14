@@ -99,11 +99,17 @@ export function freezeFeatureRow(row, asOf, { eligible = true } = {}) {
 }
 
 function observedFrom(row, asOf) {
+  const firstPitch = row?.game_datetime ?? row?.first_pitch ?? null
+  const lineupFeatures = row?.lineup_features ? {
+    ...row.lineup_features,
+    captured_at: asOf,
+    temporal_scope: beforeFirstPitch(asOf, firstPitch) ? 'pregame_context' : 'post_start_excluded',
+  } : null
   return {
     ...(row?.observed || {}),
     captured_at: asOf,
     status: row?.status ?? null,
-    first_pitch: row?.game_datetime ?? row?.first_pitch ?? null,
+    first_pitch: firstPitch,
     scores: {
       home: row?.observed?.scores?.home ?? row?.home_score ?? null,
       away: row?.observed?.scores?.away ?? row?.away_score ?? null,
@@ -121,6 +127,7 @@ function observedFrom(row, asOf) {
         : null,
     },
     lineups: row?.brief?.lineups ?? null,
+    lineup_features: lineupFeatures,
   }
 }
 
@@ -133,6 +140,11 @@ function mergeObserved(previous, row, asOf) {
       away: incoming.scores?.away ?? old.scores?.away ?? null,
     },
     odds: incoming.odds ?? old.odds ?? null,
+    lineups: incoming.lineups?.home?.length || incoming.lineups?.away?.length
+      ? incoming.lineups : old.lineups ?? null,
+    lineup_features: incoming.lineup_features?.both_complete === true
+      && incoming.lineup_features?.temporal_scope === 'pregame_context'
+      ? incoming.lineup_features : old.lineup_features ?? incoming.lineup_features ?? null,
   }
 }
 
@@ -506,7 +518,7 @@ async function fetchTeamSplits(teamId, season) {
 // season hitting hydrated, so the brief can answer "quiénes son los mejores
 // bateadores". Parses defensively across statsapi shapes; any failure → [].
 const _hitters = new Map()
-const _hitterMap = new Map() // teamId -> Map(playerId -> {name,ops,hr,avg,pos}) — todo el roster
+const _hitterMap = new Map() // teamId -> Map(playerId -> {name,ops,hr,avg,ab,pos}) — todo el roster
 async function fetchTeamHitters(teamId, season) {
   if (teamId == null) return []
   if (_hitters.has(teamId)) return _hitters.get(teamId)
@@ -524,7 +536,7 @@ async function fetchTeamHitters(teamId, season) {
       const rec = {
         name: p.fullName || p.lastName || '?',
         ops: isFinite(ops) ? Math.round(ops * 1000) / 1000 : null,
-        hr: Number(st.homeRuns) || 0, avg: st.avg ?? null,
+        hr: Number(st.homeRuns) || 0, avg: st.avg ?? null, ab,
         pos: (m.position && m.position.abbreviation) || null,
       }
       // mapa por id: TODO el roster (sin gate de AB, para que el lineup no muestre blancos)
@@ -538,6 +550,40 @@ async function fetchTeamHitters(teamId, season) {
   _hitters.set(teamId, top)
   _hitterMap.set(teamId, idMap)
   return top
+}
+
+// Descriptive, player-aware context for the private forward challenger. This
+// deliberately has model_weight=0: the public AA probability is unchanged
+// until a causal forward audit proves that lineup strength improves proper
+// scores. Missing or late lineups therefore fail closed instead of being
+// imputed into a recommendation.
+export function lineupPlayerFeatures(lineup, roster) {
+  const entries = roster instanceof Map ? [...roster.values()] : Object.values(roster || {})
+  const baseline = entries.filter((player) => Number(player?.ab) >= 40 && Number.isFinite(Number(player?.ops)))
+  const selected = (lineup || []).slice(0, 9)
+    .map((player) => roster instanceof Map ? roster.get(player?.id) : roster?.[player?.id])
+    .filter((player) => Number.isFinite(Number(player?.ops)))
+  const average = (values) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null
+  const ops = selected.map((player) => Number(player.ops))
+  const rosterOps = baseline.map((player) => Number(player.ops))
+  const topThree = [...ops].sort((a, b) => b - a).slice(0, 3)
+  const lineupOps = average(ops)
+  const rosterBaseline = average(rosterOps)
+  const complete = selected.length === 9
+  return {
+    available: selected.length > 0,
+    complete,
+    players_with_data: selected.length,
+    expected_players: 9,
+    coverage: Math.round(selected.length / 9 * 1000) / 1000,
+    lineup_ops: lineupOps == null ? null : Math.round(lineupOps * 1000) / 1000,
+    top3_ops: topThree.length === 3 ? Math.round(average(topThree) * 1000) / 1000 : null,
+    active_roster_ops: rosterBaseline == null ? null : Math.round(rosterBaseline * 1000) / 1000,
+    delta_vs_active: lineupOps == null || rosterBaseline == null
+      ? null : Math.round((lineupOps - rosterBaseline) * 1000) / 1000,
+    state: 'forward_shadow',
+    model_weight: 0,
+  }
 }
 
 // Compact human-facing brief for one game — the "por qué" behind the play:
@@ -745,6 +791,14 @@ async function computeDay(date) {
     }
     const brief = buildBrief(a, prediction, f5, priors, g, homeHand, awayHand, { home: _hitters.get(g.home_team_id) || [], away: _hitters.get(g.away_team_id) || [] })
     brief.fielding = { home: fieldingFor(rh), away: fieldingFor(ra) }
+    const lineupFeatures = {
+      home: lineupPlayerFeatures(g.home_lineup, _hitterMap.get(g.home_team_id)),
+      away: lineupPlayerFeatures(g.away_lineup, _hitterMap.get(g.away_team_id)),
+    }
+    lineupFeatures.both_complete = lineupFeatures.home.complete && lineupFeatures.away.complete
+    lineupFeatures.ops_diff = lineupFeatures.home.lineup_ops == null || lineupFeatures.away.lineup_ops == null
+      ? null : Math.round((lineupFeatures.home.lineup_ops - lineupFeatures.away.lineup_ops) * 1000) / 1000
+    lineupFeatures.changes_public_probability = false
     rows.push({ ...analysisToRow(a), date, game_date: g.game_date, game_datetime: g.game_datetime || null,
       first_pitch: g.game_datetime || null, park_factor: f.park_factor, elo_diff: f.elo_diff,
       sp_fip_diff: f.sp_fip_diff, weather_forecast: weather, wx_runs: a.total.components?.wx ?? 0,
@@ -752,7 +806,7 @@ async function computeDay(date) {
       away_probable_pitcher_id: g.away_probable_pitcher_id ?? null,
       home_probable_pitcher_name: g.home_probable_pitcher_name ?? null,
       away_probable_pitcher_name: g.away_probable_pitcher_name ?? null,
-      aux, aux2, brief, odds: ingest.facts.get(String(g.game_pk))?.odds || null,
+      aux, aux2, brief, lineup_features: lineupFeatures, odds: ingest.facts.get(String(g.game_pk))?.odds || null,
       observed: { status: g.status ?? null, scores: { home: g.home_score ?? null, away: g.away_score ?? null } } })
     return a
   })
@@ -837,6 +891,36 @@ const shadowAaLab = (lab, postedAt, startByPk) => lab ? {
     shadowCandidate(prediction, postedAt, startByPk, 'shadow_forward_gate')),
 } : null
 
+// Official lineups are usually published hours after AA freezes its morning
+// probabilities. Attach them as a separately timestamped pregame observation;
+// never recompute the pick, probability, selected flag or original feature hash.
+export function mergeAaLabPlayerContext(existingLab, freshLab, capturedAt, startByPk) {
+  if (!existingLab || !freshLab) return existingLab
+  const freshByPk = new Map((freshLab.predictions || []).map((row) => [String(row.game_pk), row]))
+  return {
+    ...existingLab,
+    predictions: (existingLab.predictions || []).map((row) => {
+      if (row.player_context?.both_complete === true) return row
+      const fresh = freshByPk.get(String(row.game_pk))
+      const context = fresh?.player_context
+      const start = row.scheduled_start_utc ?? startByPk?.get?.(String(row.game_pk)) ?? null
+      if (context?.both_complete !== true || !beforeFirstPitch(capturedAt, start)) return row
+      const lineupDiff = Number.isFinite(Number(context.ops_diff)) ? Number(context.ops_diff) : null
+      const lineupLean = lineupDiff == null || lineupDiff === 0 ? null : lineupDiff > 0 ? row.home : row.away
+      const captured = {
+        ...context, captured_at: capturedAt, temporal_scope: 'pregame_context',
+        model_weight: 0, changes_public_probability: false,
+      }
+      return {
+        ...row,
+        player_context: captured,
+        lineup_agrees_with_lab: lineupLean == null ? null : lineupLean === row.pick,
+        player_context_hash: sha256({ game_pk: row.game_pk, captured }),
+      }
+    }),
+  }
+}
+
 // The very first publication freezes the complete slate, including an empty
 // selection. Subsequent hourly runs may append scratch warnings/observations,
 // but can never manufacture a pick. The newly redesigned ORO/F5/total markets
@@ -848,6 +932,10 @@ export function buildSlateRecord(existing, day, { date, publishedAt } = {}) {
     const frozenAt = existing.slate_frozen_at || existing.published_at || existing.generated_at || publishedAt
     const preserve = (list) => (list || []).map((play) => play?.record_scope
       ? play : annotateLedgerCandidate(play, frozenAt, startByPk))
+    const shadow = { ...(existing.shadow || {}) }
+    if (shadow.aa_lab && day?.aaLab) {
+      shadow.aa_lab = mergeAaLabPlayerContext(shadow.aa_lab, day.aaLab, publishedAt, startByPk)
+    }
     return {
       ...existing,
       date: existing.date || date,
@@ -860,7 +948,7 @@ export function buildSlateRecord(existing, day, { date, publishedAt } = {}) {
       scheduled_starts: { ...scheduledStarts, ...(existing.scheduled_starts || {}) },
       starter_invalidations: existing.starter_invalidations || {},
       starter_observations: existing.starter_observations || {},
-      shadow: existing.shadow || {},
+      shadow,
     }
   }
   // Totals/F5/pitcher props stay in shadow until their own forward gate passes.

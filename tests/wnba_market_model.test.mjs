@@ -28,6 +28,16 @@ test('WNBA player challengers use causal box scores but remain closed without re
   assert.equal(report.combos.gate.min_forward, 100)
 })
 
+test('WNBA winner report carries player-aware evidence but never opens its gate', () => {
+  const player = report.winner.player_aware_shadow
+  assert.ok(player.data_audit.player_rows > 25_000)
+  assert.equal(player.data_audit.timestamp_violations, 0)
+  assert.ok(player.validation.brier < player.elo_validation.brier)
+  assert.ok(player.heldout_2026.n >= 250)
+  assert.equal(player.gate.public, false)
+  assert.equal(player.gate.approved, false)
+})
+
 test('WNBA hourly total forecaster is measured, causal and keeps coefficients private', () => {
   const forecaster = createWnbaTotalForecaster()
   const before = forecaster.predict({ date: '2026-08-14', home: 'NY', away: 'LA', neutral: false })

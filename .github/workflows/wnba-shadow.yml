@@ -23,6 +23,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+      - name: Restaurar histórico y box scores incrementales WNBA
+        uses: actions/cache/restore@v6
+        with:
+          path: data/fase2/wnba
+          key: wnba-shadow-${{ github.run_id }}
+          restore-keys: wnba-history-
       - name: Verificar histórico y backtest WNBA
         if: github.event_name != 'schedule'
         run: |
@@ -30,6 +36,7 @@ jobs:
           node robot/wnba_model.mjs backtest 2
           node robot/wnba_player_model.mjs --no-write
           node robot/wnba_market_model.mjs --no-write
+          node robot/wnba_player_winner.mjs --no-write
       - name: Capturar y gradear WNBA en sombra
         env:
           AA_BASKETBALL_SPORT: wnba

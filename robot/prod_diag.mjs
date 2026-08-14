@@ -147,8 +147,17 @@ console.log(qaSiteReady ? '✅ qa.aasport.net sirve la interfaz QA' : `⚠️ qa
 if (!qaApiClosed) marketContractFailures++;
 console.log('\n== /v1/poly/radar + /v1/poly/alerts (Radar de wallets) ==');
 const pr = await get(`${API}/v1/poly/radar`);
+let polyPaused = false;
 try {
   const d = JSON.parse(pr.text);
+  if (d.paused === true) {
+    polyPaused = true;
+    const [pa, pt] = await Promise.all([get(`${API}/v1/poly/alerts`), get(`${API}/v1/poly/track`)]);
+    const ad = JSON.parse(pa.text); const td = JSON.parse(pt.text);
+    const stopped = ad.paused === true && td.paused === true;
+    console.log(stopped ? '✅ Radar pausado: rutas sin datos, vigía/Telegram detenidos' : '❌ pausa incompleta en rutas Poly');
+    if (!stopped) marketContractFailures++;
+  } else {
   console.log('wallets:', (d.wallets || []).length, '| vigiladas:', (d.watchlist || []).length, '| top_trades:', (d.top_trades || []).length, '| actualizado:', d.ran_at || '—');
   const w0 = (d.wallets || [])[0];
   if (w0) console.log('  top1:', w0.pseudonym || (w0.w || '').slice(0, 8), '| ganó $' + (w0.pnl_usd || 0).toLocaleString(), '|', Math.round(100 * (w0.win_rate || 0)) + '% aciertos', '| gana entrando ANTES:', w0.pre_win_share != null ? Math.round(100 * w0.pre_win_share) + '%' : 'sin hora', '| best_trades:', (w0.best_trades || []).length, '| tipo:', w0.kind || '—', '| acumulado: $' + (w0.cum_now || 0).toLocaleString(), '| curva:', (w0.equity_curve || []).length + ' pts');
@@ -156,16 +165,19 @@ try {
   if (t0) console.log('  mejor trade: +$' + t0.profit.toLocaleString(), '—', (t0.who || t0.w.slice(0, 8)), '| timing:', t0.timing || 'sin hora de inicio');
   const withPf = (d.wallets || []).filter((w) => w.portfolio_usd != null).length;
   if (w0) console.log('  cartera (valor actual): top1 ' + (w0.portfolio_usd != null ? '$' + w0.portfolio_usd.toLocaleString() + (w0.positions_open != null ? ' · ' + w0.positions_open + ' posiciones' : '') : 'sin dato') + ` | resuelta en ${withPf}/${(d.wallets || []).length} wallets`);
+  }
 } catch (e) { console.log('no-json:', pr.status, pr.text.slice(0, 120)); }
-const pa = await get(`${API}/v1/poly/alerts`);
-try { const d = JSON.parse(pa.text); console.log('alertas en KV:', (d.alerts || []).length, '| updated:', d.updated_at || '—'); } catch (e) { console.log('no-json:', pa.status); }
-const pt = await get(`${API}/v1/poly/track`);
-try {
-  const d = JSON.parse(pt.text); const p = d.persistence;
-  console.log('poly:track:', d.ok === false ? 'acumulando historial (aún sin snapshots suficientes)'
-    : (p ? `persistencia viva ${Math.round(100 * p.overlap)}% (${p.stayed}/${p.then_n} vigiladas siguen) | nuevas: ${(d.new_wallets || []).length} | días: ${(d.history || []).length}`
-      : `sin persistencia aún | nuevas: ${(d.new_wallets || []).length} | días: ${(d.history || []).length}`));
-} catch (e) { console.log('no-json:', pt.status, pt.text.slice(0, 120)); }
+if (!polyPaused) {
+  const pa = await get(`${API}/v1/poly/alerts`);
+  try { const d = JSON.parse(pa.text); console.log('alertas en KV:', (d.alerts || []).length, '| updated:', d.updated_at || '—'); } catch (e) { console.log('no-json:', pa.status); }
+  const pt = await get(`${API}/v1/poly/track`);
+  try {
+    const d = JSON.parse(pt.text); const p = d.persistence;
+    console.log('poly:track:', d.ok === false ? 'acumulando historial (aún sin snapshots suficientes)'
+      : (p ? `persistencia viva ${Math.round(100 * p.overlap)}% (${p.stayed}/${p.then_n} vigiladas siguen) | nuevas: ${(d.new_wallets || []).length} | días: ${(d.history || []).length}`
+        : `sin persistencia aún | nuevas: ${(d.new_wallets || []).length} | días: ${(d.history || []).length}`));
+  } catch (e) { console.log('no-json:', pt.status, pt.text.slice(0, 120)); }
+}
 
 console.log('\n████ fin diagnóstico ████');
 if (marketContractFailures) {

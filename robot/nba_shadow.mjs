@@ -26,6 +26,7 @@ import { join } from 'node:path';
 import { makeElo, loadSeasons } from './nba_model.mjs';
 import { priceFrom, probs2way } from './lib/espn_odds.mjs';
 import { createWnbaTotalForecaster } from './wnba_market_model.mjs';
+import { createWnbaPlayerWinnerForecaster } from './wnba_player_winner.mjs';
 
 const ACCOUNT_ID = 'f02574feb7272a1da2818e35e0ff4342';
 const D1_DATABASE_ID = 'ed0969d8-050a-4987-ab98-b047c30f76c9';
@@ -201,7 +202,7 @@ async function gradeUnifiedMarkets(today) {
   if (SPORT !== 'wnba' || !unifiedMarketTable) return;
   let pending = [];
   try {
-    pending = await d1(`SELECT date,event_id,market_key,pick,side,line FROM sport_market_predictions
+    pending = await d1(`SELECT date,event_id,market_key,selection_key,pick,side,line FROM sport_market_predictions
       WHERE sport='wnba' AND result IS NULL AND date <= ? ORDER BY date,event_id LIMIT 200`, [day(today)]);
   } catch (error) {
     unifiedMarketTable = false;
@@ -218,14 +219,14 @@ async function gradeUnifiedMarkets(today) {
       const game = gameFromEvent(event, date);
       if (!String(game._status.name || '').toUpperCase().includes('FINAL') || game.hs == null || game.as == null || game.hs === game.as) continue;
       let result = 'void';
-      if (row.market_key === 'winner' && row.pick) result = (game.hs > game.as ? game.home : game.away) === row.pick ? 'win' : 'loss';
+      if (['winner', 'winner_challenger'].includes(row.market_key) && row.pick) result = (game.hs > game.as ? game.home : game.away) === row.pick ? 'win' : 'loss';
       if (row.market_key === 'total' && ['over', 'under'].includes(row.side) && num(row.line) != null) {
         const actual = game.hs + game.as;
         result = actual === Number(row.line) ? 'push' : ((row.side === 'over') === (actual > Number(row.line)) ? 'win' : 'loss');
       }
       await d1(`UPDATE sport_market_predictions SET status='final',result=?,updated_at=?
-        WHERE sport='wnba' AND date=? AND event_id=? AND market_key=? AND selection_key IN ('winner:model','total:model')`,
-      [result, new Date().toISOString(), date, row.event_id, row.market_key]);
+        WHERE sport='wnba' AND date=? AND event_id=? AND market_key=? AND selection_key=?`,
+      [result, new Date().toISOString(), date, row.event_id, row.market_key, row.selection_key]);
     }
   }
 }
@@ -238,6 +239,7 @@ async function main() {
   const dates = [day(today), day(new Date(today.getTime() + 86400000))];
   await ensureMarketProb();
   const totalForecaster = SPORT === 'wnba' ? createWnbaTotalForecaster() : null;
+  const playerWinnerForecaster = SPORT === 'wnba' ? createWnbaPlayerWinnerForecaster() : null;
   await gradeUnifiedMarkets(today);
 
   /* gradear pendientes (hasta 5 días atrás) */
@@ -305,6 +307,20 @@ async function main() {
           prob: side.p, edge: mktSide == null ? null : side.p - mktSide, projection: null,
           home: g.home, away: g.away, start: ev.date || d, featureAsOf: frozenAt, engine: ENGINE,
         });
+        const playerWinner = playerWinnerForecaster?.predict(g, pH) || null;
+        if (playerWinner) {
+          const challengerSide = playerWinner.home_prob >= .5
+            ? { code: g.home, side: 'home', prob: playerWinner.home_prob, price: homePrice, market: mkt?.pH }
+            : { code: g.away, side: 'away', prob: 1 - playerWinner.home_prob, price: awayPrice, market: mkt?.pA };
+          await insertUnifiedMarket({
+            date: d, eventId: g._id, marketKey: 'winner_challenger', selectionKey: 'winner:player-aware',
+            pick: challengerSide.code, side: challengerSide.side, line: null, price: challengerSide.price,
+            marketProb: challengerSide.market ?? null, prob: challengerSide.prob,
+            edge: challengerSide.market == null ? null : challengerSide.prob - challengerSide.market,
+            projection: null, home: g.home, away: g.away, start: ev.date || d,
+            featureAsOf: frozenAt, engine: 'wnba-player-aware-winner-v1',
+          });
+        }
         const totalOffer = wnbaTotalOffer(g, totalForecaster);
         if (totalOffer) await insertUnifiedMarket({
           date: d, eventId: g._id, marketKey: 'total', selectionKey: 'total:model', pick: totalOffer.side,

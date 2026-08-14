@@ -43,7 +43,8 @@ jobs:
       - name: Validación causal diaria de mercados
         run: |
           node robot/wnba_market_model.mjs
-          node --test tests/wnba_market_model.test.mjs
+          node robot/wnba_player_winner.mjs
+          node --test tests/wnba_market_model.test.mjs tests/wnba_player_winner.test.mjs
       - name: Publicar evidencia agregada de simulación
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
@@ -52,7 +53,7 @@ jobs:
         if: github.event.schedule == '37 10 * * 0'
         run: |
           node robot/wnba_model.mjs backtest 2
-          node --test tests/wnba_model.test.mjs
+          node --test tests/wnba_model.test.mjs tests/wnba_player_winner.test.mjs
       - name: Guardar histórico incremental WNBA
         uses: actions/cache/save@v6
         with:
