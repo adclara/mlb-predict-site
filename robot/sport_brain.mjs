@@ -133,7 +133,7 @@ export function buildSportBrain({ sport, backtest = null, rows = [], now = new D
   const approved = sport === 'soccer'
   const passed = sport === 'soccer' ? historyPass : (historyPass && enoughForward && calibratedForward && beatsMarket)
   const publicModel = approved && passed
-  const reason = passed ? 'passed' : !historyPass ? 'historical_gate_failed'
+  const reason = publicModel ? 'passed' : passed ? 'human_approval_pending' : !historyPass ? 'historical_gate_failed'
     : !enoughForward ? 'forward_sample_pending'
       : !calibratedForward ? 'forward_calibration_pending'
         : !beatsMarket ? 'market_benchmark_pending' : 'human_approval_pending'

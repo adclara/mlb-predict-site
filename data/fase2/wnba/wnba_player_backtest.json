@@ -1,0 +1,215 @@
+{
+  "schema": "aa_wnba_player_backtest_v1",
+  "generated_at": "2026-08-14T03:27:15.695Z",
+  "seasons": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+  ],
+  "burn_in": [
+    "2021",
+    "2022"
+  ],
+  "method": "causal rolling ridge; prior games only; no prop recommendation without auditable pregame line",
+  "participant_note": "Historical evaluation includes players who logged minutes; forward roster availability must be frozen pregame.",
+  "families": {
+    "pts": {
+      "model": "causal_player_form_ridge_v1",
+      "selected_lambda": 0.3,
+      "historical": {
+        "n": 20217,
+        "mae": 4.1874,
+        "rmse": 5.4511,
+        "bias": -0.0405,
+        "baseline_mae": 5.2936,
+        "interval80_coverage": 0.8001,
+        "timestamp_violations": 0
+      },
+      "per_season": {
+        "2023": {
+          "n": 4823,
+          "mae": 4.1638,
+          "rmse": 5.4694,
+          "bias": -0.0909,
+          "baseline_mae": 5.2461,
+          "interval80_coverage": 0.8038,
+          "timestamp_violations": 0
+        },
+        "2024": {
+          "n": 4849,
+          "mae": 4.1116,
+          "rmse": 5.3587,
+          "bias": 0.0802,
+          "baseline_mae": 5.2114,
+          "interval80_coverage": 0.801,
+          "timestamp_violations": 0
+        },
+        "2025": {
+          "n": 5730,
+          "mae": 4.2093,
+          "rmse": 5.4251,
+          "bias": -0.006,
+          "baseline_mae": 5.3592,
+          "interval80_coverage": 0.7972,
+          "timestamp_violations": 0
+        },
+        "2026": {
+          "n": 4815,
+          "mae": 4.2612,
+          "rmse": 5.555,
+          "bias": -0.1524,
+          "baseline_mae": 5.346,
+          "interval80_coverage": 0.799,
+          "timestamp_violations": 0
+        }
+      },
+      "market_line_coverage": 0,
+      "forward": {
+        "n": 0,
+        "dates": 0
+      },
+      "gate": {
+        "passed": false,
+        "approved": false,
+        "public": false,
+        "state": "closed",
+        "reason": "market_lines_unavailable",
+        "min_forward": 200,
+        "min_dates": 30
+      }
+    },
+    "reb": {
+      "model": "causal_player_form_ridge_v1",
+      "selected_lambda": 30,
+      "historical": {
+        "n": 20217,
+        "mae": 1.7826,
+        "rmse": 2.3569,
+        "bias": -0.0203,
+        "baseline_mae": 2.2352,
+        "interval80_coverage": 0.8015,
+        "timestamp_violations": 0
+      },
+      "per_season": {
+        "2023": {
+          "n": 4823,
+          "mae": 1.7988,
+          "rmse": 2.3867,
+          "bias": -0.0633,
+          "baseline_mae": 2.2245,
+          "interval80_coverage": 0.8038,
+          "timestamp_violations": 0
+        },
+        "2024": {
+          "n": 4849,
+          "mae": 1.7943,
+          "rmse": 2.3665,
+          "bias": 0.0088,
+          "baseline_mae": 2.2475,
+          "interval80_coverage": 0.7989,
+          "timestamp_violations": 0
+        },
+        "2025": {
+          "n": 5730,
+          "mae": 1.8008,
+          "rmse": 2.369,
+          "bias": -0.0183,
+          "baseline_mae": 2.2761,
+          "interval80_coverage": 0.8002,
+          "timestamp_violations": 0
+        },
+        "2026": {
+          "n": 4815,
+          "mae": 1.7329,
+          "rmse": 2.3022,
+          "bias": -0.0088,
+          "baseline_mae": 2.185,
+          "interval80_coverage": 0.8033,
+          "timestamp_violations": 0
+        }
+      },
+      "market_line_coverage": 0,
+      "forward": {
+        "n": 0,
+        "dates": 0
+      },
+      "gate": {
+        "passed": false,
+        "approved": false,
+        "public": false,
+        "state": "closed",
+        "reason": "market_lines_unavailable",
+        "min_forward": 200,
+        "min_dates": 30
+      }
+    },
+    "ast": {
+      "model": "causal_player_form_ridge_v1",
+      "selected_lambda": 10,
+      "historical": {
+        "n": 20217,
+        "mae": 1.2242,
+        "rmse": 1.6589,
+        "bias": -0.0155,
+        "baseline_mae": 1.5288,
+        "interval80_coverage": 0.7989,
+        "timestamp_violations": 0
+      },
+      "per_season": {
+        "2023": {
+          "n": 4823,
+          "mae": 1.2196,
+          "rmse": 1.6714,
+          "bias": -0.0357,
+          "baseline_mae": 1.5304,
+          "interval80_coverage": 0.7953,
+          "timestamp_violations": 0
+        },
+        "2024": {
+          "n": 4849,
+          "mae": 1.215,
+          "rmse": 1.6367,
+          "bias": 0.0362,
+          "baseline_mae": 1.5166,
+          "interval80_coverage": 0.7993,
+          "timestamp_violations": 0
+        },
+        "2025": {
+          "n": 5730,
+          "mae": 1.2236,
+          "rmse": 1.6501,
+          "bias": -0.0127,
+          "baseline_mae": 1.5227,
+          "interval80_coverage": 0.8012,
+          "timestamp_violations": 0
+        },
+        "2026": {
+          "n": 4815,
+          "mae": 1.2386,
+          "rmse": 1.679,
+          "bias": -0.0509,
+          "baseline_mae": 1.5468,
+          "interval80_coverage": 0.7992,
+          "timestamp_violations": 0
+        }
+      },
+      "market_line_coverage": 0,
+      "forward": {
+        "n": 0,
+        "dates": 0
+      },
+      "gate": {
+        "passed": false,
+        "approved": false,
+        "public": false,
+        "state": "closed",
+        "reason": "market_lines_unavailable",
+        "min_forward": 200,
+        "min_dates": 30
+      }
+    }
+  }
+}

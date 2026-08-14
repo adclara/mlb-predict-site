@@ -654,12 +654,26 @@ export default {
           return await summary(ctx, origin, sport, eid, `${ESPN_BASE}/${config.summary}?event=${eid}`);
         }
       }
-      const basketballRoute = path.match(/^\/v1\/(nba|wnba)\/(live|recent|standings|summary|learning)$/);
+      const basketballRoute = path.match(/^\/v1\/(nba|wnba)\/(today|live|recent|standings|summary|history|learning|simulation|pipeline-health)$/);
       if (basketballRoute) {
         const [, league, action] = basketballRoute;
         if (!BASKETBALL_LEAGUES.includes(league)) return json({ error: 'unknown_league' }, 400, origin);
         const scoreboard = `${ESPN_BASE}/basketball/${league}/scoreboard`;
         if (action === 'learning') return await sportLearning(env, league, origin);
+        if (action === 'history') return await usSportsHistory(url, env, league, origin);
+        if (action === 'simulation') return await usSportsKv(env, league, action, origin);
+        if (action === 'pipeline-health') return await usSportsPipelineHealth(env, league, origin);
+        if (action === 'today') {
+          const todayEt = etDate(new Date());
+          const today = todayEt.replaceAll('-', '');
+          let fallbackGames = [];
+          try {
+            const fetched = await fetchEspnPublicResponse(`${scoreboard}?dates=${today}&limit=100`, { init: { cf: { cacheTtl: 30 } } });
+            fallbackGames = compactOtherLiveGames(await fetched.response.json())
+              .filter((game) => game.start && etDate(new Date(game.start)) === todayEt);
+          } catch (e) { /* a KV shadow doc can still be served fail-closed */ }
+          return await usSportsToday(env, league, origin, fallbackGames);
+        }
         if (action === 'live') {
           // Fijar el día ET evita que ESPN entregue el último slate completado
           // cuando una liga está libre u off-season.
@@ -1881,10 +1895,13 @@ async function otherLive(ctx, origin, cacheTag, upstream, fallbackUpstream = nul
   const cache = caches.default;
   // Cuando el upstream está fijado a un día, la fecha también pertenece a la
   // llave. Así ni siquiera los 30 s de caché pueden cruzar la medianoche ET.
-  let cacheVariant = 'current';
+  let cacheVariant = 'current', requestedDate = null;
   try {
     const dates = new URL(upstream).searchParams.get('dates');
-    if (/^\d{8}$/.test(dates || '')) cacheVariant = dates;
+    if (/^\d{8}$/.test(dates || '')) {
+      cacheVariant = dates;
+      requestedDate = `${dates.slice(0, 4)}-${dates.slice(4, 6)}-${dates.slice(6, 8)}`;
+    }
   } catch (e) { /* upstream interno constante; current es un fallback seguro */ }
   const cacheKey = new Request(`https://aa-sports.cache/${cacheTag}/live/${cacheVariant}`, { method: 'GET' });
   const cached = await cache.match(cacheKey);
@@ -1900,7 +1917,17 @@ async function otherLive(ctx, origin, cacheTag, upstream, fallbackUpstream = nul
   }
   const data = await fetched.response.json();
 
-  const games = (data.events || []).map((ev) => {
+  const games = compactOtherLiveGames(data).filter((game) => !requestedDate
+    || (game.start && etDate(new Date(game.start)) === requestedDate));
+
+  const payload = JSON.stringify({ updated_at: new Date().toISOString(), source: fetched.source, games });
+  const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=30' } });
+  ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
+  return withCors(payload, origin);
+}
+
+function compactOtherLiveGames(data) {
+  return (data?.events || []).map((ev) => {
     const c = (ev.competitions && ev.competitions[0]) || {};
     const comp = c.competitors || [];
     const home = comp.find((x) => x.homeAway === 'home') || comp[0] || {};
@@ -1937,38 +1964,216 @@ async function otherLive(ctx, origin, cacheTag, upstream, fallbackUpstream = nul
       home: side(home), away: side(away),
     };
   });
-
-  const payload = JSON.stringify({ updated_at: new Date().toISOString(), source: fetched.source, games });
-  const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=30' } });
-  ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
-  return withCors(payload, origin);
 }
 
 function publicGateOpen(doc) {
   return doc?.gate?.public === true && doc?.gate?.approved === true && doc?.gate?.passed === true;
 }
 
+export const MARKET_KINDS = Object.freeze(['winner', 'total', 'players', 'combos']);
+
+const finiteMarketNumber = (value) => {
+  if (value == null || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+function safeMarketSample(sample) {
+  const source = sample && typeof sample === 'object' ? sample : {};
+  const out = {};
+  for (const key of ['n', 'graded', 'dates', 'wins', 'losses', 'market_n', 'min_n', 'min_forward', 'min_dates']) {
+    const value = finiteMarketNumber(source[key]);
+    if (value != null && value >= 0) out[key] = value;
+  }
+  for (const key of ['accuracy', 'brier', 'logloss', 'ece', 'market_brier', 'market_logloss', 'progress']) {
+    const value = finiteMarketNumber(source[key]);
+    if (value != null) out[key] = value;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function safeMarketGate(gate, kind) {
+  const source = gate && typeof gate === 'object' ? gate : {};
+  const passed = source.passed === true;
+  const approved = source.approved === true;
+  const isPublic = source.public === true;
+  return {
+    passed, approved, public: isPublic,
+    state: passed && approved && isPublic ? 'public' : 'closed',
+    reason: typeof source.reason === 'string' && source.reason ? source.reason.slice(0, 80) : `${kind}_forward_validation_pending`,
+  };
+}
+
+// This is the sole public projection boundary for winner, total, player props
+// and combos. A closed or malformed market retains only measured gate/sample
+// evidence; selection-level numbers are rebuilt from an allowlist only when all
+// three publication flags are true.
+export function sanitizeMarketBlock(block, fallbackGate, fallbackSample, kind = 'winner') {
+  const source = block && typeof block === 'object' ? block : {};
+  const gate = safeMarketGate(source.gate || fallbackGate, kind);
+  const sample = safeMarketSample(source.sample || fallbackSample);
+  if (!(gate.passed && gate.approved && gate.public)) return { state: 'closed', gate, sample };
+
+  const safe = { state: 'public', gate, sample };
+  for (const key of ['pick', 'side', 'family', 'player_id', 'player_name', 'confidence', 'engine_version']) {
+    if (typeof source[key] === 'string' && source[key]) safe[key] = source[key].slice(0, 100);
+  }
+  for (const key of ['prob', 'prob_pct', 'line', 'price', 'edge', 'projection', 'market_prob']) {
+    const value = finiteMarketNumber(source[key]);
+    if (value != null) safe[key] = value;
+  }
+  if (Array.isArray(source.items)) {
+    safe.items = source.items.slice(0, kind === 'combos' ? 2 : 12).map((item) => {
+      const row = {};
+      for (const key of ['selection_key', 'pick', 'side', 'family', 'player_id', 'player_name', 'confidence']) {
+        if (typeof item?.[key] === 'string' && item[key]) row[key] = item[key].slice(0, 100);
+      }
+      for (const key of ['prob', 'prob_pct', 'line', 'price', 'edge', 'projection', 'market_prob']) {
+        const value = finiteMarketNumber(item?.[key]);
+        if (value != null) row[key] = value;
+      }
+      return row;
+    }).filter((row) => Object.keys(row).length);
+  }
+  return safe;
+}
+
+function marketBlocksForEvent(event, source) {
+  const blocks = {};
+  const eventMarkets = event?.markets && typeof event.markets === 'object' ? event.markets : {};
+  const documentMarkets = source?.markets && typeof source.markets === 'object' ? source.markets : {};
+  const gates = source?.gates && typeof source.gates === 'object' ? source.gates : {};
+  const samples = source?.samples && typeof source.samples === 'object' ? source.samples : {};
+  for (const kind of MARKET_KINDS) {
+    let block = eventMarkets[kind] || null;
+    if (!block && kind === 'winner' && event?.prediction) block = event.prediction;
+    blocks[kind] = sanitizeMarketBlock(
+      block,
+      gates[kind] || documentMarkets[kind]?.gate || (kind === 'winner' ? source?.gate : null),
+      block?.sample || samples[kind] || documentMarkets[kind]?.sample || (kind === 'winner' ? source?.sample : null),
+      kind,
+    );
+  }
+  return blocks;
+}
+
+function safeSportSide(side) {
+  const source = side && typeof side === 'object' ? side : {};
+  const out = {};
+  for (const key of ['id', 'code', 'name', 'logo', 'rec', 'form']) {
+    if (typeof source[key] === 'string' && source[key]) out[key] = source[key].slice(0, 160);
+    else if (key === 'id' && finiteMarketNumber(source[key]) != null) out[key] = finiteMarketNumber(source[key]);
+  }
+  for (const key of ['score', 'rank']) {
+    const value = finiteMarketNumber(source[key]);
+    if (value != null) out[key] = value;
+  }
+  if (source.winner === true) out.winner = true;
+  if (Array.isArray(source.leaders)) out.leaders = source.leaders.slice(0, 5).map((leader) => ({
+    cat: typeof leader?.cat === 'string' ? leader.cat.slice(0, 40) : null,
+    name: typeof leader?.name === 'string' ? leader.name.slice(0, 100) : null,
+    value: typeof leader?.value === 'string' || finiteMarketNumber(leader?.value) != null ? leader.value : null,
+    headshot: typeof leader?.headshot === 'string' ? leader.headshot.slice(0, 300) : null,
+  })).filter((leader) => leader.name);
+  return out;
+}
+
+function safeSportEventFacts(event) {
+  const source = event && typeof event === 'object' ? event : {};
+  const out = {};
+  for (const key of ['event_id', 'espn_id', 'id', 'start', 'start_time', 'date', 'league', 'status', 'status_detail', 'clock']) {
+    if (typeof source[key] === 'string' && source[key]) out[key] = source[key].slice(0, 180);
+    else if (['event_id', 'espn_id', 'id'].includes(key) && finiteMarketNumber(source[key]) != null) out[key] = String(source[key]);
+  }
+  for (const key of ['period']) {
+    const value = finiteMarketNumber(source[key]);
+    if (value != null) out[key] = value;
+  }
+  out.home = safeSportSide(source.home);
+  out.away = safeSportSide(source.away);
+  if (source.market && typeof source.market === 'object') {
+    const market = {};
+    for (const key of ['total', 'home_ml', 'away_ml', 'spread', 'provider']) {
+      if (key === 'provider' && typeof source.market[key] === 'string') market[key] = source.market[key].slice(0, 80);
+      else { const value = finiteMarketNumber(source.market[key]); if (value != null) market[key] = value; }
+    }
+    if (Object.keys(market).length) out.market = market;
+  }
+  return out;
+}
+
+function safePublicRecord(record) {
+  const source = record && typeof record === 'object' ? record : {};
+  const out = {};
+  for (const key of ['n', 'wins', 'losses', 'pushes', 'voids', 'dates']) {
+    const value = finiteMarketNumber(source[key]);
+    if (value != null && value >= 0) out[key] = value;
+  }
+  for (const key of ['accuracy', 'brier', 'logloss', 'ece']) {
+    const value = finiteMarketNumber(source[key]);
+    if (value != null) out[key] = value;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 // Public projection for a new sport. A malformed or premature private blob is
 // fail-closed: scores remain visible, but picks and probabilities are removed.
 export function sanitizeUsSportsToday(doc, sport, fallbackGames = [], date = etDate(new Date())) {
   const source = doc && typeof doc === 'object' ? doc : {};
-  const open = publicGateOpen(source);
-  const events = Array.isArray(source.events) ? source.events : fallbackGames;
-  const safeEvents = events.map((event) => open ? event : ({ ...event, prediction: null }));
+  const sourceCurrent = typeof source.date !== 'string' || source.date === date;
+  const open = publicGateOpen(source) && sourceCurrent;
+  const privateEvents = (Array.isArray(source.events) ? source.events : []).filter((event) => {
+    const explicit = typeof event?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(event.date) ? event.date : null;
+    const fromStart = !explicit && event?.start && Number.isFinite(Date.parse(event.start)) ? etDate(new Date(event.start)) : null;
+    return explicit || fromStart ? (explicit || fromStart) === date : sourceCurrent;
+  });
+  const identity = (event) => String(event?.espn_id || event?.event_id || event?.id || '');
+  const privateById = new Map();
+  for (const event of privateEvents) {
+    for (const key of [event?.espn_id, event?.event_id, event?.id].filter((value) => value != null)) {
+      privateById.set(String(key), event);
+    }
+  }
+  // Public scoreboard facts are authoritative for status/scores. The private
+  // document may only overlay its already-sanitized market envelope.
+  const events = fallbackGames.length
+    ? fallbackGames.map((facts) => {
+        const model = privateById.get(identity(facts));
+        return model ? { ...facts, markets: model.markets, prediction: model.prediction } : facts;
+      })
+    : privateEvents;
+  const safeEvents = events.map((event) => {
+    const markets = marketBlocksForEvent(event, source);
+    const winner = markets.winner;
+    const prediction = winner.state === 'public' ? {
+      pick: winner.pick || null, side: winner.side || null, prob: winner.prob ?? null,
+      line: winner.line ?? null, price: winner.price ?? null, edge: winner.edge ?? null,
+      confidence: winner.confidence || null, engine_version: winner.engine_version || null,
+    } : null;
+    // Never forward arbitrary model fields from a private blob. Factual event
+    // fields and public markets are rebuilt from explicit allowlists.
+    return { ...safeSportEventFacts(event), prediction, markets };
+  });
+  const marketStatus = Object.fromEntries(MARKET_KINDS.map((kind) => [kind, sanitizeMarketBlock(
+    source.markets?.[kind], source.gates?.[kind] || (kind === 'winner' ? source.gate : null),
+    source.samples?.[kind] || source.markets?.[kind]?.sample || (kind === 'winner' ? source.sample : null), kind,
+  )]));
   return {
-    sport, date: source.date || date, updated_at: source.updated_at || null,
-    gate: source.gate || { passed: false, approved: false, public: false, state: 'training', reason: 'forward_validation_pending' },
-    sample: source.sample || null, record: open ? (source.record || null) : null,
-    events: safeEvents, top2: open && Array.isArray(source.top2) ? source.top2.slice(0, 2) : [],
+    sport, date, updated_at: source.updated_at || null,
+    gate: safeMarketGate(source.gate, 'winner'),
+    sample: safeMarketSample(source.sample), record: open ? safePublicRecord(source.record) : null,
+    markets: marketStatus, events: safeEvents,
+    top2: open && Array.isArray(source.top2)
+      ? source.top2.slice(0, 2).map((item) => sanitizeMarketBlock(item, source.gate, source.sample, item?.market === 'total' ? 'total' : 'winner')).filter((item) => item.state === 'public') : [],
     training: !open,
   };
 }
 
-async function usSportsToday(env, sport, origin) {
+async function usSportsToday(env, sport, origin, fallbackOverride = null) {
   const date = etDate(new Date());
-  let doc = null, fallbackGames = [];
+  let doc = null, fallbackGames = Array.isArray(fallbackOverride) ? fallbackOverride : [];
   try { const raw = await env.AA_LATEST.get(`${sport}:today`); if (raw) doc = JSON.parse(raw); } catch (e) { /* fail closed */ }
-  try {
+  if (!fallbackGames.length && Object.hasOwn(US_SPORTS, sport)) try {
     const row = await env.DB.prepare(
       'SELECT payload FROM sports_ingest_slots WHERE sport = ? AND date = ? ORDER BY slot_id DESC LIMIT 1',
     ).bind(sport, date).first();
@@ -1980,6 +2185,23 @@ async function usSportsToday(env, sport, origin) {
 async function usSportsHistory(url, env, sport, origin) {
   const days = Math.min(365, Math.max(1, parseInt(url.searchParams.get('days') || '30', 10) || 30));
   const cutoff = new Date(); cutoff.setUTCDate(cutoff.getUTCDate() - days);
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT date, event_id, selection_key, market_key AS market, pick, side, line, price, market_prob, prob,
+              home, away, start_time, result, engine_version, gate_version, updated_at
+       FROM sport_market_predictions
+       WHERE sport = ? AND public_scope = 'public' AND gate_passed = 1 AND human_approved = 1
+         AND invalidated = 0 AND date >= ?
+       ORDER BY date DESC, start_time DESC, market_key ASC, selection_key ASC LIMIT 1000`,
+    ).bind(sport, cutoff.toISOString().slice(0, 10)).all();
+    if (results?.length) return json({ sport, days, count: results.length, predictions: results }, 200, origin, 120);
+  } catch (e) { /* migration may not be applied yet; use the legacy ledgers */ }
+  // NBA/WNBA's legacy table is shadow-only and has no per-market/public-scope
+  // columns. Returning it would leak private rows, so an empty public history
+  // is the only safe fallback before migration 0007 has public data.
+  if (['nba', 'wnba'].includes(sport)) {
+    return json({ sport, days, count: 0, predictions: [], note: 'public_history_empty' }, 200, origin, 60);
+  }
   try {
     const { results } = await env.DB.prepare(
       `SELECT date, event_id, selection_key, market, pick, side, line, price, market_prob, prob,
@@ -1997,10 +2219,74 @@ async function usSportsHistory(url, env, sport, origin) {
 async function usSportsKv(env, sport, kind, origin) {
   const raw = await env.AA_LATEST.get(`${sport}:${kind}`);
   if (!raw) return json({ sport, state: 'training', note: 'not_published_yet' }, 200, origin, 300);
+  if (kind === 'simulation') {
+    try { return json(sanitizeSportsSimulation(JSON.parse(raw), sport), 200, origin, 300); }
+    catch (e) { return json({ sport, state: 'training', note: 'simulation_invalid' }, 200, origin, 60); }
+  }
   return new Response(raw, { status: 200, headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=300' } });
 }
 
+function safeSimulationMetrics(metrics) {
+  const source = metrics && typeof metrics === 'object' ? metrics : {};
+  const out = {};
+  for (const key of ['n', 'accuracy', 'acc', 'brier', 'logloss', 'ece', 'mae', 'rmse', 'bias', 'baseline_mae', 'interval80_coverage', 'market_line_coverage']) {
+    const value = finiteMarketNumber(source[key]);
+    if (value != null) out[key] = value;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+export function sanitizeSportsSimulation(doc, sport) {
+  const source = doc && typeof doc === 'object' ? doc : {};
+  const market = (kind) => {
+    const block = source[kind] && typeof source[kind] === 'object' ? source[kind] : {};
+    return {
+      historical: safeSimulationMetrics(block.historical),
+      forward: safeMarketSample(block.forward),
+      market_line_coverage: finiteMarketNumber(block.market_line_coverage),
+      gate: safeMarketGate(block.gate, kind),
+    };
+  };
+  const players = {};
+  for (const family of ['pts', 'reb', 'ast', 'passing_yards', 'completions', 'rushing_yards', 'receptions', 'receiving_yards', 'td']) {
+    const block = source.players?.[family];
+    if (!block) continue;
+    players[family] = {
+      historical: safeSimulationMetrics(block.historical || { n: block.historical_observations }),
+      forward: safeMarketSample(block.forward),
+      market_line_coverage: finiteMarketNumber(block.market_line_coverage),
+      gate: safeMarketGate(block.gate, 'players'),
+    };
+  }
+  return {
+    schema: 'aa_multisport_simulation_public_v1', sport,
+    generated_at: typeof source.generated_at === 'string' ? source.generated_at : null,
+    seasons: Array.isArray(source.seasons) ? source.seasons.slice(-8).map(String) : [],
+    burn_in: Array.isArray(source.burn_in) ? source.burn_in.slice(-4).map(String) : [],
+    winner: market('winner'), total: market('total'), players,
+    combos: market('combos'), state: 'training',
+  };
+}
+
 async function usSportsPipelineHealth(env, sport, origin) {
+  if (['nba', 'wnba'].includes(sport)) {
+    try {
+      const row = await env.DB.prepare(
+        `SELECT COUNT(*) AS n, MAX(updated_at) AS updated_at,
+                SUM(CASE WHEN result IN ('win','loss','push','void') THEN 1 ELSE 0 END) AS graded
+         FROM predictions WHERE sport = ?`,
+      ).bind(sport).first();
+      const ageSeconds = row?.updated_at ? Math.max(0, Math.floor((Date.now() - Date.parse(row.updated_at)) / 1000)) : null;
+      return json({
+        sport, ok: ageSeconds != null && ageSeconds <= 2 * 60 * 60,
+        state: ageSeconds == null ? 'empty' : ageSeconds > 2 * 60 * 60 ? 'stale' : 'ok',
+        interval_minutes: 60, age_seconds: ageSeconds,
+        latest: { captured_at: row?.updated_at || null, n: Number(row?.n || 0), graded: Number(row?.graded || 0) },
+      }, 200, origin, 30);
+    } catch (e) {
+      return json({ sport, ok: false, state: 'unavailable', interval_minutes: 60 }, 200, origin, 15);
+    }
+  }
   try {
     const row = await env.DB.prepare(
       `SELECT sport, slot_id, date, scheduled_at, captured_at, status, source_hash, n_games, missingness, error
@@ -2055,9 +2341,39 @@ function genericTeamSummary(data, sport) {
   const hs = statsOf(home), as = statsOf(away);
   const labels = new Map();
   for (const team of teams) for (const stat of (team.statistics || [])) labels.set(stat.name || stat.label, stat.label || stat.abbreviation || stat.name);
-  const stats = [...labels.entries()].filter(([key]) => hs.has(key) || as.has(key)).slice(0, 18)
-    .map(([key, label]) => ({ label, home: hs.get(key) ?? null, away: as.get(key) ?? null }));
-  return { sport, stats: stats.length ? stats : null };
+  const nflStats = new Map([
+    ['firstDowns', ['stat_nfl_first_downs', '1st Downs']], ['totalYards', ['stat_nfl_total_yards', 'Total Yards']],
+    ['netPassingYards', ['stat_nfl_passing_yards', 'Passing Yards']], ['rushingYards', ['stat_nfl_rushing_yards', 'Rushing Yards']],
+    ['turnovers', ['stat_nfl_turnovers', 'Turnovers']], ['sacksYardsLost', ['stat_nfl_sacks', 'Sacks-Yards']],
+    ['thirdDownEff', ['stat_nfl_third_down', '3rd Down']], ['possessionTime', ['stat_nfl_possession', 'Possession']],
+    ['totalPenaltiesYards', ['stat_nfl_penalties', 'Penalties-Yards']],
+  ]);
+  const sourceStats = sport === 'nfl'
+    ? [...nflStats].filter(([key]) => hs.has(key) || as.has(key)).map(([key, [i18n, label]]) => [key, label, i18n])
+    : [...labels.entries()].filter(([key]) => hs.has(key) || as.has(key)).slice(0, 18).map(([key, label]) => [key, label, null]);
+  const stats = sourceStats.map(([key, label, i18n]) => ({ key: i18n, label, home: hs.get(key) ?? null, away: as.get(key) ?? null }));
+  const playerSides = playerSidesByTeams(data);
+  const groupsOf = (block) => {
+    if (!block) return null;
+    const wanted = sport === 'nfl'
+      ? new Set(['passing', 'rushing', 'receiving', 'defensive'])
+      : new Set(['skaters', 'goalies']);
+    const groups = (block.statistics || []).filter((group) => wanted.has(group.name)).map((group) => {
+      const labels = (group.labels || group.names || []).map((label) => String(label));
+      const rows = (group.athletes || []).map((entry) => ({
+        name: entry?.athlete?.shortName || entry?.athlete?.displayName || null,
+        id: entry?.athlete?.id || null,
+        headshot: entry?.athlete?.headshot?.href || (typeof entry?.athlete?.headshot === 'string' ? entry.athlete.headshot : null),
+        starter: entry?.starter === true,
+        stats: Array.isArray(entry?.stats) ? entry.stats.slice(0, labels.length) : [],
+      })).filter((row) => row.name && row.stats.length).slice(0, 12);
+      return rows.length ? { key: group.name, labels, rows } : null;
+    }).filter(Boolean);
+    return groups.length ? { code: block.team?.abbreviation || null, groups } : null;
+  };
+  const players = (playerSides.home || playerSides.away)
+    ? { home: groupsOf(playerSides.home), away: groupsOf(playerSides.away) } : null;
+  return { sport, stats: stats.length ? stats : null, players };
 }
 
 // Elige el bloque home/away de un array cuyos elementos traen homeAway (o cae
@@ -2067,6 +2383,14 @@ function pickSides(arr) {
   const home = list.find((x) => x && x.homeAway === 'home') || list[0] || null;
   const away = list.find((x) => x && x.homeAway === 'away') || list[1] || null;
   return { home, away };
+}
+
+function playerSidesByTeams(data) {
+  const players = Array.isArray(data?.boxscore?.players) ? data.boxscore.players : [];
+  const teams = pickSides(data?.boxscore?.teams || []);
+  const code = (block) => block?.team?.abbreviation || block?.team?.id || null;
+  const find = (team) => players.find((block) => code(block) != null && String(code(block)) === String(code(team))) || null;
+  return { home: find(teams.home) || players[1] || players[0] || null, away: find(teams.away) || players[0] || players[1] || null };
 }
 
 // Estadísticas de soccer que mostramos, traducidas (name de ESPN → etiqueta ES).
@@ -2138,7 +2462,7 @@ const NBA_TEAM_STAT_LABELS = {
 };
 
 function nbaSummary(data, sport = 'nba') {
-  const teamSides = pickSides((data.boxscore && data.boxscore.players) || []);
+  const teamSides = playerSidesByTeams(data);
   const rowsOf = (block) => {
     if (!block) return null;
     const s = (Array.isArray(block.statistics) && block.statistics[0]) || {};
@@ -2339,7 +2663,7 @@ async function standings(ctx, origin, cacheTag, upstream, altUpstream) {
       code: (e.team && e.team.abbreviation) || null,
       name: (e.team && (e.team.shortDisplayName || e.team.displayName)) || null,
       logo: (e.team && e.team.logos && e.team.logos[0] && e.team.logos[0].href) || null,
-      rank: numOrNull(stat('rank')),
+      rank: (() => { const value = numOrNull(stat('rank')); return value != null && value > 0 ? value : null; })(),
       gp: stat('gamesPlayed'), w: stat('wins'), d: stat('ties'), l: stat('losses'),
       pct: stat('winPercent'), gb: stat('gamesBehind'),
       gd: stat('pointDifferential') ?? stat('goalDifferential') ?? stat('pointsDiff'),
@@ -2356,7 +2680,10 @@ async function standings(ctx, origin, cacheTag, upstream, altUpstream) {
     if (!sections.length && data.standings && data.standings.entries) {
       sections = [{ name: data.name || '', rows: mapEntries(data.standings.entries) }];
     }
-    for (const s of sections) s.rows.sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
+    for (const s of sections) {
+      s.rows.sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
+      s.rows = s.rows.map((row, index) => ({ ...row, rank: row.rank != null && row.rank > 0 ? row.rank : index + 1 }));
+    }
     return { season: (data.season && (data.season.displayName || data.season.year)) || null, sections };
   };
   const grab = async (url) => {

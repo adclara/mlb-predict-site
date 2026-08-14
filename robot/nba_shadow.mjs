@@ -24,7 +24,8 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { makeElo, loadSeasons } from './nba_model.mjs';
-import { probs2way } from './lib/espn_odds.mjs';
+import { priceFrom, probs2way } from './lib/espn_odds.mjs';
+import { createWnbaTotalForecaster } from './wnba_market_model.mjs';
 
 const ACCOUNT_ID = 'f02574feb7272a1da2818e35e0ff4342';
 const D1_DATABASE_ID = 'ed0969d8-050a-4987-ab98-b047c30f76c9';
@@ -39,6 +40,31 @@ if (!API_TOKEN) { console.log('Sin CLOUDFLARE_API_TOKEN; modo sombra omitido.');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const day = (d) => d.toISOString().slice(0, 10);
 const num = (x) => { const n = parseFloat(x); return Number.isFinite(n) ? n : null; };
+const normCdf = (z) => {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.3989423 * Math.exp(-z * z / 2);
+  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  return z > 0 ? 1 - p : p;
+};
+
+function wnbaTotalOffer(game, forecaster) {
+  if (!forecaster) return null;
+  const projection = forecaster.predict(game);
+  if (projection == null) return null;
+  const odds = game._odds || {}, total = odds.total || {};
+  const line = num(odds.overUnder ?? total.over?.close?.line ?? total.under?.close?.line
+    ?? total.over?.current?.line ?? total.under?.current?.line);
+  const overPrice = priceFrom(total.over ?? odds.overOdds), underPrice = priceFrom(total.under ?? odds.underOdds);
+  if (line == null || overPrice == null || underPrice == null) {
+    return { projection, line, side: null, prob: null, price: null, marketProb: null, edge: null };
+  }
+  const probOver = 1 - normCdf((line - projection) / Math.max(0.01, forecaster.residual_sd));
+  const impliedOver = 1 / overPrice, impliedUnder = 1 / underPrice, vig = impliedOver + impliedUnder;
+  const marketOver = impliedOver / vig, marketUnder = impliedUnder / vig;
+  const side = probOver >= 0.5 ? 'over' : 'under', prob = side === 'over' ? probOver : 1 - probOver;
+  const marketProb = side === 'over' ? marketOver : marketUnder;
+  return { projection, line, side, prob, price: side === 'over' ? overPrice : underPrice, marketProb, edge: prob - marketProb };
+}
 
 async function espn(path) {
   try {
@@ -91,7 +117,7 @@ function gameFromEvent(ev, d) {
   };
 }
 
-async function buildRatings(today) {
+async function buildRatings(today, totalForecaster = null) {
   const params = frozenParams();
   const elo = makeElo(params);
   const seasons = loadSeasons(join(process.env.DATA_DIR || join(process.cwd(), 'data'), 'fase2', SPORT));
@@ -126,6 +152,7 @@ async function buildRatings(today) {
       // salto de >60 días entre juegos = frontera de temporada → regresión al centro
       if (new Date(g.date) - new Date(prevDate) > 60 * 86400000) elo.newSeason();
       elo.update(g, elo.predict(g));
+      if (totalForecaster) totalForecaster.update(g);
       prevDate = g.date;
       applied++;
     }
@@ -135,6 +162,74 @@ async function buildRatings(today) {
   return { elo, prevDate };
 }
 
+let unifiedMarketTable = true;
+async function insertUnifiedMarket(row) {
+  if (!unifiedMarketTable) return false;
+  try {
+    await d1(`INSERT INTO sport_market_predictions
+      (sport,date,event_id,market_key,selection_key,family,player_id,player_name,pick,side,line,price,
+       market_prob,prob,edge,projection,combo_json,league,home,away,start_time,feature_as_of,frozen_at,
+       status,result,engine_version,gate_version,public_scope,gate_passed,human_approved,invalidated,
+       invalidated_reason,source_hash,updated_at)
+      VALUES (?,?,?,?,?,NULL,NULL,NULL,?,?,?,?,?,?,?,?,NULL,?,?,?,?,?,?,'frozen',NULL,?,?,'shadow',0,0,0,NULL,NULL,?)
+      ON CONFLICT(sport,date,event_id,market_key,selection_key) DO UPDATE SET
+        pick=COALESCE(sport_market_predictions.pick,excluded.pick),
+        side=COALESCE(sport_market_predictions.side,excluded.side),
+        line=COALESCE(sport_market_predictions.line,excluded.line),
+        price=COALESCE(sport_market_predictions.price,excluded.price),
+        market_prob=COALESCE(sport_market_predictions.market_prob,excluded.market_prob),
+        prob=COALESCE(sport_market_predictions.prob,excluded.prob),
+        edge=COALESCE(sport_market_predictions.edge,excluded.edge),
+        projection=COALESCE(sport_market_predictions.projection,excluded.projection),
+        frozen_at=CASE WHEN sport_market_predictions.price IS NULL AND excluded.price IS NOT NULL
+          THEN excluded.frozen_at ELSE sport_market_predictions.frozen_at END,
+        updated_at=excluded.updated_at
+      WHERE sport_market_predictions.status='frozen'`, [
+      SPORT, row.date, row.eventId, row.marketKey, row.selectionKey, row.pick, row.side, row.line, row.price,
+      row.marketProb, row.prob, row.edge, row.projection, SPORT.toUpperCase(), row.home, row.away, row.start,
+      row.featureAsOf, row.featureAsOf, row.engine, 'wnba-market-gate-v1', row.featureAsOf,
+    ]);
+    return true;
+  } catch (error) {
+    unifiedMarketTable = false;
+    console.log(`D1 unified market ledger unavailable until migration: ${error.message}`);
+    return false;
+  }
+}
+
+async function gradeUnifiedMarkets(today) {
+  if (SPORT !== 'wnba' || !unifiedMarketTable) return;
+  let pending = [];
+  try {
+    pending = await d1(`SELECT date,event_id,market_key,pick,side,line FROM sport_market_predictions
+      WHERE sport='wnba' AND result IS NULL AND date <= ? ORDER BY date,event_id LIMIT 200`, [day(today)]);
+  } catch (error) {
+    unifiedMarketTable = false;
+    console.log(`D1 unified grading unavailable until migration: ${error.message}`);
+    return;
+  }
+  const byDate = new Map();
+  for (const row of pending) { if (!byDate.has(row.date)) byDate.set(row.date, []); byDate.get(row.date).push(row); }
+  for (const [date, rows] of byDate) {
+    const data = await espn(`scoreboard?dates=${date.replaceAll('-', '')}`);
+    for (const row of rows) {
+      const event = (data?.events || []).find((item) => String(item.id) === String(row.event_id));
+      if (!event) continue;
+      const game = gameFromEvent(event, date);
+      if (!String(game._status.name || '').toUpperCase().includes('FINAL') || game.hs == null || game.as == null || game.hs === game.as) continue;
+      let result = 'void';
+      if (row.market_key === 'winner' && row.pick) result = (game.hs > game.as ? game.home : game.away) === row.pick ? 'win' : 'loss';
+      if (row.market_key === 'total' && ['over', 'under'].includes(row.side) && num(row.line) != null) {
+        const actual = game.hs + game.as;
+        result = actual === Number(row.line) ? 'push' : ((row.side === 'over') === (actual > Number(row.line)) ? 'win' : 'loss');
+      }
+      await d1(`UPDATE sport_market_predictions SET status='final',result=?,updated_at=?
+        WHERE sport='wnba' AND date=? AND event_id=? AND market_key=? AND selection_key IN ('winner:model','total:model')`,
+      [result, new Date().toISOString(), date, row.event_id, row.market_key]);
+    }
+  }
+}
+
 /* ── main ────────────────────────────────────────────────────────────────── */
 const tierOf = (p) => (p >= 0.7 ? 't70' : p >= 0.65 ? 't65' : p >= 0.6 ? 't60' : p >= 0.55 ? 't55' : 'open');
 
@@ -142,6 +237,8 @@ async function main() {
   const today = new Date();
   const dates = [day(today), day(new Date(today.getTime() + 86400000))];
   await ensureMarketProb();
+  const totalForecaster = SPORT === 'wnba' ? createWnbaTotalForecaster() : null;
+  await gradeUnifiedMarkets(today);
 
   /* gradear pendientes (hasta 5 días atrás) */
   const pending = await d1(
@@ -172,7 +269,7 @@ async function main() {
   }
 
   /* ratings al día y registro de picks */
-  const { elo } = await buildRatings(today);
+  const { elo } = await buildRatings(today, totalForecaster);
   let logged = 0, withMkt = 0;
   for (const d of dates) {
     const data = await espn(`scoreboard?dates=${d.replaceAll('-', '')}`);
@@ -196,6 +293,26 @@ async function main() {
          VALUES (?, ?, ?, ?, ?, 'pre', ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
         [SPORT, d, g._id, SPORT, ev.date || d, g.home, g.away, side.code, Math.round(side.p * 1000) / 1000, tierOf(side.p), ENGINE, mktSide != null ? Math.round(mktSide * 1000) / 1000 : null, new Date().toISOString()],
       );
+      if (SPORT === 'wnba') {
+        const frozenAt = new Date().toISOString();
+        const moneyline = g._odds?.moneyline || {};
+        const homePrice = priceFrom(g._odds?.homeTeamOdds ?? moneyline.home);
+        const awayPrice = priceFrom(g._odds?.awayTeamOdds ?? moneyline.away);
+        await insertUnifiedMarket({
+          date: d, eventId: g._id, marketKey: 'winner', selectionKey: 'winner:model', pick: side.code,
+          side: side.code === g.home ? 'home' : 'away', line: null,
+          price: side.code === g.home ? homePrice : awayPrice, marketProb: mktSide,
+          prob: side.p, edge: mktSide == null ? null : side.p - mktSide, projection: null,
+          home: g.home, away: g.away, start: ev.date || d, featureAsOf: frozenAt, engine: ENGINE,
+        });
+        const totalOffer = wnbaTotalOffer(g, totalForecaster);
+        if (totalOffer) await insertUnifiedMarket({
+          date: d, eventId: g._id, marketKey: 'total', selectionKey: 'total:model', pick: totalOffer.side,
+          side: totalOffer.side, line: totalOffer.line, price: totalOffer.price, marketProb: totalOffer.marketProb,
+          prob: totalOffer.prob, edge: totalOffer.edge, projection: totalOffer.projection,
+          home: g.home, away: g.away, start: ev.date || d, featureAsOf: frozenAt, engine: 'wnba-total-shadow-v1',
+        });
+      }
       logged++;
     }
     if (nEv) console.log(`  ${SPORT} ${d}: ${nEv} eventos, ${nPre} pre (regular/playoffs)`);

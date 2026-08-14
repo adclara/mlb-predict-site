@@ -420,6 +420,51 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .probtrack .aw{background:#FF6B3D;height:100%}
 .probtrack .hm{background:var(--volt);height:100%}
 .probtrack.f3 .tie{background:var(--hair-2);height:100%}
+/* Mercados primero: selector común + comparación vertical accesible. */
+.market-first{background:var(--inner);border:1px solid var(--hair);border-radius:16px;margin-bottom:14px;overflow:hidden}
+.market-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid var(--hair)}
+.market-tab{min-height:58px;padding:9px 7px;border-right:1px solid var(--hair);color:var(--faint);text-align:center;position:relative}
+.market-tab:last-child{border-right:0}
+.market-tab b{display:block;font-size:13px;color:var(--dim);line-height:1.25}
+.market-tab small{display:block;font-size:9.5px;line-height:1.25;margin-top:3px;color:var(--faint)}
+.market-tab.on b{color:var(--sky)}
+.market-tab.on::after{content:"";position:absolute;left:8px;right:8px;bottom:0;height:2px;background:var(--sky);border-radius:2px}
+.market-tab:focus-visible{outline:2px solid var(--sky);outline-offset:-3px}
+.market-panel{padding:17px 18px 16px}
+.market-panel-head{text-align:center;margin-bottom:12px}
+.market-panel-head h3{font-size:17px;font-weight:850;line-height:1.3}
+.market-panel-head p{font-size:12px;color:var(--faint);margin-top:4px;line-height:1.45}
+.prob-viz{position:relative;height:340px;display:grid;grid-template-columns:1fr 1fr;gap:34px;margin:5px auto 12px;max-width:520px;padding:0 28px 34px}
+.prob-viz::after{content:"";position:absolute;left:20px;right:20px;bottom:33px;border-top:2px solid var(--hair-2)}
+.prob-neutral{position:absolute;left:0;right:0;bottom:calc(33px + (100% - 105px)/2);border-top:1px dashed var(--faint);z-index:2}
+.prob-neutral span{position:absolute;left:0;top:-19px;font-size:10px;font-weight:800;color:var(--faint)}
+.prob-col{position:relative;display:grid;grid-template-rows:auto 44px 1fr auto;justify-items:center;min-width:0;z-index:3}
+.prob-pct{font-size:28px;font-weight:900;line-height:1;color:#ff6b3d}
+.prob-col.home .prob-pct{color:var(--volt)}
+.prob-logo{height:40px;display:grid;place-items:center;margin-top:3px}
+.prob-logo img,.prob-logo .tfall{width:38px;height:38px;object-fit:contain}
+.prob-barwell{height:100%;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.prob-barv{width:50px;min-height:4px;border-radius:9px 9px 3px 3px;background:#ff6b3d;border:1px dashed rgba(255,255,255,.48);box-shadow:0 8px 24px rgba(255,107,61,.12)}
+.prob-col.home .prob-barv{background:var(--volt);border-style:solid;box-shadow:0 8px 24px rgba(25,222,159,.13)}
+.prob-name{max-width:150px;font-size:12.5px;font-weight:800;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-top:7px}
+.market-callout{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;border:1px solid rgba(25,222,159,.32);background:rgba(25,222,159,.055);border-radius:12px;padding:11px 13px;font-size:13px;color:var(--dim)}
+.market-callout .aa{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--volt);color:#07120f;font-weight:950}
+.market-callout b{color:var(--volt);font-size:14px}
+.market-callout .risk{color:var(--amber);font-weight:750}
+.market-supplement{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--dim)}
+.market-supplement .confpill{margin:0}
+.market-honesty{font-size:11px;color:var(--faint);text-align:center;padding:11px 14px;border-top:1px solid var(--hair)}
+.gate-card{padding:8px 2px 2px;text-align:center}
+.gate-lock{font-size:16px;font-weight:850;color:var(--text)}
+.gate-reason{max-width:500px;margin:7px auto 14px;color:var(--dim);font-size:12.5px;line-height:1.55}
+.gate-progress{max-width:420px;margin:0 auto;background:var(--panel);border:1px solid var(--hair);border-radius:12px;padding:11px 12px;text-align:left}
+.gate-progress-head{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--faint);margin-bottom:7px}
+.gate-progress-head b{color:var(--text)}
+.gate-progress-track{height:7px;border-radius:5px;background:var(--panel-2);overflow:hidden}
+.gate-progress-track i{display:block;height:100%;border-radius:5px;background:var(--sky)}
+.market-items{display:grid;gap:8px}
+.market-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--hair);border-radius:10px;color:var(--dim);font-size:12.5px}
+.market-item b{color:var(--text)}
 /* ── Match Center: comparación cara a cara, gauge, tarjeta de jugador, F5 ── */
 .glass-in{background:linear-gradient(180deg,var(--panel),rgba(255,255,255,.02));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 10px 26px -14px rgba(0,0,0,.55)}
@@ -1195,6 +1240,11 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   .hwrap{padding:10px 12px;gap:8px}
   .langbtn{margin-right:0;padding-left:9px;padding-right:9px}
   .authbtn{padding-left:11px;padding-right:11px}
+  .market-panel{padding:15px 10px 13px}
+  .market-tab{min-height:60px;padding:9px 4px}
+  .market-tab b{font-size:11.5px}.market-tab small{font-size:8.5px}
+  .prob-viz{height:320px;gap:20px;padding-left:16px;padding-right:16px}
+  .prob-pct{font-size:24px}.prob-barv{width:44px}.prob-name{font-size:11.5px;max-width:112px}
 }
 .pcard{min-width:0}
 .formside{min-width:0}
@@ -1503,6 +1553,11 @@ const T = {
     how_link: '¿Cómo funciona el algoritmo AA? →', legal_link2: 'Aviso legal y términos de uso →',
     back_games: 'Partidos', sport_baseball: 'Baseball', sport_tennis: 'Tenis', sport_ncaaf: 'Fútbol College', sport_ncaam: 'Basket College',
     sport_training_gate: 'Entrenamiento · gate cerrado', sport_top2: 'Top 2 AA · mayor confianza',
+    market_compare: 'Comparador de mercados', market_winner: 'Ganador', market_total: 'Total', market_players: 'Jugadores', market_combos: 'Combos',
+    market_gate_closed: 'Gate cerrado', market_gate_public: 'Público', market_prob_title: 'Probabilidad de victoria', market_prob_aa: 'Modelo AA validado', market_prob_espn: 'ESPN · probabilidad en vivo', market_balance: 'Línea de equilibrio: 50%',
+    market_only_measured: 'Solo publicamos mercados medidos', market_locked_title: 'Este mercado sigue en validación', market_sample: 'Muestra forward', market_dates: 'fechas', market_pending_sample: 'Muestra en construcción', market_public_info: 'Señal informativa medida · tú decides', o_box_score: 'Estadísticas por jugador',
+    gate_reason_forward_validation_pending: 'Falta completar la muestra forward y sus fechas mínimas.', gate_reason_winner_forward_validation_pending: 'El ganador continúa acumulando resultados forward antes de publicarse.', gate_reason_total_forward_validation_pending: 'El modelo de totales se valida por separado con líneas pregame reales.', gate_reason_players_forward_validation_pending: 'Cada familia de props necesita 200 observaciones forward y líneas auditables.', gate_reason_combos_forward_validation_pending: 'Los combos requieren 100 resultados conjuntos y dos selecciones individuales ya públicas.', gate_reason_forward_sample_pending: 'La muestra forward todavía no llega al mínimo.', gate_reason_forward_calibration_pending: 'La calibración forward todavía no pasa el límite.', gate_reason_market_benchmark_pending: 'Falta demostrar no inferioridad frente al mercado real.', gate_reason_human_approval_pending: 'La evidencia pasó; falta aprobación humana explícita.', gate_reason_historical_gate_failed: 'La validación histórica todavía no pasa el gate.', gate_reason_learning_snapshot_pending: 'El snapshot medido del Cerebro aún se está publicando.', gate_reason_market_lines_unavailable: 'No hay cobertura histórica auditable de línea y precio pregame; por eso no se autoriza Alta/Baja.', gate_reason_player_boxscore_backfill_pending: 'El backfill causal de box scores por jugadora aún está en construcción.', gate_reason_individual_markets_not_public: 'Un combo no puede abrir hasta que sus dos selecciones individuales sean públicas.',
+    nfl_passing: 'Pase', nfl_rushing: 'Carrera', nfl_receiving: 'Recepciones', nfl_defensive: 'Defensa',
     foot: '<b>AA Sports</b> — inteligencia deportiva basada en datos. Publicamos predicciones del algoritmo AA, métricas y resúmenes para que decidas informado. No somos casa de apuestas, no tomamos dinero y no colocamos apuestas. Si decides jugar, hazlo con responsabilidad (18/21+). Los resultados pasados no garantizan resultados futuros.',
     foot_legal: 'Aviso legal y términos', foot_how: '¿Cómo funciona?',
     lang_btn: 'EN', lang_title: 'Switch to English',
@@ -1641,6 +1696,7 @@ const T = {
     sim_ntimes: 'Simulamos este juego {n} veces', sim_top: 'Marcador más probable', sim_freq: 'Marcadores más frecuentes', sim_runs: 'Carreras totales por juego', sim_margin: '¿Por cuánto gana {t}?', sim_by1: 'Por 1 carrera', sim_by23: 'Por 2-3', sim_by4: 'Por 4+', sim_loses: 'Pierde', sim_of_sims: 'de las simulaciones',
     o_recentnote: 'Sin juegos hoy · mostrando los últimos resultados', o_no_events: 'Sin eventos ahora mismo en {s}.', o_loading: 'Cargando…', o_no_events2: 'Sin eventos por ahora. Vuelve más tarde.', o_compare: 'Comparación', o_lineups: 'Alineaciones', o_match_stats: 'Estadísticas del partido', o_events: 'Eventos', o_team_stats: 'Estadísticas del equipo', o_today: 'HOY', o_toplay: 'Por jugar', o_recent_form: 'Racha reciente', o_leaders: 'Líderes del partido', o_injuries: 'Bajas reportadas', o_note: 'Datos en vivo vía AA Sports API. Actualización automática cada 45s.', no_data: 'Sin datos.',
     stat_fg: 'Tiros de campo', stat_fg_pct: '% Tiros de campo', stat_3pt: 'Triples', stat_3pt_pct: '% Triples', stat_ft: 'Tiros libres', stat_rebounds: 'Rebotes', stat_assists: 'Asistencias', stat_steals: 'Robos', stat_blocks: 'Tapones', stat_turnovers: 'Pérdidas', stat_fast_break: 'Puntos al contragolpe', stat_paint: 'Puntos en la pintura',
+    stat_nfl_first_downs: 'Primeros downs', stat_nfl_total_yards: 'Yardas totales', stat_nfl_passing_yards: 'Yardas por pase', stat_nfl_rushing_yards: 'Yardas por carrera', stat_nfl_turnovers: 'Pérdidas de balón', stat_nfl_sacks: 'Sacks-yardas', stat_nfl_third_down: 'Tercer down', stat_nfl_possession: 'Posesión', stat_nfl_penalties: 'Penalidades-yardas',
     hd_crumb: 'Historial AA', hd_measured: 'Picks medidos', hd_30d: 'últimos 30 días', hd_record: 'Récord', hd_wl: 'ganados–perdidos', hd_acc: 'Acierto', hd_acc_sub: 'todo medido, nada oculto', hd_streak: 'Racha actual', hd_streak_sub: 'según hora programada', hd_byday: 'Por día (últimos 14)', hd_noday: 'Sin días calificados aún.', hd_byconf: 'Por nivel de confianza', hist_public_rec: 'récord del boleto', hist_cohort_play: 'boleto', hist_cohort_lock: 'fijo', hist_cohort_gem: 'gema',
     cm_ops: 'OPS temporada', cm_rpg: 'Carreras/juego', cm_rpg5: 'C/juego últimos 5', cm_starter_fip: 'Abridor FIP', cm_form: 'Forma (V de 5)', cm_rest: 'Descanso (días)', d_set_score: 'Marcador por set',
     co_pos: 'Posición', co_pts: 'Puntos', co_gd: 'Dif. de gol', co_wins: 'Victorias', co_pos_conf: 'Posición conf.', co_winpct: '% Victorias', co_ptdiff: 'Dif. puntos', co_world_rank: 'Ranking mundial',
@@ -1684,6 +1740,11 @@ const T = {
     how_link: 'How does the AA algorithm work? →', legal_link2: 'Legal notice & terms of use →',
     back_games: 'Games', sport_baseball: 'Baseball', sport_tennis: 'Tennis', sport_ncaaf: 'College Football', sport_ncaam: 'College Basketball',
     sport_training_gate: 'Training · gate closed', sport_top2: 'AA Top 2 · highest confidence',
+    market_compare: 'Market comparator', market_winner: 'Winner', market_total: 'Total', market_players: 'Players', market_combos: 'Combos',
+    market_gate_closed: 'Gate closed', market_gate_public: 'Public', market_prob_title: 'Win probability', market_prob_aa: 'Validated AA model', market_prob_espn: 'ESPN · live probability', market_balance: 'Neutral line: 50%',
+    market_only_measured: 'We only publish measured markets', market_locked_title: 'This market remains under validation', market_sample: 'Forward sample', market_dates: 'dates', market_pending_sample: 'Sample in progress', market_public_info: 'Measured informational signal · you decide', o_box_score: 'Box score',
+    gate_reason_forward_validation_pending: 'The minimum forward sample and dates are not complete yet.', gate_reason_winner_forward_validation_pending: 'The winner model is still accumulating forward results before publication.', gate_reason_total_forward_validation_pending: 'The totals model is validated separately with real pregame lines.', gate_reason_players_forward_validation_pending: 'Each prop family needs 200 forward observations and auditable lines.', gate_reason_combos_forward_validation_pending: 'Combos need 100 jointly graded results and two already-public individual selections.', gate_reason_forward_sample_pending: 'The forward sample has not reached its minimum.', gate_reason_forward_calibration_pending: 'Forward calibration has not passed its limit yet.', gate_reason_market_benchmark_pending: 'Non-inferiority against the real market is not demonstrated yet.', gate_reason_human_approval_pending: 'The evidence passed; explicit human approval is still required.', gate_reason_historical_gate_failed: 'Historical validation has not passed the gate yet.', gate_reason_learning_snapshot_pending: 'The measured Brain snapshot is still being published.', gate_reason_market_lines_unavailable: 'Auditable historical pregame line and price coverage is missing, so no Over/Under signal is authorized.', gate_reason_player_boxscore_backfill_pending: 'The causal player box-score backfill is still being built.', gate_reason_individual_markets_not_public: 'A combo cannot open until both individual selections are public.',
+    nfl_passing: 'Passing', nfl_rushing: 'Rushing', nfl_receiving: 'Receiving', nfl_defensive: 'Defense',
     foot: '<b>AA Sports</b> — data-driven sports intelligence. We publish AA algorithm predictions, metrics and summaries so you decide informed. We are not a sportsbook, we take no money and we place no bets. If you choose to play, do it responsibly (18/21+). Past results do not guarantee future results.',
     foot_legal: 'Legal notice & terms', foot_how: 'How it works?',
     lang_btn: 'ES', lang_title: 'Cambiar a Español',
@@ -1822,6 +1883,7 @@ const T = {
     sim_ntimes: 'We simulated this game {n} times', sim_top: 'Most likely score', sim_freq: 'Most frequent scores', sim_runs: 'Total runs per game', sim_margin: 'By how much does {t} win?', sim_by1: 'By 1 run', sim_by23: 'By 2-3', sim_by4: 'By 4+', sim_loses: 'Loses', sim_of_sims: 'of the simulations',
     o_recentnote: 'No games today · showing the latest results', o_no_events: 'No events right now in {s}.', o_loading: 'Loading…', o_no_events2: 'No events for now. Check back later.', o_compare: 'Comparison', o_lineups: 'Lineups', o_match_stats: 'Match stats', o_events: 'Events', o_team_stats: 'Team stats', o_today: 'TODAY', o_toplay: 'Upcoming', o_recent_form: 'Recent form', o_leaders: 'Match leaders', o_injuries: 'Reported injuries', o_note: 'Live data via AA Sports API. Auto-refresh every 45s.', no_data: 'No data.',
     stat_fg: 'Field goals', stat_fg_pct: 'Field goal %', stat_3pt: 'Three-pointers', stat_3pt_pct: 'Three-point %', stat_ft: 'Free throws', stat_rebounds: 'Rebounds', stat_assists: 'Assists', stat_steals: 'Steals', stat_blocks: 'Blocks', stat_turnovers: 'Turnovers', stat_fast_break: 'Fast-break points', stat_paint: 'Points in the paint',
+    stat_nfl_first_downs: 'First downs', stat_nfl_total_yards: 'Total yards', stat_nfl_passing_yards: 'Passing yards', stat_nfl_rushing_yards: 'Rushing yards', stat_nfl_turnovers: 'Turnovers', stat_nfl_sacks: 'Sacks-yards', stat_nfl_third_down: 'Third down', stat_nfl_possession: 'Possession', stat_nfl_penalties: 'Penalties-yards',
     hd_crumb: 'AA History', hd_measured: 'Picks tracked', hd_30d: 'last 30 days', hd_record: 'Record', hd_wl: 'won–lost', hd_acc: 'Hit rate', hd_acc_sub: 'all tracked, nothing hidden', hd_streak: 'Current streak', hd_streak_sub: 'by scheduled start', hd_byday: 'By day (last 14)', hd_noday: 'No graded days yet.', hd_byconf: 'By confidence level', hist_public_rec: 'ticket record', hist_cohort_play: 'ticket', hist_cohort_lock: 'lock', hist_cohort_gem: 'gem',
     cm_ops: 'Season OPS', cm_rpg: 'Runs/game', cm_rpg5: 'R/game last 5', cm_starter_fip: 'Starter FIP', cm_form: 'Form (W of 5)', cm_rest: 'Rest (days)', d_set_score: 'Score by set',
     co_pos: 'Position', co_pts: 'Points', co_gd: 'Goal diff', co_wins: 'Wins', co_pos_conf: 'Conf. position', co_winpct: 'Win %', co_ptdiff: 'Point diff', co_world_rank: 'World ranking',
@@ -2330,6 +2392,7 @@ async function loadLearning(){
   }catch(err){ sportLearningDocs.set(target, { note: 'err' }); }
   sportLearningAt.set(target, Date.now()); sportLearningLoading.delete(target);
   if (sport === target && listTab === 'brain') renderBrain();
+  else if (sport === target && ['wnba', 'nfl'].includes(target)) renderOtherDetail();
 }
 // 🔬 Tarjeta de validación out-of-sample (walk-forward sobre todo el histórico).
 function simCard(){
@@ -2813,6 +2876,19 @@ function nbaBoxCard(box){
   </div>`;
 }
 
+function genericPlayerBox(box){
+  if (!box || !(box.groups || []).length) return `<div class="boxwrap"><span class="wempty">${t('no_box')}</span></div>`;
+  const groupLabel = (key) => ({ passing: t('nfl_passing'), rushing: t('nfl_rushing'), receiving: t('nfl_receiving'), defensive: t('nfl_defensive') })[key] || key;
+  return `<div class="boxwrap"><div class="sthead">${esc(box.code || '')}</div>${box.groups.map((group) => {
+    const labels = (group.labels || []).slice(0, 7);
+    const rows = (group.rows || []).slice(0, 6).map((player) => `<tr>
+      <td class="tl tm">${player.starter ? `<span class="stdot" title="${t('starter')}"></span>` : ''}${esc(player.name || '—')}</td>
+      ${labels.map((_, index) => `<td>${esc(String((player.stats || [])[index] ?? '—'))}</td>`).join('')}</tr>`).join('');
+    return `<div class="pcr" style="margin:8px 0 4px;font-weight:800">${esc(groupLabel(group.key))}</div>
+      <table class="sttbl boxtbl num"><thead><tr><th class="tl">${t('d_player')}</th>${labels.map((label) => `<th>${esc(label)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+  }).join('')}</div>`;
+}
+
 // Marcador por set de tenis (dato real de ESPN: linescores + tiebreaks). Es lo
 // máximo que la API gratis expone por partido; no hay stats de saque/winners.
 function tennisSetline(g){
@@ -2834,6 +2910,101 @@ function tennisSetline(g){
       <thead><tr><th class="tl">${t('d_player')}</th>${Array.from({ length: n }, (_, i) => `<th>S${i + 1}</th>`).join('')}</tr></thead>
       <tbody>${row(aw, hm, g.away)}${row(hm, aw, g.home)}</tbody>
     </table></div>`;
+}
+
+let marketTab = 'winner';
+const MARKET_KEYS = ['winner', 'total', 'players', 'combos'];
+
+function measuredMarketBlock(block, kind, fallbackSample, fallbackGate){
+  const b = block && typeof block === 'object' ? block : {};
+  const gate = b.gate && typeof b.gate === 'object' ? b.gate : (fallbackGate || {});
+  const isPublic = b.state === 'public' && gate.passed === true && gate.approved === true && gate.public === true;
+  return {
+    ...b, state: isPublic ? 'public' : 'closed',
+    gate: { ...gate, passed: gate.passed === true, approved: gate.approved === true, public: gate.public === true,
+      reason: gate.reason || `${kind}_forward_validation_pending` },
+    sample: b.sample || fallbackSample || null,
+  };
+}
+
+function marketReason(reason){
+  const key = `gate_reason_${String(reason || 'forward_validation_pending').replace(/[^a-z0-9_]/gi, '_')}`;
+  const translated = t(key);
+  return translated === key ? t('gate_reason_forward_validation_pending') : translated;
+}
+
+function marketMinimum(kind, activeSport){
+  if (kind === 'combos') return 100;
+  if (kind === 'winner' && activeSport === 'nfl') return 50;
+  return 200;
+}
+
+function gatePanel(block, kind, activeSport){
+  const sample = block.sample || {};
+  const nRaw = sample.graded ?? sample.n;
+  const n = nRaw != null && Number.isFinite(Number(nRaw)) ? Math.max(0, Number(nRaw)) : null;
+  const datesRaw = sample.dates;
+  const dates = datesRaw != null && Number.isFinite(Number(datesRaw)) ? Math.max(0, Number(datesRaw)) : null;
+  const minimum = Number(sample.min_forward ?? sample.min_n ?? marketMinimum(kind, activeSport));
+  const progress = n != null && minimum > 0 ? Math.min(100, 100 * n / minimum) : 0;
+  return `<div class="gate-card" role="status">
+    <div class="gate-lock">${t('market_locked_title')}</div>
+    <p class="gate-reason">${esc(marketReason(block.gate && block.gate.reason))}</p>
+    <div class="gate-progress">
+      <div class="gate-progress-head"><span>${t('market_sample')}</span><b class="num">${n == null ? t('market_pending_sample') : `${n} / ${minimum}${dates != null ? ` · ${dates} ${t('market_dates')}` : ''}`}</b></div>
+      <div class="gate-progress-track" aria-hidden="true"><i style="width:${progress.toFixed(1)}%"></i></div>
+    </div>
+  </div>`;
+}
+
+function probabilityColumns({ away, home, awayPct, homePct, logo }){
+  const a = Math.max(0, Math.min(100, Number(awayPct) || 0));
+  const h = Math.max(0, Math.min(100, Number(homePct) || 0));
+  const pct = (value) => Number(value).toFixed(Number(value) % 1 ? 1 : 0);
+  const col = (side, value, cls) => `<div class="prob-col ${cls}">
+    <div class="prob-pct num">${pct(value)}%</div>
+    <div class="prob-logo">${logo(side)}</div>
+    <div class="prob-barwell"><span class="prob-barv" style="height:${value}%"></span></div>
+    <div class="prob-name">${esc(side.name || side.code || '—')}</div>
+  </div>`;
+  return `<div class="prob-viz" role="img" aria-label="${esc(`${oName(away)} ${pct(a)}%, ${oName(home)} ${pct(h)}%`)}">
+    <div class="prob-neutral"><span>50%</span></div>${col(away, a, 'away')}${col(home, h, 'home')}
+  </div><div class="market-panel-head"><p>${t('market_balance')}</p></div>`;
+}
+
+function publicMarketItems(block){
+  const items = Array.isArray(block.items) ? block.items : [block];
+  return `<div class="market-items">${items.map((item) => {
+    const label = item.player_name || item.pick || item.family || 'AA';
+    const value = item.prob_pct != null ? `${item.prob_pct}%` : item.prob != null ? `${(Number(item.prob) * 100).toFixed(1)}%` : '';
+    const line = item.line != null ? ` · ${item.line}` : '';
+    return `<div class="market-item"><b>${esc(label)}</b><span class="num">${esc(`${value}${line}`)}</span></div>`;
+  }).join('')}</div>`;
+}
+
+function marketComparator({ activeSport, blocks, away, home, awayPct, homePct, logo, source, pick, risk, supplemental = '' }){
+  const selected = MARKET_KEYS.includes(marketTab) ? marketTab : 'winner';
+  const normalized = Object.fromEntries(MARKET_KEYS.map((kind) => [kind, measuredMarketBlock(blocks && blocks[kind], kind)]));
+  const block = normalized[selected];
+  const labels = { winner: 'market_winner', total: 'market_total', players: 'market_players', combos: 'market_combos' };
+  const tabs = MARKET_KEYS.map((kind) => {
+    const publicState = normalized[kind].state === 'public';
+    return `<button class="market-tab ${selected === kind ? 'on' : ''}" data-market-kind="${kind}" role="tab" aria-selected="${selected === kind}">
+      <b>${t(labels[kind])}</b><small>${publicState ? t('market_gate_public') : t('market_gate_closed')}</small></button>`;
+  }).join('');
+  let body;
+  if (block.state !== 'public') body = gatePanel(block, selected, activeSport);
+  else if (selected === 'winner' && awayPct != null && homePct != null) {
+    const pickName = pick ? (pick === home.code || canon(pick) === canon(home.code) ? oName(home) : oName(away)) : '';
+    const pickPct = pickName ? (canon(pick) === canon(home.code) ? homePct : awayPct) : null;
+    body = `<div class="market-panel-head"><h3>${t('market_prob_title')} (${source === 'espn' ? 'ESPN' : 'AA'})</h3><p>${source === 'espn' ? t('market_prob_espn') : t('market_prob_aa')}</p></div>
+      ${probabilityColumns({ away, home, awayPct, homePct, logo })}
+      ${source !== 'espn' && pickName && pickPct != null ? `<div class="market-callout"><span class="aa">AA</span><b>${esc(pickName)} ${Number(pickPct).toFixed(Number(pickPct) % 1 ? 1 : 0)}%</b>${risk ? `<span>·</span><span class="risk">${t('bol_risk')}: ${esc(risk)}</span>` : ''}</div>` : ''}`;
+  } else body = publicMarketItems(block);
+  return `<section class="market-first" aria-label="${t('market_compare')}">
+    <div class="market-tabs" role="tablist">${tabs}</div><div class="market-panel" role="tabpanel">${body}${selected === 'winner' && supplemental ? `<div class="market-supplement">${supplemental}</div>` : ''}</div>
+    <div class="market-honesty">${t('market_only_measured')} · ${t('market_public_info')}</div>
+  </section>`;
 }
 
 function renderDetail(){
@@ -2955,22 +3126,28 @@ function renderDetail(){
     <div class="secttl">${t('d_why')}</div>
     <ul class="whylist">${snap.reasons.map(r2 => `<li>${esc(r2)}</li>`).join('')}</ul>` : '';
 
+  const mlbMarketBlocks = {
+    winner: homePct != null && !p.invalidated
+      ? { state: 'public', gate: { passed: true, approved: true, public: true, reason: 'passed' } }
+      : { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'winner_forward_validation_pending' } },
+    total: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'total_forward_validation_pending' } },
+    players: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'players_forward_validation_pending' } },
+    combos: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'combos_forward_validation_pending' } },
+  };
+  const mlbMarketComparator = marketComparator({
+    activeSport: 'mlb', blocks: mlbMarketBlocks,
+    away: { ...ev.away, name: tNick(ev.away.code) }, home: { ...ev.home, name: tNick(ev.home.code) },
+    awayPct, homePct, logo: (side) => logoImg(side.code), source: liveWpHome != null ? 'espn' : 'aa',
+    pick: p.pick, risk: risk.level ? t('risk_' + risk.level) : null,
+    supplemental: !p.invalidated && p.confidence
+      ? `<span class="confpill">${t('d_confidence')} ${esc(confLabel(p.confidence))}</span>${tags}` : tags,
+  });
+
   const analisis = `
     ${invalidNotice}
     ${viewFuture ? `<div class="verdict"><span class="ic">📅</span><p><span class="vt">${t('upcoming')}</span>${t('future_detail')}</p></div>` : ''}
     ${verdictBox}
-    ${homePct != null ? `
-    <div class="whowin">
-      <div class="ww-head"><span class="q">${liveWpHome != null ? t('d_live_prob') : t('d_who_wins')}</span><span class="eng">${liveWpHome != null ? t('d_espn_moves') : t('d_engine_aa') + esc(p.engine_version || 'v2')}</span></div>
-      <div class="probhead num"><span>${esc(tNick(ev.away.code))} ${awayPct}%</span><span>${homePct}% ${esc(tNick(ev.home.code))}</span></div>
-      <div class="probtrack"><span class="aw" style="width:${awayPct}%"></span><span class="hm" style="width:${homePct}%"></span></div>
-      <div class="ww-pick">
-        ${p.pick && !p.invalidated ? `<span class="bigpick ${badgeMuted ? 'muted' : ''}">${liveWpHome != null ? t('d_pick_lbl') : t('d_wins_lbl')}${esc(tNick(p.pick))}</span>` : ''}
-        ${pickPct != null ? `<span class="bigprob num ${badgeMuted ? 'muted' : ''}">${pickPct}%</span>` : ''}
-        ${liveWpHome == null && p.confidence && !p.invalidated ? `<span class="confpill">${t('d_confidence')} ${esc(confLabel(p.confidence))}</span>` : ''}
-        ${tags}
-      </div>
-    </div>` : ''}
+    ${mlbMarketComparator}
     ${wpChart}
     ${ev.metrics?.length ? `<div class="secttl">${t('d_metrics')}</div>
       <div class="mgrid">${ev.metrics.map(m => `<div class="mcard"><div class="lb">${esc(metricLabel(m))}</div><div class="vl num ${metricCls(m)}">${esc(metricValue(m))}</div></div>`).join('')}</div>` : ''}
@@ -3306,7 +3483,7 @@ function renderSide(){
 
 /* ── interacción ─────────────────────────────────────────── */
 function select(id, openMobile){
-  if (id !== selectedId) dtab = 'analisis';
+  if (id !== selectedId){ dtab = 'analisis'; marketTab = 'winner'; }
   selectedId = id;
   renderList(); renderDetail();
   if (openMobile && window.matchMedia('(max-width:900px)').matches){
@@ -3377,6 +3554,7 @@ document.addEventListener('click', e => {
   }
   const orow = e.target.closest('[data-oid]');
   if (orow){
+    if (String(otherSel) !== String(orow.dataset.oid)) marketTab = 'winner';
     otherSel = orow.dataset.oid; renderOtherDetail();
     if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; }
     return;
@@ -3396,6 +3574,8 @@ document.addEventListener('click', e => {
   }
   const dt = e.target.closest('.dtab');
   if (dt){ dtab = dt.dataset.dt; renderDetail(); return; }
+  const market = e.target.closest('[data-market-kind]');
+  if (market){ marketTab = market.dataset.marketKind || 'winner'; sport === 'mlb' ? renderDetail() : renderOtherDetail(); return; }
   const lt = e.target.closest('.ltab');
   if (lt){
     listTab = lt.dataset.lt;
@@ -3525,7 +3705,7 @@ async function loadOther(){
     const d = await r.json();
     if (loadSeq !== otherLoadSeq || mySport !== sport || myLeague !== soccerLeague) return;
     otherGames = d.games || [];
-    if (['nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
+    if (['wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
       try{
         const mr = await fetch(`${API}/v1/${sport}/today`);
         const md = await mr.json();
@@ -3533,7 +3713,7 @@ async function loadOther(){
         const byId = new Map((md.events || []).map(e => [String(e.espn_id || e.event_id || e.id), e]));
         otherGames = otherGames.map(g => {
           const model = byId.get(String(g.espn_id));
-          return model ? { ...g, prediction: model.prediction || null } : g;
+          return model ? { ...g, prediction: model.prediction || null, markets: model.markets || md.markets || null } : { ...g, markets: md.markets || null };
         });
       }catch(e){ sportModelDocs.delete(sport); }
     }
@@ -3553,19 +3733,20 @@ async function loadOther(){
   // link compartido ?sc=<id>: selecciona ese partido si está en la lista
   if (pendingOther){ const hit = otherGames.find(x => String(x.espn_id) === String(pendingOther)); if (hit){ otherSel = hit.espn_id; } pendingOther = null; }
   loadStandings();
+  if (['wnba', 'nfl'].includes(sport)) loadLearning();
   if (sport === 'soccer') loadSoccerPreds();
   if (sport !== 'mlb') renderAll();
 }
 
 function usPredFor(g){
-  if (!g || !['nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return null;
+  if (!g || !['wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return null;
   const p = g.prediction;
   if (!p || p.prob == null || !p.pick) return null;
   return { ...p, pct: Math.round(Number(p.prob) * 1000) / 10 };
 }
 
 function top2Banner(){
-  if (!['nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return '';
+  if (!['wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return '';
   const doc = sportModelDocs.get(sport);
   const picks = Array.isArray(doc?.top2) ? doc.top2.slice(0, 2) : [];
   if (!picks.length) return `<div class="recentnote">🧪 ${t('sport_training_gate')}</div>`;
@@ -4493,8 +4674,8 @@ function stRow(code){
   const doc = standingsCache.get(key);
   if (!doc) return null;
   for (const sec of doc.sections || []){
-    const hit = (sec.rows || []).find(r => canon(r.code) === canon(code));
-    if (hit) return hit;
+    const index = (sec.rows || []).findIndex(r => canon(r.code) === canon(code));
+    if (index >= 0){ const hit = sec.rows[index]; return { ...hit, rank: Number(hit.rank) > 0 ? hit.rank : index + 1 }; }
   }
   return null;
 }
@@ -4546,7 +4727,7 @@ function standingsHtml(){
       <table class="sttbl num">
         <thead><tr><th class="tl">#</th><th class="tl">${t('st_team')}</th>${isSoccer ? `<th>${t('st_gp')}</th><th>${t('st_w')}</th><th>${t('st_d')}</th><th>${t('st_l')}</th><th>${t('st_gd')}</th><th>${t('st_pts')}</th>` : `<th>${t('st_w')}</th><th>${t('st_l')}</th><th>${t('st_pct')}</th><th>${t('st_gb')}</th>`}</tr></thead>
         <tbody>${sec.rows.slice(0, isSoccer ? 20 : 15).map((r, i) => `<tr>
-          <td class="tl">${r.rank ?? i + 1}</td>
+          <td class="tl">${Number(r.rank) > 0 ? r.rank : i + 1}</td>
           <td class="tl tm">${r.logo ? `<img src="${esc(r.logo)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}${esc(r.name || r.code || '')}</td>
           ${isSoccer
             ? `<td>${r.gp ?? '—'}</td><td>${r.w ?? '—'}</td><td>${r.d ?? '—'}</td><td>${r.l ?? '—'}</td><td>${r.gd ?? '—'}</td><td><b>${r.pts ?? '—'}</b></td>`
@@ -4623,10 +4804,24 @@ function renderOtherDetail(){
   }
   const scored = g.home.score != null && g.status !== 'pre';
   const usPr = usPredFor(g);
-  const usPredCard = usPr ? `<div class="scpred">
+  const legacyUsPredCard = usPr ? `<div class="scpred">
     <div class="scph"><span class="q">${t('sc_pickttl')}</span><span class="eng">${t('sc_eng')}</span></div>
     <div class="ww-pick"><span class="bigpick">${esc(usPr.market === 'total' ? `${usPr.side || usPr.pick} ${usPr.line ?? ''}` : usPr.pick)}</span><span class="bigprob num">${usPr.pct}%</span></div>
   </div>` : '';
+  const brain = sportLearningDocs.get(sport) || {};
+  const brainSample = brain.forward && typeof brain.forward === 'object'
+    ? { ...brain.forward, min_forward: brain.gate && brain.gate.min_forward, min_dates: brain.gate && brain.gate.min_dates } : null;
+  const sourceBlocks = g.markets || (sportModelDocs.get(sport) && sportModelDocs.get(sport).markets) || {};
+  const otherMarketBlocks = Object.fromEntries(MARKET_KEYS.map((kind) => [kind, measuredMarketBlock(
+    sourceBlocks[kind], kind, kind === 'winner' ? brainSample : null, kind === 'winner' ? brain.gate : null,
+  )]));
+  const otherHomePct = usPr && usPr.pct != null
+    ? (canon(usPr.pick) === canon(g.home.code) ? usPr.pct : 100 - usPr.pct) : null;
+  const otherAwayPct = otherHomePct != null ? Math.round((100 - otherHomePct) * 10) / 10 : null;
+  const usMarketCard = ['wnba', 'nfl'].includes(sport) ? marketComparator({
+    activeSport: sport, blocks: otherMarketBlocks, away: g.away, home: g.home,
+    awayPct: otherAwayPct, homePct: otherHomePct, logo: oLogo, source: 'aa', pick: usPr && usPr.pick, risk: null,
+  }) : legacyUsPredCard;
 
   // Comparación cara a cara descriptiva (datos reales de posiciones/ranking; sin predicciones).
   let h2hRows = '';
@@ -4663,7 +4858,7 @@ function renderOtherDetail(){
   // Detalle del partido (alineaciones/formación + estadísticas + eventos para
   // soccer; box score + estadísticas de equipo para NBA). Datos reales de ESPN.
   let summaryHtml = '';
-  if (sport === 'soccer' || sport === 'nba' || sport === 'wnba'){
+  if (['soccer', 'nba', 'wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
     loadSummary(g);
     const ent = summaryCache.get(summaryKey(g));
     const S = ent && ent.doc;
@@ -4680,8 +4875,14 @@ function renderOtherDetail(){
           <div class="evbox glass-in">${S.events.map(soccerEventRow).join('')}</div>`;
     } else if (S && (sport === 'nba' || sport === 'wnba')){
       if (S.players && (S.players.home || S.players.away))
-        summaryHtml += `<div class="secttl">Box score</div>
+        summaryHtml += `<div class="secttl">${t('o_box_score')}</div>
           <div class="boxgrid">${nbaBoxCard(S.players.away)}${nbaBoxCard(S.players.home)}</div>`;
+      if (S.stats && S.stats.length)
+        summaryHtml += `<div class="secttl">${t('o_team_stats')}</div>${statHead}
+          <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.key ? t(s.key) : s.label, s.away, s.home)).join('')}</div>`;
+    } else if (S && ['nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
+      if (S.players && (S.players.home || S.players.away))
+        summaryHtml += `<div class="secttl">${t('o_box_score')}</div><div class="boxgrid">${genericPlayerBox(S.players.away)}${genericPlayerBox(S.players.home)}</div>`;
       if (S.stats && S.stats.length)
         summaryHtml += `<div class="secttl">${t('o_team_stats')}</div>${statHead}
           <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.key ? t(s.key) : s.label, s.away, s.home)).join('')}</div>`;
@@ -4708,7 +4909,7 @@ function renderOtherDetail(){
     </div>
     <div class="dbody">
       ${sport === 'soccer' ? soccerPredCard(g) : ''}
-      ${usPredCard}
+      ${usMarketCard}
       ${otherH2H}
       ${summaryHtml}
       ${(g.away.form || g.home.form) ? `
@@ -4746,7 +4947,7 @@ function renderOtherDetail(){
         <div class="formside"><div class="fh">${oLogo(g.away)}${esc(oName(g.away))}</div>${injuryRows('nba', g.away.code)}</div>
         <div class="formside"><div class="fh">${oLogo(g.home)}${esc(oName(g.home))}</div>${injuryRows('nba', g.home.code)}</div>
       </div>` : ''}
-      ${((sport === 'soccer' && predFor(g)) || usPr) ? '' : `<div class="verdict"><span class="ic">🧪</span>
+      ${((sport === 'soccer' && predFor(g)) || usPr || ['wnba', 'nfl'].includes(sport)) ? '' : `<div class="verdict"><span class="ic">🧪</span>
         <p><span class="vt">${t('w_train')}</span>${t('sc_train_p').replace('{sport}', esc(sportLabel(sport)))}</p>
       </div>`}
       ${standingsHtml()}
@@ -4764,7 +4965,7 @@ function renderLeagueChips(){
 
 function setSport(sp2){
   sport = sp2;
-  listTab = 'all'; filter = 'all'; otherSel = null; otherGames = [];
+  listTab = 'all'; filter = 'all'; otherSel = null; otherGames = []; marketTab = 'winner';
   document.querySelectorAll('.sp[data-sport]').forEach(b => b.classList.toggle('on', b.dataset.sport === sport));
   document.querySelectorAll('.ltab').forEach(c => c.classList.toggle('on', c.dataset.lt === 'all'));
   document.querySelectorAll('.pill[data-f]').forEach(c => { c.classList.toggle('on', c.dataset.f === 'all'); c.classList.toggle('neutral', c.dataset.f === 'all'); });
