@@ -142,6 +142,20 @@ async function installApiMocks(page, date, events, games) {
         ] }] });
         if (action === 'summary') return json(route, { ok: true, sport, stats: [{ key: 'stat_fg', label: 'Tiros de campo', away: '29-65', home: '31-66' }] });
         if (action === 'recent') return json(route, { sport, games: [] });
+        if (action === 'today') {
+          const gates = {
+            winner: { passed: false, approved: false, public: false, reason: 'forward_sample_pending' },
+            total: { passed: false, approved: false, public: false, reason: 'market_lines_unavailable' },
+            players: { passed: false, approved: false, public: false, reason: 'market_lines_unavailable' },
+            combos: { passed: false, approved: false, public: false, reason: 'individual_markets_not_public' },
+          };
+          const samples = {
+            winner: { n: 37, dates: 12, min_forward: 200 }, total: { n: 0, dates: 0, min_forward: 200 },
+            players: { n: 0, dates: 0, min_forward: 200 }, combos: { n: 0, dates: 0, min_forward: 100 },
+          };
+          const markets = Object.fromEntries(Object.keys(gates).map(kind => [kind, { state: 'closed', gate: gates[kind], sample: samples[kind] }]));
+          return json(route, { sport, date, gate: gates.winner, sample: samples.winner, gates, samples, markets, events: [{ event_id: '401857140', espn_id: '401857140', markets }], top2: [] });
+        }
         return json(route, { sport, games: [{
           espn_id: '401857140', start: `${date}T23:00:00Z`, status: 'live', status_detail: '3rd Qtr',
           away: { code: 'AWY', name: 'Away Team', score: 61, logo: null, rec: '16-9' },
@@ -158,7 +172,15 @@ async function installApiMocks(page, date, events, games) {
         attribution_es: 'Estado medido del entrenamiento privado.', attribution_en: 'Measured private-training status.',
       });
       if (action === 'today') return json(route, {
-        sport, date, training: true, gate: { state: 'training', passed: false, approved: false, public: false }, events: [], top2: [],
+        sport, date, training: true,
+        gate: { state: 'closed', passed: false, approved: false, public: false, reason: 'forward_sample_pending' },
+        markets: {
+          winner: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'forward_sample_pending' }, sample: { n: 0, dates: 0, min_forward: 50 } },
+          total: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'market_lines_unavailable' }, sample: { n: 0, dates: 0, min_forward: 200 } },
+          players: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'market_lines_unavailable' }, sample: { n: 0, dates: 0, min_forward: 200 } },
+          combos: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'individual_markets_not_public' }, sample: { n: 0, dates: 0, min_forward: 100 } },
+        },
+        events: [], top2: [],
       });
       if (action === 'standings') return json(route, { sport, sections: [] });
       if (action === 'summary') return json(route, { ok: true, sport, stats: [{ label: 'Total yards', away: 320, home: 350 }] });
@@ -174,7 +196,9 @@ async function installApiMocks(page, date, events, games) {
 
   // Evita que logos/fuentes externas conviertan el ruido de red del sandbox en
   // falsos errores de la aplicación.
-  await page.route('https://a.espncdn.com/**', route => route.fulfill({ status: 204, body: '' }));
+  if (!process.env.AA_MARKET_QA_SCREENSHOT) {
+    await page.route('https://a.espncdn.com/**', route => route.fulfill({ status: 204, body: '' }));
+  }
   await page.route('https://fonts.googleapis.com/**', route => route.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   await page.route('https://fonts.gstatic.com/**', route => route.fulfill({ status: 204, body: '' }));
 }
@@ -297,6 +321,9 @@ try {
     assert.match(detailEs, /necesita ganar para evitar la barrida/i, `${viewport.name}: falta barrida ES`);
     assert.match(detailEs, /Confianza Media/i, `${viewport.name}: falta confianza ES`);
     assert.match(detailEs, /Prob\. AA calibrada\s*57%/i, `${viewport.name}: falta métrica calibrada ES`);
+    if (viewport.name === 'mobile-390' && process.env.AA_MARKET_QA_SCREENSHOT) {
+      await page.locator('#dcard .market-first').screenshot({ path: process.env.AA_MARKET_QA_SCREENSHOT });
+    }
     await page.locator('#dback').evaluate(el => el.click());
     assert.match(await page.locator('.mrow[data-id="pending-game"]').textContent(), /se publica ~7am ET/i, `${viewport.name}: falta pending ES`);
     const invalidRowEs = await page.locator('.mrow[data-id="invalidated-game"]').textContent();
@@ -334,7 +361,16 @@ try {
     assert.match(wnbaListEs, /61[\s\S]*67/, `${viewport.name}: faltan marcadores WNBA ES`);
     await page.waitForFunction(() => /Tiros de campo/i.test(document.querySelector('#dcard')?.textContent || ''));
     const wnbaDetailEs = await page.locator('#dcard').textContent();
-    assert.match(wnbaDetailEs, /Modelo AA en entrenamiento/i, `${viewport.name}: falta gate honesto WNBA ES`);
+    assert.match(wnbaDetailEs, /Gate cerrado/i, `${viewport.name}: falta gate honesto WNBA ES`);
+    assert.equal(await page.locator('#dcard .market-tab').count(), 4, `${viewport.name}: faltan cuatro mercados WNBA ES`);
+    assert.match(wnbaDetailEs, /37\s*\/\s*200/i, `${viewport.name}: falta progreso medido de ganador WNBA ES`);
+    await page.locator('#dcard .market-tab[data-market-kind="total"]').evaluate(el => el.click());
+    assert.match(await page.locator('#dcard .market-first').textContent(), /No hay cobertura histórica auditable[\s\S]*0\s*\/\s*200/i, `${viewport.name}: total WNBA no explica su bloqueo ES`);
+    await page.locator('#dcard .market-tab[data-market-kind="players"]').evaluate(el => el.click());
+    assert.match(await page.locator('#dcard .market-first').textContent(), /línea y precio pregame[\s\S]*0\s*\/\s*200/i, `${viewport.name}: props WNBA no explican su bloqueo ES`);
+    await page.locator('#dcard .market-tab[data-market-kind="combos"]').evaluate(el => el.click());
+    assert.match(await page.locator('#dcard .market-first').textContent(), /combo no puede abrir[\s\S]*0\s*\/\s*100/i, `${viewport.name}: combos WNBA no explican su bloqueo ES`);
+    await page.locator('#dcard .market-tab[data-market-kind="winner"]').evaluate(el => el.click());
     assert.doesNotMatch(wnbaDetailEs, /AA\s*\d+(?:[,.]\d+)?%/i, `${viewport.name}: se publicó una predicción WNBA no validada`);
     assert.equal(await page.locator('.ltab[data-lt="brain"]').isVisible(), true, `${viewport.name}: pestaña Cerebro WNBA oculta`);
     assert.equal(await page.locator('.ltab[data-lt="hist"]').isVisible(), false, `${viewport.name}: historial MLB apareció en WNBA`);
@@ -409,7 +445,14 @@ try {
       await page.locator(`.sp[data-sport="${newSport}"]`).click();
       await page.locator(`.mrow[data-oid="${newSport}-1"]`).waitFor({ state: 'visible' });
       assert.match(await page.locator('#list').textContent(), /Training · gate closed/i, `${viewport.name}: ${newSport} missing fail-closed banner`);
-      assert.match(await page.locator('#dcard').textContent(), /AA model in training/i, `${viewport.name}: ${newSport} missing training disclosure`);
+      const sportDetail = await page.locator('#dcard').textContent();
+      assert.match(sportDetail, newSport === 'nfl' ? /Gate closed/i : /AA model in training/i, `${viewport.name}: ${newSport} missing training disclosure`);
+      if (newSport === 'nfl') {
+        assert.equal(await page.locator('#dcard .market-tab').count(), 4, `${viewport.name}: NFL missing four markets`);
+        await page.locator('#dcard .market-tab[data-market-kind="total"]').evaluate(el => el.click());
+        assert.match(await page.locator('#dcard .market-first').textContent(), /Auditable historical pregame line[\s\S]*0\s*\/\s*200/i, `${viewport.name}: NFL total gate lacks evidence`);
+        await page.locator('#dcard .market-tab[data-market-kind="winner"]').evaluate(el => el.click());
+      }
       await page.locator('.ltab[data-lt="brain"]').click();
       await page.locator('#list .sportbrain').waitFor({ state: 'visible' });
       const sportBrain = await page.locator('#list').textContent();
@@ -421,7 +464,7 @@ try {
     await page.locator('.mrow[data-oid="401857140"]').waitFor({ state: 'visible' });
     await page.waitForFunction(() => /Team stats[\s\S]*Field goals/i.test(document.querySelector('#dcard')?.textContent || ''));
     const wnbaDetailEn = await page.locator('#dcard').textContent();
-    assert.match(wnbaDetailEn, /AA model in training/i, `${viewport.name}: missing honest WNBA gate EN`);
+    assert.match(wnbaDetailEn, /Gate closed/i, `${viewport.name}: missing honest WNBA gate EN`);
     assert.match(wnbaDetailEn, /Field goals/i, `${viewport.name}: missing WNBA stat translation EN`);
     assert.doesNotMatch(wnbaDetailEn, /Tiros de campo/i, `${viewport.name}: Spanish WNBA stat leaked into EN`);
     assert.doesNotMatch(wnbaDetailEn, /Modelo|entrenamiento|Marcadores|predicciones/i, `${viewport.name}: Spanish leaked into WNBA EN`);

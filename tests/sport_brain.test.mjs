@@ -35,6 +35,18 @@ test('WNBA permanece en sombra aunque el histórico sea bueno si falta forward',
   assert.equal(doc.gate.reason, 'forward_sample_pending')
 })
 
+test('un gate estadístico WNBA aprobado por datos aún exige aprobación humana', () => {
+  const rows = Array.from({ length: 200 }, (_, index) => ({
+    date: `2026-${String(5 + Math.floor((index % 40) / 30)).padStart(2, '0')}-${String((index % 30) + 1).padStart(2, '0')}`,
+    result: index < 180 ? 'win' : 'loss', prob: 0.9, market_prob: 0.75,
+  }))
+  const doc = buildSportBrain({ sport: 'wnba', backtest: basketBacktest, rows })
+  assert.equal(doc.gate.passed, true)
+  assert.equal(doc.gate.approved, false)
+  assert.equal(doc.gate.public, false)
+  assert.equal(doc.gate.reason, 'human_approval_pending')
+})
+
 test('NBA tampoco abre sin comparación forward contra mercado', () => {
   const rows = Array.from({ length: 320 }, (_, i) => ({
     date: `2026-11-${String((i % 30) + 1).padStart(2, '0')}`,

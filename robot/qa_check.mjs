@@ -208,6 +208,49 @@ async function qaWnba() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// 6) Contrato común de mercados WNBA/NFL + frontera fail-closed
+// ─────────────────────────────────────────────────────────────────────────
+async function qaMarketContracts() {
+  H('7) WNBA/NFL: Ganador · Total · Jugadores · Combos (fail-closed)');
+  const kinds = ['winner', 'total', 'players', 'combos'];
+  const privateFields = ['pick', 'side', 'prob', 'prob_pct', 'line', 'price', 'edge', 'projection', 'market_prob', 'items'];
+  for (const sport of ['wnba', 'nfl']) {
+    const today = await getJson(`${API}/v1/${sport}/today`);
+    if (today.status !== 200 || today.data?.sport !== sport || !Array.isArray(today.data?.events)) {
+      F(`${sport}: /today no cumple el contrato (${today.status})`); continue;
+    }
+    const missing = kinds.filter((kind) => !today.data?.markets?.[kind]);
+    if (missing.length) F(`${sport}: faltan mercados ${missing.join(', ')}`);
+    else P(`${sport}: los cuatro mercados están presentes`);
+
+    const blocks = [
+      ...kinds.map((kind) => [`documento/${kind}`, today.data.markets?.[kind]]),
+      ...today.data.events.flatMap((event) => kinds.map((kind) => [
+        `${event.espn_id || event.event_id || event.id || 'evento'}/${kind}`, event.markets?.[kind],
+      ])),
+    ];
+    const leaks = blocks.filter(([, block]) => block?.state !== 'public'
+      && privateFields.some((field) => Object.hasOwn(block || {}, field)));
+    if (leaks.length) F(`${sport}: ${leaks.length} mercados cerrados filtraron campos privados (${leaks.slice(0, 3).map(([name]) => name).join(', ')})`);
+    else P(`${sport}: ningún mercado cerrado expone pick/prob/línea/edge`);
+    if (today.data.training && (today.data.top2 || []).length) F(`${sport}: Top 2 apareció con gate cerrado`);
+    else P(`${sport}: Top 2 respeta el gate`);
+
+    const [history, simulation, health] = await Promise.all([
+      getJson(`${API}/v1/${sport}/history?days=30`),
+      getJson(`${API}/v1/${sport}/simulation`),
+      getJson(`${API}/v1/${sport}/pipeline-health`),
+    ]);
+    if (history.status === 200 && history.data?.sport === sport && Array.isArray(history.data?.predictions)) P(`${sport}: history público responde (${history.data.predictions.length})`);
+    else F(`${sport}: history inválido (${history.status})`);
+    if (simulation.status === 200 && simulation.data?.sport === sport) P(`${sport}: simulation sanitizada responde (${simulation.data.state || 'training'})`);
+    else F(`${sport}: simulation inválida (${simulation.status})`);
+    if (health.status === 200 && health.data?.sport === sport) P(`${sport}: pipeline-health responde (${health.data.state || '—'})`);
+    else F(`${sport}: pipeline-health inválido (${health.status})`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // 6) SUMMARY nuevo (soccer/nba) vs ESPN — la feature recién desplegada
 // ─────────────────────────────────────────────────────────────────────────
 async function qaSummary() {
@@ -254,7 +297,7 @@ async function qaMisc() {
   if (inj.status === 200) P('/v1/injuries responde'); else W(`/v1/injuries status ${inj.status}`);
 }
 
-for (const fn of [qaMlbToday, qaMlbLive, qaMlbPipeline, qaSoccer, qaStandings, qaWnba, qaSummary, qaMisc]) {
+for (const fn of [qaMlbToday, qaMlbLive, qaMlbPipeline, qaSoccer, qaStandings, qaWnba, qaMarketContracts, qaSummary, qaMisc]) {
   try { await fn(); } catch (e) { F(`excepción en ${fn.name}: ${e.message}`); }
 }
 

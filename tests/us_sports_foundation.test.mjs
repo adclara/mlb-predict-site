@@ -1,11 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker, {
+  MARKET_KINDS,
   US_SPORTS,
   compactUsSportsIngest,
   fallbackSportBrain,
   fetchUsSportsScoreboard,
   learningFreshnessDoc,
+  sanitizeMarketBlock,
+  sanitizeSportsSimulation,
   sanitizeUsSportsToday,
 } from '../cloudflare/worker/index.js';
 
@@ -121,6 +124,129 @@ test('today projection fails closed until all three gate flags are true', () => 
   assert.equal(publicDoc.events[0].prediction.prob, 0.61);
   assert.equal(publicDoc.top2.length, 2);
   assert.equal(publicDoc.training, false);
+});
+
+test('all four markets sanitize independently and never leak private model fields', () => {
+  assert.deepEqual(MARKET_KINDS, ['winner', 'total', 'players', 'combos']);
+  const safe = sanitizeUsSportsToday({
+    gate: { passed: false, approved: false, public: false, reason: 'forward_sample_pending' },
+    samples: { winner: { n: 12, dates: 6, min_forward: 50 }, total: { n: 7, min_forward: 200 } },
+    events: [{
+      event_id: '99', home: { code: 'PHI' }, away: { code: 'DAL' },
+      features: [1, 2, 3], weights: { secret: 9 }, prediction: { pick: 'PHI', prob: 0.92 },
+      markets: {
+        total: { gate: { passed: true, approved: false, public: false }, pick: 'over', line: 47.5, prob: 0.71 },
+        players: { gate: { passed: false, approved: false, public: false }, items: [{ player_name: 'Private', line: 250.5, prob: 0.9 }] },
+      },
+    }],
+  }, 'nfl', [], '2026-09-09');
+  const event = safe.events[0];
+  assert.equal(event.prediction, null);
+  assert.equal('features' in event, false);
+  assert.equal('weights' in event, false);
+  for (const kind of MARKET_KINDS) assert.equal(event.markets[kind].state, 'closed');
+  assert.equal(event.markets.total.line, undefined);
+  assert.equal(event.markets.players.items, undefined);
+  assert.equal(event.markets.winner.sample.n, 12);
+});
+
+test('factual scoreboard remains authoritative while private market envelopes merge by event id', () => {
+  const safe = sanitizeUsSportsToday({
+    gate: { passed: false, approved: false, public: false, reason: 'forward_sample_pending' },
+    events: [{ event_id: '42', home: { code: 'SECRET' }, markets: {
+      total: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'market_lines_unavailable' }, sample: { n: 9, min_forward: 200 }, projection: 51.2 },
+    } }],
+  }, 'nfl', [{
+    espn_id: '42', status: 'live', home: { code: 'PHI', score: 21 }, away: { code: 'DAL', score: 17 },
+  }], '2026-09-09');
+  assert.equal(safe.events[0].home.code, 'PHI');
+  assert.equal(safe.events[0].home.score, 21);
+  assert.equal(safe.events[0].markets.total.sample.n, 9);
+  assert.equal(safe.events[0].markets.total.projection, undefined);
+});
+
+test('today never serves a stale private slate as the current ET date', () => {
+  const safe = sanitizeUsSportsToday({
+    sport: 'wnba', date: '2026-09-08', updated_at: '2026-09-08T12:00:00Z',
+    gate: { passed: true, approved: true, public: true },
+    events: [{ event_id: 'old', start: '2026-09-08T20:00:00Z', prediction: { pick: 'OLD', prob: 0.99 } }],
+    top2: [{ pick: 'OLD', prob: 0.99 }],
+  }, 'wnba', [], '2026-09-09');
+  assert.equal(safe.date, '2026-09-09');
+  assert.deepEqual(safe.events, []);
+  assert.deepEqual(safe.top2, []);
+  assert.equal(safe.training, true);
+});
+
+test('a market is public only with passed, approved and public together', () => {
+  const closed = sanitizeMarketBlock({
+    gate: { passed: true, approved: false, public: true }, pick: 'over', line: 161.5, prob: 0.61,
+  }, null, { n: 199 }, 'total');
+  assert.equal(closed.state, 'closed');
+  assert.equal(closed.pick, undefined);
+  assert.equal(closed.line, undefined);
+
+  const open = sanitizeMarketBlock({
+    gate: { passed: true, approved: true, public: true },
+    items: [{ selection_key: 'pts:7', player_name: 'Measured Player', pick: 'over', line: 19.5, prob: 0.57 }],
+  }, null, { n: 212, dates: 44 }, 'players');
+  assert.equal(open.state, 'public');
+  assert.equal(open.items[0].player_name, 'Measured Player');
+  assert.equal(open.items[0].line, 19.5);
+});
+
+test('simulation sanitizer exposes metrics and strips model parameters and projections', () => {
+  const doc = sanitizeSportsSimulation({
+    generated_at: '2026-08-13T12:00:00Z', seasons: ['2022', '2023', '2024', '2025', '2026'],
+    total: {
+      model: 'private', selected_lambda: 30, coefficients: [1, 2],
+      historical: { n: 1091, mae: 14.559, secret_loss: 99 }, forward: { n: 0, dates: 0 },
+      gate: { passed: false, approved: false, public: false, reason: 'market_lines_unavailable' },
+    },
+    players: { completions: { historical: { n: 1910, mae: 5.51 }, selected_lambda: 3, forward: { n: 0 } } },
+  }, 'wnba');
+  assert.equal(doc.total.historical.n, 1091);
+  assert.equal(doc.total.historical.mae, 14.559);
+  assert.equal('model' in doc.total, false);
+  assert.equal('selected_lambda' in doc.total, false);
+  assert.equal('coefficients' in doc.total, false);
+  assert.equal('secret_loss' in doc.total.historical, false);
+  assert.equal(doc.players.completions.historical.n, 1910);
+  assert.equal('selected_lambda' in doc.players.completions, false);
+});
+
+test('WNBA exposes today/history/simulation/pipeline-health routes fail-closed', async () => {
+  const originalFetch = globalThis.fetch;
+  const currentEvent = espnEvent('77'); currentEvent.date = new Date().toISOString();
+  globalThis.fetch = async () => new Response(JSON.stringify({ events: [currentEvent] }), { status: 200 });
+  const env = {
+    ALLOWED_ORIGIN: '*',
+    AA_LATEST: { async get(key) { return key === 'wnba:simulation' ? JSON.stringify({ sport: 'wnba', state: 'training' }) : null; } },
+    DB: {
+      prepare(sql) {
+        return {
+          bind() {
+            if (/sport_market_predictions/.test(sql)) return { async all() { return { results: [] }; } };
+            if (/FROM predictions/.test(sql)) return { async first() { return { n: 0, graded: 0, updated_at: null }; } };
+            throw new Error(`unexpected SQL: ${sql}`);
+          },
+        };
+      },
+    },
+  };
+  try {
+    const today = await worker.fetch(new Request('https://aa-sports-api.test/v1/wnba/today'), env, { waitUntil() {} });
+    const todayDoc = await today.json();
+    assert.equal(today.status, 200);
+    assert.equal(todayDoc.events.length, 1);
+    assert.equal(todayDoc.events[0].prediction, null);
+    assert.equal(todayDoc.events[0].markets.players.state, 'closed');
+
+    for (const route of ['history', 'simulation', 'pipeline-health']) {
+      const response = await worker.fetch(new Request(`https://aa-sports-api.test/v1/wnba/${route}`), env, { waitUntil() {} });
+      assert.equal(response.status, 200, route);
+    }
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 test('fallback Cerebro exposes only measured aggregate and keeps the gate closed', () => {

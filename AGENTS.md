@@ -8,8 +8,9 @@ Sitio de predicciones deportivas data-driven, **$0 de infraestructura**, sobre
 Cloudflare. Marca: **"AA Sports · Los datos deciden"**. Deportes: **MLB**
 (completo, con predicciones), **fútbol** (predicciones públicas desde jul-2026),
 **NBA/tenis** (marcadores + posiciones; modelos en sombra, sin publicar) y
-**WNBA** (marcadores, resultados, posiciones y box score factuales; modelo en
-sombra, sin predicciones públicas). Más un
+**WNBA** (marcadores, resultados, posiciones, box score y comparador de mercados;
+modelos en sombra, sin predicciones públicas) y **NFL** (cobertura factual +
+comparador con gates cerrados). Más un
 **"Radar"**: observatorio de wallets de Polymarket (descriptivo, no recomienda).
 
 ## ADN NO NEGOCIABLE (aplica a TODO cambio)
@@ -67,7 +68,9 @@ path dispara el workflow. Mapa verificado (poke → workflow):
 - `.github/poke-poly` → poly-study.yml (poly_radar.mjs; cron 2×/día)
 - `.github/poke-soccer` → soccer-shadow.yml (soccer_shadow.mjs; publica soccer:today)
 - `.github/poke-nba` → nba-shadow.yml · `.github/poke-sim` → mlb-sim.yml (semanal)
-- `.github/poke-wnba` → wnba-shadow.yml (modelo WNBA en sombra + Cerebro medido)
+- `.github/poke-wnba` → wnba-shadow.yml (ganador/totales WNBA en sombra + Cerebro
+  y contratos de mercados; cron horario)
+- `wnba-validation.yml` → validación causal diaria + backfill/retrain semanal
 - `.github/poke-sport-brains` → sport-brains.yml (Cerebros soccer/NBA/WNBA/tenis)
 - `.github/poke-injuries` → injuries.yml · `.github/poke-fase2` → fase2-backfill.yml
 - `.github/poke-probe` → probe-espn.yml · `.github/poke-domain` → domain-fix.yml
@@ -88,14 +91,19 @@ path dispara el workflow. Mapa verificado (poke → workflow):
 ## KV keys (las escribe el robot, las sirve el Worker)
 `mlb:today`, `mlb:day:<fecha>`, `mlb:learning`, `mlb:simulation`, `soccer:today`,
 `poly:radar`, `poly:alerts`, `poly:lastseen`, `injuries:latest`,
-`soccer:learning`, `nba:learning`, `wnba:learning`, `tennis:learning`.
+`soccer:learning`, `nba:learning`, `wnba:{today,learning,simulation}`,
+`nfl:{today,learning,simulation}`, `tennis:learning`.
 
 ## Rutas del Worker (`cloudflare/worker/index.js`)
 `/v1/mlb/{today, day/:date, schedule/:date, event/:id, history, live, learning,
 simulation, standings}`, `/v1/injuries`,
 `/v1/soccer/{today, live, recent, standings, leagues, summary, learning}`,
-`/v1/nba/{live, recent, standings, learning}`,
-`/v1/wnba/{live, recent, standings, summary, learning}`,
+`/v1/nba/{today, live, recent, standings, summary, history, learning, simulation,
+pipeline-health}`,
+`/v1/wnba/{today, live, recent, standings, summary, history, learning, simulation,
+pipeline-health}`,
+`/v1/{nfl,ncaaf,nhl,ncaam}/{today,live,recent,standings,summary,history,learning,
+simulation,pipeline-health}`,
 `/v1/tennis/{live, recent, rankings, summary, learning}`,
 `/v1/poly/{radar, alerts, track}`, `/v1/auth/google`.
 El Worker corre tres `scheduled()`: cada 5 min vigila el Radar; cada 20 min
@@ -127,12 +135,16 @@ las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
   - `robot/soccer_shadow.mjs` — sombra + **publica soccer:today** (predicciones
     públicas de fútbol). `robot/soccer_model.mjs` — Dixon-Coles + backtest.
   - `robot/nba_model.mjs`/`nba_shadow.mjs`, `robot/wnba_model.mjs`,
-    `robot/sport_brain.mjs`, `robot/tennis_model.mjs`/`tennis_stats.mjs`.
+    `robot/wnba_market_model.mjs`, `robot/wnba_player_model.mjs`,
+    `robot/wnba_publish_simulation.mjs`, `robot/sport_brain.mjs`,
+    `robot/tennis_model.mjs`/`tennis_stats.mjs`.
   - `robot/poly_radar.mjs` + `robot/poly_study.mjs` + `robot/lib/{poly,espn_odds}.mjs`.
   - `robot/prod_diag.mjs` (diagnóstico post-deploy), `robot/qa_check.mjs`,
     `robot/injuries.mjs`, `robot/domain_fix.mjs`, `robot/subdomain_radar.mjs`.
 - **Datos**: `data/history/games/*.json`, `data/history/index.json`,
-  `data/history/learning.json`, `data/fase2/{soccer,nba,tennis}/*`.
+  `data/history/learning.json`, `data/fase2/{soccer,nba,tennis,wnba}/*`.
+  D1 usa `sport_market_predictions` como ledger multideporte fail-closed;
+  toda fila nueva nace `shadow`, sin aprobación humana.
 
 ## Modelos — estado y gates de honestidad
 - **MLB** (producción): el % mostrado es **calibrado** (`prob_v2`/Platt), no el
@@ -152,8 +164,10 @@ las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
   aprobación humana. NBA se enciende ~octubre; tenis stats depende de TENNIS_API_KEY.
 - **WNBA**: cobertura factual pública + Elo/MOV privado en sombra. Backtest
   cronológico 2023–2026: 1,091 juegos, Brier 0.2132 y 66.3% de acierto (2021–22
-  son burn-in). Es evidencia histórica, no garantía: no publica picks hasta
-  completar muestra forward, calibración, comparación de mercado y aprobación.
+  son burn-in). Totales y PTS/REB/AST tienen backtests causales separados; sin
+  líneas/precios pregame auditables sus gates permanecen cerrados. Es evidencia
+  histórica, no garantía: no publica picks hasta completar muestra forward,
+  calibración, comparación de mercado y aprobación.
 - **NFL / NCAAF / NHL / NCAAM**: marcadores y captura factual activos; modelos
   privados en `adclara/aa-sports-models-private`, con gates cerrados. No publicar
   Top 2 hasta validación forward suficiente + aprobación humana explícita.

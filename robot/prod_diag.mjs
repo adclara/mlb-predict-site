@@ -5,6 +5,40 @@ const SITE = 'https://aasport.net/';
 const API = 'https://aa-sports-api.opsmira9.workers.dev';
 const UA = { 'user-agent': 'aa-sports-diag/1.0', 'cache-control': 'no-cache' };
 const get = async (u) => { try { const r = await fetch(u, { headers: UA }); return { status: r.status, text: await r.text(), ct: r.headers.get('content-type'), cc: r.headers.get('cache-control'), age: r.headers.get('age'), cf: r.headers.get('cf-cache-status') }; } catch (e) { return { status: 0, text: String(e) }; } };
+const MARKET_KINDS = ['winner', 'total', 'players', 'combos'];
+const PRIVATE_MARKET_FIELDS = ['pick', 'side', 'prob', 'prob_pct', 'line', 'price', 'edge', 'projection', 'market_prob', 'items'];
+let marketContractFailures = 0;
+
+async function diagnoseMarkets(sport) {
+  const [todayRaw, simulationRaw, historyRaw, healthRaw] = await Promise.all([
+    get(`${API}/v1/${sport}/today`), get(`${API}/v1/${sport}/simulation`),
+    get(`${API}/v1/${sport}/history?days=30`), get(`${API}/v1/${sport}/pipeline-health`),
+  ]);
+  try {
+    const today = JSON.parse(todayRaw.text), simulation = JSON.parse(simulationRaw.text);
+    const history = JSON.parse(historyRaw.text), health = JSON.parse(healthRaw.text);
+    const missing = MARKET_KINDS.filter((kind) => !today.markets?.[kind]);
+    const blocks = [
+      ...MARKET_KINDS.map((kind) => [`documento/${kind}`, today.markets?.[kind]]),
+      ...(today.events || []).flatMap((event) => MARKET_KINDS.map((kind) => [
+        `${event.espn_id || event.event_id || event.id || 'evento'}/${kind}`, event.markets?.[kind],
+      ])),
+    ];
+    const leaks = blocks.filter(([, block]) => block?.state !== 'public'
+      && PRIVATE_MARKET_FIELDS.some((field) => Object.hasOwn(block || {}, field)));
+    const routesOk = [todayRaw, simulationRaw, historyRaw, healthRaw].every((row) => row.status === 200);
+    const safe = routesOk && !missing.length && !leaks.length && !(today.training && (today.top2 || []).length);
+    if (!safe) marketContractFailures++;
+    console.log(`${safe ? '✅' : '❌'} ${sport.toUpperCase()} mercados:`,
+      `eventos=${(today.events || []).length}`, `faltantes=${missing.join(',') || '0'}`,
+      `filtraciones=${leaks.length}`, `top2=${(today.top2 || []).length}`,
+      `simulation=${simulation.state || 'training'}`, `history=${history.count ?? (history.predictions || []).length ?? 0}`,
+      `pipeline=${health.state || '—'}`);
+  } catch (error) {
+    marketContractFailures++;
+    console.log(`❌ ${sport.toUpperCase()} contrato no-json/error:`, String(error).slice(0, 180));
+  }
+}
 
 console.log('== HTML de aasport.net ==');
 const h = await get(SITE);
@@ -100,6 +134,9 @@ try {
   console.log('Cerebro:', wnbaBrain.state || '—', '| histórico OOS:', wnbaBrain.historical?.n ?? '—',
     '| forward:', wnbaBrain.forward?.n ?? '—', '| gate público:', wnbaBrain.gate?.public === true ? 'ABIERTO' : 'cerrado');
 } catch (e) { console.log('no-json:', String(e).slice(0, 120)); }
+console.log('\n== Contrato de mercados WNBA/NFL (4 módulos, fail-closed) ==');
+await diagnoseMarkets('wnba');
+await diagnoseMarkets('nfl');
 console.log('\n== /v1/poly/radar + /v1/poly/alerts (Radar de wallets) ==');
 const pr = await get(`${API}/v1/poly/radar`);
 try {
@@ -123,3 +160,7 @@ try {
 } catch (e) { console.log('no-json:', pt.status, pt.text.slice(0, 120)); }
 
 console.log('\n████ fin diagnóstico ████');
+if (marketContractFailures) {
+  console.error(`❌ ${marketContractFailures} contrato(s) WNBA/NFL fallaron la frontera pública`);
+  process.exitCode = 1;
+}

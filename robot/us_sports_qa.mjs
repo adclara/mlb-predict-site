@@ -6,6 +6,8 @@ import { assessUsSportsPipeline } from './lib/us_sports_qa.mjs';
 
 const API = process.env.AA_API || 'https://aa-sports-api.opsmira9.workers.dev';
 const SPORTS = ['nfl', 'ncaaf', 'nhl', 'ncaam'];
+const MARKET_KEYS = ['winner', 'total', 'players', 'combos'];
+const PRIVATE_FIELDS = ['pick', 'side', 'prob', 'prob_pct', 'line', 'price', 'edge', 'projection', 'market_prob', 'items'];
 const ET_TODAY = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
 }).format(new Date());
@@ -34,8 +36,16 @@ for (const sport of SPORTS) {
     if (!today.response.ok || today.body?.sport !== sport || !Array.isArray(today.body?.events) || !Array.isArray(today.body?.top2)) {
       throw new Error(`today contract ${today.response.status}: ${today.text.slice(0, 120)}`);
     }
+    const missingMarkets = MARKET_KEYS.filter((kind) => !today.body?.markets?.[kind]);
+    if (missingMarkets.length) throw new Error(`today missing markets: ${missingMarkets.join(',')}`);
+    const marketBlocks = [
+      ...MARKET_KEYS.map((kind) => [`document:${kind}`, today.body.markets[kind]]),
+      ...today.body.events.flatMap((event) => MARKET_KEYS.map((kind) => [`${event.espn_id || event.event_id || event.id}:${kind}`, event.markets?.[kind]])),
+    ];
+    const leaks = marketBlocks.filter(([, block]) => block?.state !== 'public' && PRIVATE_FIELDS.some((field) => Object.hasOwn(block || {}, field)));
+    if (leaks.length) throw new Error(`closed market leaked selection fields: ${leaks.slice(0, 4).map(([name]) => name).join(',')}`);
     if (today.body.training && today.body.top2.length) throw new Error('training state leaked public Top 2 picks');
-    console.log(`✅ today: gate=${today.body.gate?.state || 'closed'} top2=${today.body.top2.length}`);
+    console.log(`✅ today: 4 mercados fail-closed · gate=${today.body.gate?.state || 'closed'} top2=${today.body.top2.length}`);
 
     const health = await get(`/v1/${sport}/pipeline-health`);
     if (!health.response.ok || health.body?.sport !== sport) throw new Error(`pipeline contract ${health.response.status}`);

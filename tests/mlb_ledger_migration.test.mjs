@@ -116,5 +116,10 @@ test('la tendencia del Cerebro contiene solo la cohorte causal comparable', () =
   assert.ok(Array.isArray(journal.history) && journal.history.length >= 1)
   assert.ok(journal.history.every((point) => point.cohort_version === journal.cohort_version))
   assert.ok(journal.history.every((point) => point.n <= journal.n_graded))
-  assert.equal(journal.history.some((point) => point.n > 1332), false)
+  // La cohorte crece todos los días; el antiguo techo fijo de 1,332 convirtió
+  // crecimiento legítimo en una falsa regresión. La garantía real es que la
+  // serie causal nunca retrocede ni supera la muestra graduada del snapshot.
+  const sample = journal.history.map((point) => point.n)
+  assert.ok(sample.every((n) => Number.isInteger(n) && n >= 0))
+  assert.ok(sample.every((n, index) => index === 0 || n >= sample[index - 1]))
 })

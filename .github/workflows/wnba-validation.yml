@@ -1,0 +1,60 @@
+# AA Sports — validación causal WNBA. Diaria: reproduce el challenger de
+# mercados y sus gates cerrados. Semanal: vuelve a seleccionar parámetros
+# únicamente en el burn-in; las temporadas de examen siguen intactas.
+name: WNBA causal validation
+on:
+  schedule:
+    - cron: '7 10 * * *'
+    - cron: '37 10 * * 0'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wnba-causal-validation
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Restaurar histórico incremental WNBA
+        uses: actions/cache/restore@v6
+        with:
+          path: data/fase2/wnba
+          key: wnba-history-${{ github.run_id }}
+          restore-keys: wnba-history-
+      - name: Actualizar temporada WNBA (semanal)
+        if: github.event.schedule == '37 10 * * 0'
+        run: node robot/fase2_backfill.mjs wnba
+      - name: Actualizar box scores de jugadoras
+        run: |
+          if [ "${{ github.event.schedule }}" = "37 10 * * 0" ]; then
+            node robot/wnba_player_model.mjs backfill
+          else
+            node robot/wnba_player_model.mjs backfill --recent
+          fi
+      - name: Validación causal diaria de mercados
+        run: |
+          node robot/wnba_market_model.mjs
+          node --test tests/wnba_market_model.test.mjs
+      - name: Publicar evidencia agregada de simulación
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/wnba_publish_simulation.mjs
+      - name: Refit semanal del burn-in de ganador
+        if: github.event.schedule == '37 10 * * 0'
+        run: |
+          node robot/wnba_model.mjs backtest 2
+          node --test tests/wnba_model.test.mjs
+      - name: Guardar histórico incremental WNBA
+        uses: actions/cache/save@v6
+        with:
+          path: data/fase2/wnba
+          key: wnba-history-${{ github.run_id }}

@@ -4,7 +4,7 @@
 name: wnba-shadow
 on:
   schedule:
-    - cron: '31 */6 * * *'
+    - cron: '31 * * * *'
   workflow_dispatch: {}
   push:
     branches: [main]
@@ -24,9 +24,12 @@ jobs:
         with:
           node-version: 22
       - name: Verificar histórico y backtest WNBA
+        if: github.event_name != 'schedule'
         run: |
           test -f data/fase2/wnba/wnba_backtest.json
           node robot/wnba_model.mjs backtest 2
+          node robot/wnba_player_model.mjs --no-write
+          node robot/wnba_market_model.mjs --no-write
       - name: Capturar y gradear WNBA en sombra
         env:
           AA_BASKETBALL_SPORT: wnba
@@ -36,3 +39,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: node robot/sport_brain.mjs wnba
+      - name: Publicar contratos de mercados y simulación (gates cerrados)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/wnba_publish_simulation.mjs
