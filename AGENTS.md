@@ -33,7 +33,9 @@ comparador con gates cerrados). Más un
 ```
 Repo (algoritmos privados)
   → GitHub Actions (cron) corre robot/*.mjs → escribe a KV/D1 vía API de Cloudflare
-  → Cloudflare Worker (aa-sports-api) = API de solo-lectura desde KV/D1 (oculta el origen)
+  → el repo privado US publica solo evidencia sanitizada por un puente GitHub OIDC
+     sin secret estático; el Worker fuerza todas sus filas a shadow
+  → Cloudflare Worker (aa-sports-api) = API pública de solo-lectura desde KV/D1
   → Cloudflare Pages (aa-sports) = frontend (cloudflare/pages/index.html)
 ```
 
@@ -109,6 +111,10 @@ simulation,pipeline-health}`,
 El Worker corre tres `scheduled()`: cada 5 min vigila el Radar; cada 20 min
 captura hechos públicos MLB y NFL/NCAAF/NHL/NCAAM (sin lógica de modelo) en D1; y a
 las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
+La única ruta HTTP de escritura es `/v1/internal/model-publish`: exige un JWT
+OIDC RS256 de GitHub con audience propio, repository id del repo privado, `main`
+y `hourly-shadow.yml`; vuelve a sanitizar el payload y nunca acepta aprobación
+humana ni scope público. No requiere copiar `CLOUDFLARE_API_TOKEN` al repo privado.
 
 ## Archivos clave
 - **Frontend**: `cloudflare/pages/index.html` — UN archivo HTML/JS, **SIN build,
