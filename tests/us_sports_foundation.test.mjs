@@ -8,11 +8,13 @@ import worker, {
   fetchUsSportsScoreboard,
   learningFreshnessDoc,
   sanitizeMarketBlock,
+  sanitizeQaMarketRow,
   sanitizeModelPublishEnvelope,
   sanitizeModelPublisherLearning,
   sanitizeSportsSimulation,
   sanitizeUsSportsToday,
   verifyGithubModelPublisher,
+  verifyGoogleIdToken,
 } from '../cloudflare/worker/index.js';
 
 const base64url = (value) => Buffer.from(typeof value === 'string' ? value : JSON.stringify(value)).toString('base64url');
@@ -40,6 +42,36 @@ async function signedOidc(overrides = {}) {
     token: `${encoded}.${Buffer.from(signature).toString('base64url')}`, claims, now,
     fetcher: async () => new Response(JSON.stringify({ keys: [jwk] }), { status: 200 }),
   };
+}
+
+async function signedGoogle(overrides = {}) {
+  const pair = await crypto.subtle.generateKey({
+    name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048,
+    publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256',
+  }, true, ['sign', 'verify']);
+  const jwk = await crypto.subtle.exportKey('jwk', pair.publicKey);
+  Object.assign(jwk, { kid: 'google-test-key', alg: 'RS256', use: 'sig' });
+  const now = Math.floor(Date.now() / 1000);
+  const claims = {
+    iss: 'https://accounts.google.com', aud: 'google-client-test', azp: 'google-client-test',
+    exp: now + 300, iat: now - 5, sub: 'google-user-1', nonce: 'nonce-test',
+    email: 'qa@example.com', email_verified: true, ...overrides,
+  };
+  const encoded = `${base64url({ alg: 'RS256', typ: 'JWT', kid: jwk.kid })}.${base64url(claims)}`;
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', pair.privateKey, new TextEncoder().encode(encoded));
+  return {
+    token: `${encoded}.${Buffer.from(signature).toString('base64url')}`, now,
+    fetcher: async (url) => String(url).includes('openid-configuration')
+      ? new Response(JSON.stringify({ issuer: 'https://accounts.google.com', jwks_uri: 'https://www.googleapis.com/oauth2/v3/certs' }), { status: 200 })
+      : new Response(JSON.stringify({ keys: [jwk] }), { status: 200 }),
+  };
+}
+
+async function sessionToken(secret, payload) {
+  const body = base64url(payload);
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
+  return `${body}.${Buffer.from(signature).toString('base64url')}`;
 }
 
 const espnEvent = (id = '42') => ({
@@ -84,6 +116,34 @@ test('GitHub OIDC publisher verifies signature and immutable workflow identity',
     verifyGithubModelPublisher(wrongWorkflow.token, wrongWorkflow.fetcher, wrongWorkflow.now * 1000),
     /oidc_workflow/,
   );
+});
+
+test('Google OIDC verifies signature, audience, nonce and verified email', async () => {
+  const valid = await signedGoogle();
+  const claims = await verifyGoogleIdToken(valid.token, 'google-client-test', 'nonce-test', valid.fetcher, valid.now * 1000);
+  assert.equal(claims.email, 'qa@example.com');
+  const wrongAudience = await signedGoogle({ aud: 'attacker-client', azp: 'attacker-client' });
+  await assert.rejects(
+    verifyGoogleIdToken(wrongAudience.token, 'google-client-test', 'nonce-test', wrongAudience.fetcher, wrongAudience.now * 1000),
+    /google_issuer_audience/,
+  );
+  await assert.rejects(
+    verifyGoogleIdToken(valid.token, 'google-client-test', 'wrong-nonce', valid.fetcher, valid.now * 1000),
+    /google_nonce/,
+  );
+});
+
+test('QA row sanitizer exposes measured selections but never storage approval controls', () => {
+  const row = sanitizeQaMarketRow({
+    date: '2026-08-14', event_id: '401', market_key: 'winner', selection_key: 'winner:model',
+    pick: 'PHI', side: 'home', prob: .641, edge: .031, price: -120,
+    public_scope: 'public', gate_passed: 1, human_approved: 1, invalidated: 0, coefficients: [1, 2],
+  });
+  assert.equal(row.prob, .641);
+  assert.equal(row.pick, 'PHI');
+  assert.equal('public_scope' in row, false);
+  assert.equal('human_approved' in row, false);
+  assert.equal('coefficients' in row, false);
 });
 
 test('OIDC publish envelope can never self-approve a market or a D1 row', () => {
@@ -190,6 +250,71 @@ test('internal OIDC publisher writes only sanitized KV and shadow D1 rows', asyn
     const replay = await worker.fetch(request(), env, { waitUntil() {} });
     assert.equal(replay.status, 409);
   } finally { globalThis.fetch = originalFetch; }
+});
+
+test('QA route requires an allowlisted verified session and public route stays fail-closed', async () => {
+  const now = new Date();
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now).filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
+  const day = `${parts.year}-${parts.month}-${parts.day}`;
+  const today = {
+    date: day, updated_at: now.toISOString(), gate: { passed: false, approved: false, public: false },
+    samples: { winner: { n: 2, dates: 1, min_forward: 50 } },
+    events: [{ event_id: '401', espn_id: '401', date: day, start: `${day}T20:00:00Z`, status: 'pre',
+      home: { code: 'PHI', name: 'Philadelphia' }, away: { code: 'DAL', name: 'Dallas' } }],
+  };
+  const shadowRows = [{
+    date: day, event_id: '401', market_key: 'winner', selection_key: 'winner:model',
+    pick: '1', side: 'home', prob: .641, market_prob: .61, edge: .031, price: -120,
+    home: 'PHI', away: 'DAL', start_time: `${day}T20:00:00Z`, feature_as_of: `${day}T18:00:00Z`,
+    frozen_at: `${day}T18:00:00Z`, status: 'frozen', engine_version: 'v2', gate_version: 'g1',
+    updated_at: now.toISOString(),
+  }];
+  const store = new Map([
+    ['nfl:today', JSON.stringify(today)],
+    ['nfl:learning', JSON.stringify({ sport: 'nfl', gate: { passed: false }, forward: { n: 2, dates: 1 } })],
+    ['nfl:simulation', JSON.stringify({ winner: { forward: { n: 2, dates: 1 }, gate: { passed: false } } })],
+  ]);
+  const env = {
+    ALLOWED_ORIGIN: '*', SITE_ORIGIN: 'https://aasport.net',
+    GOOGLE_CLIENT_ID: 'client', GOOGLE_CLIENT_SECRET: 'secret', AUTH_SECRET: 'auth-secret',
+    QA_ALLOWED_EMAILS: 'qa@example.com',
+    AA_LATEST: { async get(key) { return store.get(key) || null; } },
+    DB: { prepare() { return { bind() { return {
+      async all() { return { results: shadowRows }; }, async first() { return null; },
+    }; } }; } },
+  };
+  const unauthenticated = await worker.fetch(new Request('https://api.test/v1/qa/nfl/today'), env, { waitUntil() {} });
+  assert.equal(unauthenticated.status, 401);
+  const wrongMethod = await worker.fetch(new Request('https://api.test/v1/qa/nfl/today', { method: 'POST' }), env, { waitUntil() {} });
+  assert.equal(wrongMethod.status, 405);
+
+  const deniedToken = await sessionToken(env.AUTH_SECRET, {
+    uid: 1, email: 'other@example.com', email_verified: true, exp: Math.floor(Date.now() / 1000) + 60,
+  });
+  const denied = await worker.fetch(new Request('https://api.test/v1/qa/nfl/today', {
+    headers: { cookie: `aa_sess=${deniedToken}`, origin: 'https://qa.aasport.net' },
+  }), env, { waitUntil() {} });
+  assert.equal(denied.status, 403);
+
+  const allowedToken = await sessionToken(env.AUTH_SECRET, {
+    uid: 1, email: 'qa@example.com', email_verified: true, exp: Math.floor(Date.now() / 1000) + 60,
+  });
+  const qa = await worker.fetch(new Request('https://api.test/v1/qa/nfl/today', {
+    headers: { cookie: `aa_sess=${allowedToken}`, origin: 'https://qa.aasport.net' },
+  }), env, { waitUntil() {} });
+  assert.equal(qa.status, 200);
+  const qaBody = await qa.json();
+  assert.equal(qaBody.public, false);
+  assert.equal(qaBody.events[0].markets.winner.state, 'qa');
+  assert.equal(qaBody.events[0].prediction.pick, 'PHI');
+  assert.equal(qaBody.events[0].prediction.prob, .641);
+
+  const publicResponse = await worker.fetch(new Request('https://api.test/v1/nfl/today'), env, { waitUntil() {} });
+  const publicBody = await publicResponse.json();
+  assert.equal(publicBody.events[0].prediction, null);
+  assert.equal(publicBody.events[0].markets.winner.state, 'closed');
 });
 
 test('public ingestion keeps factual teams, schedule and real market only', () => {

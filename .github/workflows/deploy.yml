@@ -59,6 +59,19 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
         run: npx --yes wrangler@4.112.0 deploy
+      - name: Allowlist del QA privado (si está configurada)
+        working-directory: cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
+          QA_ALLOWED_EMAILS: ${{ secrets.QA_ALLOWED_EMAILS }}
+        run: |
+          if [ -z "$QA_ALLOWED_EMAILS" ]; then
+            echo "⚠️ QA_ALLOWED_EMAILS no está configurado: qa.aasport.net quedará bloqueado (401/403), sin exponer shadow."
+            exit 0
+          fi
+          printf '%s' "$QA_ALLOWED_EMAILS" | npx --yes wrangler@4.112.0 secret put QA_ALLOWED_EMAILS
+          echo "✅ allowlist QA cargada al Worker (valor no impreso)."
       - name: Verificar crons del vigía y la ingesta MLB
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
@@ -118,6 +131,10 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
         run: npx --yes wrangler@4.112.0 pages deploy pages --project-name=aa-sports --branch=main --commit-dirty=true
+      - name: Conectar qa.aasport.net a Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/subdomain_qa.mjs
       - name: Verificar y diagnosticar producción
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}

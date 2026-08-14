@@ -46,6 +46,8 @@ Repo (algoritmos privados)
 - Pages project: `aa-sports` · target `aa-sports-5ap.pages.dev` · dominio `aasport.net`
 - Worker: `aa-sports-api` · **API base** `https://aa-sports-api.opsmira9.workers.dev`
 - Subdominio `radar.aasport.net` → la app (arranca en la pestaña Radar)
+- Subdominio `qa.aasport.net` → QA privado autenticado; muestra filas `shadow`
+  medidas sin abrirlas al público ni cambiar sus gates.
 
 ## Secretos (viven en GitHub Actions, NUNCA en el repo ni en el agente)
 El deploy corre DENTRO de Actions con estos secretos; el agente solo necesita
@@ -53,6 +55,8 @@ El deploy corre DENTRO de Actions con estos secretos; el agente solo necesita
 - `CLOUDFLARE_API_TOKEN` (alias `CLOUDFLAREAPITOKEN`): scopes **Workers:Edit ·
   Pages:Edit · KV:Edit · D1:Edit · Zone:Read · DNS:Edit**.
 - `TG_BOT_TOKEN`, `TG_CHAT_ID`: alertas del Radar por Telegram (@POLYSIBOT).
+- `QA_ALLOWED_EMAILS`: lista separada por comas de cuentas Google autorizadas
+  para `qa.aasport.net`. Si falta, QA queda bloqueado por diseño (401/403).
 - `TENNIS_API_KEY`: (pendiente de crear) stats de tenis SportDevs.
 
 ## Cómo se DESPLIEGA — «poke files» (crítico)
@@ -106,6 +110,8 @@ pipeline-health}`,
 pipeline-health}`,
 `/v1/{nfl,ncaaf,nhl,ncaam}/{today,live,recent,standings,summary,history,learning,
 simulation,pipeline-health}`,
+`/v1/qa/{wnba,nfl,ncaaf,nhl,ncaam}/{today,history,learning,simulation,
+pipeline-health}` (sesión Google verificada + allowlist; `no-store`),
 `/v1/tennis/{live, recent, rankings, summary, learning}`,
 `/v1/poly/{radar, alerts, track}`, `/v1/auth/google`.
 El Worker corre tres `scheduled()`: cada 5 min vigila el Radar; cada 20 min
@@ -146,7 +152,8 @@ humana ni scope público. No requiere copiar `CLOUDFLARE_API_TOKEN` al repo priv
     `robot/tennis_model.mjs`/`tennis_stats.mjs`.
   - `robot/poly_radar.mjs` + `robot/poly_study.mjs` + `robot/lib/{poly,espn_odds}.mjs`.
   - `robot/prod_diag.mjs` (diagnóstico post-deploy), `robot/qa_check.mjs`,
-    `robot/injuries.mjs`, `robot/domain_fix.mjs`, `robot/subdomain_radar.mjs`.
+    `robot/injuries.mjs`, `robot/domain_fix.mjs`, `robot/subdomain_radar.mjs`,
+    `robot/subdomain_qa.mjs`.
 - **Datos**: `data/history/games/*.json`, `data/history/index.json`,
   `data/history/learning.json`, `data/fase2/{soccer,nba,tennis,wnba}/*`.
   D1 usa `sport_market_predictions` como ledger multideporte fail-closed;
