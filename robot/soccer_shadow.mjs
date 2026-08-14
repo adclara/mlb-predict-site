@@ -24,8 +24,8 @@ const D1_DATABASE_ID = 'ed0969d8-050a-4987-ab98-b047c30f76c9';
 const KV_NAMESPACE_ID = '683aa2f8846643bf8a6a8b606e5bf0b7';
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
-// Mundial ahora; las ligas de clubes entran solas cuando arranquen (agosto).
-const LEAGUES = ['fifa.world', 'uefa.champions', 'eng.1', 'esp.1', 'ita.1', 'ger.1', 'fra.1', 'usa.1', 'mex.1'];
+// Ligas activas de clubes. El Mundial 2026 terminó y queda fuera del slate diario.
+const LEAGUES = ['eng.1', 'esp.1', 'ita.1', 'ger.1', 'fra.1', 'uefa.champions', 'usa.1', 'mex.1'];
 const ENGINE = 'soccer-shadow-v1';
 
 if (!API_TOKEN) { console.log('Sin CLOUDFLARE_API_TOKEN; modo sombra omitido.'); process.exit(0); }
