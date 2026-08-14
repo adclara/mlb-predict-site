@@ -123,9 +123,22 @@ async function installApiMocks(page, date, events, games) {
     ] });
     if (path === '/v1/injuries') return json(route, { players: [] });
     if (path === '/v1/me') return json(route, { enabled: false, user: null });
-    const us = path.match(/^\/v1\/(nfl|ncaaf|nhl|ncaam)\/(live|recent|standings|today|summary)$/);
+    const us = path.match(/^\/v1\/(wnba|nfl|ncaaf|nhl|ncaam)\/(live|recent|standings|today|summary)$/);
     if (us) {
       const [, sport, action] = us;
+      if (sport === 'wnba') {
+        if (action === 'standings') return json(route, { sport, season: '2026', sections: [{ name: 'Eastern Conference', rows: [
+          { rank: 1, code: 'HME', name: 'Home Team', w: 18, l: 7, pct: '.720', gb: '—' },
+          { rank: 2, code: 'AWY', name: 'Away Team', w: 16, l: 9, pct: '.640', gb: '2' },
+        ] }] });
+        if (action === 'summary') return json(route, { ok: true, sport, stats: [{ key: 'stat_fg', label: 'Tiros de campo', away: '29-65', home: '31-66' }] });
+        if (action === 'recent') return json(route, { sport, games: [] });
+        return json(route, { sport, games: [{
+          espn_id: '401857140', start: `${date}T23:00:00Z`, status: 'live', status_detail: '3rd Qtr',
+          away: { code: 'AWY', name: 'Away Team', score: 61, logo: null, rec: '16-9' },
+          home: { code: 'HME', name: 'Home Team', score: 67, logo: null, rec: '18-7' },
+        }] });
+      }
       if (action === 'today') return json(route, {
         sport, date, training: true, gate: { state: 'training', passed: false, approved: false, public: false }, events: [], top2: [],
       });
@@ -295,6 +308,18 @@ try {
     assert.doesNotMatch(histEs, /−110/, `${viewport.name}: historial aún afirma cuota sintética ES`);
     await page.locator('.ltab[data-lt="all"]').click();
     await assertNoOverflow(page, viewport.name);
+    await page.locator('.sp[data-sport="wnba"]').click();
+    await page.locator('.mrow[data-oid="401857140"]').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('.lghead .ttl').textContent(), 'WNBA', `${viewport.name}: WNBA no aparece como liga`);
+    const wnbaListEs = await page.locator('#list').textContent();
+    assert.match(wnbaListEs, /Away Team/i, `${viewport.name}: falta visitante WNBA ES`);
+    assert.match(wnbaListEs, /61[\s\S]*67/, `${viewport.name}: faltan marcadores WNBA ES`);
+    await page.waitForFunction(() => /Tiros de campo/i.test(document.querySelector('#dcard')?.textContent || ''));
+    const wnbaDetailEs = await page.locator('#dcard').textContent();
+    assert.match(wnbaDetailEs, /Modelo AA en entrenamiento/i, `${viewport.name}: falta gate honesto WNBA ES`);
+    assert.doesNotMatch(wnbaDetailEs, /AA\s*\d+(?:[,.]\d+)?%/i, `${viewport.name}: se publicó una predicción WNBA no validada`);
+    await assertNoOverflow(page, `${viewport.name}-wnba-es`);
+    await page.locator('.sp[data-sport="mlb"]').click();
     await page.locator('#langbtn').click();
     const topEn = await page.locator('.topsignals').textContent();
     assert.match(topEn, /AA Top signals/i, `${viewport.name}: missing Top signals EN`);
@@ -358,6 +383,16 @@ try {
       assert.match(await page.locator('#dcard').textContent(), /AA model in training/i, `${viewport.name}: ${newSport} missing training disclosure`);
       await assertNoOverflow(page, `${viewport.name}-${newSport}`);
     }
+    await page.locator('.sp[data-sport="wnba"]').click();
+    await page.locator('.mrow[data-oid="401857140"]').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => /Team stats[\s\S]*Field goals/i.test(document.querySelector('#dcard')?.textContent || ''));
+    const wnbaDetailEn = await page.locator('#dcard').textContent();
+    assert.match(wnbaDetailEn, /AA model in training/i, `${viewport.name}: missing honest WNBA gate EN`);
+    assert.match(wnbaDetailEn, /Field goals/i, `${viewport.name}: missing WNBA stat translation EN`);
+    assert.doesNotMatch(wnbaDetailEn, /Tiros de campo/i, `${viewport.name}: Spanish WNBA stat leaked into EN`);
+    assert.doesNotMatch(wnbaDetailEn, /Modelo|entrenamiento|Marcadores|predicciones/i, `${viewport.name}: Spanish leaked into WNBA EN`);
+    assert.doesNotMatch(wnbaDetailEn, /AA\s*\d+(?:\.\d+)?%/i, `${viewport.name}: unvalidated WNBA prediction became public`);
+    await assertNoOverflow(page, `${viewport.name}-wnba-en`);
     assert.deepEqual(errors, [], `${viewport.name}: errores de consola/red de la app`);
     await context.close();
   }

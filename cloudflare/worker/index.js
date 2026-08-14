@@ -569,6 +569,7 @@ async function mlbPipelineHealth(env, origin) {
 // Las predicciones de estos deportes llegarán cuando su modelo pase la
 // validación; mientras, AA Sports ya muestra el "en vivo" estilo SofaScore.
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports';
+const BASKETBALL_LEAGUES = Object.freeze(['nba', 'wnba']);
 const SOCCER_LEAGUES = {
   'fifa.world': 'Mundial 2026', 'eng.1': 'Premier League', 'esp.1': 'LaLiga',
   'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1',
@@ -597,7 +598,7 @@ export default {
     try {
       if (path === '/' || path === '/v1' || path === '/v1/health') {
         return json(
-          { service: 'aa-sports-api', ok: true, sports: ['mlb', 'soccer', 'nba', 'tennis', ...Object.keys(US_SPORTS)], routes: ['/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live', '/v1/mlb/pipeline-health', '/v1/:sport/today', '/v1/:sport/live', '/v1/:sport/recent', '/v1/:sport/standings', '/v1/:sport/summary', '/v1/:sport/history', '/v1/:sport/learning', '/v1/:sport/simulation', '/v1/:sport/pipeline-health', '/v1/injuries'] },
+          { service: 'aa-sports-api', ok: true, sports: ['mlb', 'soccer', 'nba', 'wnba', 'tennis', ...Object.keys(US_SPORTS)], routes: ['/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live', '/v1/mlb/pipeline-health', '/v1/:sport/today', '/v1/:sport/live', '/v1/:sport/recent', '/v1/:sport/standings', '/v1/:sport/summary', '/v1/:sport/history', '/v1/:sport/learning', '/v1/:sport/simulation', '/v1/:sport/pipeline-health', '/v1/injuries'] },
           200, origin,
         );
       }
@@ -633,7 +634,25 @@ export default {
           return await summary(ctx, origin, sport, eid, `${ESPN_BASE}/${config.summary}?event=${eid}`);
         }
       }
-      if (path === '/v1/nba/live') return await otherLive(ctx, origin, 'nba', `${ESPN_BASE}/basketball/nba/scoreboard`);
+      const basketballRoute = path.match(/^\/v1\/(nba|wnba)\/(live|recent|standings|summary)$/);
+      if (basketballRoute) {
+        const [, league, action] = basketballRoute;
+        if (!BASKETBALL_LEAGUES.includes(league)) return json({ error: 'unknown_league' }, 400, origin);
+        const scoreboard = `${ESPN_BASE}/basketball/${league}/scoreboard`;
+        if (action === 'live') {
+          // Fijar el día ET evita que ESPN entregue el último slate completado
+          // cuando una liga está libre u off-season.
+          const today = etDate(new Date()).replaceAll('-', '');
+          return await otherLive(ctx, origin, league, `${scoreboard}?dates=${today}&limit=100`);
+        }
+        if (action === 'recent') return await recentGames(ctx, origin, league, scoreboard);
+        if (action === 'standings') {
+          return await standings(ctx, origin, league, `https://site.api.espn.com/apis/v2/sports/basketball/${league}/standings`);
+        }
+        const eid = url.searchParams.get('event');
+        if (!eid || !/^\d+$/.test(eid)) return json({ error: 'bad_event' }, 400, origin);
+        return await summary(ctx, origin, league, eid, `${ESPN_BASE}/basketball/${league}/summary?event=${eid}`);
+      }
       if (path === '/v1/tennis/live') return await tennisLive(ctx, origin);
       if (path === '/v1/soccer/live') {
         const lg = url.searchParams.get('league') || 'fifa.world';
@@ -642,7 +661,6 @@ export default {
       }
 
       // últimos resultados (fuera de horario / off-season) + tablas de posiciones
-      if (path === '/v1/nba/recent') return await recentGames(ctx, origin, 'nba', `${ESPN_BASE}/basketball/nba/scoreboard`);
       if (path === '/v1/tennis/recent') return await tennisRecent(ctx, origin);
       if (path === '/v1/tennis/rankings') return await tennisRankings(ctx, origin);
       if (path === '/v1/soccer/recent') {
@@ -651,7 +669,6 @@ export default {
         return await recentGames(ctx, origin, 'soccer:' + lg, `${ESPN_BASE}/soccer/${lg}/scoreboard`);
       }
       if (path === '/v1/mlb/standings') return await standings(ctx, origin, 'mlb-div', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings?level=3', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings');
-      if (path === '/v1/nba/standings') return await standings(ctx, origin, 'nba', 'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings');
       if (path === '/v1/soccer/standings') {
         const lg = url.searchParams.get('league') || 'fifa.world';
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
@@ -662,18 +679,13 @@ export default {
 
       // Detalle de partido (alineaciones + estadísticas + eventos) — proxy con
       // caché del endpoint summary de ESPN. Descriptivo, sin predicciones.
-      if (path === '/v1/soccer/summary' || path === '/v1/nba/summary') {
+      if (path === '/v1/soccer/summary') {
         const sport = path.split('/')[2];
         const eid = url.searchParams.get('event');
         if (!eid || !/^\d+$/.test(eid)) return json({ error: 'bad_event' }, 400, origin);
-        let up;
-        if (sport === 'soccer') {
-          const lg = url.searchParams.get('league') || 'fifa.world';
-          if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
-          up = `${ESPN_BASE}/soccer/${lg}/summary?event=${eid}`;
-        } else {
-          up = `${ESPN_BASE}/basketball/nba/summary?event=${eid}`;
-        }
+        const lg = url.searchParams.get('league') || 'fifa.world';
+        if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
+        const up = `${ESPN_BASE}/soccer/${lg}/summary?event=${eid}`;
         return await summary(ctx, origin, sport, eid, up);
       }
       if (path === '/v1/injuries') return await injuries(env, origin);
@@ -1779,7 +1791,14 @@ async function live(ctx, origin) {
 // Live genérico (NBA y soccer): mismo esquema que MLB live, sin situation.
 async function otherLive(ctx, origin, cacheTag, upstream, fallbackUpstream = null) {
   const cache = caches.default;
-  const cacheKey = new Request('https://aa-sports.cache/' + cacheTag + '/live', { method: 'GET' });
+  // Cuando el upstream está fijado a un día, la fecha también pertenece a la
+  // llave. Así ni siquiera los 30 s de caché pueden cruzar la medianoche ET.
+  let cacheVariant = 'current';
+  try {
+    const dates = new URL(upstream).searchParams.get('dates');
+    if (/^\d{8}$/.test(dates || '')) cacheVariant = dates;
+  } catch (e) { /* upstream interno constante; current es un fallback seguro */ }
+  const cacheKey = new Request(`https://aa-sports.cache/${cacheTag}/live/${cacheVariant}`, { method: 'GET' });
   const cached = await cache.match(cacheKey);
   if (cached) return withCors(await cached.text(), origin);
 
@@ -1932,7 +1951,7 @@ async function summary(ctx, origin, sport, eid, upstream) {
   try { data = await fetched.response.json(); } catch (e) { return json({ ok: false, note: 'summary non-json' }, 200, origin, 30); }
 
   const payloadObj = sport === 'soccer' ? soccerSummary(data)
-    : sport === 'nba' ? nbaSummary(data)
+    : BASKETBALL_LEAGUES.includes(sport) ? nbaSummary(data, sport)
       : genericTeamSummary(data, sport);
   const payload = JSON.stringify({ ok: true, updated_at: new Date().toISOString(), source: fetched.source, ...payloadObj });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=60' } });
@@ -2021,14 +2040,16 @@ function soccerSummary(data) {
 
 // Estadísticas de equipo de NBA que mostramos (label de ESPN → etiqueta ES).
 const NBA_TEAM_STAT_LABELS = {
-  'FG': 'Tiros de campo', 'Field Goal %': '% Tiros de campo', '3PT': 'Triples',
-  'Three Point %': '% Triples', 'FT': 'Tiros libres', 'Rebounds': 'Rebotes',
-  'Assists': 'Asistencias', 'Steals': 'Robos', 'Blocks': 'Tapones',
-  'Turnovers': 'Pérdidas', 'Fast Break Points': 'Puntos al contragolpe',
-  'Points in Paint': 'Puntos en la pintura',
+  'FG': ['stat_fg', 'Tiros de campo'], 'Field Goal %': ['stat_fg_pct', '% Tiros de campo'],
+  '3PT': ['stat_3pt', 'Triples'], 'Three Point %': ['stat_3pt_pct', '% Triples'],
+  'FT': ['stat_ft', 'Tiros libres'], 'Rebounds': ['stat_rebounds', 'Rebotes'],
+  'Assists': ['stat_assists', 'Asistencias'], 'Steals': ['stat_steals', 'Robos'],
+  'Blocks': ['stat_blocks', 'Tapones'], 'Turnovers': ['stat_turnovers', 'Pérdidas'],
+  'Fast Break Points': ['stat_fast_break', 'Puntos al contragolpe'],
+  'Points in Paint': ['stat_paint', 'Puntos en la pintura'],
 };
 
-function nbaSummary(data) {
+function nbaSummary(data, sport = 'nba') {
   const teamSides = pickSides((data.boxscore && data.boxscore.players) || []);
   const rowsOf = (block) => {
     if (!block) return null;
@@ -2061,9 +2082,9 @@ function nbaSummary(data) {
   const hs = statMap(tSides.home), as = statMap(tSides.away);
   const stats = Object.entries(NBA_TEAM_STAT_LABELS)
     .filter(([k]) => hs[k] != null || as[k] != null)
-    .map(([k, label]) => ({ label, home: hs[k] ?? null, away: as[k] ?? null }));
+    .map(([k, [key, label]]) => ({ key, label, home: hs[k] ?? null, away: as[k] ?? null }));
 
-  return { sport: 'nba', players, stats: stats.length ? stats : null };
+  return { sport, players, stats: stats.length ? stats : null };
 }
 
 // Tenis: los "events" de ESPN son torneos con partidos adentro; cada
