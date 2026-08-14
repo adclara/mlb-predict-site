@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import worker, {
   US_SPORTS,
   compactUsSportsIngest,
+  fallbackSportBrain,
   fetchUsSportsScoreboard,
+  learningFreshnessDoc,
   sanitizeUsSportsToday,
 } from '../cloudflare/worker/index.js';
 
@@ -119,4 +121,62 @@ test('today projection fails closed until all three gate flags are true', () => 
   assert.equal(publicDoc.events[0].prediction.prob, 0.61);
   assert.equal(publicDoc.top2.length, 2);
   assert.equal(publicDoc.training, false);
+});
+
+test('fallback Cerebro exposes only measured aggregate and keeps the gate closed', () => {
+  const doc = fallbackSportBrain('wnba', { n: 12, dates: 6, wins: 7, losses: 5, market_n: 4, updated_at: '2026-08-13T20:00:00Z' });
+  assert.equal(doc.forward.n, 12);
+  assert.equal(doc.forward.accuracy, 7 / 12);
+  assert.equal(doc.gate.public, false);
+  assert.equal(doc.gate.min_forward, 200);
+  assert.equal('predictions' in doc, false);
+});
+
+test('learning freshness detects a green-but-stale snapshot', () => {
+  const now = Date.parse('2026-08-14T12:00:00Z');
+  assert.equal(learningFreshnessDoc({ updated_at: '2026-08-14T01:00:00Z' }, now).fresh, true);
+  const stale = learningFreshnessDoc({ updated_at: '2026-07-21T21:04:38Z', last_date: '2026-07-04' }, now);
+  assert.equal(stale.fresh, false);
+  assert.equal(stale.last_date, '2026-07-04');
+});
+
+test('WNBA learning route works before the first KV publication and stays fail-closed', async () => {
+  const env = {
+    ALLOWED_ORIGIN: '*',
+    AA_LATEST: { async get() { return null; } },
+    DB: {
+      prepare(sql) {
+        assert.match(sql, /FROM predictions/);
+        return { bind(sport) { assert.equal(sport, 'wnba'); return { async first() { return { n: 0, dates: 0, wins: 0, losses: 0, market_n: 0, updated_at: null }; } }; } };
+      },
+    },
+  };
+  const response = await worker.fetch(new Request('https://aa-sports-api.test/v1/wnba/learning'), env, { waitUntil() {} });
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.sport, 'wnba');
+  assert.equal(body.state, 'training');
+  assert.equal(body.gate.public, false);
+});
+
+test('every public sport exposes a Cerebro route without exposing picks', async () => {
+  const sports = ['soccer', 'nba', 'wnba', 'tennis', 'nfl', 'ncaaf', 'nhl', 'ncaam'];
+  for (const sport of sports) {
+    const env = {
+      ALLOWED_ORIGIN: '*',
+      AA_LATEST: {
+        async get(key) {
+          assert.equal(key, `${sport}:learning`);
+          return JSON.stringify({ schema: 'aa_sport_learning_v1', sport, state: 'training', gate: { public: false } });
+        },
+      },
+      DB: { prepare() { throw new Error('D1 fallback should not run when KV exists'); } },
+    };
+    const response = await worker.fetch(new Request(`https://aa-sports-api.test/v1/${sport}/learning`), env, { waitUntil() {} });
+    const body = await response.json();
+    assert.equal(response.status, 200, sport);
+    assert.equal(body.sport, sport);
+    assert.equal(body.gate.public, false);
+    assert.equal('predictions' in body, false);
+  }
 });

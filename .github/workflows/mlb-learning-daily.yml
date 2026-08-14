@@ -1,5 +1,6 @@
-# AA Sports — entrenamiento privado diario. La doble hora UTC cubre DST; el
-# guard de zona ET deja pasar únicamente la corrida de las 05:37 ET.
+# AA Sports — entrenamiento privado diario. La doble hora UTC cubre DST. El
+# guard es idempotente por fecha ET: si GitHub demora el primer cron, igual
+# corre; la segunda expresión se omite solo cuando el snapshot ya se actualizó.
 name: mlb-learning-daily
 on:
   workflow_dispatch: {}
@@ -18,27 +19,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
+      - name: Adoptar el último ledger de main
+        run: git pull --ff-only origin "$GITHUB_REF_NAME"
+      - name: Decidir refit diario ET
+        id: window
+        env:
+          AA_GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: DATA_DIR="$PWD/data" node robot/mlb_learning_guard.mjs
       - name: Verificar secreto de publicación
+        if: steps.window.outputs.run == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
-      - name: Ventana diaria ET
-        id: window
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" != "schedule" ] || [ "$(TZ=America/New_York date +%H)" = "05" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "Fuera de la ventana 05:xx ET; la otra expresión UTC hará el run válido."
-          fi
       - name: Refit, calibración y challengers en sombra
         if: steps.window.outputs.run == 'true'
         run: DATA_DIR="$PWD/data" node robot/mlb_learn_daily.mjs
+      - name: Verificar que Aprende quedó fresco
+        if: steps.window.outputs.run == 'true'
+        run: DATA_DIR="$PWD/data" node robot/mlb_learning_guard.mjs --verify
       - name: Generar Cerebro AA (sin publicar aún)
         if: steps.window.outputs.run == 'true'
         env:

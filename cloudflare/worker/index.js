@@ -547,14 +547,33 @@ export function mlbPipelineHealthDoc(row, now = Date.now()) {
   };
 }
 
+const LEARNING_STALE_SECONDS = 36 * 60 * 60;
+export function learningFreshnessDoc(doc, now = Date.now()) {
+  const updatedMs = Date.parse(doc?.updated_at || '');
+  const ageSeconds = Number.isFinite(updatedMs) ? Math.max(0, Math.floor((Number(now) - updatedMs) / 1000)) : null;
+  return {
+    fresh: ageSeconds != null && ageSeconds <= LEARNING_STALE_SECONDS,
+    stale_after_hours: LEARNING_STALE_SECONDS / 3600,
+    age_seconds: ageSeconds,
+    updated_at: doc?.updated_at || null,
+    last_date: doc?.last_date || null,
+    n_graded: Number.isFinite(Number(doc?.n_graded)) ? Number(doc.n_graded) : null,
+  };
+}
+
 async function mlbPipelineHealth(env, origin) {
   try {
-    const row = await env.DB.prepare(`
-      SELECT slot_id, date, scheduled_at, captured_at, status, stage, source_hash,
-             n_games, sources, missingness, error
-      FROM mlb_ingest_slots ORDER BY slot_id DESC LIMIT 1
-    `).first();
-    return json(mlbPipelineHealthDoc(row), 200, origin, 30);
+    const [row, learningRaw] = await Promise.all([
+      env.DB.prepare(`
+        SELECT slot_id, date, scheduled_at, captured_at, status, stage, source_hash,
+               n_games, sources, missingness, error
+        FROM mlb_ingest_slots ORDER BY slot_id DESC LIMIT 1
+      `).first(),
+      env.AA_LATEST?.get ? env.AA_LATEST.get('mlb:learning') : Promise.resolve(null),
+    ]);
+    let learning = null;
+    try { learning = learningRaw ? JSON.parse(learningRaw) : null; } catch (e) { /* malformed KV is stale */ }
+    return json({ ...mlbPipelineHealthDoc(row), learning: learningFreshnessDoc(learning) }, 200, origin, 30);
   } catch (error) {
     console.error(JSON.stringify({ message: 'mlb pipeline health unavailable', error: ingestError(error) }));
     return json({
@@ -626,7 +645,8 @@ export default {
         if (action === 'recent') return await recentGames(ctx, origin, sport, upstream);
         if (action === 'standings') return await standings(ctx, origin, sport, config.standings);
         if (action === 'history') return await usSportsHistory(url, env, sport, origin);
-        if (action === 'learning' || action === 'simulation') return await usSportsKv(env, sport, action, origin);
+        if (action === 'learning') return await sportLearning(env, sport, origin);
+        if (action === 'simulation') return await usSportsKv(env, sport, action, origin);
         if (action === 'pipeline-health') return await usSportsPipelineHealth(env, sport, origin);
         if (action === 'summary') {
           const eid = url.searchParams.get('event');
@@ -634,11 +654,12 @@ export default {
           return await summary(ctx, origin, sport, eid, `${ESPN_BASE}/${config.summary}?event=${eid}`);
         }
       }
-      const basketballRoute = path.match(/^\/v1\/(nba|wnba)\/(live|recent|standings|summary)$/);
+      const basketballRoute = path.match(/^\/v1\/(nba|wnba)\/(live|recent|standings|summary|learning)$/);
       if (basketballRoute) {
         const [, league, action] = basketballRoute;
         if (!BASKETBALL_LEAGUES.includes(league)) return json({ error: 'unknown_league' }, 400, origin);
         const scoreboard = `${ESPN_BASE}/basketball/${league}/scoreboard`;
+        if (action === 'learning') return await sportLearning(env, league, origin);
         if (action === 'live') {
           // Fijar el día ET evita que ESPN entregue el último slate completado
           // cuando una liga está libre u off-season.
@@ -654,6 +675,8 @@ export default {
         return await summary(ctx, origin, league, eid, `${ESPN_BASE}/basketball/${league}/summary?event=${eid}`);
       }
       if (path === '/v1/tennis/live') return await tennisLive(ctx, origin);
+      if (path === '/v1/tennis/learning') return await sportLearning(env, 'tennis', origin);
+      if (path === '/v1/soccer/learning') return await sportLearning(env, 'soccer', origin);
       if (path === '/v1/soccer/live') {
         const lg = url.searchParams.get('league') || 'fifa.world';
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league', leagues: Object.keys(SOCCER_LEAGUES) }, 400, origin);
@@ -1493,10 +1516,75 @@ async function polyRadar(env, origin) {
 async function mlbLearning(env, origin) {
   const raw = await env.AA_LATEST.get('mlb:learning');
   if (!raw) return json({ note: 'aún sin diario de aprendizaje' }, 200, origin, 300);
-  return new Response(raw, {
-    status: 200,
-    headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=600' },
-  });
+  try {
+    const doc = JSON.parse(raw);
+    return json({ ...doc, freshness: learningFreshnessDoc(doc) }, 200, origin, 300);
+  } catch (error) {
+    console.error(JSON.stringify({ message: 'mlb learning malformed', error: ingestError(error) }));
+    return json({ note: 'diario de aprendizaje inválido', freshness: learningFreshnessDoc(null) }, 200, origin, 60);
+  }
+}
+
+const SPORT_BRAIN_SOURCES = Object.freeze({
+  soccer: 'predictions', nba: 'predictions', wnba: 'predictions', tennis: 'predictions',
+  nfl: 'sports_predictions', ncaaf: 'sports_predictions', nhl: 'sports_predictions', ncaam: 'sports_predictions',
+});
+
+export function fallbackSportBrain(sport, row = null) {
+  const n = Number(row?.n || 0), wins = Number(row?.wins || 0), losses = Number(row?.losses || Math.max(0, n - wins));
+  const dates = Number(row?.dates || 0);
+  return {
+    schema: 'aa_sport_learning_v1', sport, updated_at: row?.updated_at || null,
+    state: 'training', model_scope: 'shadow',
+    gate: {
+      passed: false, approved: false, public: false, reason: 'learning_snapshot_pending',
+      historical_passed: null, min_forward: sport === 'wnba' ? 200 : 300, min_dates: 30,
+      requires_ece_lte: 0.05, requires_market_benchmark: true,
+    },
+    historical: { n: 0, accuracy: null, brier: null, logloss: null, ece: null },
+    forward: {
+      n, dates, wins, losses, accuracy: n ? wins / n : null,
+      ci: { lo: null, hi: null }, brier: null, logloss: null, ece: null,
+      market_n: Number(row?.market_n || 0), market_accuracy: null, market_brier: null, market_logloss: null,
+    },
+    learning_es: [
+      n ? `Validación forward en sombra: ${wins}-${losses} en ${dates} fechas.` : 'El Cerebro está capturando decisiones pregame; todavía no hay resultados forward calificados.',
+      'El gate permanece cerrado. No se publican picks ni porcentajes hasta validar calibración, mercado y muestra.',
+    ],
+    learning_en: [
+      n ? `Shadow forward validation: ${wins}-${losses} across ${dates} dates.` : 'The Brain is capturing pregame decisions; no forward results are graded yet.',
+      'The gate remains closed. No picks or probabilities are published until calibration, market and sample are validated.',
+    ],
+    attribution_es: 'Estado medido del entrenamiento privado; no es garantía de resultados.',
+    attribution_en: 'Measured private-training status; not a guarantee of results.',
+  };
+}
+
+// Cerebro multideporte: primero sirve el snapshot compacto que publica Actions.
+// Si todavía no existe, D1 aporta solo el tamaño/record agregado de la sombra;
+// nunca se devuelven features, pesos, picks o probabilidades individuales.
+async function sportLearning(env, sport, origin) {
+  if (!Object.hasOwn(SPORT_BRAIN_SOURCES, sport)) return json({ error: 'unknown_sport' }, 400, origin);
+  const raw = await env.AA_LATEST.get(`${sport}:learning`);
+  if (raw) {
+    try { return json(JSON.parse(raw), 200, origin, 300); }
+    catch (error) { console.error(JSON.stringify({ message: 'sport learning malformed', sport, error: ingestError(error) })); }
+  }
+  let row = null;
+  try {
+    const table = SPORT_BRAIN_SOURCES[sport]; // cerrado sobre allowlist; nunca viene del request libre
+    row = await env.DB.prepare(`
+      SELECT COUNT(*) AS n, COUNT(DISTINCT date) AS dates,
+             SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) AS wins,
+             SUM(CASE WHEN result = 'loss' THEN 1 ELSE 0 END) AS losses,
+             SUM(CASE WHEN market_prob IS NOT NULL THEN 1 ELSE 0 END) AS market_n,
+             MAX(updated_at) AS updated_at
+      FROM ${table} WHERE sport = ? AND result IN ('win','loss')
+    `).bind(sport).first();
+  } catch (error) {
+    console.error(JSON.stringify({ message: 'sport learning fallback unavailable', sport, error: ingestError(error) }));
+  }
+  return json(fallbackSportBrain(sport, row), 200, origin, 120);
 }
 
 // ⚽ Predicciones públicas de soccer (KV soccer:today) — pick calibrado + récord

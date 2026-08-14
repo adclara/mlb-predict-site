@@ -23,13 +23,14 @@
 
 import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
-const DIR = join(process.cwd(), 'data', 'fase2', 'nba');
+const NBA_DIR = join(process.env.DATA_DIR || join(process.cwd(), 'data'), 'fase2', 'nba');
 
 /* ── carga ───────────────────────────────────────────────────────────────── */
-export function loadSeasons() {
-  const files = readdirSync(DIR).filter((f) => /^\d{4}-\d{2}\.json$/.test(f)).sort();
-  return files.map((f) => JSON.parse(readFileSync(join(DIR, f), 'utf8')));
+export function loadSeasons(dir = NBA_DIR) {
+  const files = readdirSync(dir).filter((f) => /^\d{4}(?:-\d{2})?\.json$/.test(f)).sort();
+  return files.map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')));
 }
 
 /* ── motor Elo ───────────────────────────────────────────────────────────── */
@@ -118,8 +119,10 @@ function tiers(rows) {
 }
 
 /* ── backtest completo ───────────────────────────────────────────────────── */
-export function backtest(burnInSeasons = 2) {
-  const seasons = loadSeasons();
+export function backtest(burnInSeasons = 2, {
+  dir = NBA_DIR, label = 'NBA', outputName = 'nba_backtest.json',
+} = {}) {
+  const seasons = loadSeasons(dir);
   if (seasons.length <= burnInSeasons) throw new Error(`Solo ${seasons.length} temporadas; burn-in ${burnInSeasons} no deja nada que evaluar`);
   const names = seasons.map((s) => s.season);
   console.log(`Temporadas: ${names.join(', ')} | burn-in: ${names.slice(0, burnInSeasons).join(', ')}`);
@@ -176,16 +179,19 @@ export function backtest(burnInSeasons = 2) {
   console.log('Tiers:', JSON.stringify(report.tiers));
   console.log('Calibración:', JSON.stringify(report.calibration.filter((c) => c.n > 0)));
 
-  writeFileSync(join(DIR, 'nba_backtest.json'), JSON.stringify(report, null, 2));
-  console.log(`\n✅ ${join(DIR, 'nba_backtest.json')}`);
+  report.sport = label.toLowerCase();
+  writeFileSync(join(dir, outputName), JSON.stringify(report, null, 2));
+  console.log(`\n✅ ${label}: ${join(dir, outputName)}`);
   return report;
 }
 
 /* ── CLI ─────────────────────────────────────────────────────────────────── */
-const cmd = process.argv[2];
-if (cmd === 'backtest') {
-  const burn = parseInt(process.argv[3], 10);
-  backtest(Number.isFinite(burn) ? burn : 2);
-} else if (cmd) {
-  console.log('Uso: node robot/nba_model.mjs backtest [burnInSeasons]');
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const cmd = process.argv[2];
+  if (cmd === 'backtest') {
+    const burn = parseInt(process.argv[3], 10);
+    backtest(Number.isFinite(burn) ? burn : 2);
+  } else if (cmd) {
+    console.log('Uso: node robot/nba_model.mjs backtest [burnInSeasons]');
+  }
 }

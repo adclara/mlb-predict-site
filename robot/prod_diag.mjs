@@ -58,6 +58,8 @@ try {
   console.log('estado:', ph.state, '| fresh:', ph.fresh ?? '—', '| edad s:', ph.age_seconds ?? '—',
     '| juegos:', ph.latest?.n_games ?? '—', '| capturado:', ph.latest?.captured_at || '—');
   console.log('  fuentes:', JSON.stringify(ph.latest?.sources || {}), '| missingness:', JSON.stringify(ph.latest?.missingness || {}));
+  console.log('  Aprende:', ph.learning?.fresh ? '✅ fresco' : '⚠️ atrasado', '| actualizado:', ph.learning?.updated_at || '—',
+    '| último juego:', ph.learning?.last_date || '—', '| n:', ph.learning?.n_graded ?? '—');
 } catch (e) { console.log('no-json:', String(e).slice(0, 160)); }
 
 // ── Diagnóstico del JOIN en vivo (por qué el marcador no aparece) ──
@@ -91,9 +93,12 @@ console.log('\n== /v1/wnba/live + standings (feed factual) ==');
 try {
   const wnbaLive = JSON.parse((await get(`${API}/v1/wnba/live`)).text);
   const wnbaStandings = JSON.parse((await get(`${API}/v1/wnba/standings`)).text);
+  const wnbaBrain = JSON.parse((await get(`${API}/v1/wnba/learning`)).text);
   const rows = (wnbaStandings.sections || []).reduce((n, section) => n + (section.rows || []).length, 0);
   console.log('juegos hoy:', (wnbaLive.games || []).length, '| fuente:', wnbaLive.source || '—', wnbaLive.note ? '| note: ' + wnbaLive.note : '');
   console.log('posiciones:', rows, 'equipos en', (wnbaStandings.sections || []).length, 'secciones', wnbaStandings.note ? '| note: ' + wnbaStandings.note : '');
+  console.log('Cerebro:', wnbaBrain.state || '—', '| histórico OOS:', wnbaBrain.historical?.n ?? '—',
+    '| forward:', wnbaBrain.forward?.n ?? '—', '| gate público:', wnbaBrain.gate?.public === true ? 'ABIERTO' : 'cerrado');
 } catch (e) { console.log('no-json:', String(e).slice(0, 120)); }
 console.log('\n== /v1/poly/radar + /v1/poly/alerts (Radar de wallets) ==');
 const pr = await get(`${API}/v1/poly/radar`);

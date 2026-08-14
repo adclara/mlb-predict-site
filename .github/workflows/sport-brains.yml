@@ -1,0 +1,28 @@
+# AA Sports — refresca los estados medidos de Cerebro para los deportes que
+# viven en este repo. Es descriptivo: no abre gates ni calcula picks públicos.
+name: sport-brains
+on:
+  schedule:
+    - cron: '47 11,23 * * *'
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['.github/poke-sport-brains']
+permissions:
+  contents: read
+concurrency:
+  group: sport-brains
+  cancel-in-progress: true
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Construir y publicar Cerebros medidos
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/sport_brain.mjs all

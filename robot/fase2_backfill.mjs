@@ -1,20 +1,28 @@
 // AA Sports — Fase 2: backfill histórico multideporte (corre en GitHub Actions).
 //
 // Descarga los datos históricos que entrenarán/validarán los modelos de
-// soccer, tenis y NBA, los normaliza a JSON compacto y los deja en data/fase2/.
+// soccer, tenis, NBA y WNBA, los normaliza a JSON compacto y los deja en data/fase2/.
 // Todas las fuentes son públicas, gratuitas y keyless:
 //   - Soccer: football-data.co.uk (resultados + odds de cierre, CSV por liga/temporada)
 //   - Tenis:  github.com/JeffSackmann tennis_atp / tennis_wta (CSV por año)
-//   - NBA:    ESPN scoreboard por fecha (regular + playoffs)
+//   - NBA/WNBA: ESPN scoreboard por fecha (regular + playoffs)
 //
-// Uso: node robot/fase2_backfill.mjs [soccer|tennis|nba|all]
+// Uso: node robot/fase2_backfill.mjs [soccer|tennis|nba|wnba|all]
 
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const OUT = join(process.env.DATA_DIR || join(process.cwd(), 'data'), 'fase2');
 const what = (process.argv[2] || 'all').toLowerCase();
-const manifest = { generated_at: new Date().toISOString(), soccer: {}, tennis: {}, nba: {} };
+const manifestFile = join(OUT, 'manifest.json');
+let previousManifest = {};
+try { previousManifest = JSON.parse(readFileSync(manifestFile, 'utf8')); } catch { /* primera corrida */ }
+const manifest = {
+  ...previousManifest,
+  generated_at: new Date().toISOString(),
+  soccer: previousManifest.soccer || {}, tennis: previousManifest.tennis || {},
+  nba: previousManifest.nba || {}, wnba: previousManifest.wnba || {},
+};
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -340,10 +348,73 @@ async function pullNba() {
 }
 const day0 = (dates, i) => dates[Math.min(i, dates.length - 1)];
 
+/* ── WNBA ───────────────────────────────────────────────────────────────── */
+// Cinco temporadas cerradas + la actual. Consultar el año calendario completo
+// evita codificar a mano fechas de Finals que cambian cada temporada; ESPN
+// identifica regular/playoffs con season.type 2/3 y el filtro descarta el resto.
+const WNBA_CURRENT_YEAR = new Date().getUTCFullYear();
+const WNBA_SEASONS = Array.from({ length: 6 }, (_, i) => WNBA_CURRENT_YEAR - 5 + i).map((year) => ({
+  name: String(year), from: `${year}-01-01`,
+  to: year === WNBA_CURRENT_YEAR ? new Date().toISOString().slice(0, 10) : `${year}-12-31`,
+}));
+
+async function pullWnba() {
+  console.log('— WNBA (ESPN por fecha) —');
+  const dir = join(OUT, 'wnba');
+  mkdirSync(dir, { recursive: true });
+  for (const season of WNBA_SEASONS) {
+    const file = join(dir, `${season.name}.json`);
+    // Las temporadas cerradas son inmutables. El año en curso se reconstruye
+    // para incorporar los juegos finalizados desde la última corrida.
+    if (existsSync(file) && season.name !== String(WNBA_CURRENT_YEAR)) {
+      const prev = JSON.parse(readFileSync(file, 'utf8'));
+      manifest.wnba[season.name] = (prev.games || []).length;
+      console.log(`  ${season.name}: ya existe (${manifest.wnba[season.name]} juegos), salto`);
+      continue;
+    }
+    const games = [];
+    const dates = [...dateRange(season.from, season.to)];
+    for (let i = 0; i < dates.length; i += 8) {
+      const batch = dates.slice(i, i + 8);
+      const results = await Promise.all(batch.map(async (date) => {
+        const d = await get(`https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard?dates=${date.replaceAll('-', '')}&limit=100`, false);
+        if (!d || !Array.isArray(d.events)) return [];
+        return d.events.map((ev) => {
+          const c = (ev.competitions && ev.competitions[0]) || {};
+          const comp = c.competitors || [];
+          const home = comp.find((x) => x.homeAway === 'home') || {};
+          const away = comp.find((x) => x.homeAway === 'away') || {};
+          const st = (c.status && c.status.type) || {};
+          if (!String(st.name || '').toUpperCase().includes('FINAL')) return null;
+          const type = (ev.season && ev.season.type) || null;
+          if (![2, 3].includes(type)) return null;
+          const qtrs = (t) => Array.isArray(t.linescores) ? t.linescores.map((l) => num(l.value)).filter((v) => v != null) : null;
+          const rec = (t) => (Array.isArray(t.records) && t.records[0] && t.records[0].summary) || null;
+          const o = Array.isArray(c.odds) && c.odds[0] ? c.odds[0] : null;
+          return {
+            date, type, neutral: !!c.neutralSite,
+            home: home.team && home.team.abbreviation, hs: num(home.score),
+            away: away.team && away.team.abbreviation, as: num(away.score),
+            hq: qtrs(home), aq: qtrs(away), hrec: rec(home), arec: rec(away),
+            odds: o ? { details: o.details || null, spread: num(o.spread), ou: num(o.overUnder) } : null,
+          };
+        }).filter(Boolean);
+      }));
+      games.push(...results.flat());
+      await sleep(120);
+      if (i % 80 === 0) console.log(`  ${season.name}: ${day0(dates, i)}… ${games.length} juegos`);
+    }
+    writeFileSync(file, JSON.stringify({ season: season.name, games }));
+    manifest.wnba[season.name] = games.length;
+    console.log(`  ${season.name}: ${games.length} juegos finales`);
+  }
+}
+
 /* ── main ────────────────────────────────────────────────────────────────── */
 mkdirSync(OUT, { recursive: true });
 if (what === 'all' || what === 'soccer') await pullSoccer();
 if (what === 'all' || what === 'tennis') await pullTennis();
 if (what === 'all' || what === 'nba') await pullNba();
+if (what === 'all' || what === 'wnba') await pullWnba();
 writeFileSync(join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2));
 console.log('\n✅ Backfill Fase 2 completo:', JSON.stringify(manifest));

@@ -1,23 +1,25 @@
-// AA Sports — NBA en MODO SOMBRA (corre en GitHub Actions).
+// AA Sports — NBA/WNBA en MODO SOMBRA (corre en GitHub Actions).
 //
-// Igual que la sombra de soccer: registra picks diarios en D1 (sport='nba')
+// Igual que la sombra de soccer: registra picks diarios en D1 por deporte
 // SIN publicarlos, y los gradea con los marcadores finales de ESPN. Es el
 // período de prueba en vivo que el backtest no pudo cubrir (ESPN no conserva
 // odds históricas): aquí se guarda TAMBIÉN la prob del mercado (market_prob)
 // para medir modelo-vs-mercado con odds reales antes de publicar nada.
 //
 // Qué hace cada corrida:
-//   1. RATINGS: reconstruye el Elo con las 10 temporadas de data/fase2/nba
+//   1. RATINGS: reconstruye el Elo con las temporadas de data/fase2/<sport>
 //      (params CONGELADOS del backtest) + los juegos de la temporada en curso
 //      que aún no están en fase2 (ESPN por fecha).
 //   2. GRADEA: picks pendientes → win/loss con el final de ESPN.
 //   3. REGISTRA: juegos por jugar de hoy/mañana (solo regular/playoffs, nada
-//      de Summer League ni pretemporada) con prob del modelo + market_prob.
+//      de Summer League/pretemporada) con prob del modelo + market_prob.
 //
 // Fuera de temporada corre y no registra nada (barato). Los picks reales
 // empiezan solos cuando arranque la 2026-27 en octubre.
 //
-// Requiere CLOUDFLARE_API_TOKEN. Uso: node robot/nba_shadow.mjs
+// Requiere CLOUDFLARE_API_TOKEN.
+// Uso NBA: node robot/nba_shadow.mjs
+// Uso WNBA: AA_BASKETBALL_SPORT=wnba node robot/nba_shadow.mjs
 
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -27,8 +29,10 @@ import { probs2way } from './lib/espn_odds.mjs';
 const ACCOUNT_ID = 'f02574feb7272a1da2818e35e0ff4342';
 const D1_DATABASE_ID = 'ed0969d8-050a-4987-ab98-b047c30f76c9';
 const API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
-const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba';
-const ENGINE = 'nba-shadow-v1';
+const SPORT = String(process.env.AA_BASKETBALL_SPORT || 'nba').toLowerCase();
+if (!['nba', 'wnba'].includes(SPORT)) throw new Error(`AA_BASKETBALL_SPORT inválido: ${SPORT}`);
+const ESPN = `https://site.api.espn.com/apis/site/v2/sports/basketball/${SPORT}`;
+const ENGINE = `${SPORT}-shadow-v1`;
 
 if (!API_TOKEN) { console.log('Sin CLOUDFLARE_API_TOKEN; modo sombra omitido.'); process.exit(0); }
 
@@ -63,7 +67,7 @@ async function ensureMarketProb() {
 /* ── 1) ratings: histórico + temporada en curso ──────────────────────────── */
 function frozenParams() {
   // los del backtest (grid solo en burn-in); el JSON manda si existe
-  const p = join(process.cwd(), 'data', 'fase2', 'nba', 'nba_backtest.json');
+  const p = join(process.env.DATA_DIR || join(process.cwd(), 'data'), 'fase2', SPORT, `${SPORT}_backtest.json`);
   if (existsSync(p)) {
     const j = JSON.parse(readFileSync(p, 'utf8'));
     if (j.params && j.params.k) return { k: j.params.k, hfa: j.params.hfa, carry: j.params.carry, b2b: j.params.b2b };
@@ -90,7 +94,7 @@ function gameFromEvent(ev, d) {
 async function buildRatings(today) {
   const params = frozenParams();
   const elo = makeElo(params);
-  const seasons = loadSeasons();
+  const seasons = loadSeasons(join(process.env.DATA_DIR || join(process.cwd(), 'data'), 'fase2', SPORT));
   let lastDate = '2000-01-01';
   for (const s of seasons) {
     elo.newSeason();
@@ -141,10 +145,10 @@ async function main() {
 
   /* gradear pendientes (hasta 5 días atrás) */
   const pending = await d1(
-    "SELECT date, event_id, home, away, pick FROM predictions WHERE sport = 'nba' AND result IS NULL AND pick IS NOT NULL AND date < ? ORDER BY date DESC LIMIT 80",
-    [day(today)],
+    'SELECT date, event_id, home, away, pick FROM predictions WHERE sport = ? AND result IS NULL AND pick IS NOT NULL AND date < ? ORDER BY date DESC LIMIT 80',
+    [SPORT, day(today)],
   );
-  console.log(`Sombra NBA: ${pending.length} picks por gradear`);
+  console.log(`Sombra ${SPORT.toUpperCase()}: ${pending.length} picks por gradear`);
   const byDate = new Map();
   for (const p of pending) {
     if (!byDate.has(p.date)) byDate.set(p.date, []);
@@ -161,7 +165,7 @@ async function main() {
       if (g.hs == null || g.as == null || g.hs === g.as) continue;
       const winner = g.hs > g.as ? p.home : p.away;
       const result = winner === p.pick ? 'win' : 'loss';
-      await d1("UPDATE predictions SET result = ?, status = 'final' WHERE sport = 'nba' AND date = ? AND event_id = ?", [result, p.date, p.event_id]);
+      await d1("UPDATE predictions SET result = ?, status = 'final' WHERE sport = ? AND date = ? AND event_id = ?", [result, SPORT, p.date, p.event_id]);
       console.log(`  graded ${p.date} ${p.away}@${p.home}: ${g.as}-${g.hs} → ${p.pick} ${result}`);
     }
     await sleep(150);
@@ -189,20 +193,20 @@ async function main() {
       await d1(
         `INSERT OR REPLACE INTO predictions
          (sport, date, event_id, league, start_time, status, home, away, pick, prob, confidence, engine_version, result, market_prob, updated_at)
-         VALUES ('nba', ?, ?, 'nba', ?, 'pre', ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
-        [d, g._id, ev.date || d, g.home, g.away, side.code, Math.round(side.p * 1000) / 1000, tierOf(side.p), ENGINE, mktSide != null ? Math.round(mktSide * 1000) / 1000 : null, new Date().toISOString()],
+         VALUES (?, ?, ?, ?, ?, 'pre', ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+        [SPORT, d, g._id, SPORT, ev.date || d, g.home, g.away, side.code, Math.round(side.p * 1000) / 1000, tierOf(side.p), ENGINE, mktSide != null ? Math.round(mktSide * 1000) / 1000 : null, new Date().toISOString()],
       );
       logged++;
     }
-    if (nEv) console.log(`  nba ${d}: ${nEv} eventos, ${nPre} pre (regular/playoffs)`);
+    if (nEv) console.log(`  ${SPORT} ${d}: ${nEv} eventos, ${nPre} pre (regular/playoffs)`);
     await sleep(150);
   }
-  console.log(`Sombra NBA: ${logged} picks registrados (${withMkt} con market_prob) — ${dates.join(', ')}`);
+  console.log(`Sombra ${SPORT.toUpperCase()}: ${logged} picks registrados (${withMkt} con market_prob) — ${dates.join(', ')}`);
 
   /* resumen del track record + modelo vs mercado */
-  const rec = await d1("SELECT confidence, COUNT(*) n, SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) w FROM predictions WHERE sport = 'nba' AND result IS NOT NULL GROUP BY confidence");
+  const rec = await d1("SELECT confidence, COUNT(*) n, SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) w FROM predictions WHERE sport = ? AND result IS NOT NULL GROUP BY confidence", [SPORT]);
   console.log('Track record sombra por tier:', JSON.stringify(rec));
-  const mvsm = await d1("SELECT COUNT(*) n, AVG(prob - market_prob) avg_edge, AVG(ABS(prob - market_prob)) avg_gap FROM predictions WHERE sport = 'nba' AND market_prob IS NOT NULL");
+  const mvsm = await d1("SELECT COUNT(*) n, AVG(prob - market_prob) avg_edge, AVG(ABS(prob - market_prob)) avg_gap FROM predictions WHERE sport = ? AND market_prob IS NOT NULL", [SPORT]);
   console.log('Modelo vs mercado (picks con odds):', JSON.stringify(mvsm));
 }
 

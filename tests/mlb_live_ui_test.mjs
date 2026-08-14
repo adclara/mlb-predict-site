@@ -123,10 +123,19 @@ async function installApiMocks(page, date, events, games) {
     ] });
     if (path === '/v1/injuries') return json(route, { players: [] });
     if (path === '/v1/me') return json(route, { enabled: false, user: null });
-    const us = path.match(/^\/v1\/(wnba|nfl|ncaaf|nhl|ncaam)\/(live|recent|standings|today|summary)$/);
+    const us = path.match(/^\/v1\/(wnba|nfl|ncaaf|nhl|ncaam)\/(live|recent|standings|today|summary|learning)$/);
     if (us) {
       const [, sport, action] = us;
       if (sport === 'wnba') {
+        if (action === 'learning') return json(route, {
+          schema: 'aa_sport_learning_v1', sport, updated_at: `${date}T12:00:00Z`, state: 'training', model_scope: 'shadow',
+          gate: { passed: false, approved: false, public: false, reason: 'forward_sample_pending' },
+          historical: { n: 1091, accuracy: 0.663, brier: 0.2132, logloss: 0.616, ece: 0.034 },
+          forward: { n: 0, dates: 0, wins: 0, losses: 0, accuracy: null },
+          learning_es: ['WNBA: 1,091 predicciones históricas OOS; acierto 66.3% y Brier 0.2132.', 'El modelo sigue en sombra. No se publican picks ni porcentajes.'],
+          learning_en: ['WNBA: 1,091 historical OOS predictions; 66.3% accuracy and 0.2132 Brier.', 'The model remains in shadow. No picks or probabilities are published.'],
+          attribution_es: 'Métricas medidas con validación cronológica.', attribution_en: 'Metrics measured with chronological validation.',
+        });
         if (action === 'standings') return json(route, { sport, season: '2026', sections: [{ name: 'Eastern Conference', rows: [
           { rank: 1, code: 'HME', name: 'Home Team', w: 18, l: 7, pct: '.720', gb: '—' },
           { rank: 2, code: 'AWY', name: 'Away Team', w: 16, l: 9, pct: '.640', gb: '2' },
@@ -139,6 +148,15 @@ async function installApiMocks(page, date, events, games) {
           home: { code: 'HME', name: 'Home Team', score: 67, logo: null, rec: '18-7' },
         }] });
       }
+      if (action === 'learning') return json(route, {
+        schema: 'aa_sport_learning_v1', sport, updated_at: `${date}T12:00:00Z`, state: 'training', model_scope: 'shadow',
+        gate: { passed: false, approved: false, public: false, reason: 'learning_snapshot_pending' },
+        historical: { n: 0, accuracy: null, brier: null, logloss: null, ece: null },
+        forward: { n: 0, dates: 0, wins: 0, losses: 0, accuracy: null },
+        learning_es: ['El Cerebro está capturando decisiones pregame.', 'El gate permanece cerrado.'],
+        learning_en: ['The Brain is capturing pregame decisions.', 'The gate remains closed.'],
+        attribution_es: 'Estado medido del entrenamiento privado.', attribution_en: 'Measured private-training status.',
+      });
       if (action === 'today') return json(route, {
         sport, date, training: true, gate: { state: 'training', passed: false, approved: false, public: false }, events: [], top2: [],
       });
@@ -318,6 +336,17 @@ try {
     const wnbaDetailEs = await page.locator('#dcard').textContent();
     assert.match(wnbaDetailEs, /Modelo AA en entrenamiento/i, `${viewport.name}: falta gate honesto WNBA ES`);
     assert.doesNotMatch(wnbaDetailEs, /AA\s*\d+(?:[,.]\d+)?%/i, `${viewport.name}: se publicó una predicción WNBA no validada`);
+    assert.equal(await page.locator('.ltab[data-lt="brain"]').isVisible(), true, `${viewport.name}: pestaña Cerebro WNBA oculta`);
+    assert.equal(await page.locator('.ltab[data-lt="hist"]').isVisible(), false, `${viewport.name}: historial MLB apareció en WNBA`);
+    await page.locator('.ltab[data-lt="brain"]').click();
+    await page.locator('#list .sportbrain').waitFor({ state: 'visible' });
+    const wnbaBrainEs = await page.locator('#list').textContent();
+    assert.match(wnbaBrainEs, /Cerebro AA · WNBA/i, `${viewport.name}: falta Cerebro WNBA ES`);
+    assert.match(wnbaBrainEs, /1[,.]091/i, `${viewport.name}: falta muestra histórica WNBA ES`);
+    assert.match(wnbaBrainEs, /0[,.]2132/i, `${viewport.name}: falta Brier WNBA ES`);
+    assert.match(wnbaBrainEs, /Gate público\s*cerrado/i, `${viewport.name}: WNBA no muestra gate cerrado ES`);
+    assert.match(wnbaBrainEs, /modelo sigue en sombra/i, `${viewport.name}: falta explicación de sombra WNBA ES`);
+    assert.equal(await page.locator('#list .aachip').count(), 0, `${viewport.name}: Cerebro WNBA publicó un pick individual`);
     await assertNoOverflow(page, `${viewport.name}-wnba-es`);
     await page.locator('.sp[data-sport="mlb"]').click();
     await page.locator('#langbtn').click();
@@ -381,6 +410,11 @@ try {
       await page.locator(`.mrow[data-oid="${newSport}-1"]`).waitFor({ state: 'visible' });
       assert.match(await page.locator('#list').textContent(), /Training · gate closed/i, `${viewport.name}: ${newSport} missing fail-closed banner`);
       assert.match(await page.locator('#dcard').textContent(), /AA model in training/i, `${viewport.name}: ${newSport} missing training disclosure`);
+      await page.locator('.ltab[data-lt="brain"]').click();
+      await page.locator('#list .sportbrain').waitFor({ state: 'visible' });
+      const sportBrain = await page.locator('#list').textContent();
+      assert.match(sportBrain, /Public gate\s*closed/i, `${viewport.name}: ${newSport} Brain did not fail closed`);
+      assert.match(sportBrain, /capturing pregame decisions/i, `${viewport.name}: ${newSport} Brain missing measured status`);
       await assertNoOverflow(page, `${viewport.name}-${newSport}`);
     }
     await page.locator('.sp[data-sport="wnba"]').click();
@@ -392,6 +426,14 @@ try {
     assert.doesNotMatch(wnbaDetailEn, /Tiros de campo/i, `${viewport.name}: Spanish WNBA stat leaked into EN`);
     assert.doesNotMatch(wnbaDetailEn, /Modelo|entrenamiento|Marcadores|predicciones/i, `${viewport.name}: Spanish leaked into WNBA EN`);
     assert.doesNotMatch(wnbaDetailEn, /AA\s*\d+(?:\.\d+)?%/i, `${viewport.name}: unvalidated WNBA prediction became public`);
+    await page.locator('.ltab[data-lt="brain"]').click();
+    await page.locator('#list .sportbrain').waitFor({ state: 'visible' });
+    const wnbaBrainEn = await page.locator('#list').textContent();
+    assert.match(wnbaBrainEn, /AA Brain · WNBA/i, `${viewport.name}: missing WNBA Brain EN`);
+    assert.match(wnbaBrainEn, /Historical OOS\s*1,091/i, `${viewport.name}: missing WNBA historical sample EN`);
+    assert.match(wnbaBrainEn, /Public gate\s*closed/i, `${viewport.name}: missing WNBA closed gate EN`);
+    assert.match(wnbaBrainEn, /model remains in shadow/i, `${viewport.name}: missing WNBA shadow disclosure EN`);
+    assert.doesNotMatch(wnbaBrainEn, /Cerebro|Histórico|muestra|cerrado|entrenamiento/i, `${viewport.name}: Spanish leaked into WNBA Brain EN`);
     await assertNoOverflow(page, `${viewport.name}-wnba-en`);
     assert.deepEqual(errors, [], `${viewport.name}: errores de consola/red de la app`);
     await context.close();
