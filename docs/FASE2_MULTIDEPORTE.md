@@ -6,11 +6,11 @@
 
 ## Estado actual (lanzado)
 
-- Worker: `/v1/nba/live`, `/v1/soccer/live?league=` (whitelist: fifa.world, uefa.champions,
+- Worker: `/v1/nba/live`, `/v1/soccer/live?league=` (whitelist: uefa.champions,
   eng.1, esp.1, ita.1, ger.1, fra.1, usa.1, mex.1), `/v1/tennis/live` (ATP+WTA, sets por
   jugador). Mismo patrón proxy+caché (30-45s) que MLB.
 - Frontend: tabs NBA/Soccer/Tenis activos con lista en vivo, detalle y la nota honesta
-  "Modelo AA en entrenamiento". Selector de liga en soccer (Mundial 2026 por defecto).
+  "Modelo AA en entrenamiento". Selector de liga en soccer (Premier por defecto).
 
 ## Fuentes de datos (todas gratis y estables)
 

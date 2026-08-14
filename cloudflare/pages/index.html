@@ -190,6 +190,9 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .ltop-sep{height:1px;background:var(--hair);margin-top:-1px}
 .pills{display:flex;gap:7px;padding:12px 14px}
 .pills[hidden]{display:none}
+#lgchips{overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#lgchips::-webkit-scrollbar{display:none}
+#lgchips .pill{flex:0 0 auto;scroll-snap-align:start}
 .pill{
   font-size:13px;font-weight:600;padding:6px 13px;border-radius:999px;
   background:var(--inner);border:1px solid var(--hair);color:var(--dim);transition:all .15s;
@@ -462,6 +465,15 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .gate-progress-head b{color:var(--text)}
 .gate-progress-track{height:7px;border-radius:5px;background:var(--panel-2);overflow:hidden}
 .gate-progress-track i{display:block;height:100%;border-radius:5px;background:var(--sky)}
+.model-evidence{margin:10px 12px;padding:12px 13px;border:1px solid rgba(94,168,255,.3);border-radius:12px;background:rgba(94,168,255,.065)}
+.model-evidence-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--dim)}
+.model-evidence-head b{color:var(--sky);font-size:13px}
+.model-evidence-grid,.gate-evidence{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:9px}
+.model-evidence-cell,.gate-evidence-cell{min-width:0;padding:8px 6px;border:1px solid var(--hair);border-radius:9px;background:var(--inner);text-align:center}
+.model-evidence-cell b,.gate-evidence-cell b{display:block;color:var(--text);font-size:15px}
+.model-evidence-cell span,.gate-evidence-cell span{display:block;margin-top:2px;color:var(--faint);font-size:9px;font-weight:750;line-height:1.25;text-transform:uppercase;letter-spacing:.04em}
+.model-evidence-note{margin-top:9px;color:var(--faint);font-size:11px;line-height:1.45}
+.gate-evidence{max-width:420px;margin:0 auto 10px}
 .market-items{display:grid;gap:8px}
 .market-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--hair);border-radius:10px;color:var(--dim);font-size:12.5px}
 .market-item b{color:var(--text)}
@@ -1561,6 +1573,7 @@ const T = {
     how_link: '¿Cómo funciona el algoritmo AA? →', legal_link2: 'Aviso legal y términos de uso →',
     back_games: 'Partidos', sport_baseball: 'Baseball', sport_tennis: 'Tenis', sport_ncaaf: 'Fútbol College', sport_ncaam: 'Basket College',
     sport_training_gate: 'Entrenamiento · gate cerrado', sport_top2: 'Top 2 AA · mayor confianza',
+    sport_model_evidence: 'Evidencia histórica del modelo', sport_hist_accuracy: 'Acierto histórico OOS', sport_hist_sample: 'Juegos históricos', sport_hist_brier: 'Brier histórico', sport_forward_progress: 'Muestra forward', sport_no_game_pct: 'Las probabilidades AA por partido siguen cerradas hasta completar el gate; este porcentaje describe el examen histórico, no el juego de hoy.',
     market_compare: 'Comparador de mercados', market_winner: 'Ganador', market_total: 'Total', market_players: 'Jugadores', market_combos: 'Combos',
     market_gate_closed: 'Gate cerrado', market_gate_public: 'Público', market_gate_qa: 'QA sombra', market_prob_title: 'Probabilidad de victoria', market_prob_aa: 'Modelo AA validado', market_prob_qa: 'Modelo AA en validación · no público', market_prob_espn: 'ESPN · probabilidad en vivo', market_balance: 'Línea de equilibrio: 50%',
     market_only_measured: 'Solo publicamos mercados medidos', market_locked_title: 'Este mercado sigue en validación', market_sample: 'Muestra forward', market_dates: 'fechas', market_pending_sample: 'Muestra en construcción', market_public_info: 'Señal informativa medida · tú decides', o_box_score: 'Estadísticas por jugador',
@@ -1751,6 +1764,7 @@ const T = {
     how_link: 'How does the AA algorithm work? →', legal_link2: 'Legal notice & terms of use →',
     back_games: 'Games', sport_baseball: 'Baseball', sport_tennis: 'Tennis', sport_ncaaf: 'College Football', sport_ncaam: 'College Basketball',
     sport_training_gate: 'Training · gate closed', sport_top2: 'AA Top 2 · highest confidence',
+    sport_model_evidence: 'Historical model evidence', sport_hist_accuracy: 'Historical OOS accuracy', sport_hist_sample: 'Historical games', sport_hist_brier: 'Historical Brier', sport_forward_progress: 'Forward sample', sport_no_game_pct: 'Per-game AA probabilities remain closed until the gate is complete; this percentage describes the historical exam, not today\'s game.',
     market_compare: 'Market comparator', market_winner: 'Winner', market_total: 'Total', market_players: 'Players', market_combos: 'Combos',
     market_gate_closed: 'Gate closed', market_gate_public: 'Public', market_gate_qa: 'Shadow QA', market_prob_title: 'Win probability', market_prob_aa: 'Validated AA model', market_prob_qa: 'AA model under validation · not public', market_prob_espn: 'ESPN · live probability', market_balance: 'Neutral line: 50%',
     market_only_measured: 'We only publish measured markets', market_locked_title: 'This market remains under validation', market_sample: 'Forward sample', market_dates: 'dates', market_pending_sample: 'Sample in progress', market_public_info: 'Measured informational signal · you decide', o_box_score: 'Box score',
@@ -2428,7 +2442,7 @@ async function loadLearning(){
   }catch(err){ sportLearningDocs.set(target, { note: 'err' }); }
   sportLearningAt.set(target, Date.now()); sportLearningLoading.delete(target);
   if (sport === target && listTab === 'brain') renderBrain();
-  else if (sport === target && ['wnba', 'nfl'].includes(target)) renderOtherDetail();
+  else if (sport === target && ['wnba', 'nfl'].includes(target)){ renderOtherList(); renderOtherDetail(); }
 }
 // 🔬 Tarjeta de validación out-of-sample (walk-forward sobre todo el histórico).
 function simCard(){
@@ -2984,9 +2998,20 @@ function gatePanel(block, kind, activeSport){
   const dates = datesRaw != null && Number.isFinite(Number(datesRaw)) ? Math.max(0, Number(datesRaw)) : null;
   const minimum = Number(sample.min_forward ?? sample.min_n ?? marketMinimum(kind, activeSport));
   const progress = n != null && minimum > 0 ? Math.min(100, 100 * n / minimum) : 0;
+  const learning = sportLearningDocs.get(activeSport) || {};
+  const historical = learning.historical || {};
+  const histPct = historical.accuracy != null && Number.isFinite(Number(historical.accuracy)) ? `${(Number(historical.accuracy) * 100).toFixed(1)}%` : null;
+  const histN = historical.n != null && Number.isFinite(Number(historical.n)) ? Number(historical.n).toLocaleString(LOCALE()) : null;
+  const histBrier = historical.brier != null && Number.isFinite(Number(historical.brier)) ? Number(historical.brier).toFixed(4) : null;
+  const evidence = kind === 'winner' && (histPct || histN || histBrier) ? `<div class="gate-evidence">
+    <div class="gate-evidence-cell"><b class="num">${histPct || '—'}</b><span>${t('sport_hist_accuracy')}</span></div>
+    <div class="gate-evidence-cell"><b class="num">${histN || '—'}</b><span>${t('sport_hist_sample')}</span></div>
+    <div class="gate-evidence-cell"><b class="num">${histBrier || '—'}</b><span>${t('sport_hist_brier')}</span></div>
+  </div>` : '';
   return `<div class="gate-card" role="status">
     <div class="gate-lock">${t('market_locked_title')}</div>
     <p class="gate-reason">${esc(marketReason(block.gate && block.gate.reason))}</p>
+    ${evidence}
     <div class="gate-progress">
       <div class="gate-progress-head"><span>${t('market_sample')}</span><b class="num">${n == null ? t('market_pending_sample') : `${n} / ${minimum}${dates != null ? ` · ${dates} ${t('market_dates')}` : ''}`}</b></div>
       <div class="gate-progress-track" aria-hidden="true"><i style="width:${progress.toFixed(1)}%"></i></div>
@@ -3722,8 +3747,8 @@ async function loadToday(){
 }
 /* ── multideporte (marcadores en vivo; predicciones cuando el modelo valide) ── */
 let sport = 'mlb';
-let soccerLeague = 'fifa.world';
-const SOCCER_LEAGUES = { 'fifa.world': 'Mundial', 'uefa.champions': 'Champions', 'eng.1': 'Premier', 'esp.1': 'LaLiga', 'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1', 'usa.1': 'MLS', 'mex.1': 'Liga MX' };
+let soccerLeague = 'eng.1';
+const SOCCER_LEAGUES = { 'eng.1': 'Premier', 'esp.1': 'LaLiga', 'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1', 'uefa.champions': 'Champions', 'usa.1': 'MLS', 'mex.1': 'Liga MX' };
 const SPORT_LABEL = { nba: 'NBA', wnba: 'WNBA', nfl: 'NFL', ncaaf: 'College Football', nhl: 'NHL', ncaam: 'College Basketball', soccer: 'Soccer', tennis: 'Tenis', radar: 'Radar' };
 const sportLabel = (key) => key === 'ncaaf' ? t('sport_ncaaf')
   : key === 'ncaam' ? t('sport_ncaam') : key === 'tennis' ? t('sport_tennis') : (SPORT_LABEL[key] || key);
@@ -3794,7 +3819,22 @@ function top2Banner(){
     return `<div class="recentnote"><b>🧪 QA</b> · <span class="num">${n}</span> ${t('qa_signal_count')}</div>`;
   }
   const picks = Array.isArray(doc?.top2) ? doc.top2.slice(0, 2) : [];
-  if (!picks.length) return `<div class="recentnote">🧪 ${t('sport_training_gate')}</div>`;
+  const learning = sportLearningDocs.get(sport) || {};
+  const historical = learning.historical || {};
+  const forward = learning.forward || {};
+  const fmtPct = (value) => value != null && Number.isFinite(Number(value)) ? `${(Number(value) * 100).toFixed(1)}%` : '—';
+  const fmt4 = (value) => value != null && Number.isFinite(Number(value)) ? Number(value).toFixed(4) : '—';
+  const fmtN = (value) => value != null && Number.isFinite(Number(value)) ? Number(value).toLocaleString(LOCALE()) : '—';
+  const evidence = historical.n != null ? `<div class="model-evidence" role="status">
+    <div class="model-evidence-head"><b>🧠 ${t('sport_model_evidence')}</b><span>${t('sport_training_gate')}</span></div>
+    <div class="model-evidence-grid">
+      <div class="model-evidence-cell"><b class="num">${fmtPct(historical.accuracy)}</b><span>${t('sport_hist_accuracy')}</span></div>
+      <div class="model-evidence-cell"><b class="num">${fmtN(historical.n)}</b><span>${t('sport_hist_sample')}</span></div>
+      <div class="model-evidence-cell"><b class="num">${fmt4(historical.brier)}</b><span>${t('sport_hist_brier')}</span></div>
+    </div>
+    <div class="model-evidence-note">${t('sport_forward_progress')}: <span class="num">${fmtN(forward.n)} / ${fmtN(learning.gate?.min_forward)}</span> · ${t('sport_no_game_pct')}</div>
+  </div>` : `<div class="recentnote">🧪 ${t('sport_training_gate')}</div>`;
+  if (!picks.length) return evidence;
   return `<div class="recentnote"><b>🎯 ${t('sport_top2')}</b> · ${picks.map(p => `${esc(p.pick)}${p.line != null ? ` ${esc(p.line)}` : ''} <span class="num">${Math.round(Number(p.prob) * 1000) / 10}%</span>`).join(' · ')}</div>`;
 }
 

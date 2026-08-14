@@ -106,6 +106,26 @@ test('generic live routes derive the alternate host automatically', async () => 
   });
 });
 
+test('Soccer defaults to an active club league and no longer advertises the finished World Cup', async () => {
+  const calls = [];
+  await withWorkerMocks(async (url) => {
+    calls.push(String(url));
+    return response(scoreboard('soccer'));
+  }, async () => {
+    const ctx = { waitUntil(value) { return value; } };
+    const leaguesResult = await worker.fetch(new Request('https://aa-sports-api.test/v1/soccer/leagues'), {}, ctx);
+    const leagues = (await leaguesResult.json()).leagues;
+    assert.equal(leagues['fifa.world'], undefined);
+    assert.equal(leagues['eng.1'], 'Premier League');
+
+    const liveResult = await worker.fetch(new Request('https://aa-sports-api.test/v1/soccer/live'), {}, ctx);
+    const live = await liveResult.json();
+    assert.equal(live.games.length, 1);
+    assert.ok(calls.some((url) => url.includes('/soccer/eng.1/scoreboard')));
+    assert.ok(calls.every((url) => !url.includes('fifa.world')));
+  });
+});
+
 test('WNBA exposes today, standings and basketball detail through factual public routes', async () => {
   const calls = [];
   await withWorkerMocks(async (url) => {

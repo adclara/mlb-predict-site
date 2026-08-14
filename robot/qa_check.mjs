@@ -7,6 +7,7 @@
 
 const API = process.env.AA_API || 'https://aa-sports-api.opsmira9.workers.dev';
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports';
+const SOCCER_QA_LEAGUE = 'eng.1';
 const UA = { 'user-agent': 'aa-sports-qa/1.0' };
 
 let pass = 0, fail = 0, warn = 0;
@@ -149,17 +150,17 @@ async function qaMlbPipeline() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// 3) SOCCER LIVE vs ESPN (Mundial)
+// 3) SOCCER LIVE vs ESPN (liga de clubes activa por defecto)
 // ─────────────────────────────────────────────────────────────────────────
 async function qaSoccer() {
-  H('4) Soccer /v1/soccer/live?league=fifa.world vs ESPN');
-  const w = await getJson(`${API}/v1/soccer/live?league=fifa.world`);
+  H(`4) Soccer /v1/soccer/live?league=${SOCCER_QA_LEAGUE} vs ESPN`);
+  const w = await getJson(`${API}/v1/soccer/live?league=${SOCCER_QA_LEAGUE}`);
   if (w.status !== 200) { F(`Worker soccer/live status ${w.status}`); return; }
   const wg = (w.data && w.data.games) || [];
-  P(`Worker sirve ${wg.length} partidos del Mundial`);
-  const src = await getJson(`${ESPN}/soccer/fifa.world/scoreboard`);
+  P(`Worker sirve ${wg.length} partidos de ${SOCCER_QA_LEAGUE}`);
+  const src = await getJson(`${ESPN}/soccer/${SOCCER_QA_LEAGUE}/scoreboard`);
   const eg = (src.data && src.data.events) || [];
-  console.log(`   (ESPN reporta ${eg.length} partidos fifa.world)`);
+  console.log(`   (ESPN reporta ${eg.length} partidos ${SOCCER_QA_LEAGUE})`);
   if (Math.abs(wg.length - eg.length) <= 1) P(`conteo de partidos consistente (${wg.length} vs ${eg.length})`);
   else W(`conteo distinto: Worker ${wg.length} vs ESPN ${eg.length} (ventanas de fecha/caché)`);
   // fecha de cada partido servido
@@ -175,7 +176,7 @@ async function qaStandings() {
   for (const [sp, wurl, surl] of [
     ['nba', `${API}/v1/nba/standings`, 'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings'],
     ['wnba', `${API}/v1/wnba/standings`, 'https://site.api.espn.com/apis/v2/sports/basketball/wnba/standings'],
-    ['soccer', `${API}/v1/soccer/standings?league=fifa.world`, 'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings'],
+    ['soccer', `${API}/v1/soccer/standings?league=${SOCCER_QA_LEAGUE}`, `https://site.api.espn.com/apis/v2/sports/soccer/${SOCCER_QA_LEAGUE}/standings`],
   ]) {
     const w = await getJson(wurl);
     const secs = (w.data && w.data.sections) || [];
@@ -255,14 +256,14 @@ async function qaMarketContracts() {
 // ─────────────────────────────────────────────────────────────────────────
 async function qaSummary() {
   H('7) Detalle /v1/soccer/summary vs ESPN (feature nueva)');
-  // tomar un evento reciente/en vivo del Mundial
-  const rec = await getJson(`${API}/v1/soccer/recent?league=fifa.world`);
-  const live = await getJson(`${API}/v1/soccer/live?league=fifa.world`);
+  // tomar un evento reciente/en vivo de la liga activa por defecto
+  const rec = await getJson(`${API}/v1/soccer/recent?league=${SOCCER_QA_LEAGUE}`);
+  const live = await getJson(`${API}/v1/soccer/live?league=${SOCCER_QA_LEAGUE}`);
   const cand = [ ...((live.data && live.data.games) || []), ...((rec.data && rec.data.games) || []) ]
     .find(g => g.espn_id);
   if (!cand) { W('sin evento de soccer para probar summary'); return; }
   console.log(`   evento de prueba: ${cand.away?.code}@${cand.home?.code} id=${cand.espn_id}`);
-  const w = await getJson(`${API}/v1/soccer/summary?event=${cand.espn_id}&league=fifa.world`);
+  const w = await getJson(`${API}/v1/soccer/summary?event=${cand.espn_id}&league=${SOCCER_QA_LEAGUE}`);
   if (w.status !== 200 || !w.data) { F(`summary status ${w.status}`); return; }
   if (!w.data.ok) { W('summary ok:false (ESPN sin datos para ese evento)'); return; }
   P('summary responde ok:true');
@@ -273,7 +274,7 @@ async function qaSummary() {
   else W('summary sin alineaciones ni stats (partido sin datos publicados aún)');
 
   // cruce directo contra ESPN
-  const src = await getJson(`${ESPN}/soccer/fifa.world/summary?event=${cand.espn_id}`);
+  const src = await getJson(`${ESPN}/soccer/${SOCCER_QA_LEAGUE}/summary?event=${cand.espn_id}`);
   if (src.data && src.data.boxscore) {
     const espnPoss = (src.data.boxscore.teams || []).map(t => (t.statistics || []).find(s => s.name === 'possessionPct')?.displayValue).filter(Boolean);
     const wPoss = (w.data.stats || []).find(s => s.label === 'Posesión %');

@@ -83,7 +83,8 @@ function json(route, body) {
 
 async function installApiMocks(page, date, events, games) {
   await page.route('**/v1/**', async (route) => {
-    const path = new URL(route.request().url()).pathname;
+    const requestUrl = new URL(route.request().url());
+    const path = requestUrl.pathname;
     if (path === '/v1/mlb/today') {
       return json(route, {
         sport: 'mlb', date, record: null,
@@ -123,13 +124,26 @@ async function installApiMocks(page, date, events, games) {
     ] });
     if (path === '/v1/injuries') return json(route, { players: [] });
     if (path === '/v1/me') return json(route, { enabled: false, user: null });
+    if (path === '/v1/soccer/live') return json(route, { sport: 'soccer', league: requestUrl.searchParams.get('league'), games: [{
+      espn_id: 'soc-1', league: 'Premier League', start: `${date}T19:00:00Z`, status: 'pre', status_detail: 'Scheduled',
+      away: { code: 'ARS', name: 'Arsenal', score: null, logo: null, rec: '0-0' },
+      home: { code: 'LIV', name: 'Liverpool', score: null, logo: null, rec: '0-0' },
+    }] });
+    if (path === '/v1/soccer/recent') return json(route, { sport: 'soccer', games: [] });
+    if (path === '/v1/soccer/standings') return json(route, { sport: 'soccer', season: '2026-27', sections: [] });
+    if (path === '/v1/soccer/summary') return json(route, { ok: true, sport: 'soccer', stats: [] });
+    if (path === '/v1/soccer/today') return json(route, {
+      sport: 'soccer', date, by_id: { 'soc-1': { pick: 'LIV', prob: .57, tier: 't55', league: 'eng.1' } },
+      record: { n: 3, w: 3, l: 0, wr: 1 }, backtest: [{ tier: 't55', n: 6133, hit: 67.7 }], n_test: 16059,
+    });
+    if (path === '/v1/soccer/learning') return json(route, { sport: 'soccer', historical: { n: 16059, accuracy: .677, brier: .19 }, forward: { n: 3 }, gate: { public: true } });
     const us = path.match(/^\/v1\/(wnba|nfl|ncaaf|nhl|ncaam)\/(live|recent|standings|today|summary|learning)$/);
     if (us) {
       const [, sport, action] = us;
       if (sport === 'wnba') {
         if (action === 'learning') return json(route, {
           schema: 'aa_sport_learning_v1', sport, updated_at: `${date}T12:00:00Z`, state: 'training', model_scope: 'shadow',
-          gate: { passed: false, approved: false, public: false, reason: 'forward_sample_pending' },
+          gate: { passed: false, approved: false, public: false, reason: 'forward_sample_pending', min_forward: 200, min_dates: 30 },
           historical: { n: 1091, accuracy: 0.663, brier: 0.2132, logloss: 0.616, ece: 0.034 },
           forward: { n: 0, dates: 0, wins: 0, losses: 0, accuracy: null },
           learning_es: ['WNBA: 1,091 predicciones históricas OOS; acierto 66.3% y Brier 0.2132.', 'El modelo sigue en sombra. No se publican picks ni porcentajes.'],
@@ -162,6 +176,15 @@ async function installApiMocks(page, date, events, games) {
           home: { code: 'HME', name: 'Home Team', score: 67, logo: null, rec: '18-7' },
         }] });
       }
+      if (action === 'learning' && sport === 'nfl') return json(route, {
+        schema: 'aa_sport_learning_v1', sport, updated_at: `${date}T12:00:00Z`, state: 'training', model_scope: 'shadow',
+        gate: { passed: false, approved: false, public: false, reason: 'pipeline_integrity_pending', min_forward: 50 },
+        historical: { n: 284, accuracy: .637, brier: .2241, logloss: .6393, ece: .0342 },
+        forward: { n: 0, dates: 0, wins: 0, losses: 0, accuracy: null },
+        learning_es: ['El modelo sensible a jugadores sigue acumulando decisiones pregame.'],
+        learning_en: ['The player-aware model is still capturing pregame decisions.'],
+        attribution_es: 'Estado medido del entrenamiento privado.', attribution_en: 'Measured private-training status.',
+      });
       if (action === 'learning') return json(route, {
         schema: 'aa_sport_learning_v1', sport, updated_at: `${date}T12:00:00Z`, state: 'training', model_scope: 'shadow',
         gate: { passed: false, approved: false, public: false, reason: 'learning_snapshot_pending' },
@@ -353,17 +376,29 @@ try {
     assert.doesNotMatch(histEs, /−110/, `${viewport.name}: historial aún afirma cuota sintética ES`);
     await page.locator('.ltab[data-lt="all"]').click();
     await assertNoOverflow(page, viewport.name);
+    await page.locator('.sp[data-sport="soccer"]').click();
+    await page.locator('.mrow[data-oid="soc-1"]').waitFor({ state: 'visible' });
+    const soccerListEs = await page.locator('#listpane').textContent();
+    assert.match(soccerListEs, /Premier/i, `${viewport.name}: Premier no es la liga inicial de Soccer`);
+    assert.match(soccerListEs, /Arsenal[\s\S]*Liverpool[\s\S]*AA[\s\S]*57%/i, `${viewport.name}: Soccer no muestra el slate actual con su predicción pública`);
+    assert.doesNotMatch(soccerListEs, /Mundial/i, `${viewport.name}: Mundial vencido sigue visible`);
+    assert.equal(await page.locator('#lgchips .pill').first().textContent(), 'Premier', `${viewport.name}: el carrusel de Soccer no inicia en Premier`);
+    await assertNoOverflow(page, `${viewport.name}-soccer-es`);
     await page.locator('.sp[data-sport="wnba"]').click();
     await page.locator('.mrow[data-oid="401857140"]').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => /Evidencia histórica del modelo[\s\S]*66[,.]3%/i.test(document.querySelector('#list')?.textContent || ''));
     assert.equal(await page.locator('.lghead .ttl').textContent(), 'WNBA', `${viewport.name}: WNBA no aparece como liga`);
     const wnbaListEs = await page.locator('#list').textContent();
     assert.match(wnbaListEs, /Away Team/i, `${viewport.name}: falta visitante WNBA ES`);
     assert.match(wnbaListEs, /61[\s\S]*67/, `${viewport.name}: faltan marcadores WNBA ES`);
+    assert.match(wnbaListEs, /66[,.]3%[\s\S]*1[,.]?091[\s\S]*0[,.]2132/i, `${viewport.name}: falta evidencia histórica visible WNBA ES`);
+    assert.match(wnbaListEs, /no el juego de hoy/i, `${viewport.name}: falta distinguir histórico de probabilidad del partido WNBA ES`);
     await page.waitForFunction(() => /Tiros de campo/i.test(document.querySelector('#dcard')?.textContent || ''));
     const wnbaDetailEs = await page.locator('#dcard').textContent();
     assert.match(wnbaDetailEs, /Gate cerrado/i, `${viewport.name}: falta gate honesto WNBA ES`);
     assert.equal(await page.locator('#dcard .market-tab').count(), 4, `${viewport.name}: faltan cuatro mercados WNBA ES`);
     assert.match(wnbaDetailEs, /37\s*\/\s*200/i, `${viewport.name}: falta progreso medido de ganador WNBA ES`);
+    assert.match(wnbaDetailEs, /66[,.]3%[\s\S]*1[,.]?091[\s\S]*0[,.]2132/i, `${viewport.name}: el detalle WNBA no muestra evidencia histórica medida`);
     await page.locator('#dcard .market-tab[data-market-kind="total"]').evaluate(el => el.click());
     assert.match(await page.locator('#dcard .market-first').textContent(), /No hay cobertura histórica auditable[\s\S]*0\s*\/\s*200/i, `${viewport.name}: total WNBA no explica su bloqueo ES`);
     await page.locator('#dcard .market-tab[data-market-kind="players"]').evaluate(el => el.click());
@@ -448,7 +483,12 @@ try {
       const sportDetail = await page.locator('#dcard').textContent();
       assert.match(sportDetail, newSport === 'nfl' ? /Gate closed/i : /AA model in training/i, `${viewport.name}: ${newSport} missing training disclosure`);
       if (newSport === 'nfl') {
+        await page.waitForFunction(() => /Historical model evidence[\s\S]*63\.7%/i.test(document.querySelector('#list')?.textContent || ''));
+        const nflList = await page.locator('#list').textContent();
+        assert.match(nflList, /63\.7%[\s\S]*284[\s\S]*0\.2241/i, `${viewport.name}: NFL historical evidence is not visible`);
+        assert.match(nflList, /not today'?s game/i, `${viewport.name}: NFL historical percentage is not clearly scoped`);
         assert.equal(await page.locator('#dcard .market-tab').count(), 4, `${viewport.name}: NFL missing four markets`);
+        assert.match(await page.locator('#dcard .market-first').textContent(), /63\.7%[\s\S]*284[\s\S]*0\.2241/i, `${viewport.name}: NFL detail lacks measured historical evidence`);
         await page.locator('#dcard .market-tab[data-market-kind="total"]').evaluate(el => el.click());
         assert.match(await page.locator('#dcard .market-first').textContent(), /Auditable historical pregame line[\s\S]*0\s*\/\s*200/i, `${viewport.name}: NFL total gate lacks evidence`);
         await page.locator('#dcard .market-tab[data-market-kind="winner"]').evaluate(el => el.click());

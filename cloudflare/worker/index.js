@@ -613,10 +613,11 @@ async function mlbPipelineHealth(env, origin) {
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports';
 const BASKETBALL_LEAGUES = Object.freeze(['nba', 'wnba']);
 const SOCCER_LEAGUES = {
-  'fifa.world': 'Mundial 2026', 'eng.1': 'Premier League', 'esp.1': 'LaLiga',
+  'eng.1': 'Premier League', 'esp.1': 'LaLiga',
   'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1',
   'usa.1': 'MLS', 'mex.1': 'Liga MX', 'uefa.champions': 'Champions',
 };
+const DEFAULT_SOCCER_LEAGUE = 'eng.1';
 
 export default {
   async fetch(request, env, ctx) {
@@ -726,7 +727,7 @@ export default {
       if (path === '/v1/tennis/learning') return await sportLearning(env, 'tennis', origin);
       if (path === '/v1/soccer/learning') return await sportLearning(env, 'soccer', origin);
       if (path === '/v1/soccer/live') {
-        const lg = url.searchParams.get('league') || 'fifa.world';
+        const lg = url.searchParams.get('league') || DEFAULT_SOCCER_LEAGUE;
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league', leagues: Object.keys(SOCCER_LEAGUES) }, 400, origin);
         return await otherLive(ctx, origin, 'soccer:' + lg, `${ESPN_BASE}/soccer/${lg}/scoreboard`);
       }
@@ -735,13 +736,13 @@ export default {
       if (path === '/v1/tennis/recent') return await tennisRecent(ctx, origin);
       if (path === '/v1/tennis/rankings') return await tennisRankings(ctx, origin);
       if (path === '/v1/soccer/recent') {
-        const lg = url.searchParams.get('league') || 'fifa.world';
+        const lg = url.searchParams.get('league') || DEFAULT_SOCCER_LEAGUE;
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
         return await recentGames(ctx, origin, 'soccer:' + lg, `${ESPN_BASE}/soccer/${lg}/scoreboard`);
       }
       if (path === '/v1/mlb/standings') return await standings(ctx, origin, 'mlb-div', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings?level=3', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings');
       if (path === '/v1/soccer/standings') {
-        const lg = url.searchParams.get('league') || 'fifa.world';
+        const lg = url.searchParams.get('league') || DEFAULT_SOCCER_LEAGUE;
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
         return await standings(ctx, origin, 'soccer:' + lg, `https://site.api.espn.com/apis/v2/sports/soccer/${lg}/standings`);
       }
@@ -754,7 +755,7 @@ export default {
         const sport = path.split('/')[2];
         const eid = url.searchParams.get('event');
         if (!eid || !/^\d+$/.test(eid)) return json({ error: 'bad_event' }, 400, origin);
-        const lg = url.searchParams.get('league') || 'fifa.world';
+        const lg = url.searchParams.get('league') || DEFAULT_SOCCER_LEAGUE;
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
         const up = `${ESPN_BASE}/soccer/${lg}/summary?event=${eid}`;
         return await summary(ctx, origin, sport, eid, up);
