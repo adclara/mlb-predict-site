@@ -314,9 +314,11 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .brainhead{font-size:17px;font-weight:800;display:flex;align-items:center;gap:7px}
 .bsubtle{font-size:12px;color:var(--dim);line-height:1.5;margin:6px 0 12px}
 .braintiles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.sportbrain .braintiles{grid-template-columns:1fr 1fr}
 .btile{background:var(--inner);border:1px solid var(--hair);border-radius:12px;padding:10px 9px;text-align:center;min-width:0}
 .btile .bl{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
 .btile .bv{font-size:19px;font-weight:800;color:var(--volt);margin-top:3px}
+.btile .bv.wait{color:var(--amber)}
 .btile .bs{font-size:10px;color:var(--faint);margin-top:2px;line-height:1.3}
 .bsect{font-size:12px;font-weight:800;color:var(--amber);letter-spacing:.03em;margin:16px 0 8px}
 .blearns{display:flex;flex-direction:column;gap:7px}
@@ -1603,6 +1605,11 @@ const T = {
     brain_caltime: '📉 Mi calibración en el tiempo (menos hueco = mejor)', brain_accum: 'Acumulando historial — la tendencia aparece en unos días.',
     brain_log: '🗓 Bitácora de cambios', brain_note: 'Aprendizaje del propio modelo; ilustra cómo mejora, no es garantía de resultados.',
     brain_soon: 'El Cerebro AA está preparando su primer diario de aprendizaje.',
+    brain_sport_title: 'Cerebro AA · {sport}', brain_sport_sub: 'Estado medido del entrenamiento: validación cronológica, muestra forward y gate de publicación. El algoritmo y sus pesos siguen privados.',
+    brain_hist_oos: 'Histórico OOS', brain_forward_n: 'Muestra forward', brain_brier: 'Brier', brain_brier_sub: 'menos es mejor',
+    brain_forward_acc: 'Acierto forward', brain_gate: 'Gate público', brain_gate_open: 'abierto', brain_gate_closed: 'cerrado',
+    brain_training: 'En entrenamiento', brain_public: 'Modelo público', brain_no_forward: 'Sin muestra forward calificada todavía.',
+    brain_stale: '⚠️ El re-ajuste diario de MLB está atrasado. El gate no cambia y el sistema está reintentando la actualización.',
     sim_title: '🔬 Validación out-of-sample', sim_sub: 'Cada día se entrena solo con el pasado y predice ese día — nunca ve el futuro. Esto es lo que mide sobre todo el histórico.',
     sim_games: 'Juegos validados', sim_acc: 'Acierto (fuera de muestra)', sim_ece: 'Calibración (ECE)', sim_ece_sub: 'menos es mejor',
     sim_learns: 'El aprendizaje mejora la probabilidad de forma medible (intervalo bajo cero).', sim_learns_tie: 'El aprendizaje empata al modelo base (sin diferencia significativa).',
@@ -1778,6 +1785,12 @@ const T = {
     brain_learning: "What I'm learning", brain_signals: '📶 Signals I learned truly predict',
     brain_caltime: '📉 My calibration over time (smaller gap = better)', brain_accum: 'Building history — the trend shows up in a few days.',
     brain_log: '🗓 Change log', brain_note: "The model's own learning; it shows how it improves, not a guarantee of results.",
+    brain_soon: 'AA Brain is preparing its first learning journal.',
+    brain_sport_title: 'AA Brain · {sport}', brain_sport_sub: 'Measured training status: chronological validation, forward sample and publication gate. The algorithm and its weights remain private.',
+    brain_hist_oos: 'Historical OOS', brain_forward_n: 'Forward sample', brain_brier: 'Brier', brain_brier_sub: 'lower is better',
+    brain_forward_acc: 'Forward accuracy', brain_gate: 'Public gate', brain_gate_open: 'open', brain_gate_closed: 'closed',
+    brain_training: 'In training', brain_public: 'Public model', brain_no_forward: 'No graded forward sample yet.',
+    brain_stale: '⚠️ The MLB daily refit is stale. The gate remains unchanged while the system retries the update.',
     sim_title: '🔬 Out-of-sample validation', sim_sub: 'Each day it trains only on the past and predicts that day — it never sees the future. This is what it measures across the whole history.',
     sim_games: 'Games validated', sim_acc: 'Accuracy (out-of-sample)', sim_ece: 'Calibration (ECE)', sim_ece_sub: 'lower is better',
     sim_learns: 'Learning improves the probability measurably (interval below zero).', sim_learns_tie: 'Learning ties the base model (no significant difference).',
@@ -1832,7 +1845,6 @@ const T = {
     pred_pending: 'AA prediction · publishes around 7am ET',
     pred_invalid_list: 'Prediction invalidated · starter changed',
     pred_invalid_detail: 'AA prediction invalidated: the probable starter changed. The original analysis no longer applies.',
-    brain_soon: 'AA Brain is preparing its first learning journal.',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
       <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
@@ -2285,21 +2297,39 @@ function renderHistList(){
   $('list').innerHTML = html;
 }
 
-// 🧠 Cerebro AA: qué aprende el modelo con el tiempo (de mlb:learning) +
-// 🔬 validación out-of-sample (de mlb:simulation).
-let learningDoc = null, simDoc = null, learningLoading = false;
+// 🧠 Cerebro AA: MLB conserva su diario + simulación completa; los demás
+// deportes consumen un snapshot agregado y medido. La lógica/pesos nunca llegan
+// al navegador y un gate cerrado nunca se convierte aquí en una predicción.
+let learningDoc = null, simDoc = null, learningLoading = false, learningLoadedAt = 0;
+const sportLearningDocs = new Map(), sportLearningLoading = new Set(), sportLearningAt = new Map();
 async function loadLearning(){
-  if (learningDoc){ renderBrain(); return; }
-  if (learningLoading) return;
-  learningLoading = true;
-  const [lr, sr] = await Promise.allSettled([
-    fetch(API + '/v1/mlb/learning').then(r => r.json()),
-    fetch(API + '/v1/mlb/simulation').then(r => r.json()),
-  ]);
-  learningDoc = lr.status === 'fulfilled' ? lr.value : { note: 'err' };
-  simDoc = sr.status === 'fulfilled' ? sr.value : null;
-  learningLoading = false;
-  if (sport === 'mlb' && listTab === 'brain') renderBrain();
+  const target = sport;
+  const maxAge = 5 * 60 * 1000;
+  if (target === 'mlb'){
+    if (learningDoc && Date.now() - learningLoadedAt < maxAge){ if (listTab === 'brain') renderBrain(); return; }
+    if (learningLoading) return;
+    learningLoading = true;
+    const [lr, sr] = await Promise.allSettled([
+      fetch(API + '/v1/mlb/learning').then(r => { if (!r.ok) throw new Error('learning'); return r.json(); }),
+      fetch(API + '/v1/mlb/simulation').then(r => { if (!r.ok) throw new Error('simulation'); return r.json(); }),
+    ]);
+    learningDoc = lr.status === 'fulfilled' ? lr.value : { note: 'err' };
+    simDoc = sr.status === 'fulfilled' ? sr.value : null;
+    learningLoadedAt = Date.now(); learningLoading = false;
+    if (sport === target && listTab === 'brain') renderBrain();
+    return;
+  }
+  const cachedAt = sportLearningAt.get(target) || 0;
+  if (sportLearningDocs.has(target) && Date.now() - cachedAt < maxAge){ if (listTab === 'brain') renderBrain(); return; }
+  if (sportLearningLoading.has(target)) return;
+  sportLearningLoading.add(target);
+  try{
+    const r = await fetch(`${API}/v1/${encodeURIComponent(target)}/learning`);
+    if (!r.ok) throw new Error('sport learning');
+    sportLearningDocs.set(target, await r.json());
+  }catch(err){ sportLearningDocs.set(target, { note: 'err' }); }
+  sportLearningAt.set(target, Date.now()); sportLearningLoading.delete(target);
+  if (sport === target && listTab === 'brain') renderBrain();
 }
 // 🔬 Tarjeta de validación out-of-sample (walk-forward sobre todo el histórico).
 function simCard(){
@@ -2351,6 +2381,35 @@ function calChart(hist){
 function renderBrain(){
   $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
   $('lgcount').innerHTML = '';
+  if (sport !== 'mlb'){
+    const d = sportLearningDocs.get(sport);
+    if (!d || d.note){ $('list').innerHTML = `<div class="lempty">${t('brain_soon')}</div>`; return; }
+    const h = d.historical || {}, f = d.forward || {}, gate = d.gate || {};
+    const hasN = (v) => v != null && v !== '' && Number.isFinite(Number(v));
+    const fmtN = (v) => hasN(v) ? Number(v).toLocaleString(LOCALE()) : '—';
+    const fmt4 = (v) => hasN(v) ? Number(v).toFixed(4) : '—';
+    const fmtPct = (v) => hasN(v) ? `${(Number(v) * 100).toFixed(1)}%` : '—';
+    const learns = (lang === 'en' ? d.learning_en : d.learning_es) || [];
+    const attribution = lang === 'en' ? d.attribution_en : d.attribution_es;
+    const publicGate = gate.public === true;
+    const forwardRecord = Number(f.n) > 0 ? `${fmtN(f.wins)}-${fmtN(f.losses)} · ${fmtN(f.dates)} ${lang === 'en' ? 'dates' : 'fechas'}` : t('brain_no_forward');
+    const updated = d.updated_at ? new Date(d.updated_at).toLocaleString(LOCALE(), { dateStyle: 'medium', timeStyle: 'short' }) : '';
+    $('list').innerHTML = `<div class="brain sportbrain">
+      <div class="brainhead">🧠 <b>${t('brain_sport_title').replace('{sport}', esc(sportLabel(sport)))}</b></div>
+      <div class="bsubtle">${t('brain_sport_sub')}</div>
+      <div class="braintiles">
+        <div class="btile"><div class="bl">${t('brain_hist_oos')}</div><div class="bv num">${fmtN(h.n)}</div><div class="bs">${h.accuracy == null ? '—' : fmtPct(h.accuracy)}</div></div>
+        <div class="btile"><div class="bl">${t('brain_brier')}</div><div class="bv num">${fmt4(h.brier)}</div><div class="bs">${t('brain_brier_sub')}</div></div>
+        <div class="btile"><div class="bl">${t('brain_forward_n')}</div><div class="bv num">${fmtN(f.n)}</div><div class="bs">${f.accuracy == null ? t('brain_forward_acc') : `${t('brain_forward_acc')} ${fmtPct(f.accuracy)}`}</div></div>
+        <div class="btile"><div class="bl">${t('brain_gate')}</div><div class="bv ${publicGate ? '' : 'wait'}">${publicGate ? t('brain_gate_open') : t('brain_gate_closed')}</div><div class="bs">${publicGate ? t('brain_public') : t('brain_training')}</div></div>
+      </div>
+      <div class="bsect">💡 ${t('brain_learning')}</div>
+      <div class="blearns">${learns.map(s => `<div class="blearn">${esc(s)}</div>`).join('') || `<div class="bempty">${t('brain_accum')}</div>`}</div>
+      <div class="bsubtle num">${esc(forwardRecord)}${updated ? ` · ${esc(updated)}` : ''}</div>
+      <div class="bnote">${esc(attribution || '')} · ${t('brain_note')}</div>
+    </div>`;
+    return;
+  }
   const d = learningDoc;
   if (!d || d.note){ $('list').innerHTML = `<div class="lempty">${t('brain_soon')}</div>`; return; }
   const cal = d.cal || {};
@@ -2360,10 +2419,12 @@ function renderBrain(){
     const label = lang === 'en' ? (s.label_en || s.label) : s.label;
     return `<div class="bsig"><span class="bsl">${esc(label)}</span><span class="bsw"><i style="width:${w}%"></i></span><span class="bse num">+${s.edge_pp} pts</span></div>`; };
   const logRows = (d.log || []).slice(0, 8).map(e => `<div class="blogr"><span class="bd num">${esc(e.date)}</span><span>${esc(lang === 'en' ? e.en : e.es)}</span></div>`).join('');
+  const stale = d.freshness && d.freshness.fresh === false ? `<div class="radarwarn"><b>${t('brain_stale')}</b></div>` : '';
   $('list').innerHTML = `
     <div class="brain">
       <div class="brainhead">🧠 <b>${t('brain_title')}</b></div>
       <div class="bsubtle">${t('brain_sub')}</div>
+      ${stale}
       <div class="braintiles">
         <div class="btile"><div class="bl">${t('brain_measured')}</div><div class="bv num">${d.n_graded ?? '—'}</div><div class="bs">${t('brain_since')} ${esc(d.first_date || '')}</div></div>
         <div class="btile"><div class="bl">${t('brain_cal')}</div><div class="bv num">${cal.gap ?? '—'}%</div><div class="bs">${t('brain_cal_sub')}</div></div>
@@ -2378,11 +2439,12 @@ function renderBrain(){
       <div class="bnote">${esc(d.attribution || '')} · ${t('brain_note')}</div>
     </div>`;
 }
-function renderMlbStandings(){
+function renderSportStandings(){
   $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
   $('lgcount').innerHTML = '';
   const html = standingsHtml();
-  $('list').innerHTML = html || `<div class="lempty">${standingsCache.has('mlb') ? t('st_none') : t('st_loading')}</div>`;
+  const key = sport === 'soccer' ? `soccer:${soccerLeague}` : sport;
+  $('list').innerHTML = html || `<div class="lempty">${standingsCache.has(key) ? t('st_none') : t('st_loading')}</div>`;
 }
 // Boleto del día: junta las mejores selecciones AA de hoy (fijos ORO/PLATA +
 // gemas) en una tarjeta compacta arriba de la lista. Honesto: número calibrado,
@@ -2479,9 +2541,13 @@ function runIndicatorsHtml(){
   return `<div class="runindicators"><div class="boleto-in">${head}<div class="topsigsub">${t('runind_sub')}</div><div class="bollegs">${rows}</div><div class="bolnote">${runIndicatorNote()}</div></div></div>`;
 }
 function renderList(){
-  if (sport !== 'mlb'){ renderOtherList(); return; }
+  if (sport !== 'mlb'){
+    if (listTab === 'pos'){ renderSportStandings(); return; }
+    if (listTab === 'brain'){ renderBrain(); return; }
+    renderOtherList(); return;
+  }
   if (listTab === 'hist'){ renderHistList(); return; }
-  if (listTab === 'pos'){ renderMlbStandings(); return; }
+  if (listTab === 'pos'){ renderSportStandings(); return; }
   if (listTab === 'brain'){ renderBrain(); return; }
   const n = counts();
   $('nAll').textContent = n.all || '';
@@ -3256,7 +3322,7 @@ document.addEventListener('click', e => {
   const lg2 = e.target.closest('[data-lg]');
   if (lg2){ soccerLeague = lg2.dataset.lg; otherGames = []; renderLeagueChips();
     document.querySelector('.lghead .sub').textContent = SOCCER_LEAGUES[soccerLeague] || '';
-    renderOtherList(); loadOther(); return; }
+    renderList(); loadOther(); return; }
   if (e.target.closest('a[data-ext]')) return; // links externos (perfil Polymarket): navegación normal
   const rl = e.target.closest('#radarlegal');
   if (rl){ e.preventDefault(); $('legaldlg').showModal(); return; }
@@ -3391,7 +3457,7 @@ $('dPick').addEventListener('change', e => {
 /* ── datos ───────────────────────────────────────────────── */
 function renderAll(){
   if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); return; }
-  if (sport !== 'mlb'){ renderOtherList(); renderOtherDetail(); return; }
+  if (sport !== 'mlb'){ renderList(); renderOtherDetail(); return; }
   renderTicker(); renderList(); renderDetail(); renderSide();
 }
 
@@ -3441,7 +3507,8 @@ let sport = 'mlb';
 let soccerLeague = 'fifa.world';
 const SOCCER_LEAGUES = { 'fifa.world': 'Mundial', 'uefa.champions': 'Champions', 'eng.1': 'Premier', 'esp.1': 'LaLiga', 'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1', 'usa.1': 'MLS', 'mex.1': 'Liga MX' };
 const SPORT_LABEL = { nba: 'NBA', wnba: 'WNBA', nfl: 'NFL', ncaaf: 'College Football', nhl: 'NHL', ncaam: 'College Basketball', soccer: 'Soccer', tennis: 'Tenis', radar: 'Radar' };
-const sportLabel = (key) => key === 'ncaaf' ? t('sport_ncaaf') : key === 'ncaam' ? t('sport_ncaam') : (SPORT_LABEL[key] || key);
+const sportLabel = (key) => key === 'ncaaf' ? t('sport_ncaaf')
+  : key === 'ncaam' ? t('sport_ncaam') : key === 'tennis' ? t('sport_tennis') : (SPORT_LABEL[key] || key);
 let otherGames = [], otherSel = null, otherLoading = false, otherLoadSeq = 0;
 let otherRecent = false;                 // true = mostrando últimos resultados (no hay juegos hoy)
 const sportModelDocs = new Map();        // docs públicos, siempre saneados por el Worker
@@ -3509,12 +3576,12 @@ function top2Banner(){
 // récord en vivo + evidencia del backtest. Se une a los juegos por espn_id.
 let soccerPreds = null, soccerPredsLoading = false;
 async function loadSoccerPreds(){
-  if (soccerPreds || soccerPredsLoading) { if (soccerPreds && sport === 'soccer'){ renderOtherList(); renderOtherDetail(); } return; }
+  if (soccerPreds || soccerPredsLoading) { if (soccerPreds && sport === 'soccer'){ renderList(); renderOtherDetail(); } return; }
   soccerPredsLoading = true;
   try { const r = await fetch(`${API}/v1/soccer/today`); soccerPreds = await r.json(); }
   catch (e) { soccerPreds = { by_id: {} }; }
   soccerPredsLoading = false;
-  if (sport === 'soccer'){ renderOtherList(); renderOtherDetail(); updateTrainWidget(); }
+  if (sport === 'soccer'){ renderList(); renderOtherDetail(); updateTrainWidget(); }
 }
 // El widget "modelo en entrenamiento" se oculta para soccer si ya hay predicciones.
 function updateTrainWidget(){
@@ -3566,8 +3633,8 @@ async function loadStandings(){
     const d = await r.json();
     if (d && d.sections && d.sections.length){
       standingsCache.set(key, d);
-      if (sport === 'mlb'){ if (listTab === 'pos') renderList(); }
-      else { renderOtherList(); renderOtherDetail(); }
+      if (listTab === 'pos') renderList();
+      if (sport !== 'mlb') renderOtherDetail();
     }
   }catch(err){ /* sin tabla no pasa nada */ }
 }
@@ -4701,8 +4768,16 @@ function setSport(sp2){
   document.querySelectorAll('.sp[data-sport]').forEach(b => b.classList.toggle('on', b.dataset.sport === sport));
   document.querySelectorAll('.ltab').forEach(c => c.classList.toggle('on', c.dataset.lt === 'all'));
   document.querySelectorAll('.pill[data-f]').forEach(c => { c.classList.toggle('on', c.dataset.f === 'all'); c.classList.toggle('neutral', c.dataset.f === 'all'); });
-  $('pills').style.display = sport === 'radar' ? 'none' : '';
-  document.querySelector('.ltop').style.display = sport === 'mlb' ? '' : 'none';
+  const isMlb = sport === 'mlb', isRadar = sport === 'radar';
+  $('pills').style.display = isRadar ? 'none' : '';
+  document.querySelector('.ltop').style.display = isRadar ? 'none' : '';
+  document.querySelector('.ltop-sep').style.display = isRadar ? 'none' : '';
+  for (const tab of document.querySelectorAll('.ltab')){
+    if (tab.dataset.lt === 'favs' || tab.dataset.lt === 'hist') tab.style.display = isMlb ? '' : 'none';
+    else tab.style.display = '';
+  }
+  const datebox = document.querySelector('.datebox'); if (datebox) datebox.style.display = isMlb ? '' : 'none';
+  $('dToday').style.display = isMlb ? '' : 'none';
   document.querySelectorAll('.wmlb').forEach(w => w.style.display = sport === 'mlb' ? '' : 'none');
   $('wRecord').style.display = sport === 'mlb' ? '' : 'none';
   updateTrainWidget();
@@ -4721,6 +4796,8 @@ function setSport(sp2){
     lgi.style.display = 'none'; // soccer/tenis: sin logo de liga estable en el CDN
   }
   renderLeagueChips();
+  const activeSport = document.querySelector(`.sp[data-sport="${sport}"]`);
+  if (activeSport) activeSport.scrollIntoView({ block: 'nearest', inline: 'center' });
   if (sport === 'mlb') renderAll();
   else if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); loadRadar(); loadAlerts(); }
   else { renderOtherList(); renderOtherDetail(); loadOther(); }
@@ -4896,8 +4973,10 @@ $('legaldlg').addEventListener('click', (e) => { if (e.target === $('legaldlg'))
 
 applyI18n(); // pinta el idioma guardado antes de cargar datos
 loadToday(); loadLive(); loadInjuries(); loadMe();
-// PWA: registra el service worker (instalable + arranque offline; solo cachea el shell).
-if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+// PWA: registra el service worker y fuerza la comprobación de su versión. El
+// shell sigue siendo network-first; nunca se cachean respuestas deportivas.
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker
+  .register('/sw.js', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {}));
 // Deep-links (links compartidos): ?w=<0x…> wallet · ?g=<id> juego MLB ·
 // ?tab=<sport> abre cualquier vertical · ?tab=soccer&sc=<id> partido de fútbol.
 { const qp = new URLSearchParams(location.search);

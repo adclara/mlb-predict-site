@@ -8,7 +8,8 @@ Sitio de predicciones deportivas data-driven, **$0 de infraestructura**, sobre
 Cloudflare. Marca: **"AA Sports · Los datos deciden"**. Deportes: **MLB**
 (completo, con predicciones), **fútbol** (predicciones públicas desde jul-2026),
 **NBA/tenis** (marcadores + posiciones; modelos en sombra, sin publicar) y
-**WNBA** (marcadores, resultados, posiciones y box score factuales). Más un
+**WNBA** (marcadores, resultados, posiciones y box score factuales; modelo en
+sombra, sin predicciones públicas). Más un
 **"Radar"**: observatorio de wallets de Polymarket (descriptivo, no recomienda).
 
 ## ADN NO NEGOCIABLE (aplica a TODO cambio)
@@ -66,6 +67,8 @@ path dispara el workflow. Mapa verificado (poke → workflow):
 - `.github/poke-poly` → poly-study.yml (poly_radar.mjs; cron 2×/día)
 - `.github/poke-soccer` → soccer-shadow.yml (soccer_shadow.mjs; publica soccer:today)
 - `.github/poke-nba` → nba-shadow.yml · `.github/poke-sim` → mlb-sim.yml (semanal)
+- `.github/poke-wnba` → wnba-shadow.yml (modelo WNBA en sombra + Cerebro medido)
+- `.github/poke-sport-brains` → sport-brains.yml (Cerebros soccer/NBA/WNBA/tenis)
 - `.github/poke-injuries` → injuries.yml · `.github/poke-fase2` → fase2-backfill.yml
 - `.github/poke-probe` → probe-espn.yml · `.github/poke-domain` → domain-fix.yml
 - `.github/poke-subdomain` → subdomain.yml
@@ -84,15 +87,16 @@ path dispara el workflow. Mapa verificado (poke → workflow):
 
 ## KV keys (las escribe el robot, las sirve el Worker)
 `mlb:today`, `mlb:day:<fecha>`, `mlb:learning`, `mlb:simulation`, `soccer:today`,
-`poly:radar`, `poly:alerts`, `poly:lastseen`, `injuries:latest`.
+`poly:radar`, `poly:alerts`, `poly:lastseen`, `injuries:latest`,
+`soccer:learning`, `nba:learning`, `wnba:learning`, `tennis:learning`.
 
 ## Rutas del Worker (`cloudflare/worker/index.js`)
 `/v1/mlb/{today, day/:date, schedule/:date, event/:id, history, live, learning,
 simulation, standings}`, `/v1/injuries`,
-`/v1/soccer/{today, live, recent, standings, leagues, summary}`,
-`/v1/nba/{live, recent, standings}`,
-`/v1/wnba/{live, recent, standings, summary}`,
-`/v1/tennis/{live, recent, rankings, summary}`,
+`/v1/soccer/{today, live, recent, standings, leagues, summary, learning}`,
+`/v1/nba/{live, recent, standings, learning}`,
+`/v1/wnba/{live, recent, standings, summary, learning}`,
+`/v1/tennis/{live, recent, rankings, summary, learning}`,
 `/v1/poly/{radar, alerts, track}`, `/v1/auth/google`.
 El Worker corre tres `scheduled()`: cada 5 min vigila el Radar; cada 20 min
 captura hechos públicos MLB y NFL/NCAAF/NHL/NCAAM (sin lógica de modelo) en D1; y a
@@ -122,7 +126,8 @@ las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
   - `robot/simulate.mjs` — validación OOS completa (KV mlb:simulation; semanal).
   - `robot/soccer_shadow.mjs` — sombra + **publica soccer:today** (predicciones
     públicas de fútbol). `robot/soccer_model.mjs` — Dixon-Coles + backtest.
-  - `robot/nba_model.mjs`/`nba_shadow.mjs`, `robot/tennis_model.mjs`/`tennis_stats.mjs`.
+  - `robot/nba_model.mjs`/`nba_shadow.mjs`, `robot/wnba_model.mjs`,
+    `robot/sport_brain.mjs`, `robot/tennis_model.mjs`/`tennis_stats.mjs`.
   - `robot/poly_radar.mjs` + `robot/poly_study.mjs` + `robot/lib/{poly,espn_odds}.mjs`.
   - `robot/prod_diag.mjs` (diagnóstico post-deploy), `robot/qa_check.mjs`,
     `robot/injuries.mjs`, `robot/domain_fix.mjs`, `robot/subdomain_radar.mjs`.
@@ -145,9 +150,10 @@ las 13:00 UTC archiva el Radar. La captura MLB no contiene lógica del modelo.
 - **NBA / Tenis** (sombra): registran picks en D1 sin publicar. **No publicar
   predicciones** hasta pasar gate (calibración + muestra en vivo suficiente) y con
   aprobación humana. NBA se enciende ~octubre; tenis stats depende de TENNIS_API_KEY.
-- **WNBA**: cobertura factual pública (marcadores, resultados, posiciones y box
-  score), sin modelo ni predicciones públicas. Cualquier modelo futuro requiere
-  validación forward y aprobación humana explícita.
+- **WNBA**: cobertura factual pública + Elo/MOV privado en sombra. Backtest
+  cronológico 2023–2026: 1,091 juegos, Brier 0.2132 y 66.3% de acierto (2021–22
+  son burn-in). Es evidencia histórica, no garantía: no publica picks hasta
+  completar muestra forward, calibración, comparación de mercado y aprobación.
 - **NFL / NCAAF / NHL / NCAAM**: marcadores y captura factual activos; modelos
   privados en `adclara/aa-sports-models-private`, con gates cerrados. No publicar
   Top 2 hasta validación forward suficiente + aprobación humana explícita.
