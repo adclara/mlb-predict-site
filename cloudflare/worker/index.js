@@ -3,6 +3,9 @@
 // Sirve resultados ya calculados desde KV/D1 y hace de proxy con caché para los
 // marcadores en vivo (ESPN). El navegador SOLO habla con este Worker; el
 // algoritmo nunca sale del cómputo privado.
+// La única escritura HTTP es un puente interno OIDC, cerrado al workflow
+// horario del repo privado en main; acepta evidencia sanitizada y fuerza todas
+// las filas nuevas a shadow sin aprobación humana.
 //
 // Rutas:
 //   GET /                     -> health / info
@@ -45,6 +48,18 @@ export const US_SPORTS = Object.freeze({
     summary: 'basketball/mens-college-basketball/summary', season: 'NCAA D-I',
   },
 });
+
+const MODEL_PUBLISH_PATH = '/v1/internal/model-publish';
+const MODEL_PUBLISH_AUDIENCE = 'aa-sports-model-publisher';
+const MODEL_PUBLISH_REPOSITORY = 'adclara/aa-sports-models-private';
+const MODEL_PUBLISH_REPOSITORY_ID = '1309365177';
+const MODEL_PUBLISH_OWNER_ID = '71529366';
+const MODEL_PUBLISH_WORKFLOW =
+  'adclara/aa-sports-models-private/.github/workflows/hourly-shadow.yml@refs/heads/main';
+const GITHUB_OIDC_ISSUER = 'https://token.actions.githubusercontent.com';
+const GITHUB_OIDC_JWKS = `${GITHUB_OIDC_ISSUER}/.well-known/jwks`;
+const MODEL_PUBLISH_MAX_BYTES = 512 * 1024;
+const MODEL_PUBLISH_EVENTS = new Set(['push', 'schedule', 'workflow_dispatch']);
 
 // ESPN, antes de que empiece la jornada, deja su scoreboard sin parámetros en
 // el último día completado. Siempre fijamos el día calendario ET que AA Sports
@@ -602,6 +617,7 @@ export default {
 
     const path = url.pathname.replace(/\/+$/, '') || '/';
     const isAccount = path.startsWith('/v1/auth') || path.startsWith('/v1/me');
+    const isModelPublish = path === MODEL_PUBLISH_PATH;
 
     // Wrangler puede exponer esta ruta al simular scheduled() en desarrollo.
     // En producción no aceptamos disparos HTTP del cron.
@@ -610,11 +626,15 @@ export default {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: isAccount ? credCors(request, env) : cors(origin) });
     }
-    if (request.method !== 'GET' && request.method !== 'HEAD' && !isAccount) {
+    if (isModelPublish && request.method !== 'POST') {
+      return json({ error: 'method_not_allowed' }, 405, origin);
+    }
+    if (request.method !== 'GET' && request.method !== 'HEAD' && !isAccount && !isModelPublish) {
       return json({ error: 'method_not_allowed' }, 405, origin);
     }
 
     try {
+      if (isModelPublish) return await internalModelPublish(request, env, origin);
       if (path === '/' || path === '/v1' || path === '/v1/health') {
         return json(
           { service: 'aa-sports-api', ok: true, sports: ['mlb', 'soccer', 'nba', 'wnba', 'tennis', ...Object.keys(US_SPORTS)], routes: ['/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live', '/v1/mlb/pipeline-health', '/v1/:sport/today', '/v1/:sport/live', '/v1/:sport/recent', '/v1/:sport/standings', '/v1/:sport/summary', '/v1/:sport/history', '/v1/:sport/learning', '/v1/:sport/simulation', '/v1/:sport/pipeline-health', '/v1/injuries'] },
@@ -2266,6 +2286,264 @@ export function sanitizeSportsSimulation(doc, sport) {
     winner: market('winner'), total: market('total'), players,
     combos: market('combos'), state: 'training',
   };
+}
+
+function base64UrlBytes(value) {
+  const source = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+  const padded = source + '='.repeat((4 - (source.length % 4)) % 4);
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+function jwtJson(value) {
+  return JSON.parse(new TextDecoder().decode(base64UrlBytes(value)));
+}
+
+const oidcFailure = (reason) => new Error(`oidc_${reason}`);
+
+// GitHub issues a short-lived RS256 JWT to the running job. The Worker trusts
+// only the immutable repository id, main, and this one workflow. No Cloudflare
+// token or shared signing secret crosses repository boundaries.
+export async function verifyGithubModelPublisher(token, fetcher = fetch, nowMs = Date.now()) {
+  if (typeof token !== 'string' || token.length < 100 || token.length > 12000) throw oidcFailure('token_shape');
+  const parts = token.split('.');
+  if (parts.length !== 3) throw oidcFailure('token_shape');
+  let header, claims;
+  try { header = jwtJson(parts[0]); claims = jwtJson(parts[1]); }
+  catch (error) { throw oidcFailure('token_json'); }
+  if (header?.alg !== 'RS256' || typeof header?.kid !== 'string' || !header.kid) throw oidcFailure('header');
+
+  const jwksResponse = await fetcher(GITHUB_OIDC_JWKS, {
+    headers: { accept: 'application/json', 'user-agent': 'aa-sports-worker/oidc' },
+    cf: { cacheTtl: 3600, cacheEverything: true },
+  });
+  if (!jwksResponse?.ok) throw oidcFailure('jwks_http');
+  const jwks = await jwksResponse.json();
+  const jwk = Array.isArray(jwks?.keys)
+    ? jwks.keys.find((key) => key?.kid === header.kid && key?.kty === 'RSA' && (!key.use || key.use === 'sig'))
+    : null;
+  if (!jwk) throw oidcFailure('key');
+  let cryptoKey;
+  try {
+    cryptoKey = await crypto.subtle.importKey(
+      'jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify'],
+    );
+  } catch (error) { throw oidcFailure('key_import'); }
+  const verified = await crypto.subtle.verify(
+    'RSASSA-PKCS1-v1_5', cryptoKey, base64UrlBytes(parts[2]),
+    new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
+  );
+  if (!verified) throw oidcFailure('signature');
+
+  const now = Math.floor(nowMs / 1000);
+  const audience = Array.isArray(claims?.aud) ? claims.aud : [claims?.aud];
+  if (claims?.iss !== GITHUB_OIDC_ISSUER || !audience.includes(MODEL_PUBLISH_AUDIENCE)) throw oidcFailure('issuer_audience');
+  if (!Number.isFinite(claims?.exp) || claims.exp <= now - 30) throw oidcFailure('expired');
+  if (!Number.isFinite(claims?.nbf) || claims.nbf > now + 30) throw oidcFailure('not_yet_valid');
+  if (!Number.isFinite(claims?.iat) || claims.iat > now + 30 || claims.iat < now - 600) throw oidcFailure('issued_at');
+  if (claims?.repository !== MODEL_PUBLISH_REPOSITORY
+      || String(claims?.repository_id || '') !== MODEL_PUBLISH_REPOSITORY_ID
+      || String(claims?.repository_owner_id || '') !== MODEL_PUBLISH_OWNER_ID) throw oidcFailure('repository');
+  if (claims?.repository_visibility !== 'private' || claims?.runner_environment !== 'github-hosted') throw oidcFailure('runner');
+  if (claims?.ref !== 'refs/heads/main' || claims?.ref_type !== 'branch') throw oidcFailure('ref');
+  if (claims?.workflow_ref !== MODEL_PUBLISH_WORKFLOW) throw oidcFailure('workflow');
+  if (!MODEL_PUBLISH_EVENTS.has(claims?.event_name)) throw oidcFailure('event');
+  if (typeof claims?.jti !== 'string' || claims.jti.length < 8 || !/^[0-9a-f]{40}$/i.test(String(claims?.sha || ''))) {
+    throw oidcFailure('identity');
+  }
+  return claims;
+}
+
+function forceClosedGate(gate) {
+  const source = gate && typeof gate === 'object' ? gate : {};
+  return { ...source, approved: false, public: false, state: 'closed' };
+}
+
+function forceTodayMarketsClosed(doc) {
+  const source = doc && typeof doc === 'object' ? doc : {};
+  const gates = Object.fromEntries(MARKET_KINDS.map((kind) => [kind, forceClosedGate(
+    source.gates?.[kind] || source.markets?.[kind]?.gate || (kind === 'winner' ? source.gate : null),
+  )]));
+  const markets = Object.fromEntries(MARKET_KINDS.map((kind) => [kind, {
+    ...(source.markets?.[kind] && typeof source.markets[kind] === 'object' ? source.markets[kind] : {}),
+    gate: gates[kind],
+  }]));
+  const events = (Array.isArray(source.events) ? source.events : []).map((event) => ({
+    ...(event && typeof event === 'object' ? event : {}), prediction: null,
+    markets: Object.fromEntries(MARKET_KINDS.map((kind) => [kind, {
+      ...(event?.markets?.[kind] && typeof event.markets[kind] === 'object' ? event.markets[kind] : {}),
+      gate: forceClosedGate(event?.markets?.[kind]?.gate || gates[kind]),
+    }])),
+  }));
+  return { ...source, gate: gates.winner, gates, markets, events, top2: [], record: null };
+}
+
+function forceSimulationMarketsClosed(doc) {
+  const source = doc && typeof doc === 'object' ? doc : {};
+  const closeBlock = (block) => ({
+    ...(block && typeof block === 'object' ? block : {}),
+    gate: forceClosedGate(block?.gate),
+  });
+  const players = Object.fromEntries(Object.entries(source.players || {}).map(([family, block]) => [family, closeBlock(block)]));
+  return { ...source, winner: closeBlock(source.winner), total: closeBlock(source.total), players, combos: closeBlock(source.combos) };
+}
+
+export function sanitizeModelPublisherLearning(doc, sport) {
+  const source = doc && typeof doc === 'object' ? doc : {};
+  const rawGate = forceClosedGate(source.gate);
+  const gate = { ...safeMarketGate(rawGate, 'winner') };
+  for (const key of ['min_forward', 'min_dates']) {
+    const value = finiteMarketNumber(rawGate[key]);
+    if (value != null && value >= 0) gate[key] = value;
+  }
+  const historical = safeSimulationMetrics(source.historical) || {};
+  const forward = {
+    ...(safeMarketSample(source.forward || source.sample) || {}),
+    ...(safeSimulationMetrics(source.forward) || {}),
+  };
+  const safeLines = (value) => (Array.isArray(value) ? value : [])
+    .filter((line) => typeof line === 'string' && line.trim()).slice(0, 6).map((line) => line.slice(0, 280));
+  return {
+    schema: 'aa_sport_learning_v1', sport,
+    updated_at: typeof source.updated_at === 'string' ? source.updated_at.slice(0, 40) : null,
+    state: 'training', model_scope: 'shadow', gate, historical, forward,
+    learning_es: safeLines(source.learning_es), learning_en: safeLines(source.learning_en),
+    attribution_es: typeof source.attribution_es === 'string' ? source.attribution_es.slice(0, 280) : '',
+    attribution_en: typeof source.attribution_en === 'string' ? source.attribution_en.slice(0, 280) : '',
+    public_picks_enabled: false,
+  };
+}
+
+const publishText = (value, max, required = false) => {
+  if (value == null || value === '') {
+    if (required) throw new Error('publish_row_missing_text');
+    return null;
+  }
+  const text = String(value);
+  if (text.length > max) throw new Error('publish_row_text_too_long');
+  return text;
+};
+
+const publishNumber = (value, minimum = -1e9, maximum = 1e9) => {
+  if (value == null || value === '') return null;
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < minimum || number > maximum) throw new Error('publish_row_bad_number');
+  return number;
+};
+
+function sanitizeModelMarketRow(row, sport, now = new Date()) {
+  const source = row && typeof row === 'object' ? row : {};
+  const date = publishText(source.date, 10, true);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('publish_row_bad_date');
+  const distance = Math.abs(Date.parse(`${date}T12:00:00Z`) - Date.parse(`${etDate(now)}T12:00:00Z`));
+  if (!Number.isFinite(distance) || distance > 8 * 24 * 60 * 60 * 1000) throw new Error('publish_row_date_window');
+  const marketKey = publishText(source.market_key, 24, true);
+  if (!['winner', 'total', 'player_prop', 'combo'].includes(marketKey)) throw new Error('publish_row_bad_market');
+  const startTime = publishText(source.start_time, 40);
+  const featureAsOf = publishText(source.feature_as_of, 40);
+  const frozenAt = publishText(source.frozen_at, 40);
+  const updatedAt = publishText(source.updated_at, 40, true);
+  for (const stamp of [startTime, featureAsOf, frozenAt, updatedAt].filter(Boolean)) {
+    if (!Number.isFinite(Date.parse(stamp))) throw new Error('publish_row_bad_timestamp');
+  }
+  if (startTime && featureAsOf && Date.parse(featureAsOf) > Date.parse(startTime)) throw new Error('publish_row_late_features');
+  const result = publishText(source.result, 12);
+  if (result && !['win', 'loss', 'push', 'void'].includes(result)) throw new Error('publish_row_bad_result');
+  let comboJson = null;
+  if (source.combo_json != null && source.combo_json !== '') {
+    comboJson = typeof source.combo_json === 'string' ? source.combo_json : JSON.stringify(source.combo_json);
+    if (comboJson.length > 4000) throw new Error('publish_row_combo_too_large');
+    try { JSON.parse(comboJson); } catch (error) { throw new Error('publish_row_bad_combo'); }
+  }
+  return {
+    sport, date,
+    event_id: publishText(source.event_id, 100, true), market_key: marketKey,
+    selection_key: publishText(source.selection_key, 140, true), family: publishText(source.family, 60),
+    player_id: publishText(source.player_id, 100), player_name: publishText(source.player_name, 160),
+    pick: publishText(source.pick, 160), side: publishText(source.side, 40),
+    line: publishNumber(source.line), price: publishNumber(source.price, -100000, 100000),
+    market_prob: publishNumber(source.market_prob, 0, 1), prob: publishNumber(source.prob, 0, 1),
+    edge: publishNumber(source.edge, -1, 1), projection: publishNumber(source.projection), combo_json: comboJson,
+    league: publishText(source.league, 40), home: publishText(source.home, 100), away: publishText(source.away, 100),
+    start_time: startTime, feature_as_of: featureAsOf, frozen_at: frozenAt,
+    status: publishText(source.status, 24), result,
+    engine_version: publishText(source.engine_version || 'aa-us-sports-challenger-v2', 80, true),
+    gate_version: publishText(source.gate_version || 'us-sports-gate-v1', 80, true),
+    public_scope: 'shadow', gate_passed: 0, human_approved: 0, invalidated: source.invalidated ? 1 : 0,
+    invalidated_reason: publishText(source.invalidated_reason, 160), source_hash: publishText(source.source_hash, 128),
+    updated_at: updatedAt,
+  };
+}
+
+export function sanitizeModelPublishEnvelope(payload, now = new Date()) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const sport = String(source.sport || '').toLowerCase();
+  if (!Object.hasOwn(US_SPORTS, sport)) throw new Error('publish_bad_sport');
+  const rows = Array.isArray(source.market_rows) ? source.market_rows : [];
+  if (rows.length > 1000) throw new Error('publish_too_many_rows');
+  const today = sanitizeUsSportsToday(forceTodayMarketsClosed(source.today), sport, [], etDate(now));
+  const simulation = sanitizeSportsSimulation(forceSimulationMarketsClosed(source.simulation), sport);
+  const learning = sanitizeModelPublisherLearning({ ...(source.learning || {}), gate: forceClosedGate(source.learning?.gate) }, sport);
+  return { sport, today, simulation, learning, market_rows: rows.map((row) => sanitizeModelMarketRow(row, sport, now)) };
+}
+
+const MODEL_MARKET_COLUMNS = Object.freeze([
+  'sport', 'date', 'event_id', 'market_key', 'selection_key', 'family', 'player_id', 'player_name',
+  'pick', 'side', 'line', 'price', 'market_prob', 'prob', 'edge', 'projection', 'combo_json',
+  'league', 'home', 'away', 'start_time', 'feature_as_of', 'frozen_at', 'status', 'result',
+  'engine_version', 'gate_version', 'public_scope', 'gate_passed', 'human_approved', 'invalidated',
+  'invalidated_reason', 'source_hash', 'updated_at',
+]);
+
+async function upsertModelMarketRows(db, rows) {
+  if (!rows.length) return;
+  const placeholders = `(${MODEL_MARKET_COLUMNS.map(() => '?').join(',')})`;
+  const updates = MODEL_MARKET_COLUMNS
+    .filter((column) => !['sport', 'date', 'event_id', 'market_key', 'selection_key', 'public_scope', 'gate_passed', 'human_approved'].includes(column))
+    .map((column) => `${column}=excluded.${column}`).join(',');
+  const sql = `INSERT INTO sport_market_predictions (${MODEL_MARKET_COLUMNS.join(',')}) VALUES ${placeholders}
+    ON CONFLICT(sport,date,event_id,market_key,selection_key) DO UPDATE SET ${updates}
+    WHERE sport_market_predictions.public_scope = 'shadow' AND sport_market_predictions.human_approved = 0`;
+  for (let offset = 0; offset < rows.length; offset += 50) {
+    const statements = rows.slice(offset, offset + 50).map((row) => db.prepare(sql).bind(
+      ...MODEL_MARKET_COLUMNS.map((column) => row[column] ?? null),
+    ));
+    if (typeof db.batch === 'function') await db.batch(statements);
+    else for (const statement of statements) await statement.run();
+  }
+}
+
+async function internalModelPublish(request, env, origin) {
+  const authorization = request.headers.get('authorization') || '';
+  if (!authorization.startsWith('Bearer ')) return json({ error: 'forbidden' }, 403, origin);
+  let claims;
+  try { claims = await verifyGithubModelPublisher(authorization.slice(7)); }
+  catch (error) {
+    console.warn(JSON.stringify({ message: 'model publisher rejected', reason: String(error?.message || error) }));
+    return json({ error: 'forbidden' }, 403, origin);
+  }
+  const declared = Number(request.headers.get('content-length') || 0);
+  if (declared > MODEL_PUBLISH_MAX_BYTES) return json({ error: 'payload_too_large' }, 413, origin);
+  const text = await request.text();
+  if (new TextEncoder().encode(text).byteLength > MODEL_PUBLISH_MAX_BYTES) return json({ error: 'payload_too_large' }, 413, origin);
+  let envelope;
+  try { envelope = sanitizeModelPublishEnvelope(JSON.parse(text)); }
+  catch (error) {
+    console.warn(JSON.stringify({ message: 'model publisher payload rejected', reason: String(error?.message || error) }));
+    return json({ error: 'invalid_payload' }, 400, origin);
+  }
+  // GitHub may return the same short-lived JWT more than once inside one job;
+  // each token may publish every supported sport exactly once.
+  const replayKey = `oidc:model-publish:${claims.jti}:${envelope.sport}`;
+  if (await env.AA_LATEST.get(replayKey)) return json({ error: 'replayed_token' }, 409, origin);
+  await upsertModelMarketRows(env.DB, envelope.market_rows);
+  await Promise.all([
+    env.AA_LATEST.put(`${envelope.sport}:learning`, JSON.stringify(envelope.learning)),
+    env.AA_LATEST.put(`${envelope.sport}:simulation`, JSON.stringify(envelope.simulation)),
+    env.AA_LATEST.put(`${envelope.sport}:today`, JSON.stringify(envelope.today)),
+    env.AA_LATEST.put(replayKey, String(claims.run_id || 'used'), { expirationTtl: 600 }),
+  ]);
+  return json({ ok: true, sport: envelope.sport, kv: 3, market_rows: envelope.market_rows.length, public: false }, 200, origin);
 }
 
 async function usSportsPipelineHealth(env, sport, origin) {

@@ -8,9 +8,39 @@ import worker, {
   fetchUsSportsScoreboard,
   learningFreshnessDoc,
   sanitizeMarketBlock,
+  sanitizeModelPublishEnvelope,
+  sanitizeModelPublisherLearning,
   sanitizeSportsSimulation,
   sanitizeUsSportsToday,
+  verifyGithubModelPublisher,
 } from '../cloudflare/worker/index.js';
+
+const base64url = (value) => Buffer.from(typeof value === 'string' ? value : JSON.stringify(value)).toString('base64url');
+
+async function signedOidc(overrides = {}) {
+  const pair = await crypto.subtle.generateKey({
+    name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048,
+    publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256',
+  }, true, ['sign', 'verify']);
+  const jwk = await crypto.subtle.exportKey('jwk', pair.publicKey);
+  Object.assign(jwk, { kid: 'aa-test-key', alg: 'RS256', use: 'sig' });
+  const now = Math.floor(Date.now() / 1000);
+  const claims = {
+    iss: 'https://token.actions.githubusercontent.com', aud: 'aa-sports-model-publisher',
+    exp: now + 300, nbf: now - 5, iat: now - 5, jti: 'test-jti-12345678',
+    repository: 'adclara/aa-sports-models-private', repository_id: '1309365177',
+    repository_owner_id: '71529366', repository_visibility: 'private',
+    runner_environment: 'github-hosted', ref: 'refs/heads/main', ref_type: 'branch',
+    workflow_ref: 'adclara/aa-sports-models-private/.github/workflows/hourly-shadow.yml@refs/heads/main',
+    event_name: 'schedule', sha: 'a'.repeat(40), run_id: '12345', ...overrides,
+  };
+  const encoded = `${base64url({ alg: 'RS256', typ: 'JWT', kid: jwk.kid })}.${base64url(claims)}`;
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', pair.privateKey, new TextEncoder().encode(encoded));
+  return {
+    token: `${encoded}.${Buffer.from(signature).toString('base64url')}`, claims, now,
+    fetcher: async () => new Response(JSON.stringify({ keys: [jwk] }), { status: 200 }),
+  };
+}
 
 const espnEvent = (id = '42') => ({
   id,
@@ -36,6 +66,130 @@ test('the four supported sports have complete public feed contracts', () => {
     assert.match(config.standings, /^https:\/\//);
     assert.ok(config.summary);
   }
+});
+
+test('GitHub OIDC publisher verifies signature and immutable workflow identity', async () => {
+  const valid = await signedOidc();
+  const claims = await verifyGithubModelPublisher(valid.token, valid.fetcher, valid.now * 1000);
+  assert.equal(claims.repository_id, '1309365177');
+  assert.equal(claims.ref, 'refs/heads/main');
+
+  const wrongRepo = await signedOidc({ repository_id: '999' });
+  await assert.rejects(
+    verifyGithubModelPublisher(wrongRepo.token, wrongRepo.fetcher, wrongRepo.now * 1000),
+    /oidc_repository/,
+  );
+  const wrongWorkflow = await signedOidc({ workflow_ref: 'adclara/aa-sports-models-private/.github/workflows/weekly-retrain.yml@refs/heads/main' });
+  await assert.rejects(
+    verifyGithubModelPublisher(wrongWorkflow.token, wrongWorkflow.fetcher, wrongWorkflow.now * 1000),
+    /oidc_workflow/,
+  );
+});
+
+test('OIDC publish envelope can never self-approve a market or a D1 row', () => {
+  const openGate = { passed: true, approved: true, public: true, reason: 'passed' };
+  const payload = sanitizeModelPublishEnvelope({
+    sport: 'nfl',
+    learning: {
+      gate: openGate, historical: { n: 284, accuracy: .634, brier: .2258 },
+      forward: { n: 2, dates: 1, wins: 1, losses: 1, accuracy: .5 },
+      learning_es: ['medido'], learning_en: ['measured'], weights: [1, 2, 3],
+    },
+    simulation: {
+      winner: { gate: openGate, forward: { n: 2, dates: 1, accuracy: .5 }, coefficients: [9] },
+      total: { gate: openGate, forward: { n: 2, dates: 1 }, projection: 44.1 },
+      players: {}, combos: { gate: openGate, forward: { n: 0 } },
+    },
+    today: {
+      date: '2026-09-09', gate: openGate,
+      gates: { winner: openGate, total: openGate, players: openGate, combos: openGate },
+      samples: { winner: { n: 2, min_forward: 50 } },
+      events: [{ event_id: '42', date: '2026-09-09', start: '2026-09-09T20:00:00Z',
+        home: { code: 'PHI' }, away: { code: 'DAL' }, prediction: { pick: 'PHI', prob: .91 },
+        markets: { winner: { gate: openGate, pick: 'PHI', prob: .91 } } }],
+      top2: [{ pick: 'PHI', prob: .91 }],
+    },
+    market_rows: [{
+      date: '2026-09-09', event_id: '42', market_key: 'winner', selection_key: 'winner:model',
+      pick: '1', side: 'home', price: -120, market_prob: .53, prob: .64, edge: .11,
+      home: 'PHI', away: 'DAL', start_time: '2026-09-09T20:00:00Z',
+      feature_as_of: '2026-09-09T18:00:00Z', frozen_at: '2026-09-09T18:00:00Z',
+      status: 'frozen', engine_version: 'v2', gate_version: 'g1', updated_at: '2026-09-09T18:01:00Z',
+      public_scope: 'public', gate_passed: 1, human_approved: 1,
+    }],
+  }, new Date('2026-09-09T16:00:00Z'));
+  assert.equal(payload.today.markets.winner.state, 'closed');
+  assert.equal(payload.today.events[0].prediction, null);
+  assert.deepEqual(payload.today.top2, []);
+  assert.equal(payload.simulation.winner.gate.public, false);
+  assert.equal(payload.learning.gate.approved, false);
+  assert.equal('weights' in payload.learning, false);
+  assert.equal(payload.market_rows[0].public_scope, 'shadow');
+  assert.equal(payload.market_rows[0].gate_passed, 0);
+  assert.equal(payload.market_rows[0].human_approved, 0);
+});
+
+test('internal publisher is POST-only and rejects missing OIDC before touching storage', async () => {
+  const get = await worker.fetch(new Request('https://aa-sports-api.test/v1/internal/model-publish'), {}, { waitUntil() {} });
+  assert.equal(get.status, 405);
+  const post = await worker.fetch(new Request('https://aa-sports-api.test/v1/internal/model-publish', { method: 'POST', body: '{}' }), {}, { waitUntil() {} });
+  assert.equal(post.status, 403);
+});
+
+test('internal OIDC publisher writes only sanitized KV and shadow D1 rows', async () => {
+  const fixture = await signedOidc();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = fixture.fetcher;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date()).filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
+  const day = `${parts.year}-${parts.month}-${parts.day}`;
+  const store = new Map(), batches = [];
+  const env = {
+    ALLOWED_ORIGIN: '*',
+    AA_LATEST: {
+      async get(key) { return store.get(key) || null; },
+      async put(key, value) { store.set(key, value); },
+    },
+    DB: {
+      prepare(sql) { return { bind(...values) { return { sql, values, async run() { return {}; } }; } }; },
+      async batch(statements) { batches.push(statements); return []; },
+    },
+  };
+  const openGate = { passed: true, approved: true, public: true };
+  const payload = {
+    sport: 'nfl',
+    learning: { gate: openGate, historical: { n: 284, brier: .2258 }, forward: { n: 2 }, weights: [7] },
+    simulation: { winner: { gate: openGate, historical: { n: 284, brier: .2258 }, coefficients: [7] } },
+    today: { date: day, gate: openGate, gates: { winner: openGate }, events: [{
+      event_id: '401', date: day, start: `${day}T20:00:00Z`, home: { code: 'PHI' }, away: { code: 'DAL' },
+      prediction: { pick: 'PHI', prob: .9 }, markets: { winner: { gate: openGate, pick: 'PHI', prob: .9 } },
+    }] },
+    market_rows: [{
+      date: day, event_id: '401', market_key: 'winner', selection_key: 'winner:model',
+      pick: '1', side: 'home', prob: .64, market_prob: .53, edge: .11,
+      start_time: `${day}T20:00:00Z`, feature_as_of: `${day}T18:00:00Z`, frozen_at: `${day}T18:00:00Z`,
+      updated_at: `${day}T18:01:00Z`, engine_version: 'v2', gate_version: 'g1',
+      public_scope: 'public', gate_passed: 1, human_approved: 1,
+    }],
+  };
+  const request = () => new Request('https://aa-sports-api.test/v1/internal/model-publish', {
+    method: 'POST', headers: { authorization: `Bearer ${fixture.token}`, 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  try {
+    const response = await worker.fetch(request(), env, { waitUntil() {} });
+    assert.equal(response.status, 200, await response.text());
+    assert.equal(batches.length, 1);
+    assert.ok(batches[0][0].values.includes('shadow'));
+    const today = JSON.parse(store.get('nfl:today'));
+    assert.equal(today.markets.winner.state, 'closed');
+    assert.equal(today.events[0].prediction, null);
+    assert.equal('weights' in JSON.parse(store.get('nfl:learning')), false);
+    assert.equal('coefficients' in JSON.parse(store.get('nfl:simulation')).winner, false);
+    const replay = await worker.fetch(request(), env, { waitUntil() {} });
+    assert.equal(replay.status, 409);
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 test('public ingestion keeps factual teams, schedule and real market only', () => {
