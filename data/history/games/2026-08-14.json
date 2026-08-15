@@ -1,6 +1,6 @@
 {
   "date": "2026-08-14",
-  "generated_at": "2026-08-14T23:28:59.821Z",
+  "generated_at": "2026-08-15T01:42:59.219Z",
   "schema": "games_v1",
   "integrity_schema": "ledger_v2",
   "formula_version": "v2",
@@ -261,7 +261,7 @@
           "home": 3,
           "away": 0
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-14T18:20:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -281,7 +281,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-14T23:29:02.565Z",
+          "captured_at": "2026-08-15T01:43:02.360Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "2fd4f31733d042cd2bb09c8bb580c7d7e8a44fc518b457c78fa82bb3ac87419f",
@@ -442,14 +442,14 @@
           "over_price_close": -106,
           "under_price_close": -114,
           "spread_close": -1.5,
-          "captured_at_close": "2026-08-14T23:29:02.565Z",
+          "captured_at_close": "2026-08-15T01:43:02.360Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
         "weather_forecast": {
-          "temp": 75,
-          "wind": "6 mph, In From CF",
-          "precip_pct": 3,
+          "temp": 79,
+          "wind": "9 mph",
+          "precip_pct": 34,
           "source": "open-meteo",
           "stage": "forecast"
         },
@@ -976,12 +976,12 @@
         "requested_stage": "open"
       },
       "observed": {
-        "status": "In Progress",
+        "status": "Final",
         "scores": {
-          "home": 0,
+          "home": 1,
           "away": 0
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-14T22:10:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -991,17 +991,17 @@
           "over_price": -118,
           "under_price": -102,
           "spread": 1.5,
-          "p_home_mkt": 0.5234,
-          "p_away_mkt": 0.4767,
+          "p_home_mkt": 0.521,
+          "p_away_mkt": 0.479,
           "consensus": {
-            "p_home": 0.5234,
-            "p_away": 0.4767,
-            "n_books": 2
+            "p_home": 0.521,
+            "p_away": 0.479,
+            "n_books": 1
           },
-          "stage": "live",
-          "capture_phase": "live",
+          "stage": "final",
+          "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "captured_at": "2026-08-15T01:43:02.360Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "2fd4f31733d042cd2bb09c8bb580c7d7e8a44fc518b457c78fa82bb3ac87419f",
@@ -1015,7 +1015,7 @@
           "captured_at_open": "2026-08-14T04:00:04.331Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": 0.0126,
+          "line_move": 0.0102,
           "total_line_move": 0,
           "fav_side": "home",
           "books": [
@@ -1029,20 +1029,9 @@
               "spread": 1.5,
               "p_home_mkt": 0.521,
               "p_away_mkt": 0.479
-            },
-            {
-              "provider": "DraftKings - Live Odds",
-              "ml_home": -119,
-              "ml_away": 104,
-              "over_under": 3.5,
-              "over_price": 107,
-              "under_price": -139,
-              "spread": 1.5,
-              "p_home_mkt": 0.5257,
-              "p_away_mkt": 0.4743
             }
           ],
-          "book_disagreement": 0.0047,
+          "book_disagreement": 0,
           "wp_curve": [
             {
               "half": "T",
@@ -1117,25 +1106,77 @@
             {
               "half": "T",
               "inn": 6,
-              "home_wp": 0.507,
+              "home_wp": 0.555,
               "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.716,
+              "home_score": 1,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.791,
+              "home_score": 1,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.752,
+              "home_score": 1,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.857,
+              "home_score": 1,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 8,
+              "home_wp": 0.817,
+              "home_score": 1,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 9,
+              "home_wp": 1,
+              "home_score": 1,
               "away_score": 0
             }
           ],
           "espn_id": "401816521",
-          "requested_stage": "open"
+          "requested_stage": "open",
+          "p_home_close": 0.521,
+          "ml_home_close": -113,
+          "ml_away_close": 105,
+          "over_under_close": 7.5,
+          "over_price_close": -118,
+          "under_price_close": -102,
+          "spread_close": 1.5,
+          "captured_at_close": "2026-08-15T01:43:02.360Z",
+          "provider_close": "DraftKings",
+          "close_provenance": "explicit_close_capture"
         },
         "weather_forecast": {
-          "temp": 84,
-          "wind": "3 mph, Out To CF",
-          "precip_pct": 3,
+          "temp": 88,
+          "wind": "9 mph, Out To CF",
+          "precip_pct": 15,
           "source": "open-meteo",
           "stage": "forecast"
         },
         "pitchers": {
           "home": {
             "name": "Chase Burns",
-            "fip": 3.25,
+            "fip": 3.23,
             "hand": "R",
             "era": 3.86,
             "n": 3,
@@ -1145,12 +1186,12 @@
           },
           "away": {
             "name": "Sandy Alcantara",
-            "fip": 3.9,
+            "fip": 3.89,
             "hand": "R",
             "era": 0,
             "n": 3,
             "fatigue": "media",
-            "k9": 6.8,
+            "k9": 6.9,
             "id": 645261
           }
         },
@@ -1160,52 +1201,52 @@
               "order": 1,
               "id": 682829,
               "name": "Elly De La Cruz",
-              "ops": 0.835,
+              "ops": 0.833,
               "hr": 20,
-              "avg": ".267",
+              "avg": ".266",
               "pos": "SS"
             },
             {
               "order": 2,
               "id": 701398,
               "name": "Sal Stewart",
-              "ops": 0.813,
+              "ops": 0.814,
               "hr": 26,
-              "avg": ".258",
+              "avg": ".259",
               "pos": "1B"
             },
             {
               "order": 3,
               "id": 668709,
               "name": "JJ Bleday",
-              "ops": 0.776,
+              "ops": 0.778,
               "hr": 20,
-              "avg": ".217",
+              "avg": ".219",
               "pos": "LF"
             },
             {
               "order": 4,
               "id": 663886,
               "name": "Tyler Stephenson",
-              "ops": 0.752,
+              "ops": 0.753,
               "hr": 11,
-              "avg": ".250",
+              "avg": ".252",
               "pos": "C"
             },
             {
               "order": 5,
               "id": 553993,
               "name": "Eugenio Suárez",
-              "ops": 0.7,
+              "ops": 0.705,
               "hr": 18,
-              "avg": ".204",
+              "avg": ".206",
               "pos": "DH"
             },
             {
               "order": 6,
               "id": 669911,
               "name": "Michael Toglia",
-              "ops": 0.715,
+              "ops": 0.804,
               "hr": 0,
               "avg": ".286",
               "pos": "1B"
@@ -1214,25 +1255,25 @@
               "order": 7,
               "id": 667472,
               "name": "Dane Myers",
-              "ops": 0.697,
+              "ops": 0.69,
               "hr": 3,
-              "avg": ".253",
+              "avg": ".250",
               "pos": "CF"
             },
             {
               "order": 8,
               "id": 682622,
               "name": "Noelvi Marte",
-              "ops": 0.57,
+              "ops": 0.568,
               "hr": 6,
-              "avg": ".197",
+              "avg": ".196",
               "pos": "RF"
             },
             {
               "order": 9,
               "id": 680574,
               "name": "Matt McLain",
-              "ops": 0.627,
+              "ops": 0.625,
               "hr": 10,
               "avg": ".190",
               "pos": "2B"
@@ -1243,54 +1284,54 @@
               "order": 1,
               "id": 805300,
               "name": "Jakob Marsee",
-              "ops": 0.629,
+              "ops": 0.625,
               "hr": 6,
-              "avg": ".205",
+              "avg": ".204",
               "pos": "CF"
             },
             {
               "order": 2,
               "id": 669364,
               "name": "Xavier Edwards",
-              "ops": 0.75,
+              "ops": 0.746,
               "hr": 6,
-              "avg": ".283",
+              "avg": ".282",
               "pos": "2B"
             },
             {
               "order": 3,
               "id": 672640,
               "name": "Otto Lopez",
-              "ops": 0.801,
+              "ops": 0.802,
               "hr": 9,
-              "avg": ".311",
+              "avg": ".312",
               "pos": "SS"
             },
             {
               "order": 4,
               "id": 665052,
               "name": "Griffin Conine",
-              "ops": 0.933,
+              "ops": 0.928,
               "hr": 13,
-              "avg": ".276",
+              "avg": ".274",
               "pos": "RF"
             },
             {
               "order": 5,
               "id": 681715,
               "name": "Heriberto Hernández",
-              "ops": 0.751,
+              "ops": 0.748,
               "hr": 17,
-              "avg": ".227",
+              "avg": ".226",
               "pos": "LF"
             },
             {
               "order": 6,
               "id": 691594,
               "name": "Javier Sanoja",
-              "ops": 0.716,
+              "ops": 0.713,
               "hr": 4,
-              "avg": ".272",
+              "avg": ".271",
               "pos": "3B"
             },
             {
@@ -1660,10 +1701,10 @@
       "observed": {
         "status": "In Progress",
         "scores": {
-          "home": 1,
-          "away": 0
+          "home": 8,
+          "away": 4
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-14T22:40:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -1673,17 +1714,17 @@
           "over_price": -102,
           "under_price": -118,
           "spread": 1.5,
-          "p_home_mkt": 0.5612,
-          "p_away_mkt": 0.4389,
+          "p_home_mkt": 0.479,
+          "p_away_mkt": 0.521,
           "consensus": {
-            "p_home": 0.5612,
-            "p_away": 0.4389,
-            "n_books": 2
+            "p_home": 0.479,
+            "p_away": 0.521,
+            "n_books": 1
           },
           "stage": "live",
           "capture_phase": "live",
           "is_pregame": false,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "captured_at": "2026-08-15T01:43:02.361Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "2fd4f31733d042cd2bb09c8bb580c7d7e8a44fc518b457c78fa82bb3ac87419f",
@@ -1697,9 +1738,9 @@
           "captured_at_open": "2026-08-14T04:00:04.331Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": 0.1123,
+          "line_move": 0.0301,
           "total_line_move": -0.5,
-          "fav_side": "home",
+          "fav_side": "away",
           "books": [
             {
               "provider": "DraftKings",
@@ -1711,20 +1752,9 @@
               "spread": 1.5,
               "p_home_mkt": 0.479,
               "p_away_mkt": 0.521
-            },
-            {
-              "provider": "DraftKings - Live Odds",
-              "ml_home": -199,
-              "ml_away": 171,
-              "over_under": 5.5,
-              "over_price": -114,
-              "under_price": -114,
-              "spread": -1.5,
-              "p_home_mkt": 0.6433,
-              "p_away_mkt": 0.3567
             }
           ],
-          "book_disagreement": 0.1643,
+          "book_disagreement": 0,
           "wp_curve": [
             {
               "half": "T",
@@ -1774,18 +1804,82 @@
               "home_wp": 0.724,
               "home_score": 1,
               "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.923,
+              "home_score": 4,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.808,
+              "home_score": 4,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 5,
+              "home_wp": 0.959,
+              "home_score": 7,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 6,
+              "home_wp": 0.978,
+              "home_score": 7,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.973,
+              "home_score": 7,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.973,
+              "home_score": 7,
+              "away_score": 3
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.986,
+              "home_score": 8,
+              "away_score": 3
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.994,
+              "home_score": 8,
+              "away_score": 3
+            },
+            {
+              "half": "B",
+              "inn": 8,
+              "home_wp": 0.994,
+              "home_score": 8,
+              "away_score": 3
+            },
+            {
+              "half": "T",
+              "inn": 9,
+              "home_wp": 0.996,
+              "home_score": 8,
+              "away_score": 3
             }
           ],
           "espn_id": "401816519",
           "requested_stage": "open"
         },
-        "weather_forecast": {
-          "temp": 77,
-          "wind": "2 mph",
-          "precip_pct": 4,
-          "source": "open-meteo",
-          "stage": "forecast"
-        },
+        "weather_forecast": null,
         "pitchers": {
           "home": {
             "name": "Bubba Chandler",
@@ -1799,12 +1893,12 @@
           },
           "away": {
             "name": "Jake Bennett",
-            "fip": 3.61,
+            "fip": 3.6,
             "hand": "L",
             "era": 5.19,
             "n": 3,
             "fatigue": "normal",
-            "k9": 6.7,
+            "k9": 6.8,
             "id": 687562
           }
         },
@@ -1814,7 +1908,7 @@
               "order": 1,
               "id": 693304,
               "name": "Nick Gonzales",
-              "ops": 0.76,
+              "ops": 0.761,
               "hr": 6,
               "avg": ".307",
               "pos": "3B"
@@ -1823,72 +1917,72 @@
               "order": 2,
               "id": 682927,
               "name": "Ronny Simon",
-              "ops": 0.73,
+              "ops": 0.749,
               "hr": 0,
-              "avg": ".320",
+              "avg": ".333",
               "pos": "2B"
             },
             {
               "order": 3,
               "id": 668804,
               "name": "Bryan Reynolds",
-              "ops": 0.804,
+              "ops": 0.81,
               "hr": 15,
-              "avg": ".261",
+              "avg": ".264",
               "pos": "LF"
             },
             {
               "order": 4,
               "id": 699013,
               "name": "Esmerlyn Valdez",
-              "ops": 0.922,
+              "ops": 0.923,
               "hr": 14,
-              "avg": ".249",
+              "avg": ".250",
               "pos": "RF"
             },
             {
               "order": 5,
               "id": 664040,
               "name": "Brandon Lowe",
-              "ops": 0.791,
-              "hr": 25,
-              "avg": ".249",
+              "ops": 0.796,
+              "hr": 26,
+              "avg": ".250",
               "pos": "2B"
             },
             {
               "order": 6,
               "id": 804668,
               "name": "Rafael Flores Jr.",
-              "ops": 1.055,
+              "ops": 1.076,
               "hr": 4,
-              "avg": ".258",
+              "avg": ".294",
               "pos": "C"
             },
             {
               "order": 7,
               "id": 663968,
               "name": "Jake Mangum",
-              "ops": 0.747,
+              "ops": 0.74,
               "hr": 4,
-              "avg": ".300",
+              "avg": ".297",
               "pos": "CF"
             },
             {
               "order": 8,
               "id": 669707,
               "name": "Jared Triolo",
-              "ops": 0.649,
+              "ops": 0.646,
               "hr": 2,
-              "avg": ".249",
+              "avg": ".247",
               "pos": "SS"
             },
             {
               "order": 9,
               "id": 680779,
               "name": "Henry Davis",
-              "ops": 0.575,
+              "ops": 0.571,
               "hr": 8,
-              "avg": ".173",
+              "avg": ".171",
               "pos": "C"
             }
           ],
@@ -1897,9 +1991,9 @@
               "order": 1,
               "id": 686765,
               "name": "Nick Sogard",
-              "ops": 0.68,
+              "ops": 0.702,
               "hr": 0,
-              "avg": ".242",
+              "avg": ".258",
               "pos": "2B"
             },
             {
@@ -1908,23 +2002,23 @@
               "name": "Masataka Yoshida",
               "ops": 0.741,
               "hr": 5,
-              "avg": ".271",
+              "avg": ".272",
               "pos": "DH"
             },
             {
               "order": 3,
               "id": 668939,
               "name": "Adley Rutschman",
-              "ops": 0.489,
+              "ops": 0.408,
               "hr": 0,
-              "avg": ".125",
+              "avg": ".100",
               "pos": "C"
             },
             {
               "order": 4,
               "id": 575929,
               "name": "Willson Contreras",
-              "ops": 0.918,
+              "ops": 0.917,
               "hr": 24,
               "avg": ".281",
               "pos": "1B"
@@ -1933,7 +2027,7 @@
               "order": 5,
               "id": 677800,
               "name": "Wilyer Abreu",
-              "ops": 0.793,
+              "ops": 0.794,
               "hr": 21,
               "avg": ".254",
               "pos": "RF"
@@ -1942,27 +2036,27 @@
               "order": 6,
               "id": 702332,
               "name": "Caleb Durbin",
-              "ops": 0.73,
+              "ops": 0.728,
               "hr": 12,
-              "avg": ".253",
+              "avg": ".251",
               "pos": "3B"
             },
             {
               "order": 7,
               "id": 680776,
               "name": "Jarren Duran",
-              "ops": 0.612,
+              "ops": 0.615,
               "hr": 16,
-              "avg": ".200",
+              "avg": ".202",
               "pos": "LF"
             },
             {
               "order": 8,
               "id": 655316,
               "name": "Andruw Monasterio",
-              "ops": 0.773,
+              "ops": 0.776,
               "hr": 6,
-              "avg": ".268",
+              "avg": ".270",
               "pos": "SS"
             },
             {
@@ -2313,12 +2407,12 @@
         "requested_stage": "open"
       },
       "observed": {
-        "status": "In Progress",
+        "status": "Final",
         "scores": {
-          "home": 2,
-          "away": 1
+          "home": 5,
+          "away": 9
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-14T22:40:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -2328,17 +2422,17 @@
           "over_price": -108,
           "under_price": -112,
           "spread": -1.5,
-          "p_home_mkt": 0.6409,
-          "p_away_mkt": 0.3591,
+          "p_home_mkt": 0.5619,
+          "p_away_mkt": 0.4381,
           "consensus": {
-            "p_home": 0.6409,
-            "p_away": 0.3591,
-            "n_books": 2
+            "p_home": 0.5619,
+            "p_away": 0.4381,
+            "n_books": 1
           },
-          "stage": "live",
-          "capture_phase": "live",
+          "stage": "final",
+          "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "captured_at": "2026-08-15T01:43:02.361Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "2fd4f31733d042cd2bb09c8bb580c7d7e8a44fc518b457c78fa82bb3ac87419f",
@@ -2352,7 +2446,7 @@
           "captured_at_open": "2026-08-14T04:00:04.331Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": 0.0567,
+          "line_move": -0.0223,
           "total_line_move": 0,
           "fav_side": "home",
           "books": [
@@ -2366,20 +2460,9 @@
               "spread": -1.5,
               "p_home_mkt": 0.5619,
               "p_away_mkt": 0.4381
-            },
-            {
-              "provider": "DraftKings - Live Odds",
-              "ml_home": -283,
-              "ml_away": 248,
-              "over_under": 8.5,
-              "over_price": -137,
-              "under_price": 105,
-              "spread": -1.5,
-              "p_home_mkt": 0.72,
-              "p_away_mkt": 0.28
             }
           ],
-          "book_disagreement": 0.1581,
+          "book_disagreement": 0,
           "wp_curve": [
             {
               "half": "T",
@@ -2415,27 +2498,128 @@
               "home_wp": 0.645,
               "home_score": 2,
               "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 3,
+              "home_wp": 0.722,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 4,
+              "home_wp": 0.183,
+              "home_score": 3,
+              "away_score": 6
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.147,
+              "home_score": 3,
+              "away_score": 6
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.168,
+              "home_score": 3,
+              "away_score": 6
+            },
+            {
+              "half": "B",
+              "inn": 5,
+              "home_wp": 0.129,
+              "home_score": 3,
+              "away_score": 6
+            },
+            {
+              "half": "T",
+              "inn": 6,
+              "home_wp": 0.053,
+              "home_score": 3,
+              "away_score": 8
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.03,
+              "home_score": 3,
+              "away_score": 8
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.035,
+              "home_score": 3,
+              "away_score": 8
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.071,
+              "home_score": 5,
+              "away_score": 8
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.042,
+              "home_score": 5,
+              "away_score": 9
+            },
+            {
+              "half": "B",
+              "inn": 8,
+              "home_wp": 0.013,
+              "home_score": 5,
+              "away_score": 9
+            },
+            {
+              "half": "T",
+              "inn": 9,
+              "home_wp": 0.016,
+              "home_score": 5,
+              "away_score": 9
+            },
+            {
+              "half": "B",
+              "inn": 9,
+              "home_wp": 0,
+              "home_score": 5,
+              "away_score": 9
             }
           ],
           "espn_id": "401816520",
-          "requested_stage": "open"
+          "requested_stage": "open",
+          "p_home_close": 0.5619,
+          "ml_home_close": -134,
+          "ml_away_close": 124,
+          "over_under_close": 8.5,
+          "over_price_close": -108,
+          "under_price_close": -112,
+          "spread_close": -1.5,
+          "captured_at_close": "2026-08-15T01:43:02.361Z",
+          "provider_close": "DraftKings",
+          "close_provenance": "explicit_close_capture"
         },
         "weather_forecast": {
-          "temp": 83,
-          "wind": "3 mph",
-          "precip_pct": 6,
+          "temp": 80,
+          "wind": "13 mph, Out To CF",
+          "precip_pct": 47,
           "source": "open-meteo",
           "stage": "forecast"
         },
         "pitchers": {
           "home": {
             "name": "Jackson Jobe",
-            "fip": 4.3,
+            "fip": 4.84,
             "hand": "R",
             "era": 0,
             "n": 1,
             "fatigue": "normal",
-            "k9": 7.9,
+            "k9": 8.3,
             "id": 695549
           },
           "away": {
@@ -2455,18 +2639,18 @@
               "order": 1,
               "id": 650402,
               "name": "Gleyber Torres",
-              "ops": 0.763,
+              "ops": 0.767,
               "hr": 8,
-              "avg": ".256",
+              "avg": ".260",
               "pos": "2B"
             },
             {
               "order": 2,
               "id": 693307,
               "name": "Dillon Dingler",
-              "ops": 0.835,
+              "ops": 0.827,
               "hr": 26,
-              "avg": ".263",
+              "avg": ".261",
               "pos": "C"
             },
             {
@@ -2482,54 +2666,54 @@
               "order": 4,
               "id": 680664,
               "name": "Eduardo Valencia",
-              "ops": 1.226,
+              "ops": 1.253,
               "hr": 5,
-              "avg": ".378",
+              "avg": ".396",
               "pos": "C"
             },
             {
               "order": 5,
               "id": 690993,
               "name": "Colt Keith",
-              "ops": 0.727,
+              "ops": 0.729,
               "hr": 8,
-              "avg": ".264",
+              "avg": ".265",
               "pos": "3B"
             },
             {
               "order": 6,
               "id": 679529,
               "name": "Spencer Torkelson",
-              "ops": 0.753,
+              "ops": 0.748,
               "hr": 20,
-              "avg": ".234",
+              "avg": ".232",
               "pos": "1B"
             },
             {
               "order": 7,
               "id": 656716,
               "name": "Zach McKinstry",
-              "ops": 0.631,
+              "ops": 0.624,
               "hr": 4,
-              "avg": ".221",
+              "avg": ".218",
               "pos": "2B"
             },
             {
               "order": 8,
               "id": 701162,
               "name": "Ben Malgeri",
-              "ops": 0.833,
-              "hr": 2,
-              "avg": ".280",
+              "ops": 0.882,
+              "hr": 3,
+              "avg": ".283",
               "pos": "RF"
             },
             {
               "order": 9,
               "id": 703601,
               "name": "Max Clark",
-              "ops": 0.727,
+              "ops": 0.762,
               "hr": 1,
-              "avg": ".260",
+              "avg": ".264",
               "pos": "CF"
             }
           ],
@@ -2538,81 +2722,81 @@
               "order": 1,
               "id": 803011,
               "name": "Sam Antonacci",
-              "ops": 0.776,
+              "ops": 0.775,
               "hr": 8,
-              "avg": ".279",
+              "avg": ".278",
               "pos": "LF"
             },
             {
               "order": 2,
               "id": 808959,
               "name": "Munetaka Murakami",
-              "ops": 0.898,
-              "hr": 26,
-              "avg": ".234",
+              "ops": 0.909,
+              "hr": 27,
+              "avg": ".235",
               "pos": "1B"
             },
             {
               "order": 3,
               "id": 678246,
               "name": "Miguel Vargas",
-              "ops": 0.806,
-              "hr": 25,
-              "avg": ".234",
+              "ops": 0.829,
+              "hr": 27,
+              "avg": ".239",
               "pos": "3B"
             },
             {
               "order": 4,
               "id": 643217,
               "name": "Andrew Benintendi",
-              "ops": 0.727,
+              "ops": 0.73,
               "hr": 12,
-              "avg": ".244",
+              "avg": ".245",
               "pos": "DH"
             },
             {
               "order": 5,
               "id": 695731,
               "name": "Braden Montgomery",
-              "ops": 0.701,
+              "ops": 0.71,
               "hr": 4,
-              "avg": ".236",
+              "avg": ".237",
               "pos": "RF"
             },
             {
               "order": 6,
               "id": 695657,
               "name": "Colson Montgomery",
-              "ops": 0.724,
+              "ops": 0.72,
               "hr": 26,
-              "avg": ".211",
+              "avg": ".209",
               "pos": "SS"
             },
             {
               "order": 7,
               "id": 805367,
               "name": "Chase Meidroth",
-              "ops": 0.772,
+              "ops": 0.777,
               "hr": 12,
-              "avg": ".278",
+              "avg": ".280",
               "pos": "2B"
             },
             {
               "order": 8,
               "id": 671976,
               "name": "Tristan Peters",
-              "ops": 0.742,
-              "hr": 6,
-              "avg": ".265",
+              "ops": 0.755,
+              "hr": 7,
+              "avg": ".268",
               "pos": "CF"
             },
             {
               "order": 9,
               "id": 691011,
               "name": "Drew Romo",
-              "ops": 0.504,
+              "ops": 0.499,
               "hr": 6,
-              "avg": ".135",
+              "avg": ".132",
               "pos": "C"
             }
           ]
@@ -2953,12 +3137,12 @@
         "requested_stage": "open"
       },
       "observed": {
-        "status": "In Progress",
+        "status": "Game Over",
         "scores": {
-          "home": 0,
-          "away": 0
+          "home": 4,
+          "away": 1
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-14T23:10:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -2968,17 +3152,17 @@
           "over_price": -116,
           "under_price": -104,
           "spread": -1.5,
-          "p_home_mkt": 0.5367,
-          "p_away_mkt": 0.4633,
+          "p_home_mkt": 0.5232,
+          "p_away_mkt": 0.4768,
           "consensus": {
-            "p_home": 0.5367,
-            "p_away": 0.4633,
-            "n_books": 2
+            "p_home": 0.5232,
+            "p_away": 0.4768,
+            "n_books": 1
           },
-          "stage": "live",
-          "capture_phase": "live",
+          "stage": "final",
+          "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "captured_at": "2026-08-15T01:43:02.361Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "2fd4f31733d042cd2bb09c8bb580c7d7e8a44fc518b457c78fa82bb3ac87419f",
@@ -2992,7 +3176,7 @@
           "captured_at_open": "2026-08-14T04:00:04.331Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": 0.0046,
+          "line_move": -0.0089,
           "total_line_move": -0.5,
           "fav_side": "home",
           "books": [
@@ -3006,20 +3190,9 @@
               "spread": -1.5,
               "p_home_mkt": 0.5232,
               "p_away_mkt": 0.4768
-            },
-            {
-              "provider": "DraftKings - Live Odds",
-              "ml_home": -132,
-              "ml_away": 115,
-              "over_under": 6.5,
-              "over_price": -134,
-              "under_price": 103,
-              "spread": -1.5,
-              "p_home_mkt": 0.5502,
-              "p_away_mkt": 0.4498
             }
           ],
-          "book_disagreement": 0.027,
+          "book_disagreement": 0,
           "wp_curve": [
             {
               "half": "T",
@@ -3038,35 +3211,137 @@
             {
               "half": "T",
               "inn": 2,
-              "home_wp": 0.416,
+              "home_wp": 0.431,
               "home_score": 0,
               "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 2,
+              "home_wp": 0.387,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 3,
+              "home_wp": 0.341,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 3,
+              "home_wp": 0.306,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 4,
+              "home_wp": 0.365,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.316,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.385,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 5,
+              "home_wp": 0.332,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 6,
+              "home_wp": 0.304,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.717,
+              "home_score": 2,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.815,
+              "home_score": 2,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.938,
+              "home_score": 4,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.979,
+              "home_score": 4,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 8,
+              "home_wp": 0.973,
+              "home_score": 4,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 9,
+              "home_wp": 1,
+              "home_score": 4,
+              "away_score": 1
             }
           ],
           "espn_id": "401816524",
-          "requested_stage": "open"
+          "requested_stage": "open",
+          "p_home_close": 0.5232,
+          "ml_home_close": -114,
+          "ml_away_close": 106,
+          "over_under_close": 8.5,
+          "over_price_close": -116,
+          "under_price_close": -104,
+          "spread_close": -1.5,
+          "captured_at_close": "2026-08-15T01:43:02.361Z",
+          "provider_close": "DraftKings",
+          "close_provenance": "explicit_close_capture"
         },
-        "weather_forecast": {
-          "temp": 80,
-          "wind": "9 mph, Out To CF",
-          "precip_pct": 7,
-          "source": "open-meteo",
-          "stage": "forecast"
-        },
+        "weather_forecast": null,
         "pitchers": {
           "home": {
             "name": "Robert Stock",
-            "fip": 4.44,
+            "fip": 4.53,
             "hand": "R",
             "era": 10.13,
             "n": 2,
             "fatigue": "normal",
-            "k9": 10.2,
+            "k9": 9.5,
             "id": 476594
           },
           "away": {
             "name": "Andrew Alvarez",
-            "fip": 3.4,
+            "fip": 3.46,
             "hand": "L",
             "era": 2.25,
             "n": 3,
@@ -3081,43 +3356,43 @@
               "order": 1,
               "id": 805999,
               "name": "A.J. Ewing",
-              "ops": 0.719,
+              "ops": 0.712,
               "hr": 7,
-              "avg": ".258",
+              "avg": ".255",
               "pos": "CF"
             },
             {
               "order": 2,
               "id": 596019,
               "name": "Francisco Lindor",
-              "ops": 0.753,
-              "hr": 11,
-              "avg": ".238",
+              "ops": 0.769,
+              "hr": 12,
+              "avg": ".240",
               "pos": "SS"
             },
             {
               "order": 3,
               "id": 666182,
               "name": "Bo Bichette",
-              "ops": 0.689,
+              "ops": 0.688,
               "hr": 12,
-              "avg": ".261",
+              "avg": ".262",
               "pos": "3B"
             },
             {
               "order": 4,
               "id": 673357,
               "name": "Luis Robert Jr.",
-              "ops": 0.649,
+              "ops": 0.645,
               "hr": 6,
-              "avg": ".215",
+              "avg": ".216",
               "pos": "CF"
             },
             {
               "order": 5,
               "id": 701807,
               "name": "Carson Benge",
-              "ops": 0.748,
+              "ops": 0.747,
               "hr": 13,
               "avg": ".274",
               "pos": "RF"
@@ -3126,26 +3401,26 @@
               "order": 6,
               "id": 682626,
               "name": "Francisco Alvarez",
-              "ops": 0.772,
+              "ops": 0.766,
               "hr": 13,
-              "avg": ".251",
+              "avg": ".248",
               "pos": "C"
             },
             {
               "order": 7,
               "id": 543760,
               "name": "Marcus Semien",
-              "ops": 0.624,
+              "ops": 0.626,
               "hr": 14,
-              "avg": ".210",
+              "avg": ".211",
               "pos": "2B"
             },
             {
               "order": 8,
               "id": 676724,
               "name": "Jared Young",
-              "ops": 0.768,
-              "hr": 7,
+              "ops": 0.778,
+              "hr": 8,
               "avg": ".262",
               "pos": "1B"
             },
@@ -3153,9 +3428,9 @@
               "order": 9,
               "id": 620443,
               "name": "Luis Torrens",
-              "ops": 0.669,
+              "ops": 0.675,
               "hr": 5,
-              "avg": ".232",
+              "avg": ".235",
               "pos": "C"
             }
           ],
@@ -3164,7 +3439,7 @@
               "order": 1,
               "id": 682928,
               "name": "CJ Abrams",
-              "ops": 0.897,
+              "ops": 0.899,
               "hr": 29,
               "avg": ".283",
               "pos": "SS"
@@ -3173,36 +3448,36 @@
               "order": 2,
               "id": 694673,
               "name": "Abimelec Ortiz",
-              "ops": 1.086,
+              "ops": 0.963,
               "hr": 4,
-              "avg": ".323",
+              "avg": ".286",
               "pos": "1B"
             },
             {
               "order": 3,
               "id": 691781,
               "name": "Brady House",
-              "ops": 0.687,
+              "ops": 0.692,
               "hr": 8,
-              "avg": ".240",
+              "avg": ".242",
               "pos": "3B"
             },
             {
               "order": 4,
               "id": 695734,
               "name": "Daylen Lile",
-              "ops": 0.718,
+              "ops": 0.714,
               "hr": 15,
-              "avg": ".251",
+              "avg": ".249",
               "pos": "LF"
             },
             {
               "order": 5,
               "id": 660688,
               "name": "Keibert Ruiz",
-              "ops": 0.748,
+              "ops": 0.739,
               "hr": 7,
-              "avg": ".273",
+              "avg": ".270",
               "pos": "C"
             },
             {
@@ -3211,23 +3486,23 @@
               "name": "José Tena",
               "ops": 0.705,
               "hr": 6,
-              "avg": ".238",
+              "avg": ".237",
               "pos": "DH"
             },
             {
               "order": 7,
               "id": 683083,
               "name": "Nasim Nuñez",
-              "ops": 0.58,
+              "ops": 0.579,
               "hr": 1,
-              "avg": ".229",
+              "avg": ".228",
               "pos": "2B"
             },
             {
               "order": 8,
               "id": 678391,
               "name": "Jorbit Vivas",
-              "ops": 0.665,
+              "ops": 0.662,
               "hr": 3,
               "avg": ".243",
               "pos": "3B"
@@ -3236,7 +3511,7 @@
               "order": 9,
               "id": 696285,
               "name": "Jacob Young",
-              "ops": 0.72,
+              "ops": 0.717,
               "hr": 10,
               "avg": ".248",
               "pos": "CF"
@@ -3574,10 +3849,10 @@
       "observed": {
         "status": "In Progress",
         "scores": {
-          "home": 0,
-          "away": 0
+          "home": 5,
+          "away": 7
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-14T23:10:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -3597,7 +3872,7 @@
           "stage": "live",
           "capture_phase": "live",
           "is_pregame": false,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "captured_at": "2026-08-15T01:43:02.361Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "2fd4f31733d042cd2bb09c8bb580c7d7e8a44fc518b457c78fa82bb3ac87419f",
@@ -3642,37 +3917,129 @@
               "home_wp": 0.552,
               "home_score": 0,
               "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 2,
+              "home_wp": 0.486,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 2,
+              "home_wp": 0.623,
+              "home_score": 1,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 3,
+              "home_wp": 0.674,
+              "home_score": 1,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 3,
+              "home_wp": 0.854,
+              "home_score": 3,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 4,
+              "home_wp": 0.683,
+              "home_score": 3,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.668,
+              "home_score": 3,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.244,
+              "home_score": 3,
+              "away_score": 5
+            },
+            {
+              "half": "B",
+              "inn": 5,
+              "home_wp": 0.191,
+              "home_score": 3,
+              "away_score": 5
+            },
+            {
+              "half": "T",
+              "inn": 6,
+              "home_wp": 0.184,
+              "home_score": 3,
+              "away_score": 5
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.273,
+              "home_score": 4,
+              "away_score": 5
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.107,
+              "home_score": 4,
+              "away_score": 7
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.088,
+              "home_score": 4,
+              "away_score": 7
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.075,
+              "home_score": 4,
+              "away_score": 7
+            },
+            {
+              "half": "B",
+              "inn": 8,
+              "home_wp": 0.066,
+              "home_score": 5,
+              "away_score": 7
             }
           ],
           "espn_id": "401816523",
           "requested_stage": "open"
         },
-        "weather_forecast": {
-          "temp": 78,
-          "wind": "8 mph, In From CF",
-          "precip_pct": 0,
-          "source": "open-meteo",
-          "stage": "forecast"
-        },
+        "weather_forecast": null,
         "pitchers": {
           "home": {
             "name": "Gavin Williams",
-            "fip": 3.64,
+            "fip": 3.76,
             "hand": "R",
             "era": 1.96,
             "n": 3,
             "fatigue": "normal",
-            "k9": 11.4,
+            "k9": 11.5,
             "id": 668909
           },
           "away": {
             "name": "Michael King",
-            "fip": 4.21,
+            "fip": 4.29,
             "hand": "R",
             "era": 4.24,
             "n": 3,
             "fatigue": "normal",
-            "k9": 7.9,
+            "k9": 7.8,
             "id": 650633
           }
         },
@@ -3682,63 +4049,63 @@
               "order": 1,
               "id": 680757,
               "name": "Steven Kwan",
-              "ops": 0.694,
+              "ops": 0.697,
               "hr": 2,
-              "avg": ".265",
+              "avg": ".267",
               "pos": "LF"
             },
             {
               "order": 2,
               "id": 800050,
               "name": "Chase DeLauter",
-              "ops": 0.802,
+              "ops": 0.801,
               "hr": 13,
-              "avg": ".284",
+              "avg": ".285",
               "pos": "RF"
             },
             {
               "order": 3,
               "id": 682657,
               "name": "Angel Martínez",
-              "ops": 0.716,
+              "ops": 0.707,
               "hr": 12,
-              "avg": ".245",
+              "avg": ".241",
               "pos": "LF"
             },
             {
               "order": 4,
               "id": 663993,
               "name": "Nathaniel Lowe",
-              "ops": 0.631,
-              "hr": 1,
-              "avg": ".217",
+              "ops": 0.903,
+              "hr": 2,
+              "avg": ".296",
               "pos": "1B"
             },
             {
               "order": 5,
               "id": 683953,
               "name": "Travis Bazzana",
-              "ops": 0.716,
+              "ops": 0.708,
               "hr": 9,
-              "avg": ".239",
+              "avg": ".236",
               "pos": "2B"
             },
             {
               "order": 6,
               "id": 694197,
               "name": "Angel Genao",
-              "ops": 0.811,
+              "ops": 0.834,
               "hr": 1,
-              "avg": ".296",
+              "avg": ".323",
               "pos": "2B"
             },
             {
               "order": 7,
               "id": 690984,
               "name": "Petey Halpin",
-              "ops": 0.566,
+              "ops": 0.577,
               "hr": 2,
-              "avg": ".219",
+              "avg": ".222",
               "pos": "CF"
             },
             {
@@ -3754,8 +4121,8 @@
               "order": 9,
               "id": 677587,
               "name": "Brayan Rocchio",
-              "ops": 0.682,
-              "hr": 9,
+              "ops": 0.689,
+              "hr": 10,
               "avg": ".252",
               "pos": "SS"
             }
@@ -3765,43 +4132,43 @@
               "order": 1,
               "id": 665487,
               "name": "Fernando Tatis Jr.",
-              "ops": 0.774,
-              "hr": 12,
-              "avg": ".281",
+              "ops": 0.778,
+              "hr": 13,
+              "avg": ".280",
               "pos": "RF"
             },
             {
               "order": 2,
               "id": 630105,
               "name": "Jake Cronenworth",
-              "ops": 0.591,
+              "ops": 0.598,
               "hr": 3,
-              "avg": ".217",
+              "avg": ".222",
               "pos": "2B"
             },
             {
               "order": 3,
               "id": 592518,
               "name": "Manny Machado",
-              "ops": 0.708,
+              "ops": 0.711,
               "hr": 23,
-              "avg": ".212",
+              "avg": ".215",
               "pos": "3B"
             },
             {
               "order": 4,
               "id": 664034,
               "name": "Ty France",
-              "ops": 0.877,
+              "ops": 0.881,
               "hr": 17,
-              "avg": ".297",
+              "avg": ".298",
               "pos": "1B"
             },
             {
               "order": 5,
               "id": 701538,
               "name": "Jackson Merrill",
-              "ops": 0.715,
+              "ops": 0.716,
               "hr": 19,
               "avg": ".246",
               "pos": "CF"
@@ -3810,27 +4177,27 @@
               "order": 6,
               "id": 669134,
               "name": "Luis Campusano",
-              "ops": 0.923,
+              "ops": 0.942,
               "hr": 5,
-              "avg": ".314",
+              "avg": ".320",
               "pos": "C"
             },
             {
               "order": 7,
               "id": 657757,
               "name": "Gavin Sheets",
-              "ops": 0.706,
+              "ops": 0.698,
               "hr": 15,
-              "avg": ".211",
+              "avg": ".208",
               "pos": "1B"
             },
             {
               "order": 8,
               "id": 593428,
               "name": "Xander Bogaerts",
-              "ops": 0.64,
-              "hr": 10,
-              "avg": ".221",
+              "ops": 0.653,
+              "hr": 11,
+              "avg": ".223",
               "pos": "SS"
             },
             {
@@ -4172,10 +4539,10 @@
       "observed": {
         "status": "In Progress",
         "scores": {
-          "home": 0,
-          "away": 0
+          "home": 2,
+          "away": 6
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-14T23:10:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -4185,17 +4552,17 @@
           "over_price": -116,
           "under_price": -104,
           "spread": -1.5,
-          "p_home_mkt": 0.5804,
-          "p_away_mkt": 0.4196,
+          "p_home_mkt": 0.324,
+          "p_away_mkt": 0.676,
           "consensus": {
-            "p_home": 0.5804,
-            "p_away": 0.4196,
+            "p_home": 0.324,
+            "p_away": 0.676,
             "n_books": 2
           },
           "stage": "live",
           "capture_phase": "live",
           "is_pregame": false,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "captured_at": "2026-08-15T01:43:02.361Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "6446bd1ae336cb13a72e6206cba947640d1cb84a6c45c1254497dd317b4fc9f6",
@@ -4209,9 +4576,9 @@
           "captured_at_open": "2026-08-14T08:40:04.332Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": -0.0125,
+          "line_move": -0.2689,
           "total_line_move": 0,
-          "fav_side": "home",
+          "fav_side": "away",
           "books": [
             {
               "provider": "DraftKings",
@@ -4226,17 +4593,17 @@
             },
             {
               "provider": "DraftKings - Live Odds",
-              "ml_home": -146,
-              "ml_away": 127,
-              "over_under": 7.5,
-              "over_price": 103,
-              "under_price": -135,
-              "spread": -1.5,
-              "p_home_mkt": 0.574,
-              "p_away_mkt": 0.426
+              "ml_home": 1480,
+              "ml_away": -3300,
+              "over_under": 8.5,
+              "over_price": -166,
+              "under_price": 127,
+              "spread": 3.5,
+              "p_home_mkt": 0.0612,
+              "p_away_mkt": 0.9388
             }
           ],
-          "book_disagreement": 0.0128,
+          "book_disagreement": 0.5256,
           "wp_curve": [
             {
               "half": "T",
@@ -4251,15 +4618,106 @@
               "home_wp": 0.552,
               "home_score": 0,
               "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 2,
+              "home_wp": 0.484,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 2,
+              "home_wp": 0.625,
+              "home_score": 1,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 3,
+              "home_wp": 0.48,
+              "home_score": 1,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 3,
+              "home_wp": 0.548,
+              "home_score": 2,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 4,
+              "home_wp": 0.605,
+              "home_score": 2,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.557,
+              "home_score": 2,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.606,
+              "home_score": 2,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 5,
+              "home_wp": 0.537,
+              "home_score": 2,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 6,
+              "home_wp": 0.611,
+              "home_score": 2,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.543,
+              "home_score": 2,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.215,
+              "home_score": 2,
+              "away_score": 4
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.142,
+              "home_score": 2,
+              "away_score": 4
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.043,
+              "home_score": 2,
+              "away_score": 6
             }
           ],
           "espn_id": "401816518",
           "requested_stage": "open"
         },
         "weather_forecast": {
-          "temp": 78,
-          "wind": "10 mph",
-          "precip_pct": 44,
+          "temp": 90,
+          "wind": "11 mph",
+          "precip_pct": 3,
           "source": "open-meteo",
           "stage": "forecast"
         },
@@ -4276,12 +4734,12 @@
           },
           "away": {
             "name": "Chris Bassitt",
-            "fip": 4.41,
+            "fip": 4.42,
             "hand": "R",
             "era": 4.73,
             "n": 3,
             "fatigue": "normal",
-            "k9": 6.1,
+            "k9": 5.8,
             "id": 605135
           }
         },
@@ -4291,7 +4749,7 @@
               "order": 1,
               "id": 650490,
               "name": "Yandy Díaz",
-              "ops": 0.835,
+              "ops": 0.834,
               "hr": 17,
               "avg": ".302",
               "pos": "DH"
@@ -4300,27 +4758,27 @@
               "order": 2,
               "id": 666018,
               "name": "Jonathan Aranda",
-              "ops": 0.802,
+              "ops": 0.797,
               "hr": 15,
-              "avg": ".284",
+              "avg": ".282",
               "pos": "1B"
             },
             {
               "order": 3,
               "id": 802415,
               "name": "Chandler Simpson",
-              "ops": 0.702,
+              "ops": 0.696,
               "hr": 0,
-              "avg": ".309",
+              "avg": ".306",
               "pos": "LF"
             },
             {
               "order": 4,
               "id": 691406,
               "name": "Junior Caminero",
-              "ops": 0.92,
+              "ops": 0.919,
               "hr": 35,
-              "avg": ".278",
+              "avg": ".277",
               "pos": "3B"
             },
             {
@@ -4336,36 +4794,36 @@
               "order": 6,
               "id": 683748,
               "name": "Victor Mesa Jr.",
-              "ops": 0.737,
+              "ops": 0.735,
               "hr": 10,
-              "avg": ".213",
+              "avg": ".215",
               "pos": "RF"
             },
             {
               "order": 7,
               "id": 656775,
               "name": "Cedric Mullins",
-              "ops": 0.641,
+              "ops": 0.643,
               "hr": 13,
-              "avg": ".207",
+              "avg": ".209",
               "pos": "CF"
             },
             {
               "order": 8,
               "id": 680700,
               "name": "Richie Palacios",
-              "ops": 0.691,
+              "ops": 0.695,
               "hr": 5,
-              "avg": ".238",
+              "avg": ".239",
               "pos": "2B"
             },
             {
               "order": 9,
               "id": 670764,
               "name": "Taylor Walls",
-              "ops": 0.605,
+              "ops": 0.603,
               "hr": 2,
-              "avg": ".217",
+              "avg": ".216",
               "pos": "SS"
             }
           ],
@@ -4374,72 +4832,72 @@
               "order": 1,
               "id": 624413,
               "name": "Pete Alonso",
-              "ops": 0.831,
+              "ops": 0.83,
               "hr": 26,
-              "avg": ".258",
+              "avg": ".259",
               "pos": "1B"
             },
             {
               "order": 2,
               "id": 702616,
               "name": "Jackson Holliday",
-              "ops": 0.72,
+              "ops": 0.719,
               "hr": 6,
-              "avg": ".240",
+              "avg": ".241",
               "pos": "2B"
             },
             {
               "order": 3,
               "id": 691723,
               "name": "Coby Mayo",
-              "ops": 0.709,
+              "ops": 0.701,
               "hr": 15,
-              "avg": ".213",
+              "avg": ".211",
               "pos": "3B"
             },
             {
               "order": 4,
               "id": 641933,
               "name": "Tyler O'Neill",
-              "ops": 0.702,
+              "ops": 0.711,
               "hr": 10,
-              "avg": ".216",
+              "avg": ".219",
               "pos": "RF"
             },
             {
               "order": 5,
               "id": 683002,
               "name": "Gunnar Henderson",
-              "ops": 0.687,
-              "hr": 19,
-              "avg": ".214",
+              "ops": 0.705,
+              "hr": 20,
+              "avg": ".221",
               "pos": "SS"
             },
             {
               "order": 6,
               "id": 687952,
               "name": "Christian Encarnacion-Strand",
-              "ops": 0.801,
+              "ops": 0.791,
               "hr": 4,
-              "avg": ".254",
+              "avg": ".258",
               "pos": "3B"
             },
             {
               "order": 7,
               "id": 665750,
               "name": "Leody Taveras",
-              "ops": 0.669,
+              "ops": 0.662,
               "hr": 7,
-              "avg": ".225",
+              "avg": ".223",
               "pos": "CF"
             },
             {
               "order": 8,
               "id": 681297,
               "name": "Colton Cowser",
-              "ops": 0.652,
-              "hr": 9,
-              "avg": ".211",
+              "ops": 0.667,
+              "hr": 10,
+              "avg": ".214",
               "pos": "CF"
             },
             {
@@ -4787,9 +5245,9 @@
         "status": "In Progress",
         "scores": {
           "home": 0,
-          "away": 1
+          "away": 2
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-14T23:15:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -4799,17 +5257,17 @@
           "over_price": -110,
           "under_price": -110,
           "spread": -1.5,
-          "p_home_mkt": 0.6051,
-          "p_away_mkt": 0.3949,
+          "p_home_mkt": 0.3725,
+          "p_away_mkt": 0.6276,
           "consensus": {
-            "p_home": 0.6051,
-            "p_away": 0.3949,
+            "p_home": 0.3725,
+            "p_away": 0.6276,
             "n_books": 2
           },
           "stage": "live",
           "capture_phase": "live",
           "is_pregame": false,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "captured_at": "2026-08-15T01:43:02.361Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "6446bd1ae336cb13a72e6206cba947640d1cb84a6c45c1254497dd317b4fc9f6",
@@ -4823,9 +5281,9 @@
           "captured_at_open": "2026-08-14T08:40:04.332Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": -0.0395,
+          "line_move": -0.2721,
           "total_line_move": 0.5,
-          "fav_side": "home",
+          "fav_side": "away",
           "books": [
             {
               "provider": "DraftKings",
@@ -4840,17 +5298,17 @@
             },
             {
               "provider": "DraftKings - Live Odds",
-              "ml_home": -141,
-              "ml_away": 122,
-              "over_under": 8.5,
-              "over_price": -125,
-              "under_price": -104,
-              "spread": -1.5,
-              "p_home_mkt": 0.565,
-              "p_away_mkt": 0.435
+              "ml_home": 870,
+              "ml_away": -1340,
+              "over_under": 2.5,
+              "over_price": 123,
+              "under_price": -160,
+              "spread": 1.5,
+              "p_home_mkt": 0.0997,
+              "p_away_mkt": 0.9003
             }
           ],
-          "book_disagreement": 0.0802,
+          "book_disagreement": 0.5455,
           "wp_curve": [
             {
               "half": "T",
@@ -4858,37 +5316,143 @@
               "home_wp": 0.633,
               "home_score": 0,
               "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 1,
+              "home_wp": 0.583,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 2,
+              "home_wp": 0.605,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 2,
+              "home_wp": 0.566,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 3,
+              "home_wp": 0.577,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 3,
+              "home_wp": 0.54,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 4,
+              "home_wp": 0.559,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.52,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.505,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 5,
+              "home_wp": 0.435,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 6,
+              "home_wp": 0.467,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.396,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.45,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.307,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.378,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 8,
+              "home_wp": 0.222,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 9,
+              "home_wp": 0.093,
+              "home_score": 0,
+              "away_score": 2
             }
           ],
           "espn_id": "401816517",
           "requested_stage": "open"
         },
-        "weather_forecast": {
-          "temp": 81,
-          "wind": "8 mph, Out To CF",
-          "precip_pct": 11,
-          "source": "open-meteo",
-          "stage": "forecast"
-        },
+        "weather_forecast": null,
         "pitchers": {
           "home": {
             "name": "Chris Sale",
-            "fip": 2.59,
+            "fip": 2.5,
             "hand": "L",
             "era": 3,
             "n": 3,
             "fatigue": "normal",
-            "k9": 11,
+            "k9": 11.2,
             "id": 519242
           },
           "away": {
             "name": "Brandon Pfaadt",
-            "fip": 4.09,
+            "fip": 3.93,
             "hand": "R",
             "era": 0,
             "n": 3,
             "fatigue": "normal",
-            "k9": 5.7,
+            "k9": 5.9,
             "id": 694297
           }
         },
@@ -4898,34 +5462,34 @@
               "order": 1,
               "id": 686948,
               "name": "Drake Baldwin",
-              "ops": 0.812,
+              "ops": 0.811,
               "hr": 20,
-              "avg": ".274",
+              "avg": ".275",
               "pos": "C"
             },
             {
               "order": 2,
               "id": 660670,
               "name": "Ronald Acuña Jr.",
-              "ops": 0.788,
+              "ops": 0.78,
               "hr": 12,
-              "avg": ".244",
+              "avg": ".241",
               "pos": "RF"
             },
             {
               "order": 3,
               "id": 621566,
               "name": "Matt Olson",
-              "ops": 0.889,
+              "ops": 0.883,
               "hr": 35,
-              "avg": ".264",
+              "avg": ".262",
               "pos": "1B"
             },
             {
               "order": 4,
               "id": 671739,
               "name": "Michael Harris II",
-              "ops": 0.808,
+              "ops": 0.807,
               "hr": 20,
               "avg": ".290",
               "pos": "CF"
@@ -4934,16 +5498,16 @@
               "order": 5,
               "id": 645277,
               "name": "Ozzie Albies",
-              "ops": 0.744,
+              "ops": 0.739,
               "hr": 20,
-              "avg": ".256",
+              "avg": ".254",
               "pos": "2B"
             },
             {
               "order": 6,
               "id": 643289,
               "name": "Mauricio Dubón",
-              "ops": 0.706,
+              "ops": 0.705,
               "hr": 10,
               "avg": ".264",
               "pos": "LF"
@@ -4952,27 +5516,27 @@
               "order": 7,
               "id": 573262,
               "name": "Mike Yastrzemski",
-              "ops": 0.719,
+              "ops": 0.712,
               "hr": 9,
-              "avg": ".234",
+              "avg": ".232",
               "pos": "LF"
             },
             {
               "order": 8,
               "id": 663586,
               "name": "Austin Riley",
-              "ops": 0.674,
+              "ops": 0.669,
               "hr": 15,
-              "avg": ".225",
+              "avg": ".223",
               "pos": "3B"
             },
             {
               "order": 9,
               "id": 805347,
               "name": "Jim Jarvis",
-              "ops": 0.597,
+              "ops": 0.586,
               "hr": 1,
-              "avg": ".222",
+              "avg": ".218",
               "pos": "SS"
             }
           ],
@@ -4981,25 +5545,25 @@
               "order": 1,
               "id": 672695,
               "name": "Geraldo Perdomo",
-              "ops": 0.735,
+              "ops": 0.744,
               "hr": 9,
-              "avg": ".247",
+              "avg": ".252",
               "pos": "SS"
             },
             {
               "order": 2,
               "id": 682998,
               "name": "Corbin Carroll",
-              "ops": 0.818,
+              "ops": 0.824,
               "hr": 18,
-              "avg": ".243",
+              "avg": ".246",
               "pos": "RF"
             },
             {
               "order": 3,
               "id": 672515,
               "name": "Gabriel Moreno",
-              "ops": 0.834,
+              "ops": 0.836,
               "hr": 8,
               "avg": ".304",
               "pos": "C"
@@ -5017,45 +5581,45 @@
               "order": 5,
               "id": 571448,
               "name": "Nolan Arenado",
-              "ops": 0.754,
+              "ops": 0.749,
               "hr": 18,
-              "avg": ".242",
+              "avg": ".240",
               "pos": "3B"
             },
             {
               "order": 6,
               "id": 545121,
               "name": "Ildemaro Vargas",
-              "ops": 0.718,
+              "ops": 0.715,
               "hr": 7,
-              "avg": ".268",
+              "avg": ".267",
               "pos": "1B"
             },
             {
               "order": 7,
               "id": 694374,
               "name": "Tim Tawa",
-              "ops": 0.663,
-              "hr": 6,
-              "avg": ".232",
+              "ops": 0.678,
+              "hr": 7,
+              "avg": ".233",
               "pos": "LF"
             },
             {
               "order": 8,
               "id": 682988,
               "name": "Tyler Locklear",
-              "ops": 0.846,
+              "ops": 0.801,
               "hr": 1,
-              "avg": ".294",
+              "avg": ".278",
               "pos": "1B"
             },
             {
               "order": 9,
               "id": 814439,
               "name": "Ryan Waldschmidt",
-              "ops": 0.731,
+              "ops": 0.719,
               "hr": 2,
-              "avg": ".280",
+              "avg": ".276",
               "pos": "CF"
             }
           ]
@@ -5393,12 +5957,12 @@
         "requested_stage": "open"
       },
       "observed": {
-        "status": "In Progress",
+        "status": "Game Over",
         "scores": {
-          "home": 0,
-          "away": 0
+          "home": 3,
+          "away": 1
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-14T23:15:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -5408,17 +5972,17 @@
           "over_price": -119,
           "under_price": -101,
           "spread": 1.5,
-          "p_home_mkt": 0.4176,
-          "p_away_mkt": 0.5825,
+          "p_home_mkt": 0.4149,
+          "p_away_mkt": 0.5851,
           "consensus": {
-            "p_home": 0.4176,
-            "p_away": 0.5825,
-            "n_books": 2
+            "p_home": 0.4149,
+            "p_away": 0.5851,
+            "n_books": 1
           },
-          "stage": "live",
-          "capture_phase": "live",
+          "stage": "final",
+          "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "captured_at": "2026-08-15T01:43:02.361Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "2fd4f31733d042cd2bb09c8bb580c7d7e8a44fc518b457c78fa82bb3ac87419f",
@@ -5432,7 +5996,7 @@
           "captured_at_open": "2026-08-14T04:00:04.331Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": 0.0001,
+          "line_move": -0.0026,
           "total_line_move": -0.5,
           "fav_side": "away",
           "books": [
@@ -5446,20 +6010,9 @@
               "spread": 1.5,
               "p_home_mkt": 0.4149,
               "p_away_mkt": 0.5851
-            },
-            {
-              "provider": "DraftKings - Live Odds",
-              "ml_home": 130,
-              "ml_away": -150,
-              "over_under": 6.5,
-              "over_price": -142,
-              "under_price": 109,
-              "spread": 1.5,
-              "p_home_mkt": 0.4202,
-              "p_away_mkt": 0.5798
             }
           ],
-          "book_disagreement": 0.0053,
+          "book_disagreement": 0,
           "wp_curve": [
             {
               "half": "T",
@@ -5474,18 +6027,127 @@
               "home_wp": 0.526,
               "home_score": 0,
               "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 2,
+              "home_wp": 0.521,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 2,
+              "home_wp": 0.526,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 3,
+              "home_wp": 0.514,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 3,
+              "home_wp": 0.475,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 4,
+              "home_wp": 0.49,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.467,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.522,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 5,
+              "home_wp": 0.487,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 6,
+              "home_wp": 0.353,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.673,
+              "home_score": 2,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.73,
+              "home_score": 2,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.774,
+              "home_score": 2,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.827,
+              "home_score": 2,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 8,
+              "home_wp": 0.917,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 9,
+              "home_wp": 1,
+              "home_score": 3,
+              "away_score": 1
             }
           ],
           "espn_id": "401816522",
-          "requested_stage": "open"
+          "requested_stage": "open",
+          "p_home_close": 0.4149,
+          "ml_home_close": 137,
+          "ml_away_close": -147,
+          "over_under_close": 7.5,
+          "over_price_close": -119,
+          "under_price_close": -101,
+          "spread_close": 1.5,
+          "captured_at_close": "2026-08-15T01:43:02.361Z",
+          "provider_close": "DraftKings",
+          "close_provenance": "explicit_close_capture"
         },
-        "weather_forecast": {
-          "temp": 74,
-          "wind": "4 mph",
-          "precip_pct": 0,
-          "source": "open-meteo",
-          "stage": "forecast"
-        },
+        "weather_forecast": null,
         "pitchers": {
           "home": {
             "name": "Shane Bieber",
@@ -5494,17 +6156,17 @@
             "era": 7.5,
             "n": 3,
             "fatigue": "normal",
-            "k9": 7,
+            "k9": 6.8,
             "id": 669456
           },
           "away": {
             "name": "Gerrit Cole",
-            "fip": 3.66,
+            "fip": 3.6,
             "hand": "R",
             "era": 1.45,
             "n": 3,
             "fatigue": "normal",
-            "k9": 9.7,
+            "k9": 9.6,
             "id": 543037
           }
         },
@@ -5514,18 +6176,18 @@
               "order": 1,
               "id": 703520,
               "name": "Brett Bateman",
-              "ops": 0.621,
+              "ops": 0.688,
               "hr": 0,
-              "avg": ".250",
+              "avg": ".290",
               "pos": "CF"
             },
             {
               "order": 2,
               "id": 664770,
               "name": "Nathan Lukes",
-              "ops": 0.691,
+              "ops": 0.684,
               "hr": 6,
-              "avg": ".268",
+              "avg": ".265",
               "pos": "RF"
             },
             {
@@ -5534,32 +6196,32 @@
               "name": "Vladimir Guerrero Jr.",
               "ops": 0.693,
               "hr": 7,
-              "avg": ".262",
+              "avg": ".263",
               "pos": "1B"
             },
             {
               "order": 4,
               "id": 543807,
               "name": "George Springer",
-              "ops": 0.706,
+              "ops": 0.698,
               "hr": 12,
-              "avg": ".233",
+              "avg": ".231",
               "pos": "DH"
             },
             {
               "order": 5,
               "id": 672386,
               "name": "Alejandro Kirk",
-              "ops": 0.694,
-              "hr": 4,
-              "avg": ".261",
+              "ops": 0.735,
+              "hr": 5,
+              "avg": ".269",
               "pos": "C"
             },
             {
               "order": 6,
               "id": 665926,
               "name": "Andrés Giménez",
-              "ops": 0.644,
+              "ops": 0.645,
               "hr": 8,
               "avg": ".238",
               "pos": "SS"
@@ -5568,18 +6230,18 @@
               "order": 7,
               "id": 672960,
               "name": "Kazuma Okamoto",
-              "ops": 0.731,
+              "ops": 0.73,
               "hr": 24,
-              "avg": ".226",
+              "avg": ".227",
               "pos": "3B"
             },
             {
               "order": 8,
               "id": 660821,
               "name": "Jesús Sánchez",
-              "ops": 0.748,
+              "ops": 0.739,
               "hr": 8,
-              "avg": ".266",
+              "avg": ".263",
               "pos": "RF"
             },
             {
@@ -5597,43 +6259,43 @@
               "order": 1,
               "id": 663757,
               "name": "Trent Grisham",
-              "ops": 0.728,
-              "hr": 15,
-              "avg": ".222",
+              "ops": 0.74,
+              "hr": 16,
+              "avg": ".225",
               "pos": "CF"
             },
             {
               "order": 2,
               "id": 700250,
               "name": "Ben Rice",
-              "ops": 0.888,
+              "ops": 0.883,
               "hr": 32,
-              "avg": ".255",
+              "avg": ".253",
               "pos": "DH"
             },
             {
               "order": 3,
               "id": 682987,
               "name": "Spencer Jones",
-              "ops": 0.694,
+              "ops": 0.701,
               "hr": 5,
-              "avg": ".211",
+              "avg": ".214",
               "pos": "CF"
             },
             {
               "order": 4,
               "id": 671277,
               "name": "Luis García Jr.",
-              "ops": 0.755,
+              "ops": 0.67,
               "hr": 1,
-              "avg": ".258",
+              "avg": ".229",
               "pos": "1B"
             },
             {
               "order": 5,
               "id": 665862,
               "name": "Jazz Chisholm Jr.",
-              "ops": 0.687,
+              "ops": 0.684,
               "hr": 17,
               "avg": ".216",
               "pos": "2B"
@@ -5642,9 +6304,9 @@
               "order": 6,
               "id": 671218,
               "name": "Heliot Ramos",
-              "ops": 0.393,
+              "ops": 0.355,
               "hr": 0,
-              "avg": ".080",
+              "avg": ".071",
               "pos": "LF"
             },
             {
@@ -5653,25 +6315,25 @@
               "name": "Ryan McMahon",
               "ops": 0.66,
               "hr": 10,
-              "avg": ".218",
+              "avg": ".219",
               "pos": "3B"
             },
             {
               "order": 8,
               "id": 669224,
               "name": "Austin Wells",
-              "ops": 0.581,
+              "ops": 0.579,
               "hr": 8,
-              "avg": ".180",
+              "avg": ".178",
               "pos": "C"
             },
             {
               "order": 9,
               "id": 806146,
               "name": "George Lombard Jr.",
-              "ops": 0.827,
+              "ops": 0.752,
               "hr": 2,
-              "avg": ".276",
+              "avg": ".250",
               "pos": "SS"
             }
           ]
@@ -6010,12 +6672,12 @@
         "requested_stage": "open"
       },
       "observed": {
-        "status": "Pre-Game",
+        "status": "In Progress",
         "scores": {
-          "home": 0,
-          "away": 0
+          "home": 5,
+          "away": 2
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-15T00:10:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -6025,17 +6687,17 @@
           "over_price": -112,
           "under_price": -107,
           "spread": -1.5,
-          "p_home_mkt": 0.5341,
-          "p_away_mkt": 0.4659,
+          "p_home_mkt": 0.6925,
+          "p_away_mkt": 0.3075,
           "consensus": {
-            "p_home": 0.5341,
-            "p_away": 0.4659,
-            "n_books": 1
+            "p_home": 0.6925,
+            "p_away": 0.3075,
+            "n_books": 2
           },
-          "stage": "pregame",
-          "capture_phase": "pregame",
-          "is_pregame": true,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "stage": "live",
+          "capture_phase": "live",
+          "is_pregame": false,
+          "captured_at": "2026-08-15T01:43:02.361Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "2fd4f31733d042cd2bb09c8bb580c7d7e8a44fc518b457c78fa82bb3ac87419f",
@@ -6049,7 +6711,7 @@
           "captured_at_open": "2026-08-14T04:00:04.331Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": -0.0071,
+          "line_move": 0.1513,
           "total_line_move": 0,
           "fav_side": "home",
           "books": [
@@ -6063,15 +6725,91 @@
               "spread": -1.5,
               "p_home_mkt": 0.5341,
               "p_away_mkt": 0.4659
+            },
+            {
+              "provider": "DraftKings - Live Odds",
+              "ml_home": -730,
+              "ml_away": 549,
+              "over_under": 11.5,
+              "over_price": 104,
+              "under_price": -135,
+              "spread": -2.5,
+              "p_home_mkt": 0.8509,
+              "p_away_mkt": 0.1491
             }
           ],
-          "book_disagreement": 0,
+          "book_disagreement": 0.3168,
+          "wp_curve": [
+            {
+              "half": "T",
+              "inn": 1,
+              "home_wp": 0.37,
+              "home_score": 0,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 1,
+              "home_wp": 0.469,
+              "home_score": 1,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 2,
+              "home_wp": 0.487,
+              "home_score": 1,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 2,
+              "home_wp": 0.848,
+              "home_score": 5,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 3,
+              "home_wp": 0.867,
+              "home_score": 5,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 3,
+              "home_wp": 0.869,
+              "home_score": 5,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 4,
+              "home_wp": 0.892,
+              "home_score": 5,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.895,
+              "home_score": 5,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.898,
+              "home_score": 5,
+              "away_score": 2
+            }
+          ],
           "espn_id": "401816526",
           "requested_stage": "open"
         },
         "weather_forecast": {
           "temp": 86,
-          "wind": "8 mph",
+          "wind": "7 mph",
           "precip_pct": 2,
           "source": "open-meteo",
           "stage": "forecast"
@@ -6079,7 +6817,7 @@
         "pitchers": {
           "home": {
             "name": "Peter Lambert",
-            "fip": 3.97,
+            "fip": 3.94,
             "hand": "R",
             "era": 3.45,
             "n": 3,
@@ -6089,12 +6827,12 @@
           },
           "away": {
             "name": "George Kirby",
-            "fip": 3.66,
+            "fip": 3.74,
             "hand": "R",
             "era": 4.5,
             "n": 3,
             "fatigue": "normal",
-            "k9": 7.6,
+            "k9": 7.5,
             "id": 669923
           }
         },
@@ -6104,45 +6842,45 @@
               "order": 1,
               "id": 665161,
               "name": "Jeremy Peña",
-              "ops": 0.822,
+              "ops": 0.821,
               "hr": 13,
-              "avg": ".290",
+              "avg": ".291",
               "pos": "SS"
             },
             {
               "order": 2,
               "id": 670541,
               "name": "Yordan Alvarez",
-              "ops": 1.057,
-              "hr": 35,
-              "avg": ".322",
+              "ops": 1.068,
+              "hr": 36,
+              "avg": ".325",
               "pos": "DH"
             },
             {
               "order": 3,
               "id": 670623,
               "name": "Isaac Paredes",
-              "ops": 0.761,
+              "ops": 0.762,
               "hr": 15,
-              "avg": ".254",
+              "avg": ".255",
               "pos": "3B"
             },
             {
               "order": 4,
               "id": 666211,
               "name": "Taylor Trammell",
-              "ops": 0.746,
+              "ops": 0.738,
               "hr": 7,
-              "avg": ".235",
+              "avg": ".232",
               "pos": "CF"
             },
             {
               "order": 5,
               "id": 514888,
               "name": "Jose Altuve",
-              "ops": 0.695,
+              "ops": 0.691,
               "hr": 13,
-              "avg": ".240",
+              "avg": ".239",
               "pos": "2B"
             },
             {
@@ -6158,27 +6896,27 @@
               "order": 7,
               "id": 572233,
               "name": "Christian Walker",
-              "ops": 0.765,
+              "ops": 0.766,
               "hr": 22,
-              "avg": ".236",
+              "avg": ".237",
               "pos": "1B"
             },
             {
               "order": 8,
               "id": 701358,
               "name": "Cam Smith",
-              "ops": 0.69,
+              "ops": 0.697,
               "hr": 16,
-              "avg": ".224",
+              "avg": ".226",
               "pos": "RF"
             },
             {
               "order": 9,
               "id": 543877,
               "name": "Christian Vázquez",
-              "ops": 0.583,
+              "ops": 0.592,
               "hr": 5,
-              "avg": ".211",
+              "avg": ".215",
               "pos": "C"
             }
           ],
@@ -6187,54 +6925,54 @@
               "order": 1,
               "id": 702284,
               "name": "Cole Young",
-              "ops": 0.724,
+              "ops": 0.719,
               "hr": 14,
-              "avg": ".262",
+              "avg": ".260",
               "pos": "2B"
             },
             {
               "order": 2,
               "id": 668227,
               "name": "Randy Arozarena",
-              "ops": 0.822,
+              "ops": 0.826,
               "hr": 16,
-              "avg": ".276",
+              "avg": ".277",
               "pos": "LF"
             },
             {
               "order": 3,
               "id": 686527,
               "name": "Dominic Canzone",
-              "ops": 0.819,
+              "ops": 0.823,
               "hr": 19,
-              "avg": ".252",
+              "avg": ".254",
               "pos": "DH"
             },
             {
               "order": 4,
               "id": 677594,
               "name": "Julio Rodríguez",
-              "ops": 0.75,
+              "ops": 0.753,
               "hr": 19,
-              "avg": ".257",
+              "avg": ".258",
               "pos": "CF"
             },
             {
               "order": 5,
               "id": 647304,
               "name": "Josh Naylor",
-              "ops": 0.703,
+              "ops": 0.7,
               "hr": 10,
-              "avg": ".264",
+              "avg": ".263",
               "pos": "1B"
             },
             {
               "order": 6,
               "id": 680977,
               "name": "Brendan Donovan",
-              "ops": 0.747,
+              "ops": 0.752,
               "hr": 3,
-              "avg": ".250",
+              "avg": ".255",
               "pos": "3B"
             },
             {
@@ -6250,19 +6988,19 @@
               "order": 8,
               "id": 645302,
               "name": "Victor Robles",
-              "ops": 0.555,
+              "ops": 0.546,
               "hr": 0,
-              "avg": ".241",
+              "avg": ".237",
               "pos": "RF"
             },
             {
               "order": 9,
               "id": 801126,
               "name": "Brock Rodden",
-              "ops": null,
-              "hr": null,
-              "avg": null,
-              "pos": null
+              "ops": 0,
+              "hr": 0,
+              "avg": ".000",
+              "pos": "2B"
             }
           ]
         },
@@ -6593,12 +7331,12 @@
         "requested_stage": "open"
       },
       "observed": {
-        "status": "Pre-Game",
+        "status": "In Progress",
         "scores": {
           "home": 0,
           "away": 0
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-15T01:38:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -6608,17 +7346,17 @@
           "over_price": -108,
           "under_price": -112,
           "spread": 1.5,
-          "p_home_mkt": 0.4976,
-          "p_away_mkt": 0.5024,
+          "p_home_mkt": 0.5195,
+          "p_away_mkt": 0.4805,
           "consensus": {
-            "p_home": 0.4976,
-            "p_away": 0.5024,
-            "n_books": 1
+            "p_home": 0.5195,
+            "p_away": 0.4805,
+            "n_books": 2
           },
-          "stage": "pregame",
-          "capture_phase": "pregame",
-          "is_pregame": true,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "stage": "live",
+          "capture_phase": "live",
+          "is_pregame": false,
+          "captured_at": "2026-08-15T01:43:02.361Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "2fd4f31733d042cd2bb09c8bb580c7d7e8a44fc518b457c78fa82bb3ac87419f",
@@ -6632,9 +7370,9 @@
           "captured_at_open": "2026-08-14T04:00:04.331Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": -0.0067,
+          "line_move": 0.0152,
           "total_line_move": -0.5,
-          "fav_side": "away",
+          "fav_side": "home",
           "books": [
             {
               "provider": "DraftKings",
@@ -6646,19 +7384,33 @@
               "spread": 1.5,
               "p_home_mkt": 0.4976,
               "p_away_mkt": 0.5024
+            },
+            {
+              "provider": "DraftKings - Live Odds",
+              "ml_home": -127,
+              "ml_away": 111,
+              "over_under": 7.5,
+              "over_price": -130,
+              "under_price": 100,
+              "spread": -1.5,
+              "p_home_mkt": 0.5414,
+              "p_away_mkt": 0.4586
             }
           ],
-          "book_disagreement": 0,
+          "book_disagreement": 0.0438,
+          "wp_curve": [
+            {
+              "half": "T",
+              "inn": 1,
+              "home_wp": 0.472,
+              "home_score": 0,
+              "away_score": 0
+            }
+          ],
           "espn_id": "401816529",
           "requested_stage": "open"
         },
-        "weather_forecast": {
-          "temp": 77,
-          "wind": "8 mph, Out To CF",
-          "precip_pct": 0,
-          "source": "open-meteo",
-          "stage": "forecast"
-        },
+        "weather_forecast": null,
         "pitchers": {
           "home": {
             "name": "Grayson Rodriguez",
@@ -6770,9 +7522,9 @@
               "order": 1,
               "id": 695600,
               "name": "Carter Jensen",
-              "ops": 0.707,
+              "ops": 0.705,
               "hr": 16,
-              "avg": ".222",
+              "avg": ".221",
               "pos": "C"
             },
             {
@@ -7174,32 +7926,32 @@
         "book_disagreement": 0
       },
       "observed": {
-        "status": "Pre-Game",
+        "status": "In Progress",
         "scores": {
           "home": 0,
           "away": 0
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-15T01:40:00Z",
         "odds": {
           "provider": "DraftKings",
-          "ml_home": -104,
-          "ml_away": -103,
+          "ml_home": 103,
+          "ml_away": -111,
           "over_under": 9.5,
-          "over_price": -103,
-          "under_price": -117,
+          "over_price": -107,
+          "under_price": -113,
           "spread": 1.5,
-          "p_home_mkt": 0.5012,
-          "p_away_mkt": 0.4988,
+          "p_home_mkt": 0.4923,
+          "p_away_mkt": 0.5077,
           "consensus": {
-            "p_home": 0.5012,
-            "p_away": 0.4988,
-            "n_books": 1
+            "p_home": 0.4923,
+            "p_away": 0.5077,
+            "n_books": 2
           },
-          "stage": "pregame",
-          "capture_phase": "pregame",
-          "is_pregame": true,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "stage": "live",
+          "capture_phase": "live",
+          "is_pregame": false,
+          "captured_at": "2026-08-15T01:43:02.361Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "6446bd1ae336cb13a72e6206cba947640d1cb84a6c45c1254497dd317b4fc9f6",
@@ -7213,37 +7965,42 @@
           "captured_at_open": "2026-08-14T08:40:04.332Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": -0.0086,
+          "line_move": -0.0175,
           "total_line_move": 0,
-          "fav_side": "home",
+          "fav_side": "away",
           "books": [
             {
               "provider": "DraftKings",
-              "ml_home": -104,
-              "ml_away": -103,
+              "ml_home": 103,
+              "ml_away": -111,
               "over_under": 9.5,
-              "over_price": -103,
-              "under_price": -117,
+              "over_price": -107,
+              "under_price": -113,
               "spread": 1.5,
-              "p_home_mkt": 0.5012,
-              "p_away_mkt": 0.4988
+              "p_home_mkt": 0.4836,
+              "p_away_mkt": 0.5164
+            },
+            {
+              "provider": "DraftKings - Live Odds",
+              "ml_home": -108,
+              "ml_away": -107,
+              "over_under": 9.5,
+              "over_price": 103,
+              "under_price": -134,
+              "spread": 1.5,
+              "p_home_mkt": 0.5011,
+              "p_away_mkt": 0.4989
             }
           ],
-          "book_disagreement": 0,
+          "book_disagreement": 0.0175,
           "espn_id": "401816531",
           "requested_stage": "open"
         },
-        "weather_forecast": {
-          "temp": 79,
-          "wind": "9 mph, Out To CF",
-          "precip_pct": 0,
-          "source": "open-meteo",
-          "stage": "forecast"
-        },
+        "weather_forecast": null,
         "pitchers": {
           "home": {
             "name": "Gage Jump",
-            "fip": 3.77,
+            "fip": 3.76,
             "hand": "L",
             "era": 4.6,
             "n": 3,
@@ -7351,9 +8108,9 @@
               "order": 1,
               "id": 694671,
               "name": "Wyatt Langford",
-              "ops": 0.777,
+              "ops": 0.774,
               "hr": 13,
-              "avg": ".253",
+              "avg": ".252",
               "pos": "LF"
             },
             {
@@ -7768,7 +8525,7 @@
           "home": 0,
           "away": 0
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-15T02:10:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -7788,7 +8545,7 @@
           "stage": "pregame",
           "capture_phase": "pregame",
           "is_pregame": true,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "captured_at": "2026-08-15T01:43:02.361Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "2fd4f31733d042cd2bb09c8bb580c7d7e8a44fc518b457c78fa82bb3ac87419f",
@@ -7822,13 +8579,7 @@
           "espn_id": "401816530",
           "requested_stage": "open"
         },
-        "weather_forecast": {
-          "temp": 73,
-          "wind": "7 mph, Out To CF",
-          "precip_pct": 0,
-          "source": "open-meteo",
-          "stage": "forecast"
-        },
+        "weather_forecast": null,
         "pitchers": {
           "home": {
             "name": "Yoshinobu Yamamoto",
@@ -8049,7 +8800,7 @@
           "both_complete": true,
           "ops_diff": 0.018,
           "changes_public_probability": false,
-          "captured_at": "2026-08-14T23:28:59.821Z",
+          "captured_at": "2026-08-15T01:42:59.219Z",
           "temporal_scope": "pregame_context"
         }
       },
@@ -8354,7 +9105,7 @@
           "home": 0,
           "away": 0
         },
-        "captured_at": "2026-08-14T23:28:59.821Z",
+        "captured_at": "2026-08-15T01:42:59.219Z",
         "first_pitch": "2026-08-15T02:15:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -8374,7 +9125,7 @@
           "stage": "pregame",
           "capture_phase": "pregame",
           "is_pregame": true,
-          "captured_at": "2026-08-14T23:29:02.566Z",
+          "captured_at": "2026-08-15T01:43:02.361Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "2fd4f31733d042cd2bb09c8bb580c7d7e8a44fc518b457c78fa82bb3ac87419f",
@@ -8408,13 +9159,7 @@
           "espn_id": "401816528",
           "requested_stage": "open"
         },
-        "weather_forecast": {
-          "temp": 60,
-          "wind": "14 mph, Out To CF",
-          "precip_pct": 0,
-          "source": "open-meteo",
-          "stage": "forecast"
-        },
+        "weather_forecast": null,
         "pitchers": {
           "home": {
             "name": "Landen Roupp",
@@ -8635,7 +9380,7 @@
           "both_complete": true,
           "ops_diff": -0.271,
           "changes_public_probability": false,
-          "captured_at": "2026-08-14T23:28:59.821Z",
+          "captured_at": "2026-08-15T01:42:59.219Z",
           "temporal_scope": "pregame_context"
         }
       },
