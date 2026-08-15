@@ -283,7 +283,23 @@
       "note": "Abridor cambió (visita: TBD → Wandy Peralta) — el análisis original ya no aplica"
     }
   },
-  "starter_observations": {},
+  "starter_observations": {
+    "824400": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-08-15T23:27:13.396Z",
+      "scheduled_start_utc": "2026-08-15T23:10:00Z",
+      "phase": "late_or_unknown",
+      "changes": [
+        {
+          "side": "away",
+          "from_id": null,
+          "to_id": "593974",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (visita: TBD → Wandy Peralta) — el análisis original ya no aplica"
+    }
+  },
   "shadow": {
     "late_plays": [],
     "market_plays": [],
@@ -1281,17 +1297,19 @@
           "aa_home_prob": 0.4718,
           "agrees_with_aa": true,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.673,
+            "away_lineup_ops": 0.662,
+            "ops_diff": 0.011,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-08-15T23:27:13.396Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": false,
           "scheduled_start_utc": "2026-08-16T01:40:00Z",
           "feature_as_of": "2026-08-15T11:27:28.921Z",
           "features": {
@@ -1314,7 +1332,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "0732d35204620fe873498baf93e3bae8970151b1891fa99bc2345b75c70f0742"
         }
       ]
     }
