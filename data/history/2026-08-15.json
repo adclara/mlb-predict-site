@@ -266,7 +266,23 @@
     "824884": "2026-08-15T23:15:00Z",
     "824966": "2026-08-16T01:40:00Z"
   },
-  "starter_invalidations": {},
+  "starter_invalidations": {
+    "824400": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-08-15T19:26:48.807Z",
+      "scheduled_start_utc": "2026-08-15T23:10:00Z",
+      "phase": "pregame",
+      "changes": [
+        {
+          "side": "away",
+          "from_id": null,
+          "to_id": "593974",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (visita: TBD → Wandy Peralta) — el análisis original ya no aplica"
+    }
+  },
   "starter_observations": {},
   "shadow": {
     "late_plays": [],
@@ -947,17 +963,19 @@
           "aa_home_prob": 0.5411,
           "agrees_with_aa": true,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.755,
+            "away_lineup_ops": 0.713,
+            "ops_diff": 0.042,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-08-15T19:26:48.807Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": true,
           "scheduled_start_utc": "2026-08-15T23:10:00Z",
           "feature_as_of": "2026-08-15T11:27:28.921Z",
           "features": {
@@ -980,7 +998,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "3e1e35382b75c10c2590366307b061fb1f9816ad510c7a774181cbe244d8959b"
         },
         {
           "game_pk": 823671,
