@@ -250,6 +250,21 @@
         }
       ],
       "note": "Abridor cambió (local: TBD → Kent Emanuel · visita: TBD → Quinn Mathews) — el análisis original ya no aplica"
+    },
+    "824725": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-08-17T15:32:07.408Z",
+      "scheduled_start_utc": "2026-08-17T23:10:00Z",
+      "phase": "pregame",
+      "changes": [
+        {
+          "side": "home",
+          "from_id": null,
+          "to_id": "687941",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (local: TBD → Alec Gamboa) — el análisis original ya no aplica"
     }
   },
   "starter_observations": {},
@@ -435,17 +450,19 @@
           "aa_home_prob": 0.5002,
           "agrees_with_aa": false,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.657,
+            "away_lineup_ops": 0.816,
+            "ops_diff": -0.159,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-08-17T15:32:07.408Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": false,
           "scheduled_start_utc": "2026-08-17T17:40:00Z",
           "feature_as_of": "2026-08-17T11:33:12.311Z",
           "features": {
@@ -468,7 +485,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "553263d8a669ce107e19fd12a8164df53f5822e909ea609600db932c34047c0c"
         },
         {
           "game_pk": 824478,
