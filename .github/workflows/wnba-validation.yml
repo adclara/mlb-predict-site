@@ -6,7 +6,21 @@ on:
   schedule:
     - cron: '7 10 * * *'
     - cron: '37 10 * * 0'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      full_refresh:
+        description: Run the weekly backfill and burn-in refit
+        required: false
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - '.github/workflows/wnba-validation.yml'
+      - 'robot/fase2_backfill.mjs'
+      - 'robot/wnba_market_model.mjs'
+      - 'robot/wnba_player_model.mjs'
+      - 'robot/wnba_player_winner.mjs'
+      - 'tests/wnba_*.test.mjs'
 
 permissions:
   contents: read
@@ -31,11 +45,11 @@ jobs:
           key: wnba-history-${{ github.run_id }}
           restore-keys: wnba-history-
       - name: Actualizar temporada WNBA (semanal)
-        if: github.event.schedule == '37 10 * * 0'
+        if: github.event.schedule == '37 10 * * 0' || github.event_name == 'pull_request' || inputs.full_refresh
         run: node robot/fase2_backfill.mjs wnba
       - name: Actualizar box scores de jugadoras
         run: |
-          if [ "${{ github.event.schedule }}" = "37 10 * * 0" ]; then
+          if [ "${{ github.event.schedule }}" = "37 10 * * 0" ] || [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ inputs.full_refresh }}" = "true" ]; then
             node robot/wnba_player_model.mjs backfill
           else
             node robot/wnba_player_model.mjs backfill --recent
@@ -46,15 +60,17 @@ jobs:
           node robot/wnba_player_winner.mjs
           node --test tests/wnba_market_model.test.mjs tests/wnba_player_winner.test.mjs
       - name: Publicar evidencia agregada de simulación
+        if: github.event_name != 'pull_request'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: node robot/wnba_publish_simulation.mjs
       - name: Refit semanal del burn-in de ganador
-        if: github.event.schedule == '37 10 * * 0'
+        if: github.event.schedule == '37 10 * * 0' || github.event_name == 'pull_request' || inputs.full_refresh
         run: |
           node robot/wnba_model.mjs backtest 2
           node --test tests/wnba_model.test.mjs tests/wnba_player_winner.test.mjs
       - name: Guardar histórico incremental WNBA
+        if: github.event_name != 'pull_request'
         uses: actions/cache/save@v6
         with:
           path: data/fase2/wnba

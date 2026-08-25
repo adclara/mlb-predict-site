@@ -177,8 +177,9 @@ humana ni scope público. No requiere copiar `CLOUDFLARE_API_TOKEN` al repo priv
   predicciones** hasta pasar gate (calibración + muestra en vivo suficiente) y con
   aprobación humana. NBA se enciende ~octubre; tenis stats depende de TENNIS_API_KEY.
 - **WNBA**: cobertura factual pública + Elo/MOV privado en sombra. Backtest
-  cronológico 2023–2026: 1,091 juegos, Brier 0.2132 y 66.3% de acierto (2021–22
-  son burn-in). Totales y PTS/REB/AST tienen backtests causales separados; sin
+  cronológico desde 2023 con 2021–22 como burn-in; la muestra y las métricas se
+  recalculan con cada backfill semanal y se validan contra sus temporadas, sin
+  fijar como contrato un conteo mutable. Totales y PTS/REB/AST tienen backtests causales separados; sin
   líneas/precios pregame auditables sus gates permanecen cerrados. Es evidencia
   histórica, no garantía: no publica picks hasta completar muestra forward,
   calibración, comparación de mercado y aprobación.
