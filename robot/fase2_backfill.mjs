@@ -41,6 +41,24 @@ async function get(url, asText = true, tries = 3, extraHeaders = {}) {
   return null;
 }
 
+// A required JSON source must never be converted into an empty result. This is
+// used by mutable-season validation so a provider outage cannot create a
+// partial history that still looks valid.
+async function getRequiredJson(url, tries = 5) {
+  let lastError = null;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const res = await fetch(url, { headers: { 'user-agent': 'aa-sports-backfill/1.0' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    } catch (error) {
+      lastError = error;
+      if (i + 1 < tries) await sleep(800 * (2 ** i));
+    }
+  }
+  throw new Error(`required source request failed after ${tries} attempts: ${url}: ${lastError?.message || 'unknown error'}`);
+}
+
 // CSV simple (las fuentes usadas no llevan comas dentro de campos con comillas
 // salvo casos raros; se manejan comillas básicas por si acaso).
 function parseCsv(text) {
@@ -373,12 +391,15 @@ async function pullWnba() {
       continue;
     }
     const games = [];
+    const seen = new Set();
+    let queriesSucceeded = 0;
     const dates = [...dateRange(season.from, season.to)];
     for (let i = 0; i < dates.length; i += 8) {
       const batch = dates.slice(i, i + 8);
       const results = await Promise.all(batch.map(async (date) => {
-        const d = await get(`https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard?dates=${date.replaceAll('-', '')}&limit=100`, false);
-        if (!d || !Array.isArray(d.events)) return [];
+        const d = await getRequiredJson(`https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard?dates=${date.replaceAll('-', '')}&limit=100`);
+        queriesSucceeded++;
+        if (!Array.isArray(d.events)) throw new Error(`WNBA ${date}: provider response has no events array`);
         return d.events.map((ev) => {
           const c = (ev.competitions && ev.competitions[0]) || {};
           const comp = c.competitors || [];
@@ -392,6 +413,7 @@ async function pullWnba() {
           const rec = (t) => (Array.isArray(t.records) && t.records[0] && t.records[0].summary) || null;
           const o = Array.isArray(c.odds) && c.odds[0] ? c.odds[0] : null;
           return {
+            event_id: ev.id != null ? String(ev.id) : null,
             date, type, neutral: !!c.neutralSite,
             home: home.team && home.team.abbreviation, hs: num(home.score),
             away: away.team && away.team.abbreviation, as: num(away.score),
@@ -400,10 +422,19 @@ async function pullWnba() {
           };
         }).filter(Boolean);
       }));
-      games.push(...results.flat());
+      for (const game of results.flat()) {
+        const key = game.event_id || `${game.date}|${game.home}|${game.away}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        games.push(game);
+      }
       await sleep(120);
       if (i % 80 === 0) console.log(`  ${season.name}: ${day0(dates, i)}… ${games.length} juegos`);
     }
+    if (queriesSucceeded !== dates.length) {
+      throw new Error(`WNBA ${season.name}: source coverage ${queriesSucceeded}/${dates.length}`);
+    }
+    console.log(`  ${season.name}: cobertura fuente ${queriesSucceeded}/${dates.length}; ${seen.size} juegos únicos`);
     writeFileSync(file, JSON.stringify({ season: season.name, games }));
     manifest.wnba[season.name] = games.length;
     console.log(`  ${season.name}: ${games.length} juegos finales`);
