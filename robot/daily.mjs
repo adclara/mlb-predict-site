@@ -181,7 +181,7 @@ export function mergeGameRows(previousRows, freshRows, { asOf, freezeFeatures = 
           feature_scope: migratedEligible ? 'backfill_asof' : 'legacy_unverifiable',
           integrity: old.integrity || {
             ledger_version: 'v2', cohort: 'legacy_native_mutable', training_eligible: false,
-            reason: 'pregame_capture_time_unverifiable', first_pitch, official_date: old.game_date ?? old.date ?? null,
+            reason: 'pregame_capture_time_unverifiable', first_pitch: firstPitch, official_date: old.game_date ?? old.date ?? null,
           },
           versions: old.versions || {
             formula: old.formula_version ?? FORMULA_VERSION,
