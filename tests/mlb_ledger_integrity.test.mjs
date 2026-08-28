@@ -102,6 +102,28 @@ test('upsert lógico conserva el veredicto integrity de una fila migrada', () =>
   assert.match(sealed.feature_hash, /^[a-f0-9]{64}$/)
 })
 
+test('upsert tardío sella una fila legacy sin integrity usando la hora del juego', () => {
+  const firstPitch = '2026-07-20T20:00:00Z'
+  const old = {
+    game_pk: 10,
+    date: '2026-07-20',
+    game_date: '2026-07-20',
+    game_datetime: firstPitch,
+    status: 'Scheduled',
+    model_p: 0.51,
+  }
+  const [sealed] = mergeGameRows([old], [{ ...old, status: 'Final', model_p: 0.88 }], {
+    asOf: '2026-07-21T12:00:00Z',
+    freezeFeatures: true,
+  })
+  assert.equal(sealed.model_p, 0.51)
+  assert.equal(sealed.first_pitch, firstPitch)
+  assert.equal(sealed.integrity.first_pitch, firstPitch)
+  assert.equal(sealed.integrity.reason, 'pregame_capture_time_unverifiable')
+  assert.equal(sealed.integrity.training_eligible, false)
+  assert.match(sealed.feature_hash, /^[a-f0-9]{64}$/)
+})
+
 test('un slate vacío también se congela; ORO y laboratorios nacen en sombra', () => {
   const rows = [{ game_pk: 1, game_datetime: '2026-07-21T23:00:00Z' }]
   const first = buildSlateRecord(null, {
