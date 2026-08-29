@@ -855,22 +855,83 @@ function safeIntelligenceProvider(source) {
   if (!source || typeof source !== 'object') return null;
   const out = {};
   for (const key of ['matched', 'fresh', 'usable']) if (typeof source[key] === 'boolean') out[key] = source[key];
-  for (const key of ['prob', 'bid', 'ask', 'mid', 'spread', 'indicative', 'volume_24h', 'liquidity', 'n', 'disagreement']) {
+  for (const key of ['prob', 'bid', 'ask', 'mid', 'spread', 'indicative', 'volume_24h', 'liquidity', 'n', 'disagreement', 'candidates']) {
     const value = intelligenceNumber(source[key]); if (value != null) out[key] = value;
   }
-  for (const key of ['as_of', 'market_id', 'ticker']) {
+  for (const key of ['as_of', 'market_id', 'ticker', 'reason']) {
     const value = intelligenceText(source[key]); if (value) out[key] = value;
   }
   return Object.keys(out).length ? out : null;
+}
+
+function safeIntelligenceRecord(record) {
+  if (!record || typeof record !== 'object') return null;
+  return { text: intelligenceText(record.text, 20), wins: Math.max(0, intelligenceNumber(record.wins) || 0),
+    losses: Math.max(0, intelligenceNumber(record.losses) || 0), pct: intelligenceNumber(record.pct) };
+}
+
+function safeIntelligenceRecent(rows) {
+  return (Array.isArray(rows) ? rows : []).slice(0, 5).map((row) => ({ w: row?.w === true,
+    score: intelligenceText(row?.score, 20), opp: intelligenceText(row?.opp, 30), date: intelligenceText(row?.date, 10) }));
+}
+
+function safeIntelligenceContext(context) {
+  if (!context || typeof context !== 'object') return null;
+  const number = (key) => intelligenceNumber(context[key]);
+  const out = {
+    probability_kind: intelligenceText(context.probability_kind, 30), provider: intelligenceText(context.provider, 60),
+    summary_es: intelligenceText(context.summary_es, 300), price: number('price'), spread: number('spread'), total: number('total'),
+    open_prob: number('open_prob'), line_move: number('line_move'), pick_record: safeIntelligenceRecord(context.pick_record),
+    opponent_record: safeIntelligenceRecord(context.opponent_record), pick_recent: safeIntelligenceRecent(context.pick_recent),
+    opponent_recent: safeIntelligenceRecent(context.opponent_recent),
+  };
+  out.metrics = (Array.isArray(context.metrics) ? context.metrics : []).slice(0, 8).map((metric) => ({
+    key: intelligenceText(metric?.key, 50), label: intelligenceText(metric?.label, 80), value: intelligenceText(metric?.value, 50),
+    kind: intelligenceText(metric?.kind, 30), score: intelligenceNumber(metric?.score),
+  })).filter((metric) => metric.key || metric.label);
+  const formSide = (rows) => (Array.isArray(rows) ? rows : []).slice(0, 5).map((row) => ({ date: intelligenceText(row?.date, 10),
+    opp: intelligenceText(row?.opp, 30), w: row?.w === true, score: intelligenceText(row?.score, 20) }));
+  out.form = context.form ? { home: formSide(context.form.home), away: formSide(context.form.away) } : null;
+  const offense = (side) => side && typeof side === 'object' ? { ops: intelligenceNumber(side.ops), runs: intelligenceNumber(side.runs) } : null;
+  out.offense = context.offense ? { home: offense(context.offense.home), away: offense(context.offense.away) } : null;
+  const pitcher = (side) => side && typeof side === 'object' ? { name: intelligenceText(side.name, 80), era_recent: intelligenceNumber(side.era_recent),
+    starts: intelligenceNumber(side.starts), fatigue: intelligenceText(side.fatigue, 20), fip: intelligenceNumber(side.fip),
+    hand: intelligenceText(side.hand, 5), k9: intelligenceNumber(side.k9) } : null;
+  out.pitchers = context.pitchers ? { home: pitcher(context.pitchers.home), away: pitcher(context.pitchers.away) } : null;
+  out.bullpen = context.bullpen ? { home_fip: intelligenceNumber(context.bullpen.home_fip), away_fip: intelligenceNumber(context.bullpen.away_fip) } : null;
+  out.edges = (Array.isArray(context.edges) ? context.edges : []).slice(0, 8).map((edge) => ({ factor: intelligenceText(edge?.factor, 80),
+    favors: intelligenceText(edge?.favors, 10), strength: intelligenceNumber(edge?.strength) })).filter((edge) => edge.factor);
+  out.weather = context.weather ? { condition: intelligenceText(context.weather.condition, 50), temp_f: intelligenceNumber(context.weather.temp_f),
+    wind: intelligenceText(context.weather.wind, 30), precip_pct: intelligenceNumber(context.weather.precip_pct) } : null;
+  out.risk = context.risk ? { level: intelligenceText(context.risk.level, 20), score: intelligenceNumber(context.risk.score) } : null;
+  out.market = context.market ? { p_home_pct: intelligenceNumber(context.market.p_home_pct), p_away_pct: intelligenceNumber(context.market.p_away_pct),
+    line_move: intelligenceNumber(context.market.line_move), p_home_open_pct: intelligenceNumber(context.market.p_home_open_pct), spread: intelligenceNumber(context.market.spread) } : null;
+  return out;
+}
+
+function safeIntelligenceReason(reason) {
+  if (typeof reason === 'string') return { code: 'measured_reason', text: reason.slice(0, 180) };
+  if (!reason || typeof reason !== 'object') return null;
+  const out = { code: intelligenceText(reason.code, 60), text: intelligenceText(reason.text, 180), value: intelligenceNumber(reason.value),
+    provider: intelligenceText(reason.provider, 60), pick_record: intelligenceText(reason.pick_record, 20),
+    opponent_record: intelligenceText(reason.opponent_record, 20), pick_wins: intelligenceNumber(reason.pick_wins),
+    pick_n: intelligenceNumber(reason.pick_n), opponent_wins: intelligenceNumber(reason.opponent_wins), opponent_n: intelligenceNumber(reason.opponent_n),
+    pick_name: intelligenceText(reason.pick_name, 80), opponent_name: intelligenceText(reason.opponent_name, 80),
+    pick_value: intelligenceNumber(reason.pick_value), opponent_value: intelligenceNumber(reason.opponent_value),
+    level: intelligenceText(reason.level, 20), score: intelligenceNumber(reason.score) };
+  return out.code ? out : null;
 }
 
 export function sanitizeIntelligenceDoc(source, nowMs = Date.now()) {
   const doc = source && typeof source === 'object' ? source : {};
   const asOf = intelligenceText(doc.as_of, 40);
   const stale = !asOf || !Number.isFinite(Date.parse(asOf)) || nowMs - Date.parse(asOf) > 75 * 60 * 1000;
-  const slate = (Array.isArray(doc.slate) ? doc.slate : []).slice(0, 7).map((item) => {
-    const prob = intelligenceNumber(item?.aa?.prob);
-    if (!item?.id || !item?.event_id || !item?.pick || prob == null || item?.aa?.public_gate !== true) return null;
+  const slate = (Array.isArray(doc.slate) ? doc.slate : []).slice(0, 12).map((item) => {
+    const scope = item?.selection_scope === 'market_fact' ? 'market_fact' : 'aa_public';
+    const prob = intelligenceNumber(item?.probability?.value ?? item?.aa?.prob ?? item?.market_pick?.prob);
+    const start = Date.parse(item?.start || 0), authorized = scope === 'market_fact'
+      ? item?.market_pick?.public_fact === true : item?.aa?.public_gate === true;
+    if (!item?.id || !item?.event_id || !item?.pick || !(prob > .60) || !authorized || !Number.isFinite(start) || start <= nowMs || (stale && scope === 'market_fact')) return null;
     const consensus = item.consensus && typeof item.consensus === 'object' ? {
       state: stale ? 'insufficient' : ['agree', 'conflict', 'insufficient'].includes(item.consensus.state) ? item.consensus.state : 'insufficient',
       market_prob: stale ? null : intelligenceNumber(item.consensus.market_prob),
@@ -892,25 +953,35 @@ export function sanitizeIntelligenceDoc(source, nowMs = Date.now()) {
       id: intelligenceText(item.id), sport: intelligenceText(item.sport, 20), event_id: intelligenceText(item.event_id),
       start: intelligenceText(item.start, 40), home: safeSportSide(item.home), away: safeSportSide(item.away),
       market: intelligenceText(item.market, 30), pick: intelligenceText(item.pick),
-      aa: { prob, engine: intelligenceText(item.aa.engine, 60), public_gate: true },
+      selection_scope: scope, probability: { value: prob, kind: scope === 'market_fact' ? 'market_devig' : 'aa_calibrated' },
+      aa: scope === 'aa_public' ? { prob, engine: intelligenceText(item.aa.engine, 60), public_gate: true } : null,
+      market_pick: scope === 'market_fact' ? { prob, engine: intelligenceText(item.market_pick.engine, 60),
+        provider: intelligenceText(item.market_pick.provider, 60), price: intelligenceNumber(item.market_pick.price), public_fact: true } : null,
       books: stale ? null : safeIntelligenceProvider(item.books),
       polymarket: stale ? null : safeIntelligenceProvider(item.polymarket),
       kalshi: stale ? null : safeIntelligenceProvider(item.kalshi),
       wallet_signal: walletSignal, consensus,
-      reasons: (Array.isArray(item.reasons) ? item.reasons : []).slice(0, 5).map((reason) => typeof reason === 'string'
-        ? { code: 'measured_reason', text: reason.slice(0, 160) }
-        : { code: intelligenceText(reason?.code, 60), value: intelligenceNumber(reason?.value) }).filter((reason) => reason.code),
+      context: safeIntelligenceContext(item.context),
+      reasons: (Array.isArray(item.reasons) ? item.reasons : []).slice(0, 8).map(safeIntelligenceReason).filter(Boolean),
     };
   }).filter(Boolean);
   const comboSample = safeMarketSample(doc?.combos?.sample) || { n: 0, dates: 0, min_forward: 100, min_dates: 30 };
   return {
-    version: 'intelligence_v1', date: intelligenceText(doc.date, 10), state: stale ? 'stale' : (slate.length ? 'fresh' : 'degraded'),
+    version: 'intelligence_v2', date: intelligenceText(doc.date, 10), state: stale ? 'stale' : (slate.length ? 'fresh' : 'degraded'),
     as_of: asOf, next_refresh: intelligenceText(doc.next_refresh, 40), cadence: '30m_active_2h_calm',
     sources: {
       aa: { ok: doc?.sources?.aa?.ok === true }, books: { ok: doc?.sources?.books?.ok === true },
       polymarket: { ok: doc?.sources?.polymarket?.ok === true, markets: Math.max(0, intelligenceNumber(doc?.sources?.polymarket?.markets) || 0) },
       kalshi: { ok: doc?.sources?.kalshi?.ok === true, markets: Math.max(0, intelligenceNumber(doc?.sources?.kalshi?.markets) || 0) },
     }, slate,
+    market_bundles: stale ? [] : (Array.isArray(doc.market_bundles) ? doc.market_bundles : []).slice(0, 3).map((bundle) => {
+      const legs = (Array.isArray(bundle?.legs) ? bundle.legs : []).slice(0, 3).map((leg) => ({ id: intelligenceText(leg?.id),
+        sport: intelligenceText(leg?.sport, 20), event_id: intelligenceText(leg?.event_id), pick: intelligenceText(leg?.pick),
+        prob: intelligenceNumber(leg?.prob), source: ['aa_public', 'market_fact'].includes(leg?.source) ? leg.source : null,
+        start: intelligenceText(leg?.start, 40) })).filter((leg) => leg.id && leg.pick && leg.prob > .60 && slate.some((item) => item.id === leg.id));
+      return legs.length >= 2 && new Set(legs.map((leg) => leg.sport)).size >= 2 ? { bundle_id: intelligenceText(bundle?.bundle_id),
+        state: 'informational', joint_prob: null, legs } : null;
+    }).filter(Boolean),
     combos: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'combos_forward_validation_pending' }, sample: comboSample },
     budget: { kv_writes: Math.min(120, Math.max(0, intelligenceNumber(doc?.budget?.kv_writes) || 0)),
       d1_rows: Math.min(5000, Math.max(0, intelligenceNumber(doc?.budget?.d1_rows) || 0)), max_kv_writes_day: 120, max_d1_rows_day: 5000 },
