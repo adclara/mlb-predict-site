@@ -13,6 +13,10 @@ modelos en sombra, sin predicciones públicas) y **NFL** (cobertura factual +
 comparador con gates cerrados). El **Radar legacy de wallets está pausado**:
 sus rutas, alertas y Telegram siguen detenidos. La Central AA sí consulta
 Polymarket y Kalshi en solo lectura, sin alertas, para contexto multifuente.
+La Central puede mostrar favoritos **factuales de mercado** >60% en ventana
+pregame de 36h aunque el modelo del deporte siga cerrado: deben llevar scope
+`market_fact` y jamás presentarse como predicción AA. Sus bundles multideporte
+son informativos y no publican probabilidad conjunta ni ROI.
 
 ## ADN NO NEGOCIABLE (aplica a TODO cambio)
 - **$0**: solo free tiers (Cloudflare Workers/KV/D1/Pages + GitHub Actions + APIs
@@ -157,6 +161,9 @@ humana ni scope público. No requiere copiar `CLOUDFLARE_API_TOKEN` al repo priv
     `robot/wnba_publish_simulation.mjs`, `robot/sport_brain.mjs`,
     `robot/tennis_model.mjs`/`tennis_stats.mjs`.
   - `robot/poly_radar.mjs` + `robot/poly_study.mjs` + `robot/lib/{poly,espn_odds}.mjs`.
+  - `robot/market_intelligence.mjs`, `robot/poly_wallet_profiles.mjs` y
+    `robot/lib/market_intelligence.mjs` — Central AA: picks AA gated + favoritos
+    factuales pregame, contexto Polymarket/Kalshi y bundles informativos.
   - `robot/prod_diag.mjs` (diagnóstico post-deploy), `robot/qa_check.mjs`,
     `robot/injuries.mjs`, `robot/domain_fix.mjs`, `robot/subdomain_radar.mjs`,
     `robot/subdomain_qa.mjs`.

@@ -649,6 +649,11 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .intelchips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.intelchip{padding:5px 8px;border:1px solid var(--hair);border-radius:999px;color:var(--dim);font-size:11px}.intelchip.good{color:var(--volt);border-color:rgba(25,222,159,.35)}.intelchip.bad{color:var(--amber);border-color:rgba(245,158,11,.4)}
 .intelsource{display:grid;grid-template-columns:1fr auto;gap:5px;margin:6px 0;padding:10px;border:1px solid var(--hair);border-radius:12px}.intelsource small{grid-column:1/-1;color:var(--dim)}
 .intelwhy{margin:10px 0;padding-left:20px;color:var(--dim);line-height:1.55}.intelgate{margin:12px 0;padding:12px;border:1px solid var(--hair);border-radius:12px;color:var(--dim);font-size:12px}
+.intelscope{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;border:1px solid rgba(25,222,159,.4);color:var(--volt);font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.intelscope.market{border-color:rgba(59,130,246,.5);color:var(--sky)}
+.intelevidence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:10px 0}.intelevidence>div{padding:10px;border:1px solid var(--hair);border-radius:12px;background:rgba(255,255,255,.018)}.intelevidence small{display:block;color:var(--dim);font-size:10px}.intelevidence b{display:block;margin-top:4px;font-size:13px}
+.intelform{display:flex;gap:4px;margin-top:6px}.intelform i{display:grid;place-items:center;width:21px;height:21px;border-radius:6px;background:rgba(239,68,68,.13);color:var(--red);font-style:normal;font-size:9px;font-weight:900}.intelform i.w{background:rgba(25,222,159,.13);color:var(--volt)}
+.bundlewrap{margin:14px 8px}.bundlecard{margin:7px 0;padding:11px;border:1px solid rgba(59,130,246,.28);border-radius:13px;background:rgba(59,130,246,.045)}.bundlehead{display:flex;justify-content:space-between;gap:8px;margin-bottom:7px;font-size:11px;color:var(--sky);font-weight:900}.bundleleg{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--hair);font-size:11px}.bundleleg:first-of-type{border-top:0}.bundleleg span{color:var(--dim)}.bundlenote{color:var(--dim);font-size:10px;line-height:1.45;margin-top:7px}
+@media(max-width:520px){.intelevidence{grid-template-columns:1fr}.bundlewrap{margin:12px 0}}
 .tracklive{margin-top:8px;padding-top:8px;border-top:1px solid rgba(245,158,11,.22);display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .tracklive b{color:var(--volt)}
 .newchip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border:1px solid var(--volt);border-radius:999px;color:var(--volt);font-size:11px;font-weight:700;white-space:nowrap}
@@ -1570,14 +1575,21 @@ const T = {
     f_all: 'Todos', f_live: 'En vivo', f_final: 'Finales', f_pre: 'Por jugar',
     season: 'USA · Temporada 2026', matches: 'Partidos',
     radar_sub: 'Central de jugadas · inteligencia multifuente', live_via_espn: 'En vivo · vía ESPN',
-    intel_nav: 'Central AA', intel_title: 'Central de Jugadas AA', intel_sub: 'Hasta 7 selecciones públicas, explicadas con AA, casas, Polymarket y Kalshi.',
+    intel_nav: 'Central AA', intel_title: 'Central de Jugadas AA', intel_sub: 'Selecciones pregame >60% en las próximas 36h: AA validado o probabilidad real del mercado.',
     intel_loading: 'Cargando inteligencia de mercados…', intel_empty: 'No hay jugadas públicas elegibles ahora mismo. No rellenamos una cuota.',
     intel_updated: 'Actualizado', intel_next: 'próxima revisión', intel_agree: 'Mercados de acuerdo', intel_conflict: 'Conflicto de mercado', intel_insufficient: 'Evidencia insuficiente',
-    intel_aa: 'Probabilidad AA calibrada', intel_books: 'Casas / consenso', intel_poly: 'Polymarket', intel_kalshi: 'Kalshi', intel_unmatched: 'sin mercado comparable',
+    intel_aa: 'Probabilidad AA calibrada', intel_market_prob: 'Probabilidad del mercado des-vigada', intel_books: 'Casas / consenso', intel_poly: 'Polymarket', intel_kalshi: 'Kalshi', intel_unmatched: 'sin mercado comparable',
     intel_why: 'Por qué aparece', intel_market_context: 'Contexto de mercado; no cambia la probabilidad AA en v1.', intel_divergence: 'Una fuente difiere al menos 8 puntos.',
     intel_move: 'Movimiento de al menos 5 puntos en 30 minutos.', intel_book_dis: 'Las casas discrepan al menos 4 puntos.', intel_possible: 'Patrón compatible con posible información; no es una acusación.',
     intel_combo: 'Combinadas de 2–3 piernas', intel_combo_closed: 'En sombra hasta 100 resultados conjuntos, calibración y aprobación humana.',
     intel_honesty: 'Las wallets y los mercados son evidencia contextual. El estudio previo no encontró edge replicable al copiar traders. No son garantía ni acusación.',
+    intel_scope_aa: 'AA validado', intel_scope_market: 'Favorito del mercado', intel_source_note_aa: 'Modelo AA con gate público.', intel_source_note_market: 'Dato factual de cuotas; no es una predicción del modelo AA.',
+    intel_not_listed: 'No listado para este juego', intel_ambiguous: 'Coincidencia ambigua; descartada', intel_quote_rejected: 'Cotización sin bid/ask fresco y estrecho', intel_checked: 'conector revisado',
+    intel_matchup_data: 'Datos del matchup', intel_record: 'Récord de temporada', intel_recent: 'Últimos partidos', intel_price: 'Cuota', intel_spread: 'Hándicap', intel_total: 'Total', intel_start: 'Comienza', intel_no_sample: 'sin muestra suficiente',
+    intel_opponent: 'rival', intel_pitching: 'Pitcheo', intel_offense: 'Ofensiva', intel_legs: 'piernas',
+    intel_reason_market: '{p} asigna {v}% al pick después de quitar el margen.', intel_reason_record: 'Récord: pick {a} · rival {b}.', intel_reason_form: 'Forma reciente: pick {a}/{an} · rival {b}/{bn}.', intel_reason_home: 'El pick juega como local.', intel_reason_move: 'La probabilidad se movió {v} puntos desde apertura.', intel_reason_expensive: 'Favorito muy caro: alta probabilidad no significa buen valor.',
+    intel_reason_aa_prob: 'AA publica {v}% calibrado para esta selección.', intel_reason_aa_form: 'Últimos juegos: pick {a}/{an} · rival {b}/{bn}.', intel_reason_pitching: 'Abridores: {a} ({av}) vs {b} ({bv}).', intel_reason_offense: 'Carreras por juego: pick {a} · rival {b}.', intel_reason_risk: 'Riesgo AA medido: {l} ({s}/100).',
+    intel_bundles_title: 'Combinaciones multideporte', intel_bundles_sub: 'Piernas individuales >60% de deportes distintos', intel_bundle_note: 'Combinación informativa del mercado. No mostramos probabilidad conjunta ni ROI porque aún no están calibrados.', intel_no_bundles: 'No hay dos deportes elegibles para combinar ahora.',
     intel_wallets: 'Wallets calificadas', intel_support: 'apoyan el pick', intel_oppose: 'juegan en contra', intel_mixed: 'señal mixta',
     detail_empty: 'Elige un partido para ver el análisis completo del algoritmo AA.',
     w_perf: 'Rendimiento del algoritmo', w_train: '🧪 Modelo AA en entrenamiento',
@@ -1770,14 +1782,21 @@ const T = {
     f_all: 'All', f_live: 'Live', f_final: 'Final', f_pre: 'Upcoming',
     season: 'USA · 2026 Season', matches: 'Games',
     radar_sub: 'Play central · multi-source intelligence', live_via_espn: 'Live · via ESPN',
-    intel_nav: 'AA Central', intel_title: 'AA Play Central', intel_sub: 'Up to 7 public selections explained with AA, books, Polymarket, and Kalshi.',
+    intel_nav: 'AA Central', intel_title: 'AA Play Central', intel_sub: 'Pregame selections above 60% over the next 36h: gated AA or measured market probability.',
     intel_loading: 'Loading market intelligence…', intel_empty: 'There are no eligible public plays right now. We never fill a quota.',
     intel_updated: 'Updated', intel_next: 'next review', intel_agree: 'Markets agree', intel_conflict: 'Market conflict', intel_insufficient: 'Insufficient evidence',
-    intel_aa: 'Calibrated AA probability', intel_books: 'Books / consensus', intel_poly: 'Polymarket', intel_kalshi: 'Kalshi', intel_unmatched: 'no comparable market',
+    intel_aa: 'Calibrated AA probability', intel_market_prob: 'De-vigged market probability', intel_books: 'Books / consensus', intel_poly: 'Polymarket', intel_kalshi: 'Kalshi', intel_unmatched: 'no comparable market',
     intel_why: 'Why it appears', intel_market_context: 'Market context; it does not change the AA probability in v1.', intel_divergence: 'A source differs by at least 8 points.',
     intel_move: 'Move of at least 5 points in 30 minutes.', intel_book_dis: 'Books disagree by at least 4 points.', intel_possible: 'Pattern compatible with possible information; not an accusation.',
     intel_combo: '2–3 leg combos', intel_combo_closed: 'In shadow until 100 joint results, calibration, and human approval.',
     intel_honesty: 'Wallets and markets are contextual evidence. The prior study found no replicable edge from copying traders. They are neither a guarantee nor an accusation.',
+    intel_scope_aa: 'Gated AA', intel_scope_market: 'Market favorite', intel_source_note_aa: 'AA model with a public gate.', intel_source_note_market: 'Factual odds data; not an AA model prediction.',
+    intel_not_listed: 'Not listed for this game', intel_ambiguous: 'Ambiguous match; discarded', intel_quote_rejected: 'Quote lacked a fresh, narrow bid/ask', intel_checked: 'connector checked',
+    intel_matchup_data: 'Matchup data', intel_record: 'Season record', intel_recent: 'Recent games', intel_price: 'Price', intel_spread: 'Spread', intel_total: 'Total', intel_start: 'Starts', intel_no_sample: 'insufficient sample',
+    intel_opponent: 'opponent', intel_pitching: 'Pitching', intel_offense: 'Offense', intel_legs: 'legs',
+    intel_reason_market: '{p} assigns {v}% to the pick after removing vig.', intel_reason_record: 'Record: pick {a} · opponent {b}.', intel_reason_form: 'Recent form: pick {a}/{an} · opponent {b}/{bn}.', intel_reason_home: 'The pick plays at home.', intel_reason_move: 'Probability moved {v} points from the opener.', intel_reason_expensive: 'Very expensive favorite: high probability does not mean good value.',
+    intel_reason_aa_prob: 'AA publishes a calibrated {v}% for this selection.', intel_reason_aa_form: 'Recent games: pick {a}/{an} · opponent {b}/{bn}.', intel_reason_pitching: 'Starters: {a} ({av}) vs {b} ({bv}).', intel_reason_offense: 'Runs per game: pick {a} · opponent {b}.', intel_reason_risk: 'Measured AA risk: {l} ({s}/100).',
+    intel_bundles_title: 'Cross-sport combinations', intel_bundles_sub: 'Individual legs above 60% from different sports', intel_bundle_note: 'Informational market combination. No joint probability or ROI is shown because it is not calibrated yet.', intel_no_bundles: 'There are not two eligible sports to combine right now.',
     intel_wallets: 'Qualified wallets', intel_support: 'support the pick', intel_oppose: 'oppose the pick', intel_mixed: 'mixed signal',
     detail_empty: 'Pick a game to see the full AA algorithm analysis.',
     w_perf: 'Algorithm performance', w_train: '🧪 AA model in training',
@@ -2016,6 +2035,7 @@ function applyI18n(){
   document.title = t('meta_title');
   const _md = document.querySelector('meta[name="description"]'); if (_md) _md.setAttribute('content', t('meta_desc'));
   const lb = document.getElementById('langbtn'); if (lb){ lb.textContent = t('lang_btn'); lb.title = t('lang_title'); }
+  if (typeof sport !== 'undefined' && sport === 'radar') document.querySelector('.lghead .sub').textContent = t('radar_sub');
 }
 function setLang(l){
   lang = (l === 'en') ? 'en' : 'es';
@@ -4121,7 +4141,7 @@ async function loadRadar(){
     try{
       const r = await fetch(`${API}/v1/intelligence/today`);
       const d = await r.json();
-      if (d && d.version === 'intelligence_v1' && Array.isArray(d.slate)){ radarDoc = d; radarAt = Date.now(); }
+      if (d && /^intelligence_v[12]$/.test(d.version || '') && Array.isArray(d.slate)){ radarDoc = d; radarAt = Date.now(); }
     }catch(err){ /* se conserva el último snapshot visible */ }
     radarLoading = false;
     if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); }
@@ -4339,12 +4359,42 @@ const walletCard = (w, i) => `<div class="wcard" data-rw="${esc(w.w)}" role="but
   <span class="row2">${w.win_rate != null ? `${t('r_acierta')} ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(rCat(w.cats[0].cat)) : '—'} · ${w.n_markets} ${t('r_mercados')}${giveBack(w) >= 0.15 ? ` · <span style="color:var(--red)">${t('bal_of')} +${esc(rUsd(w.pnl_usd))} ${t('bal_gross')}</span>` : (w.portfolio_usd > 0 ? ` · 💼 ${esc(rUsd(w.portfolio_usd))}` : '')}<span class="ver">${t('r_ver_perfil')}</span></span>
 </div>`;
 const intelPct = (value) => value == null || !isFinite(value) ? '—' : `${(100 * Number(value)).toFixed(1)}%`;
+const intelProb = (item) => item?.probability?.value ?? item?.aa?.prob ?? item?.market_pick?.prob ?? null;
+const intelScope = (item) => item?.selection_scope === 'market_fact' ? 'market' : 'aa';
+const intelPrice = (value) => value == null || !isFinite(value) ? '—' : `${Number(value) > 0 ? '+' : ''}${Number(value)}`;
 const intelStateText = (state) => state === 'agree' ? t('intel_agree') : state === 'conflict' ? t('intel_conflict') : t('intel_insufficient');
 const intelProvider = (label, source) => {
   const prob = source && (source.prob ?? source.mid ?? source.indicative);
-  return `<div class="intelsource"><b>${esc(label)}</b><span class="num">${prob == null ? t('intel_unmatched') : intelPct(prob)}</span>
-    ${source && source.spread != null ? `<small>spread ${(100 * source.spread).toFixed(1)} pts${source.volume_24h != null ? ` · vol ${Number(source.volume_24h).toLocaleString(LOCALE())}` : ''}</small>` : ''}</div>`;
+  const why = source?.reason === 'ambiguous' ? t('intel_ambiguous') : source?.reason === 'quote_rejected' ? t('intel_quote_rejected')
+    : source?.reason === 'not_listed' ? t('intel_not_listed') : t('intel_unmatched');
+  const detail = prob != null && source?.matched !== false
+    ? `${source.spread != null ? `spread ${(100 * source.spread).toFixed(1)} pts` : ''}${source.volume_24h != null ? `${source.spread != null ? ' · ' : ''}vol ${Number(source.volume_24h).toLocaleString(LOCALE())}` : ''}`
+    : `${why} · ${t('intel_checked')}`;
+  return `<div class="intelsource"><b>${esc(label)}</b><span class="num">${prob == null ? esc(why) : intelPct(prob)}</span><small>${esc(detail)}</small></div>`;
 };
+const intelReasonText = (reason) => {
+  if (reason?.text) return reason.text;
+  if (reason?.code === 'market_probability') return t('intel_reason_market').replace('{p}', reason.provider || t('intel_scope_market')).replace('{v}', (100 * Number(reason.value || 0)).toFixed(1));
+  if (reason?.code === 'season_record') return t('intel_reason_record').replace('{a}', reason.pick_record || '—').replace('{b}', reason.opponent_record || '—');
+  if (reason?.code === 'recent_form') return t('intel_reason_form').replace('{a}', reason.pick_wins ?? 0).replace('{an}', reason.pick_n ?? 0).replace('{b}', reason.opponent_wins ?? 0).replace('{bn}', reason.opponent_n ?? 0);
+  if (reason?.code === 'home_field') return t('intel_reason_home');
+  if (reason?.code === 'line_move') return t('intel_reason_move').replace('{v}', `${Number(reason.value || 0) >= 0 ? '+' : ''}${(100 * Number(reason.value || 0)).toFixed(1)}`);
+  if (reason?.code === 'expensive_favorite') return t('intel_reason_expensive');
+  if (reason?.code === 'aa_probability') return t('intel_reason_aa_prob').replace('{v}', (100 * Number(reason.value || 0)).toFixed(1));
+  if (reason?.code === 'aa_form') return t('intel_reason_aa_form').replace('{a}', reason.pick_wins ?? 0).replace('{an}', reason.pick_n ?? 0).replace('{b}', reason.opponent_wins ?? 0).replace('{bn}', reason.opponent_n ?? 0);
+  if (reason?.code === 'aa_pitching') return t('intel_reason_pitching').replace('{a}', reason.pick_name || '—').replace('{av}', reason.pick_value ?? '—').replace('{b}', reason.opponent_name || '—').replace('{bv}', reason.opponent_value ?? '—');
+  if (reason?.code === 'aa_offense') return t('intel_reason_offense').replace('{a}', reason.pick_value ?? '—').replace('{b}', reason.opponent_value ?? '—');
+  if (reason?.code === 'aa_risk') return t('intel_reason_risk').replace('{l}', reason.level ? t(`risk_${reason.level}`) : '—').replace('{s}', reason.score ?? '—');
+  return reason?.code || '';
+};
+const intelForm = (rows) => rows?.length ? `<span class="intelform">${rows.slice(0, 5).map((row) => `<i class="${row.w ? 'w' : ''}" title="${esc(`${row.opp || ''} ${row.score || ''}`)}">${row.w ? 'W' : 'L'}</i>`).join('')}</span>` : `<small>${t('intel_no_sample')}</small>`;
+function intelBundles(doc){
+  const bundles = doc?.market_bundles || [];
+  return `<div class="bundlewrap"><div class="secttl2">${t('intel_bundles_title')} <span class="sub3">${t('intel_bundles_sub')}</span></div>
+    ${bundles.length ? bundles.map((bundle, index) => `<div class="bundlecard"><div class="bundlehead"><span>#${index + 1}</span><span>${bundle.legs.length} ${t('intel_legs')}</span></div>
+      ${bundle.legs.map((leg) => `<div class="bundleleg" data-rw="${esc(leg.id)}" role="button"><b>${esc(String(leg.sport || '').toUpperCase())} · ${esc(leg.pick)}</b><span class="num">${intelPct(leg.prob)} · ${leg.source === 'market_fact' ? t('intel_scope_market') : t('intel_scope_aa')}</span></div>`).join('')}
+      <div class="bundlenote">${t('intel_bundle_note')}</div></div>`).join('') : `<div class="lempty2">${t('intel_no_bundles')}</div>`}</div>`;
+}
 function centralListHtml(){
   const doc = radarDoc || {}, slate = doc.slate || [];
   const fresh = doc.state === 'fresh';
@@ -4354,9 +4404,9 @@ function centralListHtml(){
     <span class="intelchip ${fresh ? 'good' : 'bad'}">${esc(doc.state || 'degraded')}</span><span class="intelchip">${t('intel_updated')} ${esc(stamp)}</span><span class="intelchip">${t('intel_next')} ${esc(next)}</span></div></div>`;
   if (!slate.length) return hero + `<div class="lempty">${radarLoading ? t('intel_loading') : t('intel_empty')}</div>`;
   return hero + slate.map((item, i) => `<button class="intelrow ${radarSel === item.id ? 'on' : ''}" data-rw="${esc(item.id)}">
-    <span class="intelrank num">#${i + 1}</span><span><span class="intelteams">${esc(item.away?.code || '')} @ ${esc(item.home?.code || '')}</span>
-    <span class="intelmeta">${esc(String(item.sport || '').toUpperCase())} · ${esc(item.pick)} · ${esc(intelStateText(item.consensus?.state))}</span></span>
-    <span class="intelprob num">${intelPct(item.aa?.prob)}</span></button>`).join('');
+    <span class="intelrank num">#${i + 1}</span><span><span class="intelteams">${esc(item.pick)} · ${esc(item.away?.code || '')} @ ${esc(item.home?.code || '')}</span>
+    <span class="intelmeta">${esc(String(item.sport || '').toUpperCase())} · <i class="intelscope ${intelScope(item)}">${t(intelScope(item) === 'market' ? 'intel_scope_market' : 'intel_scope_aa')}</i> · ${esc(intelStateText(item.consensus?.state))}</span></span>
+    <span class="intelprob num">${intelPct(intelProb(item))}</span></button>`).join('') + intelBundles(doc);
 }
 function centralDetailHtml(){
   const doc = radarDoc || {}, slate = doc.slate || [];
@@ -4365,24 +4415,44 @@ function centralDetailHtml(){
   const anomalies = (item.consensus?.anomalies || []).map((a) => ({
     provider_divergence: t('intel_divergence'), market_move_30m: t('intel_move'), book_disagreement: t('intel_book_dis'), possible_informed_pattern: t('intel_possible'),
   }[a.code] || a.code));
-  const reasons = (item.reasons || []).map((reason) => reason.text || reason.code).filter(Boolean);
+  const reasons = (item.reasons || []).map(intelReasonText).filter(Boolean);
   const stateClass = item.consensus?.state === 'agree' ? 'good' : item.consensus?.state === 'conflict' ? 'bad' : '';
   const wallet = item.wallet_signal;
   const walletHtml = wallet ? `<div class="intelsource"><b>${t('intel_wallets')}</b><span>${wallet.side === 'support' ? t('intel_support') : wallet.side === 'oppose' ? t('intel_oppose') : t('intel_mixed')}</span>
     <small>${wallet.qualified_wallets} · $${Number(wallet.usd || 0).toLocaleString(LOCALE())} · ${t('intel_possible')}</small></div>` : '';
+  const ctx = item.context || {}, scope = intelScope(item), probability = intelProb(item);
+  const start = item.start ? new Date(item.start).toLocaleString(LOCALE(), { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+  const recordN = Number(ctx.pick_record?.wins || 0) + Number(ctx.pick_record?.losses || 0) + Number(ctx.opponent_record?.wins || 0) + Number(ctx.opponent_record?.losses || 0);
+  const record = recordN > 0 ? `${ctx.pick_record?.text || '—'} vs ${ctx.opponent_record?.text || '—'}` : t('intel_no_sample');
+  const pickedHome = item.pick === item.home?.code;
+  const pickForm = ctx.pick_recent?.length ? ctx.pick_recent : (ctx.form && (pickedHome ? ctx.form.home : ctx.form.away));
+  const opponentForm = ctx.opponent_recent?.length ? ctx.opponent_recent : (ctx.form && (pickedHome ? ctx.form.away : ctx.form.home));
+  const evidence = `<div class="secttl">${t('intel_matchup_data')}</div><div class="intelevidence">
+    <div><small>${t('intel_start')}</small><b>${esc(start)}</b></div><div><small>${t('intel_record')}</small><b class="num">${esc(record)}</b></div>
+    <div><small>${t('intel_recent')} · ${esc(item.pick)}</small>${intelForm(pickForm)}</div>
+    <div><small>${t('intel_recent')} · ${t('intel_opponent')}</small>${intelForm(opponentForm)}</div>
+    ${(ctx.price != null || item.market_pick?.price != null) ? `<div><small>${t('intel_price')} · ${esc(ctx.provider || item.market_pick?.provider || '')}</small><b class="num">${intelPrice(ctx.price ?? item.market_pick?.price)}</b></div>` : ''}
+    ${ctx.spread != null ? `<div><small>${t('intel_spread')}</small><b class="num">${ctx.spread > 0 ? '+' : ''}${ctx.spread}</b></div>` : ''}
+    ${ctx.total != null ? `<div><small>${t('intel_total')}</small><b class="num">${ctx.total}</b></div>` : ''}
+    ${ctx.pitchers ? `<div><small>${t('intel_pitching')}</small><b>${esc(ctx.pitchers.home?.name || '—')} ${ctx.pitchers.home?.era_recent != null ? `· ERA ${ctx.pitchers.home.era_recent}` : ''}<br>${esc(ctx.pitchers.away?.name || '—')} ${ctx.pitchers.away?.era_recent != null ? `· ERA ${ctx.pitchers.away.era_recent}` : ''}</b></div>` : ''}
+    ${ctx.offense ? `<div><small>${t('intel_offense')}</small><b class="num">${item.home?.code} ${ctx.offense.home?.runs ?? '—'} R/G · ${item.away?.code} ${ctx.offense.away?.runs ?? '—'} R/G</b></div>` : ''}
+  </div>`;
   return `<div class="dtop"><span class="crumb">${t('intel_title')}</span></div><div class="dbody">
-    <div class="intelhero"><h2>${esc(item.pick)} · ${intelPct(item.aa?.prob)}</h2><p>${esc(item.away?.name || item.away?.code || '')} @ ${esc(item.home?.name || item.home?.code || '')}</p>
-      <div class="intelchips"><span class="intelchip ${stateClass}">${esc(intelStateText(item.consensus?.state))}</span><span class="intelchip">${t('intel_market_context')}</span></div></div>
-    ${intelProvider(t('intel_aa'), { prob: item.aa?.prob })}${intelProvider(t('intel_books'), item.books)}${intelProvider(t('intel_poly'), item.polymarket)}${intelProvider(t('intel_kalshi'), item.kalshi)}${walletHtml}
+    <div class="intelhero"><h2>${esc(item.pick)} · ${intelPct(probability)}</h2><p>${esc(item.away?.name || item.away?.code || '')} @ ${esc(item.home?.name || item.home?.code || '')}</p>
+      <div class="intelchips"><span class="intelscope ${scope}">${t(scope === 'market' ? 'intel_scope_market' : 'intel_scope_aa')}</span><span class="intelchip ${stateClass}">${esc(intelStateText(item.consensus?.state))}</span></div>
+      <p>${t(scope === 'market' ? 'intel_source_note_market' : 'intel_source_note_aa')}</p></div>
+    ${intelProvider(t(scope === 'market' ? 'intel_market_prob' : 'intel_aa'), { prob: probability })}${intelProvider(t('intel_books'), item.books)}${intelProvider(t('intel_poly'), item.polymarket)}${intelProvider(t('intel_kalshi'), item.kalshi)}${walletHtml}
     ${(reasons.length || anomalies.length) ? `<div class="secttl">${t('intel_why')}</div><ul class="intelwhy">${[...reasons, ...anomalies].slice(0, 8).map((text) => `<li>${esc(text)}</li>`).join('')}</ul>` : ''}
-    <div class="intelgate"><b>${t('intel_combo')}</b><br>${t('intel_combo_closed')}<br><span class="num">${doc.combos?.sample?.n || 0} / ${doc.combos?.sample?.min_forward || 100}</span></div>
+    ${evidence}
+    ${intelBundles(doc)}
+    <div class="intelgate"><b>${t('intel_combo')} · AA</b><br>${t('intel_combo_closed')}<br><span class="num">${doc.combos?.sample?.n || 0} / ${doc.combos?.sample?.min_forward || 100}</span></div>
     <div class="radarwarn"><b>${t('warn_legal')}:</b> ${t('intel_honesty')}</div></div>`;
 }
 function renderRadarList(){
   if (sport !== 'radar') return;
   if (CENTRAL_INTELLIGENCE){
     $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
-    $('lgcount').innerHTML = radarDoc?.slate?.length ? `<b>${radarDoc.slate.length}</b>/7` : '';
+    $('lgcount').innerHTML = radarDoc?.slate?.length ? `<b>${radarDoc.slate.length}</b>/12` : '';
     $('list').innerHTML = centralListHtml(); return;
   }
   if (RADAR_PAUSED){

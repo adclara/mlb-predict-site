@@ -151,11 +151,19 @@ console.log('\n== /v1/intelligence/today (Central AA, sin alertas) ==');
 try {
   const intelRaw = await get(`${API}/v1/intelligence/today`);
   const intel = JSON.parse(intelRaw.text);
-  const safe = intelRaw.status === 200 && intel.version === 'intelligence_v1'
-    && (intel.slate || []).length <= 7 && intel.combos?.state === 'closed'
+  const slateIds = new Set((intel.slate || []).map((item) => item.id));
+  const slateSafe = (intel.slate || []).every((item) => item.probability?.value > .60
+    && (item.selection_scope === 'aa_public' ? item.aa?.public_gate === true && !item.market_pick
+      : item.selection_scope === 'market_fact' && item.market_pick?.public_fact === true && !item.aa));
+  const bundlesSafe = (intel.market_bundles || []).every((bundle) => bundle.joint_prob == null
+    && (bundle.legs || []).length >= 2 && new Set((bundle.legs || []).map((leg) => leg.sport)).size >= 2
+    && (bundle.legs || []).every((leg) => slateIds.has(leg.id) && leg.prob > .60));
+  const safe = intelRaw.status === 200 && intel.version === 'intelligence_v2'
+    && (intel.slate || []).length <= 12 && slateSafe && bundlesSafe && intel.combos?.state === 'closed'
     && !Object.hasOwn(intel.combos || {}, 'items') && intel.alerts === false && intel.telegram === false;
   console.log(safe ? '✅ contrato seguro' : '❌ contrato inválido', '| estado:', intel.state,
-    '| slate:', (intel.slate || []).length, '| Poly:', intel.sources?.polymarket?.ok,
+    '| slate:', (intel.slate || []).length, '| deportes:', new Set((intel.slate || []).map((item) => item.sport)).size,
+    '| bundles:', (intel.market_bundles || []).length, '| Poly:', intel.sources?.polymarket?.ok,
     '| Kalshi:', intel.sources?.kalshi?.ok, '| as_of:', intel.as_of || '—');
   if (!safe) marketContractFailures++;
 } catch (error) { console.log('❌ intelligence no-json/error:', String(error).slice(0, 160)); marketContractFailures++; }
