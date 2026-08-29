@@ -24,6 +24,6 @@ jobs:
         with:
           node-version: 22
       - name: Contratos locales fail-closed
-        run: node --test tests/us_sports_foundation.test.mjs
+        run: node --test tests/us_sports_foundation.test.mjs tests/ncaaf_context.test.mjs
       - name: Frescura y contratos en producción
         run: node robot/us_sports_qa.mjs

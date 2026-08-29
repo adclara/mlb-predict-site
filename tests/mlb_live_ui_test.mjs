@@ -215,7 +215,20 @@ async function installApiMocks(page, date, events, games) {
         events: [], top2: [],
       });
       if (action === 'standings') return json(route, { sport, sections: [] });
-      if (action === 'summary') return json(route, { ok: true, sport, stats: [{ label: 'Total yards', away: 320, home: 350 }] });
+      if (action === 'summary') return json(route, sport === 'ncaaf' ? {
+        ok: true, sport, stats: [{ label: 'Total yards', away: 320, home: 350 }], players: null,
+        predictor: { source: 'espn_matchup_predictor', away_pct: 45, home_pct: 55 },
+        recent: {
+          away: { code: 'AWY', wins: 2, losses: 3, win_pct: 40, games: [
+            { event_id: 'a1', result: 'W', score: '28-20', at_vs: '@', opponent: { code: 'OP1' } },
+            { event_id: 'a2', result: 'L', score: '14-24', at_vs: 'vs', opponent: { code: 'OP2' } },
+          ] },
+          home: { code: 'HME', wins: 4, losses: 1, win_pct: 80, games: [
+            { event_id: 'h1', result: 'W', score: '31-17', at_vs: 'vs', opponent: { code: 'OP3' } },
+            { event_id: 'h2', result: 'W', score: '27-21', at_vs: '@', opponent: { code: 'OP4' } },
+          ] },
+        }, venue: { name: 'Test Stadium', city: 'Test City', country: 'USA', grass: true }, injuries: null,
+      } : { ok: true, sport, stats: [{ label: 'Total yards', away: 320, home: 350 }] });
       if (action === 'recent') return json(route, { sport, games: [] });
       return json(route, { sport, games: [{
         espn_id: `${sport}-1`, start: `${date}T23:00:00Z`, status: 'pre', status_detail: 'Scheduled',
@@ -394,7 +407,41 @@ try {
     assert.match(soccerListEs, /Arsenal[\s\S]*Liverpool[\s\S]*AA[\s\S]*57%/i, `${viewport.name}: Soccer no muestra el slate actual con su predicción pública`);
     assert.doesNotMatch(soccerListEs, /Mundial/i, `${viewport.name}: Mundial vencido sigue visible`);
     assert.equal(await page.locator('#lgchips .pill').first().textContent(), 'Premier', `${viewport.name}: el carrusel de Soccer no inicia en Premier`);
+    const soccerRowBox = await page.locator('.mrow[data-oid="soc-1"]').boundingBox();
+    const soccerChipBox = await page.locator('.mrow[data-oid="soc-1"] .aachip').boundingBox();
+    assert.ok(soccerRowBox && soccerChipBox && soccerChipBox.x >= soccerRowBox.x
+      && soccerChipBox.x + soccerChipBox.width <= soccerRowBox.x + soccerRowBox.width + 1, `${viewport.name}: chip AA de Soccer recortado`);
+    if (viewport.name !== 'desktop') {
+      const leagueFlow = await page.locator('#lgchips').evaluate((el) => ({ client: el.clientWidth, scroll: el.scrollWidth }));
+      assert.ok(leagueFlow.scroll <= leagueFlow.client + 1, `${viewport.name}: ligas de Soccer siguen cortadas horizontalmente`);
+      assert.equal(await page.locator('#lgchips .pill').last().isVisible(), true, `${viewport.name}: última liga no visible`);
+    }
+    if (viewport.name === 'mobile-390' && process.env.AA_NCAAF_SOCCER_SCREENSHOT_DIR) {
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: `${process.env.AA_NCAAF_SOCCER_SCREENSHOT_DIR}/07-soccer-list-fixed-mobile.png`, fullPage: false });
+    }
+    await page.locator('.mrow[data-oid="soc-1"]').click();
+    await page.waitForFunction(() => /Predicción AA[\s\S]*57%/i.test(document.querySelector('#dcard')?.textContent || ''));
+    const soccerDetailWidth = await page.locator('#detail').evaluate((el) => ({ client: el.clientWidth, scroll: el.scrollWidth }));
+    assert.ok(soccerDetailWidth.scroll <= soccerDetailWidth.client + 1, `${viewport.name}: detalle Soccer recortado`);
+    if (viewport.name === 'mobile-390' && process.env.AA_NCAAF_SOCCER_SCREENSHOT_DIR) {
+      await page.screenshot({ path: `${process.env.AA_NCAAF_SOCCER_SCREENSHOT_DIR}/05-soccer-detail-fixed-mobile.png`, fullPage: false });
+    }
+    if (viewport.name !== 'desktop') await page.locator('#dback').evaluate((el) => el.click());
     await assertNoOverflow(page, `${viewport.name}-soccer-es`);
+    await page.locator('.sp[data-sport="ncaaf"]').click();
+    await page.locator('.mrow[data-oid="ncaaf-1"]').waitFor({ state: 'visible' });
+    assert.match(await page.locator('#list').textContent(), /40%[\s\S]*60%[\s\S]*Mercado/i, `${viewport.name}: NCAAF no muestra porcentajes de mercado ES`);
+    if (viewport.name !== 'desktop') await page.locator('.mrow[data-oid="ncaaf-1"]').click();
+    await page.waitForFunction(() => /Predictor externo de ESPN[\s\S]*45%[\s\S]*55%/i.test(document.querySelector('#dcard')?.textContent || ''));
+    const ncaafEs = await page.locator('#dcard').textContent();
+    assert.match(ncaafEs, /Probabilidad de mercado[\s\S]*Mercado desvigado[\s\S]*40%[\s\S]*60%/i, `${viewport.name}: NCAAF sin probabilidad factual ES`);
+    assert.match(ncaafEs, /Por qué los datos favorecen a este lado[\s\S]*quitar el margen/i, `${viewport.name}: NCAAF sin razones ES`);
+    assert.match(ncaafEs, /Últimos 5 · temporada anterior[\s\S]*Away Team[\s\S]*2-3[\s\S]*Home Team[\s\S]*4-1/i, `${viewport.name}: NCAAF sin historial ES`);
+    assert.match(ncaafEs, /Datos de jugadores[\s\S]*box scores verificados[\s\S]*probabilidad AA sin validación/i, `${viewport.name}: NCAAF sin contexto honesto de jugadores ES`);
+    assert.match(ncaafEs, /Sede[\s\S]*Test Stadium[\s\S]*Test City/i, `${viewport.name}: NCAAF sin sede ES`);
+    assert.doesNotMatch(ncaafEs, /Modelo AA validado/i, `${viewport.name}: NCAAF presenta mercado como AA ES`);
+    if (viewport.name !== 'desktop') await page.locator('#dback').evaluate((el) => el.click());
     await page.locator('.sp[data-sport="wnba"]').click();
     await page.locator('.mrow[data-oid="401857140"]').waitFor({ state: 'visible' });
     await page.waitForFunction(() => /Evidencia histórica del modelo[\s\S]*66[,.]3%/i.test(document.querySelector('#list')?.textContent || ''));
@@ -493,8 +540,14 @@ try {
       await page.locator(`.sp[data-sport="${newSport}"]`).click();
       await page.locator(`.mrow[data-oid="${newSport}-1"]`).waitFor({ state: 'visible' });
       assert.match(await page.locator('#list').textContent(), /Training · gate closed/i, `${viewport.name}: ${newSport} missing fail-closed banner`);
+      if (newSport === 'ncaaf' && viewport.name === 'mobile-390' && process.env.AA_NCAAF_SOCCER_SCREENSHOT_DIR) {
+        await page.waitForTimeout(400);
+        await page.screenshot({ path: `${process.env.AA_NCAAF_SOCCER_SCREENSHOT_DIR}/08-ncaaf-list-fixed-mobile.png`, fullPage: false });
+      }
+      if (viewport.name !== 'desktop') await page.locator(`.mrow[data-oid="${newSport}-1"]`).click();
       const sportDetail = await page.locator('#dcard').textContent();
-      assert.match(sportDetail, newSport === 'nfl' ? /Gate closed/i : /AA model in training/i, `${viewport.name}: ${newSport} missing training disclosure`);
+      assert.match(sportDetail, /Gate closed/i, `${viewport.name}: ${newSport} missing honest market gate`);
+      assert.match(await page.locator('#list').textContent(), /40%[\s\S]*60%[\s\S]*Market/i, `${viewport.name}: ${newSport} per-game market percentages missing`);
       if (newSport === 'nfl') {
         await page.waitForFunction(() => /Historical model evidence[\s\S]*63\.7%/i.test(document.querySelector('#list')?.textContent || ''));
         const nflList = await page.locator('#list').textContent();
@@ -508,6 +561,24 @@ try {
         assert.match(await page.locator('#dcard .market-first').textContent(), /Auditable historical pregame line[\s\S]*0\s*\/\s*200/i, `${viewport.name}: NFL total gate lacks evidence`);
         await page.locator('#dcard .market-tab[data-market-kind="winner"]').evaluate(el => el.click());
       }
+      if (newSport === 'ncaaf') {
+        await page.waitForFunction(() => /External ESPN predictor[\s\S]*45%[\s\S]*55%/i.test(document.querySelector('#dcard')?.textContent || ''));
+        const ncaafDetail = await page.locator('#dcard').textContent();
+        assert.match(ncaafDetail, /Market win probability[\s\S]*40%[\s\S]*60%/i, `${viewport.name}: NCAAF missing de-vigged market probability`);
+        assert.match(ncaafDetail, /External ESPN predictor[\s\S]*45%[\s\S]*55%/i, `${viewport.name}: NCAAF missing external predictor`);
+        assert.match(ncaafDetail, /Why the data favors this side[\s\S]*removing vig/i, `${viewport.name}: NCAAF missing factual reasons`);
+        assert.match(ncaafDetail, /Last 5 · previous season[\s\S]*Away Team[\s\S]*2-3[\s\S]*Home Team[\s\S]*4-1/i, `${viewport.name}: NCAAF missing prior-season form`);
+        assert.match(ncaafDetail, /Player data[\s\S]*verified box scores[\s\S]*do not turn it into an AA probability/i, `${viewport.name}: NCAAF player-data honesty missing`);
+        assert.match(ncaafDetail, /Venue[\s\S]*Test Stadium[\s\S]*Test City/i, `${viewport.name}: NCAAF venue missing`);
+        assert.doesNotMatch(ncaafDetail, /Validated AA model/i, `${viewport.name}: NCAAF market fact masquerades as AA`);
+        if (viewport.name === 'mobile-390' && process.env.AA_NCAAF_SOCCER_SCREENSHOT_DIR) {
+          await page.screenshot({ path: `${process.env.AA_NCAAF_SOCCER_SCREENSHOT_DIR}/06-ncaaf-detail-fixed-mobile.png`, fullPage: false });
+          await page.locator('#detail').evaluate((el) => { el.scrollTop = 620; });
+          await page.waitForTimeout(150);
+          await page.screenshot({ path: `${process.env.AA_NCAAF_SOCCER_SCREENSHOT_DIR}/09-ncaaf-context-fixed-mobile.png`, fullPage: false });
+        }
+      }
+      if (viewport.name !== 'desktop') await page.locator('#dback').evaluate((el) => el.click());
       await page.locator('.ltab[data-lt="brain"]').click();
       await page.locator('#list .sportbrain').waitFor({ state: 'visible' });
       const sportBrain = await page.locator('#list').textContent();

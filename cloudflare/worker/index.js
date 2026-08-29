@@ -3114,7 +3114,7 @@ async function summary(ctx, origin, sport, eid, upstream) {
   return withCors(payload, origin, 60);
 }
 
-function genericTeamSummary(data, sport) {
+export function genericTeamSummary(data, sport) {
   const teams = data?.boxscore?.teams || [];
   const home = teams.find((team) => team.homeAway === 'home') || teams[0] || {};
   const away = teams.find((team) => team.homeAway === 'away') || teams[1] || {};
@@ -3129,14 +3129,14 @@ function genericTeamSummary(data, sport) {
     ['thirdDownEff', ['stat_nfl_third_down', '3rd Down']], ['possessionTime', ['stat_nfl_possession', 'Possession']],
     ['totalPenaltiesYards', ['stat_nfl_penalties', 'Penalties-Yards']],
   ]);
-  const sourceStats = sport === 'nfl'
+  const sourceStats = ['nfl', 'ncaaf'].includes(sport)
     ? [...nflStats].filter(([key]) => hs.has(key) || as.has(key)).map(([key, [i18n, label]]) => [key, label, i18n])
     : [...labels.entries()].filter(([key]) => hs.has(key) || as.has(key)).slice(0, 18).map(([key, label]) => [key, label, null]);
   const stats = sourceStats.map(([key, label, i18n]) => ({ key: i18n, label, home: hs.get(key) ?? null, away: as.get(key) ?? null }));
   const playerSides = playerSidesByTeams(data);
   const groupsOf = (block) => {
     if (!block) return null;
-    const wanted = sport === 'nfl'
+    const wanted = ['nfl', 'ncaaf'].includes(sport)
       ? new Set(['passing', 'rushing', 'receiving', 'defensive'])
       : new Set(['skaters', 'goalies']);
     const groups = (block.statistics || []).filter((group) => wanted.has(group.name)).map((group) => {
@@ -3154,7 +3154,56 @@ function genericTeamSummary(data, sport) {
   };
   const players = (playerSides.home || playerSides.away)
     ? { home: groupsOf(playerSides.home), away: groupsOf(playerSides.away) } : null;
-  return { sport, stats: stats.length ? stats : null, players };
+
+  // ESPN publica un predictor externo y los cinco juegos anteriores incluso
+  // antes del kickoff. Son contexto factual de otra fuente, nunca una salida
+  // del modelo AA ni autorización para abrir su gate.
+  const probability = (value) => {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 && number <= 100 ? Math.round(number * 10) / 10 : null;
+  };
+  const predictorRaw = data?.predictor;
+  const predictorHome = probability(predictorRaw?.homeTeam?.gameProjection);
+  const predictorAway = probability(predictorRaw?.awayTeam?.gameProjection);
+  const predictor = ['nfl', 'ncaaf'].includes(sport) && predictorHome != null && predictorAway != null
+    && Math.abs(predictorHome + predictorAway - 100) <= .2
+    ? { source: 'espn_matchup_predictor', home_pct: predictorHome, away_pct: predictorAway } : null;
+
+  const teamId = (block) => block?.team?.id == null ? null : String(block.team.id);
+  const recentFor = (team) => {
+    const id = teamId(team);
+    const block = (Array.isArray(data?.lastFiveGames) ? data.lastFiveGames : [])
+      .find((item) => id != null && String(item?.team?.id) === id);
+    const games = (Array.isArray(block?.events) ? block.events : []).slice(-5).map((event) => ({
+      event_id: event?.id == null ? null : String(event.id), start: ingestText(event?.gameDate, 40),
+      result: ['W', 'L', 'T'].includes(event?.gameResult) ? event.gameResult : null,
+      score: ingestText(event?.score, 20), at_vs: ['@', 'vs'].includes(event?.atVs) ? event.atVs : null,
+      opponent: { code: ingestText(event?.opponent?.abbreviation, 12), name: ingestText(event?.opponent?.shortDisplayName || event?.opponent?.displayName, 80) },
+    })).filter((event) => event.event_id && event.result);
+    if (!games.length) return null;
+    const wins = games.filter((game) => game.result === 'W').length;
+    const losses = games.filter((game) => game.result === 'L').length;
+    return { code: ingestText(block?.team?.abbreviation, 12), wins, losses,
+      win_pct: wins + losses ? Math.round((wins / (wins + losses)) * 1000) / 10 : null, games };
+  };
+  const recent = ['nfl', 'ncaaf'].includes(sport) ? { home: recentFor(home), away: recentFor(away) } : null;
+
+  const venueRaw = data?.gameInfo?.venue;
+  const venue = venueRaw?.fullName ? { name: ingestText(venueRaw.fullName, 100), city: ingestText(venueRaw?.address?.city, 60),
+    state: ingestText(venueRaw?.address?.state, 40), country: ingestText(venueRaw?.address?.country, 60),
+    grass: typeof venueRaw.grass === 'boolean' ? venueRaw.grass : null } : null;
+
+  const injuries = (Array.isArray(data?.injuries) ? data.injuries : []).map((block) => ({
+    code: ingestText(block?.team?.abbreviation, 12),
+    items: (Array.isArray(block?.injuries) ? block.injuries : []).slice(0, 12).map((injury) => ({
+      name: ingestText(injury?.athlete?.displayName || injury?.athlete?.shortName, 80),
+      status: ingestText(typeof injury?.status === 'string' ? injury.status : injury?.status?.description, 30),
+      type: ingestText(injury?.type?.description || injury?.type?.name, 50),
+    })).filter((injury) => injury.name),
+  })).filter((block) => block.code && block.items.length);
+
+  return { sport, stats: stats.length ? stats : null, players, predictor,
+    recent: recent && (recent.home || recent.away) ? recent : null, venue, injuries: injuries.length ? injuries : null };
 }
 
 // Elige el bloque home/away de un array cuyos elementos traen homeAway (o cae

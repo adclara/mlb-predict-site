@@ -142,9 +142,10 @@ try {
   console.log('Cerebro:', wnbaBrain.state || '—', '| histórico OOS:', wnbaBrain.historical?.n ?? '—',
     '| forward:', wnbaBrain.forward?.n ?? '—', '| gate público:', wnbaBrain.gate?.public === true ? 'ABIERTO' : 'cerrado');
 } catch (e) { console.log('no-json:', String(e).slice(0, 120)); }
-console.log('\n== Contrato de mercados WNBA/NFL (4 módulos, fail-closed) ==');
+console.log('\n== Contrato de mercados WNBA/NFL/NCAAF (4 módulos, fail-closed) ==');
 await diagnoseMarkets('wnba');
 await diagnoseMarkets('nfl');
+await diagnoseMarkets('ncaaf');
 console.log('\n== Frontera QA privada (anónimo nunca ve shadow) ==');
 const qaApi = await get(`${API}/v1/qa/nfl/today`);
 const qaSite = await get('https://qa.aasport.net/?prod-diag=1');
