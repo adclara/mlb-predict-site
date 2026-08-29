@@ -1,0 +1,39 @@
+name: market-intelligence
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+    - cron: '17 6 * * *'
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['.github/poke-intelligence']
+permissions:
+  contents: read
+concurrency:
+  group: market-intelligence
+  cancel-in-progress: true
+jobs:
+  pulse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Validate intelligence helpers
+        run: node --test tests/market_intelligence.test.mjs
+      - name: Build and publish sanitized snapshot
+        if: github.event_name != 'schedule' || github.event.schedule != '17 6 * * *'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
+          node robot/market_intelligence.mjs
+      - name: Refresh causal Polymarket sports-wallet profiles
+        if: github.event_name == 'schedule' && github.event.schedule == '17 6 * * *'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
+          node robot/poly_wallet_profiles.mjs

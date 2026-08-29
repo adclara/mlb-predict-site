@@ -48,6 +48,7 @@ console.log('  ¿tiene "Aviso legal" (cambio MÁS reciente)?:', has('Aviso legal
 console.log('  ¿tiene "Probabilidad en vivo" (Fase 2)?:', has('Probabilidad en vivo'));
 console.log('  ¿tiene calibratedProb/win_prob (marcadores nuevos)?:', has('win_prob_home') || has('liveWpHome'));
 console.log('  ¿tiene "Fijos" en el récord (Fase 3)?:', has('trChip') || has('Fijos'));
+console.log('  ¿tiene Central AA multifuente?:', has('Central de Jugadas AA') && has('/v1/intelligence/today'));
 const m = h.text.match(/AA Sports/); console.log('  longitud del HTML:', h.text.length, 'bytes');
 
 console.log('\n== /v1/mlb/today (¿datos calibrados?) ==');
@@ -146,6 +147,19 @@ console.log(qaApiClosed ? '✅ API QA exige sesión autenticada (401)' : `❌ AP
 console.log(qaSiteReady ? '✅ qa.aasport.net sirve la interfaz QA' : `⚠️ qa.aasport.net aún propagando (status ${qaSite.status})`);
 if (!qaApiClosed) marketContractFailures++;
 console.log('\n== /v1/poly/radar + /v1/poly/alerts (Radar de wallets) ==');
+console.log('\n== /v1/intelligence/today (Central AA, sin alertas) ==');
+try {
+  const intelRaw = await get(`${API}/v1/intelligence/today`);
+  const intel = JSON.parse(intelRaw.text);
+  const safe = intelRaw.status === 200 && intel.version === 'intelligence_v1'
+    && (intel.slate || []).length <= 7 && intel.combos?.state === 'closed'
+    && !Object.hasOwn(intel.combos || {}, 'items') && intel.alerts === false && intel.telegram === false;
+  console.log(safe ? '✅ contrato seguro' : '❌ contrato inválido', '| estado:', intel.state,
+    '| slate:', (intel.slate || []).length, '| Poly:', intel.sources?.polymarket?.ok,
+    '| Kalshi:', intel.sources?.kalshi?.ok, '| as_of:', intel.as_of || '—');
+  if (!safe) marketContractFailures++;
+} catch (error) { console.log('❌ intelligence no-json/error:', String(error).slice(0, 160)); marketContractFailures++; }
+
 const pr = await get(`${API}/v1/poly/radar`);
 let polyPaused = false;
 try {
