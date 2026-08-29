@@ -1585,6 +1585,8 @@ const T = {
     intel_honesty: 'Las wallets y los mercados son evidencia contextual. El estudio previo no encontró edge replicable al copiar traders. No son garantía ni acusación.',
     intel_scope_aa: 'AA validado', intel_scope_market: 'Favorito del mercado', intel_source_note_aa: 'Modelo AA con gate público.', intel_source_note_market: 'Dato factual de cuotas; no es una predicción del modelo AA.',
     intel_not_listed: 'No listado para este juego', intel_ambiguous: 'Coincidencia ambigua; descartada', intel_quote_rejected: 'Cotización sin bid/ask fresco y estrecho', intel_checked: 'conector revisado',
+    intel_snapshot_stale: 'Snapshot atrasado; precio actual oculto', intel_stale_title: 'Datos temporalmente atrasados', intel_stale_body: 'Última actualización hace {n} min. Se conservan solo jugadas pregame futuras; precios externos y combinaciones se ocultan hasta recuperar el pipeline.',
+    intel_state_fresh: 'fresco', intel_state_stale: 'atrasado', intel_state_degraded: 'parcial',
     intel_matchup_data: 'Datos del matchup', intel_record: 'Récord de temporada', intel_recent: 'Últimos partidos', intel_price: 'Cuota', intel_spread: 'Hándicap', intel_total: 'Total', intel_start: 'Comienza', intel_no_sample: 'sin muestra suficiente',
     intel_opponent: 'rival', intel_pitching: 'Pitcheo', intel_offense: 'Ofensiva', intel_legs: 'piernas',
     intel_reason_market: '{p} asigna {v}% al pick después de quitar el margen.', intel_reason_record: 'Récord: pick {a} · rival {b}.', intel_reason_form: 'Forma reciente: pick {a}/{an} · rival {b}/{bn}.', intel_reason_home: 'El pick juega como local.', intel_reason_move: 'La probabilidad se movió {v} puntos desde apertura.', intel_reason_expensive: 'Favorito muy caro: alta probabilidad no significa buen valor.',
@@ -1792,6 +1794,8 @@ const T = {
     intel_honesty: 'Wallets and markets are contextual evidence. The prior study found no replicable edge from copying traders. They are neither a guarantee nor an accusation.',
     intel_scope_aa: 'Gated AA', intel_scope_market: 'Market favorite', intel_source_note_aa: 'AA model with a public gate.', intel_source_note_market: 'Factual odds data; not an AA model prediction.',
     intel_not_listed: 'Not listed for this game', intel_ambiguous: 'Ambiguous match; discarded', intel_quote_rejected: 'Quote lacked a fresh, narrow bid/ask', intel_checked: 'connector checked',
+    intel_snapshot_stale: 'Stale snapshot; current price hidden', intel_stale_title: 'Data temporarily delayed', intel_stale_body: 'Last update was {n} min ago. Only future pregame plays remain visible; external prices and combinations are hidden until the pipeline recovers.',
+    intel_state_fresh: 'fresh', intel_state_stale: 'stale', intel_state_degraded: 'partial',
     intel_matchup_data: 'Matchup data', intel_record: 'Season record', intel_recent: 'Recent games', intel_price: 'Price', intel_spread: 'Spread', intel_total: 'Total', intel_start: 'Starts', intel_no_sample: 'insufficient sample',
     intel_opponent: 'opponent', intel_pitching: 'Pitching', intel_offense: 'Offense', intel_legs: 'legs',
     intel_reason_market: '{p} assigns {v}% to the pick after removing vig.', intel_reason_record: 'Record: pick {a} · opponent {b}.', intel_reason_form: 'Recent form: pick {a}/{an} · opponent {b}/{bn}.', intel_reason_home: 'The pick plays at home.', intel_reason_move: 'Probability moved {v} points from the opener.', intel_reason_expensive: 'Very expensive favorite: high probability does not mean good value.',
@@ -4363,9 +4367,11 @@ const intelProb = (item) => item?.probability?.value ?? item?.aa?.prob ?? item?.
 const intelScope = (item) => item?.selection_scope === 'market_fact' ? 'market' : 'aa';
 const intelPrice = (value) => value == null || !isFinite(value) ? '—' : `${Number(value) > 0 ? '+' : ''}${Number(value)}`;
 const intelStateText = (state) => state === 'agree' ? t('intel_agree') : state === 'conflict' ? t('intel_conflict') : t('intel_insufficient');
+const intelDocState = (state) => t(`intel_state_${['fresh', 'stale', 'degraded'].includes(state) ? state : 'degraded'}`);
+const intelStaleWarning = (doc) => doc?.state === 'stale' ? `<div class="radarwarn"><b>${t('intel_stale_title')}:</b> ${t('intel_stale_body').replace('{n}', doc.freshness?.age_minutes ?? '—')}</div>` : '';
 const intelProvider = (label, source) => {
   const prob = source && (source.prob ?? source.mid ?? source.indicative);
-  const why = source?.reason === 'ambiguous' ? t('intel_ambiguous') : source?.reason === 'quote_rejected' ? t('intel_quote_rejected')
+  const why = source?.reason === 'snapshot_stale' ? t('intel_snapshot_stale') : source?.reason === 'ambiguous' ? t('intel_ambiguous') : source?.reason === 'quote_rejected' ? t('intel_quote_rejected')
     : source?.reason === 'not_listed' ? t('intel_not_listed') : t('intel_unmatched');
   const detail = prob != null && source?.matched !== false
     ? `${source.spread != null ? `spread ${(100 * source.spread).toFixed(1)} pts` : ''}${source.volume_24h != null ? `${source.spread != null ? ' · ' : ''}vol ${Number(source.volume_24h).toLocaleString(LOCALE())}` : ''}`
@@ -4401,7 +4407,7 @@ function centralListHtml(){
   const stamp = doc.as_of ? new Date(doc.as_of).toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' }) : '—';
   const next = doc.next_refresh ? new Date(doc.next_refresh).toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' }) : '—';
   const hero = `<div class="intelhero"><h2>${t('intel_title')}</h2><p>${t('intel_sub')}</p><div class="intelchips">
-    <span class="intelchip ${fresh ? 'good' : 'bad'}">${esc(doc.state || 'degraded')}</span><span class="intelchip">${t('intel_updated')} ${esc(stamp)}</span><span class="intelchip">${t('intel_next')} ${esc(next)}</span></div></div>`;
+    <span class="intelchip ${fresh ? 'good' : 'bad'}">${esc(intelDocState(doc.state))}</span><span class="intelchip">${t('intel_updated')} ${esc(stamp)}</span><span class="intelchip">${t('intel_next')} ${esc(next)}</span></div></div>${intelStaleWarning(doc)}`;
   if (!slate.length) return hero + `<div class="lempty">${radarLoading ? t('intel_loading') : t('intel_empty')}</div>`;
   return hero + slate.map((item, i) => `<button class="intelrow ${radarSel === item.id ? 'on' : ''}" data-rw="${esc(item.id)}">
     <span class="intelrank num">#${i + 1}</span><span><span class="intelteams">${esc(item.pick)} · ${esc(item.away?.code || '')} @ ${esc(item.home?.code || '')}</span>
@@ -4437,7 +4443,7 @@ function centralDetailHtml(){
     ${ctx.pitchers ? `<div><small>${t('intel_pitching')}</small><b>${esc(ctx.pitchers.home?.name || '—')} ${ctx.pitchers.home?.era_recent != null ? `· ERA ${ctx.pitchers.home.era_recent}` : ''}<br>${esc(ctx.pitchers.away?.name || '—')} ${ctx.pitchers.away?.era_recent != null ? `· ERA ${ctx.pitchers.away.era_recent}` : ''}</b></div>` : ''}
     ${ctx.offense ? `<div><small>${t('intel_offense')}</small><b class="num">${item.home?.code} ${ctx.offense.home?.runs ?? '—'} R/G · ${item.away?.code} ${ctx.offense.away?.runs ?? '—'} R/G</b></div>` : ''}
   </div>`;
-  return `<div class="dtop"><span class="crumb">${t('intel_title')}</span></div><div class="dbody">
+  return `<div class="dtop"><span class="crumb">${t('intel_title')}</span></div><div class="dbody">${intelStaleWarning(doc)}
     <div class="intelhero"><h2>${esc(item.pick)} · ${intelPct(probability)}</h2><p>${esc(item.away?.name || item.away?.code || '')} @ ${esc(item.home?.name || item.home?.code || '')}</p>
       <div class="intelchips"><span class="intelscope ${scope}">${t(scope === 'market' ? 'intel_scope_market' : 'intel_scope_aa')}</span><span class="intelchip ${stateClass}">${esc(intelStateText(item.consensus?.state))}</span></div>
       <p>${t(scope === 'market' ? 'intel_source_note_market' : 'intel_source_note_aa')}</p></div>

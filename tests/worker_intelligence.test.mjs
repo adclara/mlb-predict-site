@@ -5,6 +5,8 @@ import worker, { sanitizeIntelligenceDoc } from '../cloudflare/worker/index.js';
 const sample = (asOf = new Date().toISOString()) => ({
   version: 'intelligence_v2', date: '2026-08-28', state: 'fresh', as_of: asOf,
   next_refresh: new Date(Date.parse(asOf) + 1800e3).toISOString(),
+  cadence: '30m_redundant', source_health: { requests: 20, retries: 2, ok: 19, failed: 1, critical_ok: 10, critical_failed: 0,
+    by_host: { 'site.api.espn.com': { ok: 10, failed: 0, retries: 1 } } },
   sources: { aa: { ok: true }, books: { ok: true }, polymarket: { ok: true, markets: 4 }, kalshi: { ok: true, markets: 3 } },
   slate: [{ id: 'mlb:1', sport: 'mlb', event_id: '1', start: new Date(Date.parse(asOf) + 3 * 3600e3).toISOString(), pick: 'BOS', market: 'winner', selection_scope: 'aa_public',
     home: { code: 'BOS', name: 'Boston' }, away: { code: 'NYY', name: 'New York' },
@@ -26,6 +28,8 @@ test('sanitizer exposes only gated singles and always closes combos/alerts', () 
   assert.equal('items' in doc.combos, false);
   assert.equal(doc.alerts, false);
   assert.equal(doc.telegram, false);
+  assert.equal(doc.cadence, '30m_redundant');
+  assert.equal(doc.source_health.critical_ok, 10);
 });
 
 test('stale snapshots withdraw consensus claims but preserve authorized AA pick', () => {
@@ -33,13 +37,15 @@ test('stale snapshots withdraw consensus claims but preserve authorized AA pick'
   const doc = sanitizeIntelligenceDoc(sample(old), Date.parse('2026-08-28T12:00:00Z'));
   assert.equal(doc.state, 'stale');
   assert.equal(doc.slate[0].aa.prob, .62);
+  assert.equal(doc.slate[0].stale, true);
   assert.equal(doc.slate[0].consensus.state, 'insufficient');
-  assert.equal(doc.slate[0].polymarket, null);
+  assert.equal(doc.slate[0].polymarket.reason, 'snapshot_stale');
+  assert.equal(doc.freshness.age_minutes, 120);
 });
 
-test('market facts above 60% are public but never masquerade as AA; stale ones disappear', () => {
+test('market facts above 60% never masquerade as AA and hard-stale ones disappear', () => {
   const asOf = '2026-08-28T10:00:00Z', doc = sample(asOf);
-  doc.slate.push({ id: 'wnba:2', sport: 'wnba', event_id: '2', start: '2026-08-28T17:00:00Z', pick: 'NY', market: 'winner',
+  doc.slate.push({ id: 'wnba:2', sport: 'wnba', event_id: '2', start: '2026-08-28T20:00:00Z', pick: 'NY', market: 'winner',
     selection_scope: 'market_fact', home: { code: 'NY', name: 'Liberty' }, away: { code: 'CHI', name: 'Sky' },
     probability: { value: .76, kind: 'market_devig' }, market_pick: { prob: .76, provider: 'DraftKings', price: -380, public_fact: true },
     books: { prob: .76, n: 1 }, polymarket: { matched: true, prob: .785, reason: 'matched' }, kalshi: { matched: true, prob: .785, reason: 'matched' },
@@ -47,15 +53,30 @@ test('market facts above 60% are public but never masquerade as AA; stale ones d
     reasons: [{ code: 'market_probability', value: .76, provider: 'DraftKings' }] });
   doc.market_bundles = [{ bundle_id: 'mlb:1+wnba:2', legs: [
     { id: 'mlb:1', sport: 'mlb', event_id: '1', pick: 'BOS', prob: .62, source: 'aa_public', start: doc.slate[0].start },
-    { id: 'wnba:2', sport: 'wnba', event_id: '2', pick: 'NY', prob: .76, source: 'market_fact', start: '2026-08-28T17:00:00Z' }], joint_prob: null }];
+    { id: 'wnba:2', sport: 'wnba', event_id: '2', pick: 'NY', prob: .76, source: 'market_fact', start: '2026-08-28T20:00:00Z' }], joint_prob: null }];
   const fresh = sanitizeIntelligenceDoc(doc, Date.parse('2026-08-28T10:30:00Z'));
   const market = fresh.slate.find((row) => row.id === 'wnba:2');
   assert.equal(market.aa, null);
   assert.equal(market.market_pick.public_fact, true);
   assert.equal(fresh.market_bundles.length, 1);
   const stale = sanitizeIntelligenceDoc(doc, Date.parse('2026-08-28T12:00:00Z'));
-  assert.equal(stale.slate.some((row) => row.id === 'wnba:2'), false);
+  const staleMarket = stale.slate.find((row) => row.id === 'wnba:2');
+  assert.equal(staleMarket.stale, true);
+  assert.equal(staleMarket.polymarket.reason, 'snapshot_stale');
+  assert.equal(staleMarket.market_pick.price, null);
+  assert.equal(staleMarket.context.price, null);
+  assert.equal(staleMarket.context.spread, null);
   assert.deepEqual(stale.market_bundles, []);
+  const hardStale = sanitizeIntelligenceDoc(doc, Date.parse('2026-08-28T17:00:01Z'));
+  assert.equal(hardStale.slate.some((row) => row.id === 'wnba:2'), false);
+  assert.equal(hardStale.freshness.hard_stale, true);
+});
+
+test('fresh partial source state stays degraded instead of masquerading as fresh', () => {
+  const doc = sample('2026-08-28T10:00:00Z'); doc.state = 'degraded'; doc.source_health.critical_failed = 1;
+  const publicDoc = sanitizeIntelligenceDoc(doc, Date.parse('2026-08-28T10:10:00Z'));
+  assert.equal(publicDoc.state, 'degraded');
+  assert.equal(publicDoc.freshness.stale, false);
 });
 
 test('sanitizer preserves missing market numbers as null instead of manufacturing 0%', () => {

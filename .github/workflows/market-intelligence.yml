@@ -1,39 +1,59 @@
 name: market-intelligence
 on:
   schedule:
-    - cron: '7,37 * * * *'
-    - cron: '17 6 * * *'
+    # Redundant quarter-hour wakeups. The robot's freshness preflight writes
+    # only when the current snapshot is >=30 minutes old, preserving the 30m
+    # effective cadence while tolerating one or more dropped GitHub schedules.
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch: {}
+  workflow_run:
+    workflows: [adrian-daily, soccer-shadow, wnba-shadow, US sports freshness QA]
+    types: [completed]
   push:
     branches: [main]
-    paths: ['.github/poke-intelligence']
+    paths:
+      - '.github/poke-intelligence'
+      - 'data/history/**'
+      - 'data/fase2/**'
 permissions:
   contents: read
 concurrency:
   group: market-intelligence
-  cancel-in-progress: true
+  # A cancelled run looks like a failure and can leave a long gap if the newer
+  # trigger is itself dropped. Redundant runs self-dedupe before any API work.
+  cancel-in-progress: false
 jobs:
   pulse:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+      - name: Classify trigger and force only an explicit poke
+        id: trigger
+        shell: bash
+        run: |
+          force=0
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && git show --pretty='' --name-only "$GITHUB_SHA" | grep -qx '.github/poke-intelligence'; then
+            force=1
+          fi
+          echo "force=$force" >> "$GITHUB_OUTPUT"
+          echo "event=$GITHUB_EVENT_NAME force=$force"
       - name: Validate intelligence helpers
         run: node --test tests/market_intelligence.test.mjs
       - name: Build and publish sanitized snapshot
-        if: github.event_name != 'schedule' || github.event.schedule != '17 6 * * *'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          AA_INTELLIGENCE_FORCE: ${{ steps.trigger.outputs.force }}
+          AA_INTELLIGENCE_MIN_AGE_MINUTES: '30'
+          AA_INTELLIGENCE_TRIGGER: ${{ github.event_name }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
           node robot/market_intelligence.mjs
-      - name: Refresh causal Polymarket sports-wallet profiles
-        if: github.event_name == 'schedule' && github.event.schedule == '17 6 * * *'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
-          node robot/poly_wallet_profiles.mjs
+      - name: Verify Central AA production freshness
+        run: node robot/intelligence_health_check.mjs --max-age=45

@@ -78,7 +78,9 @@ path dispara el workflow. Mapa verificado (poke → workflow):
 - `.github/poke-us-sports` → us-sports-qa.yml (frescura NFL/NCAAF/NHL/NCAAM; cron 4×/día)
 - `.github/poke-poly` → sin efecto mientras `poly-study.yml` permanece pausado
 - `.github/poke-intelligence` → market-intelligence.yml (pulso multifuente 30m
-  activo/2h calma + perfil causal diario de wallets; nunca alertas/Telegram)
+  con triggers redundantes cron/workflow_run/push y preflight anti-duplicado;
+  nunca alertas/Telegram). `poly-wallet-profiles.yml` mantiene por separado el
+  perfil causal diario de wallets, para que su run no simule un pulso exitoso.
 - `.github/poke-soccer` → soccer-shadow.yml (soccer_shadow.mjs; publica soccer:today)
 - `.github/poke-nba` → nba-shadow.yml · `.github/poke-sim` → mlb-sim.yml (semanal)
 - `.github/poke-wnba` → wnba-shadow.yml (ganador/totales WNBA en sombra + Cerebro
@@ -163,7 +165,12 @@ humana ni scope público. No requiere copiar `CLOUDFLARE_API_TOKEN` al repo priv
   - `robot/poly_radar.mjs` + `robot/poly_study.mjs` + `robot/lib/{poly,espn_odds}.mjs`.
   - `robot/market_intelligence.mjs`, `robot/poly_wallet_profiles.mjs` y
     `robot/lib/market_intelligence.mjs` — Central AA: picks AA gated + favoritos
-    factuales pregame, contexto Polymarket/Kalshi y bundles informativos.
+    factuales pregame, contexto Polymarket/Kalshi y bundles informativos. El
+    pipeline se auto-deduplica a 30m, reintenta upstreams y verifica KV; el
+    Worker conserva un snapshot marcado stale hasta 6h sin mostrar precios
+    externos actuales ni bundles, para que un cron perdido no vacíe la app.
+  - `robot/intelligence_health_check.mjs` — gate read-only de frescura usado por
+    publicación y deploy; falla si el snapshot productivo supera 45 minutos.
   - `robot/prod_diag.mjs` (diagnóstico post-deploy), `robot/qa_check.mjs`,
     `robot/injuries.mjs`, `robot/domain_fix.mjs`, `robot/subdomain_radar.mjs`,
     `robot/subdomain_qa.mjs`.

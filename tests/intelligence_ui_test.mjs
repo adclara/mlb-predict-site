@@ -11,6 +11,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../cloudflare/pag
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const now = new Date(), date = now.toISOString().slice(0, 10);
 const intelligence = { version: 'intelligence_v2', date, state: 'fresh', as_of: now.toISOString(), next_refresh: new Date(now.getTime() + 1800e3).toISOString(),
+  freshness: { age_minutes: 1, stale: false, hard_stale: false },
   sources: { aa: { ok: true }, books: { ok: true }, polymarket: { ok: true, markets: 2 }, kalshi: { ok: true, markets: 2 } },
   slate: [{ id: 'mlb:1', sport: 'mlb', event_id: '1', start: new Date(now.getTime() + 3e6).toISOString(), market: 'winner', pick: 'BOS', selection_scope: 'aa_public',
     home: { code: 'BOS', name: 'Boston Red Sox' }, away: { code: 'NYY', name: 'New York Yankees' }, probability: { value: .64, kind: 'aa_calibrated' }, aa: { prob: .64, engine: 'v2', public_gate: true },
@@ -68,6 +69,13 @@ try {
     assert.match(wnbaEs, /12 \/ 100/); await page.locator('#langbtn').evaluate((el) => el.click()); assert.match(await page.locator('#dcard').textContent(), /AA Play Central/); assert.match(await page.locator('#dcard').textContent(), /De-vigged market probability/);
     assert.match(await page.locator('.lghead .sub').textContent(), /multi-source intelligence/i); assert.doesNotMatch(await page.locator('.lghead .sub').textContent(), /Season/i);
     await page.locator('.intelrow[data-rw="mlb:1"]').evaluate((el) => el.click()); assert.match(await page.locator('#dcard').textContent(), /Starters:[\s\S]*A\. Ace/); assert.doesNotMatch(await page.locator('#dcard').textContent(), /Abridores|riesgo bajo/i);
+    if (viewport.n === 'desktop') {
+      intelligence.state = 'stale'; intelligence.freshness = { age_minutes: 120, stale: true, hard_stale: false };
+      await page.evaluate(async () => { radarDoc = null; radarAt = 0; await loadRadar(); });
+      assert.match(await page.locator('#list').textContent(), /Data temporarily delayed[\s\S]*120 min/);
+      assert.match(await page.locator('#dcard').textContent(), /external prices and combinations are hidden/i);
+      intelligence.state = 'fresh'; intelligence.freshness = { age_minutes: 1, stale: false, hard_stale: false };
+    }
     if (process.env.AA_INTELLIGENCE_SCREENSHOT) await page.screenshot({ path: `/tmp/aa-intelligence-v2-${viewport.n}.png`, fullPage: true });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth); assert.ok(overflow <= 1, `${viewport.n}: overflow ${overflow}`);
     assert.deepEqual(errors, [], `${viewport.n}: console errors`); await context.close();

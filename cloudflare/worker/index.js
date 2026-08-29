@@ -922,16 +922,32 @@ function safeIntelligenceReason(reason) {
   return out.code ? out : null;
 }
 
+function safeIntelligenceSourceHealth(health) {
+  if (!health || typeof health !== 'object') return null;
+  const out = {};
+  for (const key of ['requests', 'retries', 'ok', 'failed', 'critical_ok', 'critical_failed']) {
+    out[key] = Math.max(0, intelligenceNumber(health[key]) || 0);
+  }
+  out.by_host = Object.fromEntries(Object.entries(health.by_host || {}).slice(0, 20).map(([host, row]) => [
+    String(host).slice(0, 120), { ok: Math.max(0, intelligenceNumber(row?.ok) || 0),
+      failed: Math.max(0, intelligenceNumber(row?.failed) || 0), retries: Math.max(0, intelligenceNumber(row?.retries) || 0) },
+  ]));
+  return out;
+}
+
 export function sanitizeIntelligenceDoc(source, nowMs = Date.now()) {
   const doc = source && typeof source === 'object' ? source : {};
   const asOf = intelligenceText(doc.as_of, 40);
-  const stale = !asOf || !Number.isFinite(Date.parse(asOf)) || nowMs - Date.parse(asOf) > 75 * 60 * 1000;
+  const asOfMs = Date.parse(asOf || ''), ageMs = Number.isFinite(asOfMs) ? Math.max(0, nowMs - asOfMs) : Infinity;
+  const stale = ageMs > 75 * 60 * 1000, hardStale = ageMs > 6 * 60 * 60 * 1000;
+  const staleProvider = (sourceProvider) => sourceProvider && typeof sourceProvider === 'object'
+    ? { matched: sourceProvider.matched === true, reason: 'snapshot_stale' } : null;
   const slate = (Array.isArray(doc.slate) ? doc.slate : []).slice(0, 12).map((item) => {
     const scope = item?.selection_scope === 'market_fact' ? 'market_fact' : 'aa_public';
     const prob = intelligenceNumber(item?.probability?.value ?? item?.aa?.prob ?? item?.market_pick?.prob);
     const start = Date.parse(item?.start || 0), authorized = scope === 'market_fact'
       ? item?.market_pick?.public_fact === true : item?.aa?.public_gate === true;
-    if (!item?.id || !item?.event_id || !item?.pick || !(prob > .60) || !authorized || !Number.isFinite(start) || start <= nowMs || (stale && scope === 'market_fact')) return null;
+    if (!item?.id || !item?.event_id || !item?.pick || !(prob > .60) || !authorized || !Number.isFinite(start) || start <= nowMs || (hardStale && scope === 'market_fact')) return null;
     const consensus = item.consensus && typeof item.consensus === 'object' ? {
       state: stale ? 'insufficient' : ['agree', 'conflict', 'insufficient'].includes(item.consensus.state) ? item.consensus.state : 'insufficient',
       market_prob: stale ? null : intelligenceNumber(item.consensus.market_prob),
@@ -949,26 +965,34 @@ export function sanitizeIntelligenceDoc(source, nowMs = Date.now()) {
         wr_lb: intelligenceNumber(profile?.wr_lb), pnl: intelligenceNumber(profile?.pnl),
       })).filter((profile) => /^0x[0-9a-f]{40}$/i.test(profile.wallet || '')),
     } : null;
+    const context = safeIntelligenceContext(item.context);
+    if (stale && context) {
+      for (const key of ['price', 'spread', 'total', 'open_prob', 'line_move']) context[key] = null;
+      context.market = null;
+    }
     return {
       id: intelligenceText(item.id), sport: intelligenceText(item.sport, 20), event_id: intelligenceText(item.event_id),
       start: intelligenceText(item.start, 40), home: safeSportSide(item.home), away: safeSportSide(item.away),
       market: intelligenceText(item.market, 30), pick: intelligenceText(item.pick),
       selection_scope: scope, probability: { value: prob, kind: scope === 'market_fact' ? 'market_devig' : 'aa_calibrated' },
-      aa: scope === 'aa_public' ? { prob, engine: intelligenceText(item.aa.engine, 60), public_gate: true } : null,
+      stale, aa: scope === 'aa_public' ? { prob, engine: intelligenceText(item.aa.engine, 60), public_gate: true } : null,
       market_pick: scope === 'market_fact' ? { prob, engine: intelligenceText(item.market_pick.engine, 60),
-        provider: intelligenceText(item.market_pick.provider, 60), price: intelligenceNumber(item.market_pick.price), public_fact: true } : null,
-      books: stale ? null : safeIntelligenceProvider(item.books),
-      polymarket: stale ? null : safeIntelligenceProvider(item.polymarket),
-      kalshi: stale ? null : safeIntelligenceProvider(item.kalshi),
+        provider: intelligenceText(item.market_pick.provider, 60), price: stale ? null : intelligenceNumber(item.market_pick.price), public_fact: true } : null,
+      books: stale ? staleProvider(item.books) : safeIntelligenceProvider(item.books),
+      polymarket: stale ? staleProvider(item.polymarket) : safeIntelligenceProvider(item.polymarket),
+      kalshi: stale ? staleProvider(item.kalshi) : safeIntelligenceProvider(item.kalshi),
       wallet_signal: walletSignal, consensus,
-      context: safeIntelligenceContext(item.context),
+      context,
       reasons: (Array.isArray(item.reasons) ? item.reasons : []).slice(0, 8).map(safeIntelligenceReason).filter(Boolean),
     };
   }).filter(Boolean);
   const comboSample = safeMarketSample(doc?.combos?.sample) || { n: 0, dates: 0, min_forward: 100, min_dates: 30 };
   return {
-    version: 'intelligence_v2', date: intelligenceText(doc.date, 10), state: stale ? 'stale' : (slate.length ? 'fresh' : 'degraded'),
-    as_of: asOf, next_refresh: intelligenceText(doc.next_refresh, 40), cadence: '30m_active_2h_calm',
+    version: 'intelligence_v2', date: intelligenceText(doc.date, 10),
+    state: stale ? 'stale' : (doc.state === 'degraded' || !slate.length ? 'degraded' : 'fresh'),
+    as_of: asOf, next_refresh: intelligenceText(doc.next_refresh, 40), cadence: ['30m_redundant', '30m_active_2h_calm'].includes(doc.cadence) ? doc.cadence : '30m_redundant',
+    freshness: { age_minutes: Number.isFinite(ageMs) ? Math.round(ageMs / 6000) / 10 : null,
+      stale, hard_stale: hardStale, stale_after_minutes: 75, hard_stale_after_minutes: 360 },
     sources: {
       aa: { ok: doc?.sources?.aa?.ok === true }, books: { ok: doc?.sources?.books?.ok === true },
       polymarket: { ok: doc?.sources?.polymarket?.ok === true, markets: Math.max(0, intelligenceNumber(doc?.sources?.polymarket?.markets) || 0) },
@@ -983,6 +1007,7 @@ export function sanitizeIntelligenceDoc(source, nowMs = Date.now()) {
         state: 'informational', joint_prob: null, legs } : null;
     }).filter(Boolean),
     combos: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'combos_forward_validation_pending' }, sample: comboSample },
+    source_health: safeIntelligenceSourceHealth(doc.source_health),
     budget: { kv_writes: Math.min(120, Math.max(0, intelligenceNumber(doc?.budget?.kv_writes) || 0)),
       d1_rows: Math.min(5000, Math.max(0, intelligenceNumber(doc?.budget?.d1_rows) || 0)), max_kv_writes_day: 120, max_d1_rows_day: 5000 },
     alerts: false, telegram: false,

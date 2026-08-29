@@ -3,7 +3,7 @@
 import { createHash } from 'node:crypto';
 import { canonicalTeam, extractTeams, intelligenceState, matchProviderEvent, matchProviderEventResult, quoteFromMarket, sameTeam,
   buildMarketBundles, buildShadowCombos, marketEventFromEspn, recentFormByTeam,
-  sanitizePublicSlate, shouldRunPulse } from './lib/market_intelligence.mjs';
+  sanitizePublicSlate } from './lib/market_intelligence.mjs';
 
 const AA_API = 'https://aa-sports-api.opsmira9.workers.dev';
 const ACCOUNT_ID = 'f02574feb7272a1da2818e35e0ff4342';
@@ -11,6 +11,9 @@ const KV_ID = '683aa2f8846643bf8a6a8b606e5bf0b7';
 const D1_ID = 'ed0969d8-050a-4987-ab98-b047c30f76c9';
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN || null;
 const DRY_RUN = process.argv.includes('--dry-run') || !TOKEN;
+const FORCE = process.env.AA_INTELLIGENCE_FORCE === '1';
+const MIN_AGE_MINUTES = Math.max(0, Number(process.env.AA_INTELLIGENCE_MIN_AGE_MINUTES || 0) || 0);
+const TRIGGER = String(process.env.AA_INTELLIGENCE_TRIGGER || (DRY_RUN ? 'dry-run' : 'unknown')).slice(0, 40);
 const ET = 'America/New_York';
 const SPORTS = ['mlb', 'soccer', 'nba', 'wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'];
 const AA_SPORTS = ['mlb', 'soccer', 'nba', 'wnba', 'nfl'];
@@ -25,16 +28,57 @@ const etDate = (date = new Date()) => new Intl.DateTimeFormat('en-CA', {
   timeZone: ET, year: 'numeric', month: '2-digit', day: '2-digit',
 }).format(date);
 const timeout = (ms) => AbortSignal.timeout(ms);
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const telemetry = { requests: 0, retries: 0, ok: 0, failed: 0, critical_ok: 0, critical_failed: 0, by_host: {} };
+const resetTelemetry = () => {
+  for (const key of ['requests', 'retries', 'ok', 'failed', 'critical_ok', 'critical_failed']) telemetry[key] = 0;
+  telemetry.by_host = {};
+};
+const log = (value) => { if (!DRY_RUN) console.log(JSON.stringify(value)); };
+const hostMetric = (url, key) => {
+  const host = new URL(url).host, row = telemetry.by_host[host] || { ok: 0, failed: 0, retries: 0 };
+  row[key] = (row[key] || 0) + 1; telemetry.by_host[host] = row;
+};
 
-async function getJson(url, { optional = false } = {}) {
-  try {
-    const response = await fetch(url, { headers: { accept: 'application/json', 'user-agent': 'aa-sports-intelligence/1.0' }, signal: timeout(12000) });
-    if (!response.ok) throw new Error(`${response.status}`);
-    return await response.json();
-  } catch (error) {
-    if (!optional) console.warn(JSON.stringify({ message: 'upstream unavailable', url: new URL(url).host, error: String(error?.message || error) }));
-    return null;
+export function freshnessDecision(current, nowMs, minAgeMinutes, force = false) {
+  const ageMinutes = current?.as_of && Number.isFinite(Date.parse(current.as_of))
+    ? Math.max(0, (nowMs - Date.parse(current.as_of)) / 60000) : null;
+  const verifiable = current?.version === 'intelligence_v2' && current?.cadence === '30m_redundant'
+    && Number(current?.source_health?.critical_ok || 0) > 0;
+  return { skip: !force && verifiable && ageMinutes != null && ageMinutes < minAgeMinutes,
+    age_minutes: ageMinutes, verifiable };
+}
+
+export function previousFutureCount(previous, nowMs) {
+  return (previous?.slate || []).filter((item) => Number.isFinite(Date.parse(item?.start)) && Date.parse(item.start) > nowMs).length;
+}
+
+export async function getJson(url, { optional = false, critical = false, tries = 3, fetcher = fetch, sleepFn = sleep, label = 'upstream' } = {}) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= tries; attempt++) {
+    telemetry.requests++;
+    try {
+      const response = await fetcher(url, { headers: { accept: 'application/json', 'user-agent': 'aa-sports-intelligence/2.0', 'cache-control': 'no-cache' }, signal: timeout(12000) });
+      if (!response.ok) {
+        const error = new Error(`http_${response.status}`); error.status = response.status; throw error;
+      }
+      const body = await response.json(); telemetry.ok++; hostMetric(url, 'ok'); if (critical) telemetry.critical_ok++;
+      return body;
+    } catch (error) {
+      lastError = error;
+      const retryable = error?.status === 429 || error?.status >= 500 || error?.name === 'TimeoutError' || error?.name === 'AbortError' || error?.status == null;
+      if (attempt < tries && retryable) {
+        telemetry.retries++; hostMetric(url, 'retries');
+        await sleepFn(Math.min(3000, 300 * (2 ** (attempt - 1))));
+        continue;
+      }
+      break;
+    }
   }
+  telemetry.failed++; hostMetric(url, 'failed'); if (critical) telemetry.critical_failed++;
+  if (!DRY_RUN) console.warn(JSON.stringify({ message: 'upstream unavailable', label, optional, critical,
+    host: new URL(url).host, path: new URL(url).pathname, error: String(lastError?.message || lastError) }));
+  return null;
 }
 
 function eventsOf(doc, sport) {
@@ -91,9 +135,11 @@ async function fetchMarketEvents(now) {
   const [scoreboardRows, historyRows] = await Promise.all([
     Promise.all([
       ...Object.entries(ESPN_FEEDS).flatMap(([sport, feed]) => dates.map(async (date) => ({ sport, league: sport.toUpperCase(),
-        doc: await getJson(`https://site.api.espn.com/apis/site/v2/sports/${feed}/scoreboard?dates=${date}&limit=400`, { optional: true }) }))),
+        doc: await getJson(`https://site.api.espn.com/apis/site/v2/sports/${feed}/scoreboard?dates=${date}&limit=400`,
+          { optional: true, critical: true, label: `scoreboard:${sport}:${date}` }) }))),
       ...SOCCER_LEAGUES.flatMap((league) => dates.map(async (date) => ({ sport: 'soccer', league,
-        doc: await getJson(`https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${date}&limit=200`, { optional: true }) }))),
+        doc: await getJson(`https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${date}&limit=200`,
+          { optional: true, critical: true, label: `scoreboard:soccer:${league}:${date}` }) }))),
     ]),
     Promise.all([
       ...Object.entries(ESPN_FEEDS).map(async ([sport, feed]) => ({ sport,
@@ -203,25 +249,48 @@ export function buildOverlays(events, poly, kalshi, now) {
   return out;
 }
 
-async function cf(path, init) {
-  const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
-    ...init, headers: { authorization: `Bearer ${TOKEN}`, ...(init?.headers || {}) }, signal: timeout(15000),
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || body.success === false) throw new Error(`Cloudflare ${response.status}: ${JSON.stringify(body.errors || body).slice(0, 300)}`);
-  return body;
+async function cf(path, init, tries = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= tries; attempt++) {
+    try {
+      const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
+        ...init, headers: { authorization: `Bearer ${TOKEN}`, ...(init?.headers || {}) }, signal: timeout(15000),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body.success === false) {
+        const error = new Error(`Cloudflare ${response.status}: ${JSON.stringify(body.errors || body).slice(0, 300)}`);
+        error.retryable = response.status === 429 || response.status >= 500;
+        throw error;
+      }
+      return body;
+    } catch (error) {
+      lastError = error;
+      if (attempt >= tries || error?.retryable === false) break;
+      log({ message: 'cloudflare write retry', path, attempt, error: String(error?.message || error) });
+      await sleep(Math.min(3000, 400 * (2 ** (attempt - 1))));
+    }
+  }
+  throw lastError;
+}
+
+async function readKvJson(key) {
+  if (!TOKEN) return null;
+  try {
+    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${KV_ID}/values/${encodeURIComponent(key)}`, {
+      headers: { authorization: `Bearer ${TOKEN}`, accept: 'application/json', 'cache-control': 'no-cache' }, signal: timeout(12000),
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`kv_get_${response.status}`);
+    return await response.json();
+  } catch (error) {
+    log({ message: 'kv read failed', key, error: String(error?.message || error) });
+    return null;
+  }
 }
 
 async function loadWalletProfiles() {
-  if (!TOKEN) return [];
-  try {
-    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${KV_ID}/values/intelligence%3Awallets`, {
-      headers: { authorization: `Bearer ${TOKEN}`, accept: 'application/json' }, signal: timeout(12000),
-    });
-    if (!response.ok) return [];
-    const doc = await response.json();
-    return Array.isArray(doc?.profiles) ? doc.profiles.filter((profile) => profile?.w) : [];
-  } catch { return []; }
+  const doc = await readKvJson('intelligence:wallets');
+  return Array.isArray(doc?.profiles) ? doc.profiles.filter((profile) => profile?.w) : [];
 }
 
 async function attachWalletSignals(events, poly, overlays, profiles, nowMs) {
@@ -268,13 +337,13 @@ async function attachWalletSignals(events, poly, overlays, profiles, nowMs) {
 
 async function publish(doc) {
   const payload = JSON.stringify(doc);
-  await cf(`/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${KV_ID}/values/intelligence%3Atoday`, {
-    method: 'PUT', headers: { 'content-type': 'application/json' }, body: payload,
-  });
+  log({ message: 'publish started', content_hash: doc.content_hash, bytes: Buffer.byteLength(payload), slate: doc.slate.length });
+  // `intelligence:today` is the commit marker. Write history and ledgers first
+  // so a partial failure leaves the old latest snapshot eligible for retry.
   await cf(`/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${KV_ID}/values/${encodeURIComponent(`intelligence:day:${doc.date}`)}`, {
     method: 'PUT', headers: { 'content-type': 'application/json' }, body: payload,
   });
-  await cf(`/accounts/${ACCOUNT_ID}/d1/database/${D1_ID}/query`, { method: 'POST', headers: { 'content-type': 'application/json' },
+  const d1Result = await cf(`/accounts/${ACCOUNT_ID}/d1/database/${D1_ID}/query`, { method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ sql: `INSERT OR IGNORE INTO market_intelligence_snapshots
       (slot_at, date, state, payload_hash, payload, kv_writes, d1_rows, created_at) VALUES (?, ?, ?, ?, ?, 2, 1, ?)`,
     params: [doc.as_of.slice(0, 16) + ':00Z', doc.date, doc.state, doc.content_hash, payload, doc.as_of] }) });
@@ -288,16 +357,42 @@ async function publish(doc) {
     await cf(`/accounts/${ACCOUNT_ID}/d1/database/${D1_ID}/query`, { method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ sql: `INSERT OR IGNORE INTO cross_sport_combo_ledger ${fields} VALUES ${marks}`, params }) });
   }
+  await cf(`/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${KV_ID}/values/intelligence%3Atoday`, {
+    method: 'PUT', headers: { 'content-type': 'application/json' }, body: payload,
+  });
+  let readback = null;
+  for (let attempt = 1; attempt <= 10; attempt++) {
+    readback = await readKvJson('intelligence:today');
+    if (readback?.content_hash === doc.content_hash) break;
+    if (attempt < 10) await sleep(3000);
+  }
+  if (!readback || readback.content_hash !== doc.content_hash) {
+    throw new Error(`kv_readback_mismatch expected=${doc.content_hash} actual=${readback?.content_hash || 'missing'}`);
+  }
+  log({ message: 'publish verified', content_hash: doc.content_hash,
+    d1: d1Result?.result?.[0]?.meta || null, combos: combos.length, kv_readback: true });
 }
 
 export async function run(now = new Date()) {
-  const nowIso = now.toISOString(), nowMs = now.getTime();
+  const startedAt = Date.now(), nowIso = now.toISOString(), nowMs = now.getTime();
+  resetTelemetry();
+  if (!DRY_RUN && !FORCE && MIN_AGE_MINUTES > 0) {
+    const current = await readKvJson('intelligence:today') || await getJson(`${AA_API}/v1/intelligence/today?freshness=${Date.now()}`,
+      { optional: true, tries: 2, label: 'freshness-preflight' });
+    const decision = freshnessDecision(current, nowMs, MIN_AGE_MINUTES, FORCE), ageMinutes = decision.age_minutes;
+    if (decision.skip) {
+      log({ message: 'freshness preflight skip', trigger: TRIGGER, age_minutes: +ageMinutes.toFixed(1),
+        min_age_minutes: MIN_AGE_MINUTES, as_of: current.as_of });
+      return { skipped: true, reason: 'fresh', age_minutes: ageMinutes };
+    }
+    log({ message: 'freshness preflight run', trigger: TRIGGER, force: false,
+      age_minutes: ageMinutes == null ? null : +ageMinutes.toFixed(1), min_age_minutes: MIN_AGE_MINUTES });
+  } else if (!DRY_RUN) {
+    log({ message: 'freshness preflight run', trigger: TRIGGER, force: FORCE, min_age_minutes: MIN_AGE_MINUTES });
+  }
   const [aaEvents, marketEvents] = await Promise.all([fetchAaEvents(), fetchMarketEvents(now)]);
   const events = [...aaEvents, ...marketEvents];
-  if (!shouldRunPulse(events, nowMs)) {
-    console.log(JSON.stringify({ message: 'calm-window skip', events: events.length, now: nowIso }));
-    return { skipped: true };
-  }
+  if (telemetry.critical_ok === 0) throw new Error('all_critical_scoreboards_unavailable');
   const [polyDocs, kalshiDocs, walletProfiles] = await Promise.all([
     Promise.all(SPORTS.map((sport) => getJson(
       `https://gamma-api.polymarket.com/events?tag_slug=${POLY_TAG[sport]}&closed=false&limit=500&order=startDate&ascending=false`, { optional: true }))),
@@ -311,17 +406,37 @@ export async function run(now = new Date()) {
   const slate = sanitizePublicSlate(events, overlays, { max: 12, now: nowMs });
   const comboItems = buildShadowCombos(slate, { max: 3 });
   const marketBundles = buildMarketBundles(slate, { max: 3 });
-  const doc = { version: 'intelligence_v2', date: etDate(now), state: slate.length ? 'fresh' : 'degraded', as_of: nowIso,
-    next_refresh: new Date(nowMs + (events.some((e) => e.status === 'live' || (Date.parse(e.start) - nowMs < 18 * 3600e3 && Date.parse(e.start) >= nowMs - 30 * 60e3)) ? 30 : 120) * 60e3).toISOString(),
-    cadence: '30m_active_2h_calm', sources: { aa: { ok: events.length > 0 }, books: { ok: slate.some((x) => x.books) },
+  if (!slate.length && telemetry.critical_failed > 0 && !DRY_RUN) {
+    const previous = await readKvJson('intelligence:today');
+    const previousFuture = previousFutureCount(previous, nowMs);
+    if (previousFuture) {
+      log({ message: 'empty partial snapshot rejected; previous KV preserved', previous_future: previousFuture,
+        critical_ok: telemetry.critical_ok, critical_failed: telemetry.critical_failed });
+      return { preserved: true, reason: 'partial_empty', previous_future: previousFuture };
+    }
+    throw new Error(`partial_empty_snapshot critical_ok=${telemetry.critical_ok} critical_failed=${telemetry.critical_failed}`);
+  }
+  const doc = { version: 'intelligence_v2', date: etDate(now), state: telemetry.critical_failed ? 'degraded' : slate.length ? 'fresh' : 'degraded', as_of: nowIso,
+    next_refresh: new Date(nowMs + 30 * 60e3).toISOString(),
+    cadence: '30m_redundant', sources: { aa: { ok: aaEvents.length > 0 }, books: { ok: slate.some((x) => x.books) },
       polymarket: { ok: poly.length > 0, markets: poly.length }, kalshi: { ok: kalshi.length > 0, markets: kalshi.length } },
     slate, combos: { state: 'closed', items: comboItems, gate: { passed: false, approved: false, public: false, reason: 'combos_forward_validation_pending' },
       sample: { n: 0, dates: 0, min_forward: 100, min_dates: 30 } },
     market_bundles: marketBundles,
+    source_health: { requests: telemetry.requests, retries: telemetry.retries, ok: telemetry.ok, failed: telemetry.failed,
+      critical_ok: telemetry.critical_ok, critical_failed: telemetry.critical_failed, by_host: telemetry.by_host },
     budget: { kv_writes: 2, d1_rows: 1 + comboItems.length, max_kv_writes_day: 120, max_d1_rows_day: 5000 },
     alerts: false, telegram: false };
   doc.content_hash = createHash('sha256').update(JSON.stringify(doc)).digest('hex');
-  if (DRY_RUN) console.log(JSON.stringify(doc, null, 2)); else await publish(doc);
+  if (DRY_RUN) console.log(JSON.stringify(doc, null, 2));
+  else {
+    await publish(doc);
+    log({ message: 'market intelligence complete', trigger: TRIGGER, duration_ms: Date.now() - startedAt,
+      state: doc.state, slate: slate.length, sports: [...new Set(slate.map((item) => item.sport))],
+      poly_matches: slate.filter((item) => item.polymarket?.prob != null).length,
+      kalshi_matches: slate.filter((item) => item.kalshi?.prob != null).length,
+      bundles: marketBundles.map((bundle) => bundle.legs.length), source_health: doc.source_health });
+  }
   return doc;
 }
 
