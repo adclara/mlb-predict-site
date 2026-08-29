@@ -1176,6 +1176,15 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .dnote{font-size:11.5px;color:var(--faint);line-height:1.6;margin-top:16px;padding-top:12px;border-top:1px solid var(--hair)}
 .aachip{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;color:var(--dim);background:var(--inner);border:1px solid var(--hair);border-radius:999px;padding:2px 7px;white-space:nowrap}
 .aachip b{color:var(--volt);font-weight:800}
+.other-pick-line{display:flex;min-width:0;padding-left:28px;margin-top:2px;overflow:hidden}
+.other-pick-line .aachip{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.historygames{display:grid;gap:5px;margin-top:8px}
+.historygame{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:7px;align-items:center;padding:6px 8px;border:1px solid var(--hair);border-radius:8px;background:var(--inner);font-size:11px;color:var(--dim)}
+.historygame .result{display:grid;place-items:center;width:20px;height:20px;border-radius:5px;font-weight:900;background:var(--panel-2)}
+.historygame .result.w{color:var(--volt)}.historygame .result.l{color:var(--red)}.historygame .result.t{color:var(--amber)}
+.historygame .opp{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.historygame .score{font-weight:800;color:var(--text)}
+.venue-card,.player-pending{padding:11px 13px;border:1px solid var(--hair);border-radius:11px;background:var(--inner);color:var(--dim);font-size:12px;line-height:1.5}
+.venue-card b,.player-pending b{color:var(--text)}
 .scpred{background:var(--inner);border:1px solid var(--hair);border-radius:14px;padding:12px 13px;margin-bottom:12px}
 .scph{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
 .scph .q{font-size:14px;font-weight:800}.scph .eng{font-size:10px;color:var(--faint)}
@@ -1282,6 +1291,8 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   .market-tab b{font-size:11.5px}.market-tab small{font-size:8.5px}
   .prob-viz{height:320px;gap:20px;padding-left:16px;padding-right:16px}
   .prob-pct{font-size:24px}.prob-barv{width:44px}.prob-name{font-size:11.5px;max-width:112px}
+  #lgchips{flex-wrap:wrap;overflow-x:visible;scroll-snap-type:none;padding:10px 12px;gap:6px}
+  #lgchips .pill{font-size:11.5px;padding:5px 10px}
 }
 .pcard{min-width:0}
 .formside{min-width:0}
@@ -1616,7 +1627,7 @@ const T = {
     sport_training_gate: 'Entrenamiento · gate cerrado', sport_top2: 'Top 2 AA · mayor confianza',
     sport_model_evidence: 'Evidencia histórica del modelo', sport_hist_accuracy: 'Acierto histórico OOS', sport_hist_sample: 'Juegos históricos', sport_hist_brier: 'Brier histórico', sport_forward_progress: 'Muestra forward', sport_no_game_pct: 'Las probabilidades AA por partido siguen cerradas hasta completar el gate; este porcentaje describe el examen histórico, no el juego de hoy.',
     market_compare: 'Comparador de mercados', market_winner: 'Ganador', market_total: 'Total', market_players: 'Jugadores', market_combos: 'Combos',
-    market_gate_closed: 'Gate cerrado', market_gate_public: 'Público', market_gate_qa: 'QA sombra', market_prob_title: 'Probabilidad de victoria', market_prob_aa: 'Modelo AA validado', market_prob_qa: 'Modelo AA en validación · no público', market_prob_espn: 'ESPN · probabilidad en vivo', market_prob_market_title: 'Probabilidad de mercado', market_prob_market: 'Mercado desvigado · no es probabilidad AA', market_source_short: 'Mercado', market_balance: 'Línea de equilibrio: 50%',
+    market_gate_closed: 'Gate cerrado', market_gate_public: 'Público', market_gate_qa: 'QA sombra', market_prob_title: 'Probabilidad de victoria', market_prob_aa: 'Modelo AA validado', market_prob_qa: 'Modelo AA en validación · no público', market_prob_espn: 'ESPN · probabilidad en vivo', market_prob_market_title: 'Probabilidad de mercado', market_prob_market: 'Mercado desvigado · no es probabilidad AA', market_source_short: 'Mercado', market_line_short: 'Línea', market_balance: 'Línea de equilibrio: 50%',
     market_only_measured: 'Solo publicamos mercados medidos', market_locked_title: 'Este mercado sigue en validación', market_sample: 'Muestra forward', market_dates: 'fechas', market_pending_sample: 'Muestra en construcción', market_public_info: 'Señal informativa medida · tú decides', o_box_score: 'Estadísticas por jugador',
     qa_banner_active: 'QA PRIVADO · predicciones sombra medidas; no están publicadas ni aprobadas', qa_banner_login: 'QA privado · inicia sesión con la cuenta autorizada', qa_banner_denied: 'Esta cuenta no tiene acceso al QA privado', qa_login: 'Entrar a QA', qa_menu_badge: 'QA autorizado', qa_signal_count: 'señales sombra medidas', qa_honesty: 'Vista de validación privada · gate público cerrado',
     gate_reason_forward_validation_pending: 'Falta completar la muestra forward y sus fechas mínimas.', gate_reason_winner_forward_validation_pending: 'El ganador continúa acumulando resultados forward antes de publicarse.', gate_reason_total_forward_validation_pending: 'El modelo de totales se valida por separado con líneas pregame reales.', gate_reason_players_forward_validation_pending: 'Cada familia de props necesita 200 observaciones forward y líneas auditables.', gate_reason_combos_forward_validation_pending: 'Los combos requieren 100 resultados conjuntos y dos selecciones individuales ya públicas.', gate_reason_forward_sample_pending: 'La muestra forward todavía no llega al mínimo.', gate_reason_forward_calibration_pending: 'La calibración forward todavía no pasa el límite.', gate_reason_market_benchmark_pending: 'Falta demostrar no inferioridad frente al mercado real.', gate_reason_human_approval_pending: 'La evidencia pasó; falta aprobación humana explícita.', gate_reason_historical_gate_failed: 'La validación histórica todavía no pasa el gate.', gate_reason_learning_snapshot_pending: 'El snapshot medido del Cerebro aún se está publicando.', gate_reason_market_lines_unavailable: 'No hay cobertura histórica auditable de línea y precio pregame; por eso no se autoriza Alta/Baja.', gate_reason_player_boxscore_backfill_pending: 'El backfill causal de box scores por jugadora aún está en construcción.', gate_reason_individual_markets_not_public: 'Un combo no puede abrir hasta que sus dos selecciones individuales sean públicas.',
@@ -1759,7 +1770,7 @@ const T = {
     no_recent_games: 'Sin juegos recientes medidos.', no_data_enough: 'Sin datos suficientes aún.', bats_hot: '🔥 Bates calientes', bats_cold: '❄️ Bates fríos', bats_normal: 'Bates normales', no_data_yet: 'Sin datos aún.', no_snapshot: 'Snapshot no disponible para este juego todavía.', no_sim: 'Simulación no disponible: este juego no tiene predicción publicada.',
     pick_hit: 'pick acertado', pick_miss: 'pick fallado', tab_analysis: 'Análisis AA', tab_sim: 'Simulación', postponed: 'Pospuesto',
     sim_ntimes: 'Simulamos este juego {n} veces', sim_top: 'Marcador más probable', sim_freq: 'Marcadores más frecuentes', sim_runs: 'Carreras totales por juego', sim_margin: '¿Por cuánto gana {t}?', sim_by1: 'Por 1 carrera', sim_by23: 'Por 2-3', sim_by4: 'Por 4+', sim_loses: 'Pierde', sim_of_sims: 'de las simulaciones',
-    o_recentnote: 'Sin juegos hoy · mostrando los últimos resultados', o_no_events: 'Sin eventos ahora mismo en {s}.', o_loading: 'Cargando…', o_no_events2: 'Sin eventos por ahora. Vuelve más tarde.', o_compare: 'Comparación', o_lineups: 'Alineaciones', o_match_stats: 'Estadísticas del partido', o_events: 'Eventos', o_team_stats: 'Estadísticas del equipo', o_today: 'HOY', o_toplay: 'Por jugar', o_recent_form: 'Racha reciente', o_leaders: 'Líderes del partido', o_injuries: 'Bajas reportadas', o_note: 'Datos en vivo vía AA Sports API. Actualización automática cada 45s.', no_data: 'Sin datos.',
+    o_recentnote: 'Sin juegos hoy · mostrando los últimos resultados', o_no_events: 'Sin eventos ahora mismo en {s}.', o_loading: 'Cargando…', o_no_events2: 'Sin eventos por ahora. Vuelve más tarde.', o_compare: 'Comparación', o_lineups: 'Alineaciones', o_match_stats: 'Estadísticas del partido', o_events: 'Eventos', o_team_stats: 'Estadísticas del equipo', o_today: 'HOY', o_toplay: 'Por jugar', o_recent_form: 'Racha reciente', o_prev_form: 'Últimos 5 · temporada anterior', o_leaders: 'Líderes del partido', o_player_data: 'Datos de jugadores', o_player_pending: 'La comparación de jugadores se completa con box scores verificados cuando existen. No la convertimos en probabilidad AA sin validación.', o_injuries: 'Bajas reportadas', o_venue: 'Sede', o_external_predictor: 'Predictor externo de ESPN', o_external_predictor_note: 'Contexto independiente de ESPN; no es una predicción AA ni abre el gate.', o_why_factual: 'Por qué los datos favorecen a este lado', o_reason_market: '{provider} asigna {p} a {team} después de quitar el margen.', o_reason_predictor: 'ESPN Matchup Predictor: {away} {ap} · {home} {hp}.', o_reason_recent: 'Últimos 5 de la temporada anterior: {away} {aw}-{al} · {home} {hw}-{hl}.', o_reason_line: 'Línea actual: {team} {spread} · total {total}.', o_note: 'Datos en vivo vía AA Sports API. Actualización automática cada 45s.', no_data: 'Sin datos.',
     stat_fg: 'Tiros de campo', stat_fg_pct: '% Tiros de campo', stat_3pt: 'Triples', stat_3pt_pct: '% Triples', stat_ft: 'Tiros libres', stat_rebounds: 'Rebotes', stat_assists: 'Asistencias', stat_steals: 'Robos', stat_blocks: 'Tapones', stat_turnovers: 'Pérdidas', stat_fast_break: 'Puntos al contragolpe', stat_paint: 'Puntos en la pintura',
     stat_nfl_first_downs: 'Primeros downs', stat_nfl_total_yards: 'Yardas totales', stat_nfl_passing_yards: 'Yardas por pase', stat_nfl_rushing_yards: 'Yardas por carrera', stat_nfl_turnovers: 'Pérdidas de balón', stat_nfl_sacks: 'Sacks-yardas', stat_nfl_third_down: 'Tercer down', stat_nfl_possession: 'Posesión', stat_nfl_penalties: 'Penalidades-yardas',
     hd_crumb: 'Historial AA', hd_measured: 'Picks medidos', hd_30d: 'últimos 30 días', hd_record: 'Récord', hd_wl: 'ganados–perdidos', hd_acc: 'Acierto', hd_acc_sub: 'todo medido, nada oculto', hd_streak: 'Racha actual', hd_streak_sub: 'según hora programada', hd_byday: 'Por día (últimos 14)', hd_noday: 'Sin días calificados aún.', hd_byconf: 'Por nivel de confianza', hist_public_rec: 'récord del boleto', hist_cohort_play: 'boleto', hist_cohort_lock: 'fijo', hist_cohort_gem: 'gema',
@@ -1825,7 +1836,7 @@ const T = {
     sport_training_gate: 'Training · gate closed', sport_top2: 'AA Top 2 · highest confidence',
     sport_model_evidence: 'Historical model evidence', sport_hist_accuracy: 'Historical OOS accuracy', sport_hist_sample: 'Historical games', sport_hist_brier: 'Historical Brier', sport_forward_progress: 'Forward sample', sport_no_game_pct: 'Per-game AA probabilities remain closed until the gate is complete; this percentage describes the historical exam, not today\'s game.',
     market_compare: 'Market comparator', market_winner: 'Winner', market_total: 'Total', market_players: 'Players', market_combos: 'Combos',
-    market_gate_closed: 'Gate closed', market_gate_public: 'Public', market_gate_qa: 'Shadow QA', market_prob_title: 'Win probability', market_prob_aa: 'Validated AA model', market_prob_qa: 'AA model under validation · not public', market_prob_espn: 'ESPN · live probability', market_prob_market_title: 'Market win probability', market_prob_market: 'De-vigged market · not an AA probability', market_source_short: 'Market', market_balance: 'Neutral line: 50%',
+    market_gate_closed: 'Gate closed', market_gate_public: 'Public', market_gate_qa: 'Shadow QA', market_prob_title: 'Win probability', market_prob_aa: 'Validated AA model', market_prob_qa: 'AA model under validation · not public', market_prob_espn: 'ESPN · live probability', market_prob_market_title: 'Market win probability', market_prob_market: 'De-vigged market · not an AA probability', market_source_short: 'Market', market_line_short: 'Line', market_balance: 'Neutral line: 50%',
     market_only_measured: 'We only publish measured markets', market_locked_title: 'This market remains under validation', market_sample: 'Forward sample', market_dates: 'dates', market_pending_sample: 'Sample in progress', market_public_info: 'Measured informational signal · you decide', o_box_score: 'Box score',
     qa_banner_active: 'PRIVATE QA · measured shadow predictions; not published or approved', qa_banner_login: 'Private QA · sign in with the authorized account', qa_banner_denied: 'This account does not have private QA access', qa_login: 'Enter QA', qa_menu_badge: 'QA authorized', qa_signal_count: 'measured shadow signals', qa_honesty: 'Private validation view · public gate remains closed',
     gate_reason_forward_validation_pending: 'The minimum forward sample and dates are not complete yet.', gate_reason_winner_forward_validation_pending: 'The winner model is still accumulating forward results before publication.', gate_reason_total_forward_validation_pending: 'The totals model is validated separately with real pregame lines.', gate_reason_players_forward_validation_pending: 'Each prop family needs 200 forward observations and auditable lines.', gate_reason_combos_forward_validation_pending: 'Combos need 100 jointly graded results and two already-public individual selections.', gate_reason_forward_sample_pending: 'The forward sample has not reached its minimum.', gate_reason_forward_calibration_pending: 'Forward calibration has not passed its limit yet.', gate_reason_market_benchmark_pending: 'Non-inferiority against the real market is not demonstrated yet.', gate_reason_human_approval_pending: 'The evidence passed; explicit human approval is still required.', gate_reason_historical_gate_failed: 'Historical validation has not passed the gate yet.', gate_reason_learning_snapshot_pending: 'The measured Brain snapshot is still being published.', gate_reason_market_lines_unavailable: 'Auditable historical pregame line and price coverage is missing, so no Over/Under signal is authorized.', gate_reason_player_boxscore_backfill_pending: 'The causal player box-score backfill is still being built.', gate_reason_individual_markets_not_public: 'A combo cannot open until both individual selections are public.',
@@ -1968,7 +1979,7 @@ const T = {
     no_recent_games: 'No recent games tracked.', no_data_enough: 'Not enough data yet.', bats_hot: '🔥 Hot bats', bats_cold: '❄️ Cold bats', bats_normal: 'Normal bats', no_data_yet: 'No data yet.', no_snapshot: 'Snapshot not available for this game yet.', no_sim: 'Simulation not available: this game has no published prediction.',
     pick_hit: 'pick hit', pick_miss: 'pick missed', tab_analysis: 'AA analysis', tab_sim: 'Simulation', postponed: 'Postponed',
     sim_ntimes: 'We simulated this game {n} times', sim_top: 'Most likely score', sim_freq: 'Most frequent scores', sim_runs: 'Total runs per game', sim_margin: 'By how much does {t} win?', sim_by1: 'By 1 run', sim_by23: 'By 2-3', sim_by4: 'By 4+', sim_loses: 'Loses', sim_of_sims: 'of the simulations',
-    o_recentnote: 'No games today · showing the latest results', o_no_events: 'No events right now in {s}.', o_loading: 'Loading…', o_no_events2: 'No events for now. Check back later.', o_compare: 'Comparison', o_lineups: 'Lineups', o_match_stats: 'Match stats', o_events: 'Events', o_team_stats: 'Team stats', o_today: 'TODAY', o_toplay: 'Upcoming', o_recent_form: 'Recent form', o_leaders: 'Match leaders', o_injuries: 'Reported injuries', o_note: 'Live data via AA Sports API. Auto-refresh every 45s.', no_data: 'No data.',
+    o_recentnote: 'No games today · showing the latest results', o_no_events: 'No events right now in {s}.', o_loading: 'Loading…', o_no_events2: 'No events for now. Check back later.', o_compare: 'Comparison', o_lineups: 'Lineups', o_match_stats: 'Match stats', o_events: 'Events', o_team_stats: 'Team stats', o_today: 'TODAY', o_toplay: 'Upcoming', o_recent_form: 'Recent form', o_prev_form: 'Last 5 · previous season', o_leaders: 'Match leaders', o_player_data: 'Player data', o_player_pending: 'Player comparison fills from verified box scores when available. We do not turn it into an AA probability without validation.', o_injuries: 'Reported injuries', o_venue: 'Venue', o_external_predictor: 'External ESPN predictor', o_external_predictor_note: 'Independent ESPN context; not an AA prediction and does not open the gate.', o_why_factual: 'Why the data favors this side', o_reason_market: '{provider} assigns {p} to {team} after removing vig.', o_reason_predictor: 'ESPN Matchup Predictor: {away} {ap} · {home} {hp}.', o_reason_recent: 'Previous-season last 5: {away} {aw}-{al} · {home} {hw}-{hl}.', o_reason_line: 'Current line: {team} {spread} · total {total}.', o_note: 'Live data via AA Sports API. Auto-refresh every 45s.', no_data: 'No data.',
     stat_fg: 'Field goals', stat_fg_pct: 'Field goal %', stat_3pt: 'Three-pointers', stat_3pt_pct: 'Three-point %', stat_ft: 'Free throws', stat_rebounds: 'Rebounds', stat_assists: 'Assists', stat_steals: 'Steals', stat_blocks: 'Blocks', stat_turnovers: 'Turnovers', stat_fast_break: 'Fast-break points', stat_paint: 'Points in the paint',
     stat_nfl_first_downs: 'First downs', stat_nfl_total_yards: 'Total yards', stat_nfl_passing_yards: 'Passing yards', stat_nfl_rushing_yards: 'Rushing yards', stat_nfl_turnovers: 'Turnovers', stat_nfl_sacks: 'Sacks-yards', stat_nfl_third_down: 'Third down', stat_nfl_possession: 'Possession', stat_nfl_penalties: 'Penalties-yards',
     hd_crumb: 'AA History', hd_measured: 'Picks tracked', hd_30d: 'last 30 days', hd_record: 'Record', hd_wl: 'won–lost', hd_acc: 'Hit rate', hd_acc_sub: 'all tracked, nothing hidden', hd_streak: 'Current streak', hd_streak_sub: 'by scheduled start', hd_byday: 'By day (last 14)', hd_noday: 'No graded days yet.', hd_byconf: 'By confidence level', hist_public_rec: 'ticket record', hist_cohort_play: 'ticket', hist_cohort_lock: 'lock', hist_cohort_gem: 'gem',
@@ -5054,6 +5065,67 @@ function marketWinPcts(game){
   return { home: homePct, away: Math.round((100 - homePct) * 10) / 10 };
 }
 
+const FACTUAL_MARKET_SPORTS = new Set(['wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam']);
+const oPct = (value) => `${Number(value).toLocaleString(LOCALE(), { minimumFractionDigits: Number(value) % 1 ? 1 : 0, maximumFractionDigits: 1 })}%`;
+const fillText = (key, values) => Object.entries(values).reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)), t(key));
+
+function externalPredictorHtml(summaryDoc, game){
+  const predictor = summaryDoc?.predictor;
+  if (!predictor || predictor.home_pct == null || predictor.away_pct == null) return '';
+  return `<section class="scpred external-predictor-card">
+    <div class="scph"><span class="q">${t('o_external_predictor')}</span><span class="eng">ESPN</span></div>
+    <div class="probhead"><span>${esc(oName(game.away))} <b class="num">${oPct(predictor.away_pct)}</b></span><span><b class="num">${oPct(predictor.home_pct)}</b> ${esc(oName(game.home))}</span></div>
+    <div class="probtrack" role="img" aria-label="${esc(`${oName(game.away)} ${oPct(predictor.away_pct)}, ${oName(game.home)} ${oPct(predictor.home_pct)}`)}"><span class="aw" style="width:${predictor.away_pct}%"></span><span class="hm" style="width:${predictor.home_pct}%"></span></div>
+    <div class="schnote">${t('o_external_predictor_note')}</div></section>`;
+}
+
+function factualReasonsHtml(game, summaryDoc){
+  if (!FACTUAL_MARKET_SPORTS.has(sport)) return '';
+  const reasons = [], pcts = marketWinPcts(game), predictor = summaryDoc?.predictor;
+  if (pcts){
+    const homeFav = pcts.home >= pcts.away, team = homeFav ? oName(game.home) : oName(game.away), pct = homeFav ? pcts.home : pcts.away;
+    reasons.push(fillText('o_reason_market', { provider: game.market?.provider || t('market_source_short'), p: oPct(pct), team }));
+  }
+  if (predictor?.home_pct != null && predictor?.away_pct != null) reasons.push(fillText('o_reason_predictor', {
+    away: oName(game.away), ap: oPct(predictor.away_pct), home: oName(game.home), hp: oPct(predictor.home_pct),
+  }));
+  const recent = summaryDoc?.recent;
+  if (recent?.away && recent?.home) reasons.push(fillText('o_reason_recent', {
+    away: oName(game.away), aw: recent.away.wins, al: recent.away.losses,
+    home: oName(game.home), hw: recent.home.wins, hl: recent.home.losses,
+  }));
+  const spread = Number(game.market?.spread), total = Number(game.market?.total);
+  if (Number.isFinite(spread) && Number.isFinite(total)) {
+    const team = spread <= 0 ? oName(game.home) : oName(game.away);
+    reasons.push(fillText('o_reason_line', { team, spread: `${-Math.abs(spread)}`, total }));
+  }
+  return reasons.length ? `<div class="secttl">${t('o_why_factual')}</div><ul class="whylist">${reasons.map((reason) => `<li>${esc(reason)}</li>`).join('')}</ul>` : '';
+}
+
+function previousFormHtml(summaryDoc, game){
+  const recent = summaryDoc?.recent;
+  if (!recent || (!recent.away && !recent.home)) return '';
+  const card = (data, side) => {
+    const resultLabel = (result) => result === 'W' ? t('abbr_w') : result === 'L' ? t('abbr_l') : (lang === 'en' ? 'T' : 'E');
+    return `<div class="formside"><div class="fh">${oLogo(side)}${esc(oName(side))}${data ? ` <span class="num">${data.wins}-${data.losses}${data.win_pct != null ? ` · ${oPct(data.win_pct)}` : ''}</span>` : ''}</div>
+      <div class="historygames">${(data?.games || []).map((gameRow) => `<div class="historygame"><span class="result ${String(gameRow.result || '').toLowerCase()}">${resultLabel(gameRow.result)}</span><span class="opp">${esc(gameRow.at_vs || '')} ${esc(gameRow.opponent?.code || gameRow.opponent?.name || '—')}</span><span class="score num">${esc(gameRow.score || '—')}</span></div>`).join('') || `<span class="wempty">${t('no_data')}</span>`}</div></div>`;
+  };
+  return `<div class="secttl">${t('o_prev_form')}</div><div class="formgrid">${card(recent.away, game.away)}${card(recent.home, game.home)}</div>`;
+}
+
+function venueHtml(summaryDoc){
+  const venue = summaryDoc?.venue;
+  if (!venue?.name) return '';
+  const place = [venue.city, venue.state, venue.country].filter(Boolean).join(', ');
+  return `<div class="secttl">${t('o_venue')}</div><div class="venue-card"><b>${esc(venue.name)}</b>${place ? `<br>${esc(place)}` : ''}</div>`;
+}
+
+function summaryInjuriesHtml(summaryDoc){
+  const groups = summaryDoc?.injuries || [];
+  if (!groups.length) return '';
+  return `<div class="secttl">${t('o_injuries')}</div><div class="formgrid">${groups.map((group) => `<div class="formside"><div class="fh">${esc(group.code || '')}</div>${group.items.map((item) => `<div class="hitrow"><span class="hitname">${esc(item.name)}</span><span class="hitst">${esc(item.status || item.type || '—')}</span></div>`).join('')}</div>`).join('')}</div>`;
+}
+
 function renderOtherList(){
   const n = { all: otherGames.length, live: 0, pre: 0, final: 0 };
   for (const g of otherGames) n[g.status] = (n[g.status] || 0) + 1;
@@ -5086,20 +5158,23 @@ function renderOtherList(){
       const pr = sport === 'soccer' ? predFor(g) : usPredFor(g);
       const aachip = pr && pr.pct != null
         ? `<span class="aachip" title="${esc(pickTtl)}">AA <b>${esc(sport === 'soccer' ? tNick(pr.pick) : pr.pick)}</b> ${pr.pct}%</span>` : '';
-      const marketPct = !scored && !pr && ['wnba', 'nfl'].includes(sport) ? marketWinPcts(g) : null;
+      const marketPct = !scored && !pr && FACTUAL_MARKET_SPORTS.has(sport) ? marketWinPcts(g) : null;
+      const rawSpread = Number(g.market?.spread);
+      const marketLine = !scored && !pr && FACTUAL_MARKET_SPORTS.has(sport) && !marketPct && Number.isFinite(rawSpread)
+        ? { team: rawSpread <= 0 ? g.home.code : g.away.code, spread: -Math.abs(rawSpread) } : null;
       const displayPct = (value) => Number(value).toFixed(Number(value) % 1 ? 1 : 0) + '%';
       return `<button class="mrow" data-oid="${esc(g.espn_id)}" style="--i:${i}">
         <span class="mtime num">${t}</span>
         <span class="mteams">
           <span class="mt ${g.away.winner ? 'win' : ''}">${oLogo(g.away)}<span class="nm">${esc(oName(g.away))}</span>${rankChip(g.away)}${setsA}</span>
           <span class="mt ${g.home.winner ? 'win' : ''}">${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}</span>${rankChip(g.home)}${setsH}</span>
+          ${aachip ? `<span class="other-pick-line">${aachip}</span>` : ''}
         </span>
         <span class="mscore num">
-          <span class="ms ${marketPct ? 'marketpct' : ''} ${g.status === 'live' ? 'lv' : ''}">${scored ? g.away.score : marketPct ? displayPct(marketPct.away) : ''}</span>
+          <span class="ms ${marketPct || marketLine ? 'marketpct' : ''} ${g.status === 'live' ? 'lv' : ''}">${scored ? g.away.score : marketPct ? displayPct(marketPct.away) : marketLine ? `${esc(marketLine.team)} ${marketLine.spread}` : ''}</span>
           <span class="ms ${marketPct ? 'marketpct' : ''} ${g.status === 'live' ? 'lv' : ''}">${scored ? g.home.score : marketPct ? displayPct(marketPct.home) : ''}</span>
-          ${marketPct ? `<span class="marketpct-source">${marketSourceLabel}</span>` : ''}
+          ${marketPct || marketLine ? `<span class="marketpct-source">${marketPct ? marketSourceLabel : t('market_line_short')}</span>` : ''}
         </span>
-        <span>${aachip}</span>
       </button>`;
     }).join('') : banner + `<div class="lempty">${t('o_no_events').replace('{s}', esc(sportLabel(sport)))}</div>`;
 }
@@ -5117,6 +5192,10 @@ function renderOtherDetail(){
       : `<div class="dempty">${otherLoading ? t('o_loading') : t('o_no_events2')}</div>`;
     return;
   }
+  const summarySupported = ['soccer', 'nba', 'wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport);
+  if (summarySupported) loadSummary(g);
+  const summaryEntry = summarySupported ? summaryCache.get(summaryKey(g)) : null;
+  const S = summaryEntry && summaryEntry.doc;
   const scored = g.home.score != null && g.status !== 'pre';
   const usPr = usPredFor(g);
   const legacyUsPredCard = usPr ? `<div class="scpred">
@@ -5136,7 +5215,7 @@ function renderOtherDetail(){
     : factualMarketPct && factualMarketPct.home;
   const otherAwayPct = otherHomePct != null ? Math.round((100 - otherHomePct) * 10) / 10 : null;
   const probabilitySource = usPr ? (qaMode ? 'qa' : 'aa') : factualMarketPct ? 'market' : (qaMode ? 'qa' : 'aa');
-  const usMarketCard = (['wnba', 'nfl'].includes(sport) || (qaMode && ['ncaaf', 'nhl', 'ncaam'].includes(sport))) ? marketComparator({
+  const usMarketCard = (FACTUAL_MARKET_SPORTS.has(sport) || (qaMode && ['ncaaf', 'nhl', 'ncaam'].includes(sport))) ? marketComparator({
     activeSport: sport, blocks: otherMarketBlocks, away: g.away, home: g.home,
     awayPct: otherAwayPct, homePct: otherHomePct, logo: oLogo, source: probabilitySource, pick: usPr && usPr.pick, risk: null,
   }) : legacyUsPredCard;
@@ -5176,10 +5255,7 @@ function renderOtherDetail(){
   // Detalle del partido (alineaciones/formación + estadísticas + eventos para
   // soccer; box score + estadísticas de equipo para NBA). Datos reales de ESPN.
   let summaryHtml = '';
-  if (['soccer', 'nba', 'wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
-    loadSummary(g);
-    const ent = summaryCache.get(summaryKey(g));
-    const S = ent && ent.doc;
+  if (summarySupported){
     const statHead = `<div class="mstathead"><span>${esc(oName(g.away))}</span><span>${esc(oName(g.home))}</span></div>`;
     if (S && sport === 'soccer'){
       if (S.lineups && (S.lineups.home || S.lineups.away))
@@ -5200,7 +5276,8 @@ function renderOtherDetail(){
           <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.key ? t(s.key) : s.label, s.away, s.home)).join('')}</div>`;
     } else if (S && ['nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
       if (S.players && (S.players.home || S.players.away))
-        summaryHtml += `<div class="secttl">${t('o_box_score')}</div><div class="boxgrid">${genericPlayerBox(S.players.away)}${genericPlayerBox(S.players.home)}</div>`;
+        summaryHtml += `<div class="secttl">${['nfl', 'ncaaf'].includes(sport) ? t('o_player_data') : t('o_box_score')}</div><div class="boxgrid">${genericPlayerBox(S.players.away)}${genericPlayerBox(S.players.home)}</div>`;
+      else if (sport === 'ncaaf') summaryHtml += `<div class="secttl">${t('o_player_data')}</div><div class="player-pending"><b>${t('market_gate_closed')}</b><br>${t('o_player_pending')}</div>`;
       if (S.stats && S.stats.length)
         summaryHtml += `<div class="secttl">${t('o_team_stats')}</div>${statHead}
           <div class="mstatbox glass-in">${S.stats.map(s => mstatRow(s.key ? t(s.key) : s.label, s.away, s.home)).join('')}</div>`;
@@ -5228,8 +5305,13 @@ function renderOtherDetail(){
     <div class="dbody">
       ${sport === 'soccer' ? soccerPredCard(g) : ''}
       ${usMarketCard}
+      ${['nfl', 'ncaaf'].includes(sport) ? externalPredictorHtml(S, g) : ''}
+      ${factualReasonsHtml(g, S)}
+      ${['nfl', 'ncaaf'].includes(sport) ? previousFormHtml(S, g) : ''}
+      ${venueHtml(S)}
       ${otherH2H}
       ${summaryHtml}
+      ${summaryInjuriesHtml(S)}
       ${(g.away.form || g.home.form) ? `
       <div class="secttl">${t('o_recent_form')}</div>
       <div class="formgrid">
@@ -5265,7 +5347,7 @@ function renderOtherDetail(){
         <div class="formside"><div class="fh">${oLogo(g.away)}${esc(oName(g.away))}</div>${injuryRows('nba', g.away.code)}</div>
         <div class="formside"><div class="fh">${oLogo(g.home)}${esc(oName(g.home))}</div>${injuryRows('nba', g.home.code)}</div>
       </div>` : ''}
-      ${((sport === 'soccer' && predFor(g)) || usPr || ['wnba', 'nfl'].includes(sport) || (qaMode && ['ncaaf', 'nhl', 'ncaam'].includes(sport))) ? '' : `<div class="verdict"><span class="ic">🧪</span>
+      ${((sport === 'soccer' && predFor(g)) || usPr || FACTUAL_MARKET_SPORTS.has(sport) || (qaMode && ['ncaaf', 'nhl', 'ncaam'].includes(sport))) ? '' : `<div class="verdict"><span class="ic">🧪</span>
         <p><span class="vt">${t('w_train')}</span>${t('sc_train_p').replace('{sport}', esc(sportLabel(sport)))}</p>
       </div>`}
       ${standingsHtml()}

@@ -207,8 +207,11 @@ humana ni scope público. No requiere copiar `CLOUDFLARE_API_TOKEN` al repo priv
   histórica, no garantía: no publica picks hasta completar muestra forward,
   calibración, comparación de mercado y aprobación.
 - **NFL / NCAAF / NHL / NCAAM**: marcadores y captura factual activos; modelos
-  privados en `adclara/aa-sports-models-private`, con gates cerrados. No publicar
-  Top 2 hasta validación forward suficiente + aprobación humana explícita.
+  privados en `adclara/aa-sports-models-private`, con gates cerrados. NCAAF
+  muestra porcentajes moneyline des-vigados, predictor externo ESPN, últimos
+  cinco de la temporada anterior, sede y box score de jugadores como contexto
+  factual; ninguna de esas fuentes abre el gate AA. No publicar Top 2 hasta
+  validación forward suficiente + aprobación humana explícita.
 
 ## Testing (Playwright)
 - Playwright está **global** en `/opt/node22/lib/node_modules` (corre con
