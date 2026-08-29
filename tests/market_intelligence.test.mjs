@@ -28,6 +28,14 @@ test('anomalies are descriptive and versioned by measured thresholds', () => {
   ]);
 });
 
+test('unmatched providers stay absent and never become a false 0% conflict', () => {
+  const state = intelligenceState({ aaProb: .625, bookProb: .655, polyProb: null, kalshiProb: null });
+  assert.equal(state.state, 'agree');
+  assert.equal(state.market_prob, .655);
+  assert.equal(state.divergence, .03);
+  assert.deepEqual(state.anomalies, []);
+});
+
 test('wallet qualification penalizes small samples with Wilson', () => {
   assert.ok(wilsonLowerBound(8, 8) < .70);
   const base = { wins: 16, losses: 4, pnl: 1000, consistency: .75, cost: 5000, wash_share: .1, avg_entry: .55 };
