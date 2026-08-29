@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 22
       - name: Regresión de lógica — MLB causal, ingesta, mercados sombra y Radar pausado
-        run: node --test tests/mlb_live_date.test.mjs tests/mlb_lock_gate.test.mjs tests/mlb_market_lab.test.mjs tests/mlb_selection_policy.test.mjs tests/mlb_ledger_migration.test.mjs tests/mlb_ledger_integrity.test.mjs tests/mlb_model_integrity.test.mjs tests/mlb_aa_lab.test.mjs tests/mlb_publish_watchdog.test.mjs tests/mlb_schedule_contract.test.mjs tests/mlb_ingest_consumer.test.mjs tests/mlb_normalize_observed.test.mjs tests/mlb_content_hash.test.mjs tests/mlb_upload_guard.test.mjs tests/mlb_learning_guard.test.mjs tests/sport_brain.test.mjs tests/wnba_model.test.mjs tests/wnba_market_model.test.mjs tests/wnba_player_winner.test.mjs tests/worker_mlb_ingest.test.mjs tests/worker_espn_public_fallback.test.mjs tests/us_sports_foundation.test.mjs tests/poly_paused.test.mjs tests/market_intelligence.test.mjs tests/worker_intelligence.test.mjs
+        run: node --test tests/mlb_live_date.test.mjs tests/mlb_lock_gate.test.mjs tests/mlb_market_lab.test.mjs tests/mlb_selection_policy.test.mjs tests/mlb_ledger_migration.test.mjs tests/mlb_ledger_integrity.test.mjs tests/mlb_model_integrity.test.mjs tests/mlb_aa_lab.test.mjs tests/mlb_publish_watchdog.test.mjs tests/mlb_schedule_contract.test.mjs tests/mlb_ingest_consumer.test.mjs tests/mlb_normalize_observed.test.mjs tests/mlb_content_hash.test.mjs tests/mlb_upload_guard.test.mjs tests/mlb_learning_guard.test.mjs tests/sport_brain.test.mjs tests/wnba_model.test.mjs tests/wnba_market_model.test.mjs tests/wnba_player_winner.test.mjs tests/worker_mlb_ingest.test.mjs tests/worker_espn_public_fallback.test.mjs tests/us_sports_foundation.test.mjs tests/poly_paused.test.mjs tests/market_intelligence.test.mjs tests/worker_intelligence.test.mjs tests/intelligence_health.test.mjs tests/intelligence_workflow.test.mjs
       - name: Producción = main (fix de production branch)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
@@ -58,6 +58,14 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: f02574feb7272a1da2818e35e0ff4342
         run: npx --yes wrangler@4.112.0 deploy
+      - name: Reconciliar snapshot de Central AA tras el deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          AA_INTELLIGENCE_MIN_AGE_MINUTES: '30'
+          AA_INTELLIGENCE_TRIGGER: deploy
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
+          node robot/market_intelligence.mjs
       - name: Allowlist del QA privado (si está configurada)
         working-directory: cloudflare
         env:
@@ -151,6 +159,7 @@ jobs:
             || { echo "❌ CSP bloquea el envío de Cloudflare Web Analytics"; exit 1; }
       - name: Diagnóstico semántico de producción
         run: |
+          node robot/intelligence_health_check.mjs --max-age=45
           node robot/prod_diag.mjs
           healthy=0
           for i in $(seq 1 80); do

@@ -294,15 +294,6 @@ export function buildMarketBundles(slate, { max = 3 } = {}) {
     .map(({ sort_score: _score, ...bundle }) => bundle);
 }
 
-export function shouldRunPulse(events, now = Date.now()) {
-  const active = (events || []).some((event) => {
-    if (event?.status === 'live') return true;
-    const start = Date.parse(event?.start || event?.start_time || 0);
-    return Number.isFinite(start) && start >= now - 30 * 60e3 && start <= now + 18 * 3600e3;
-  });
-  return active || new Date(now).getUTCHours() % 2 === 0;
-}
-
 export function buildShadowCombos(slate, { max = 3 } = {}) {
   const rows = Array.isArray(slate) ? slate : [];
   const teams = (leg) => new Set([canonicalTeam(leg?.home?.code || leg?.home), canonicalTeam(leg?.away?.code || leg?.away)]);

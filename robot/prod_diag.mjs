@@ -160,11 +160,14 @@ try {
     && (bundle.legs || []).every((leg) => slateIds.has(leg.id) && leg.prob > .60));
   const safe = intelRaw.status === 200 && intel.version === 'intelligence_v2'
     && (intel.slate || []).length <= 12 && slateSafe && bundlesSafe && intel.combos?.state === 'closed'
-    && !Object.hasOwn(intel.combos || {}, 'items') && intel.alerts === false && intel.telegram === false;
+    && !Object.hasOwn(intel.combos || {}, 'items') && intel.alerts === false && intel.telegram === false
+    && intel.freshness?.stale === false && Number(intel.freshness?.age_minutes) <= 45
+    && Number(intel.source_health?.critical_ok || 0) > 0;
   console.log(safe ? '✅ contrato seguro' : '❌ contrato inválido', '| estado:', intel.state,
     '| slate:', (intel.slate || []).length, '| deportes:', new Set((intel.slate || []).map((item) => item.sport)).size,
     '| bundles:', (intel.market_bundles || []).length, '| Poly:', intel.sources?.polymarket?.ok,
-    '| Kalshi:', intel.sources?.kalshi?.ok, '| as_of:', intel.as_of || '—');
+    '| Kalshi:', intel.sources?.kalshi?.ok, '| edad min:', intel.freshness?.age_minutes ?? '—',
+    '| critical_failed:', intel.source_health?.critical_failed ?? '—', '| as_of:', intel.as_of || '—');
   if (!safe) marketContractFailures++;
 } catch (error) { console.log('❌ intelligence no-json/error:', String(error).slice(0, 160)); marketContractFailures++; }
 

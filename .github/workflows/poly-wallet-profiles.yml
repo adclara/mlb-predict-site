@@ -1,0 +1,27 @@
+name: poly-wallet-profiles
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: poly-wallet-profiles
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Validate wallet profile rules
+        run: node --test tests/market_intelligence.test.mjs
+      - name: Refresh causal Polymarket sports-wallet profiles
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Falta CLOUDFLARE_API_TOKEN"; exit 1; }
+          node robot/poly_wallet_profiles.mjs

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildMarketBundles, buildShadowCombos, intelligenceState, marketEventFromEspn, matchProviderEvent,
-  qualifiesWallet, quoteFromBidAsk, sameTeam, sanitizePublicSlate, shouldRunPulse, wilsonLowerBound } from '../robot/lib/market_intelligence.mjs';
+  qualifiesWallet, quoteFromBidAsk, sameTeam, sanitizePublicSlate, wilsonLowerBound } from '../robot/lib/market_intelligence.mjs';
 import { buildWalletProfiles } from '../robot/poly_wallet_profiles.mjs';
-import { buildOverlays, kalshiCandidates, polyCandidates } from '../robot/market_intelligence.mjs';
+import { buildOverlays, freshnessDecision, getJson, kalshiCandidates, polyCandidates, previousFutureCount } from '../robot/market_intelligence.mjs';
 
 test('provider matching requires one unambiguous team/time match', () => {
   const event = { away: { code: 'NYY' }, home: { code: 'BOS' }, start: '2026-08-28T23:00:00Z' };
@@ -39,6 +39,29 @@ test('Kalshi candidates retain their series sport to prevent cross-league city m
   const rows = kalshiCandidates(docs, '2026-08-29T10:00:00Z');
   assert.equal(rows.length, 1);
   assert.equal(rows[0].league, 'wnba');
+});
+
+test('upstream JSON retries transient failures but not a permanent 404', async () => {
+  let calls = 0;
+  const transient = await getJson('https://example.test/data', { tries: 3, sleepFn: async () => {}, fetcher: async () => {
+    calls++; return calls < 3 ? { ok: false, status: 503, async json() { return {}; } } : { ok: true, status: 200, async json() { return { ok: true }; } };
+  } });
+  assert.deepEqual(transient, { ok: true }); assert.equal(calls, 3);
+  calls = 0;
+  const missing = await getJson('https://example.test/missing', { tries: 3, sleepFn: async () => {}, fetcher: async () => {
+    calls++; return { ok: false, status: 404, async json() { return {}; } };
+  } });
+  assert.equal(missing, null); assert.equal(calls, 1);
+});
+
+test('freshness preflight dedupes redundant triggers and partial-empty guard detects prior future rows', () => {
+  const now = Date.parse('2026-08-29T12:00:00Z');
+  const current = { version: 'intelligence_v2', cadence: '30m_redundant', source_health: { critical_ok: 10 } };
+  assert.equal(freshnessDecision({ ...current, as_of: '2026-08-29T11:40:00Z' }, now, 30).skip, true);
+  assert.equal(freshnessDecision({ ...current, as_of: '2026-08-29T11:20:00Z' }, now, 30).skip, false);
+  assert.equal(freshnessDecision({ ...current, as_of: '2026-08-29T11:50:00Z' }, now, 30, true).skip, false);
+  assert.equal(freshnessDecision({ as_of: '2026-08-29T11:50:00Z' }, now, 30).skip, false);
+  assert.equal(previousFutureCount({ slate: [{ start: '2026-08-29T13:00:00Z' }, { start: '2026-08-29T11:00:00Z' }] }, now), 1);
 });
 
 test('quote fails closed when stale, wide, or one-sided', () => {
@@ -114,13 +137,6 @@ test('soccer market fact keeps native 1X2 de-vig probability instead of dropping
   assert.equal(overlay.books.prob, .70);
   assert.equal(overlay.consensus.state, 'agree');
   assert.equal(overlay.consensus.market_prob, .70);
-});
-
-test('adaptive pulse runs near events and only every two hours in calm windows', () => {
-  const now = Date.parse('2026-08-28T20:00:00Z');
-  assert.equal(shouldRunPulse([], now), true);
-  assert.equal(shouldRunPulse([], Date.parse('2026-08-28T21:00:00Z')), false);
-  assert.equal(shouldRunPulse([{ start: '2026-08-28T22:00:00Z', status: 'pre' }], Date.parse('2026-08-28T21:00:00Z')), true);
 });
 
 test('shadow combo builder uses public legs, distinct events and never claims joint probability', () => {
