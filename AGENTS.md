@@ -10,8 +10,9 @@ Cloudflare. Marca: **"AA Sports · Los datos deciden"**. Deportes: **MLB**
 **NBA/tenis** (marcadores + posiciones; modelos en sombra, sin publicar) y
 **WNBA** (marcadores, resultados, posiciones, box score y comparador de mercados;
 modelos en sombra, sin predicciones públicas) y **NFL** (cobertura factual +
-comparador con gates cerrados). El **Radar de Polymarket está pausado**: no hay
-consultas, crons, alertas ni Telegram hasta una reactivación explícita.
+comparador con gates cerrados). El **Radar legacy de wallets está pausado**:
+sus rutas, alertas y Telegram siguen detenidos. La Central AA sí consulta
+Polymarket y Kalshi en solo lectura, sin alertas, para contexto multifuente.
 
 ## ADN NO NEGOCIABLE (aplica a TODO cambio)
 - **$0**: solo free tiers (Cloudflare Workers/KV/D1/Pages + GitHub Actions + APIs
@@ -72,6 +73,8 @@ path dispara el workflow. Mapa verificado (poke → workflow):
 - `.github/poke-live` → mlb-live-observer.yml (multi-book/WP en vivo; no bloquea daily)
 - `.github/poke-us-sports` → us-sports-qa.yml (frescura NFL/NCAAF/NHL/NCAAM; cron 4×/día)
 - `.github/poke-poly` → sin efecto mientras `poly-study.yml` permanece pausado
+- `.github/poke-intelligence` → market-intelligence.yml (pulso multifuente 30m
+  activo/2h calma + perfil causal diario de wallets; nunca alertas/Telegram)
 - `.github/poke-soccer` → soccer-shadow.yml (soccer_shadow.mjs; publica soccer:today)
 - `.github/poke-nba` → nba-shadow.yml · `.github/poke-sim` → mlb-sim.yml (semanal)
 - `.github/poke-wnba` → wnba-shadow.yml (ganador/totales WNBA en sombra + Cerebro
@@ -96,13 +99,15 @@ path dispara el workflow. Mapa verificado (poke → workflow):
 
 ## KV keys (las escribe el robot, las sirve el Worker)
 `mlb:today`, `mlb:day:<fecha>`, `mlb:learning`, `mlb:simulation`, `soccer:today`,
-`poly:radar`, `poly:alerts`, `poly:lastseen`, `injuries:latest`,
+`poly:radar`, `poly:alerts`, `poly:lastseen`, `intelligence:{today,wallets}`,
+`intelligence:day:<fecha>`, `injuries:latest`,
 `soccer:learning`, `nba:learning`, `wnba:{today,learning,simulation}`,
 `nfl:{today,learning,simulation}`, `tennis:learning`.
 
 ## Rutas del Worker (`cloudflare/worker/index.js`)
 `/v1/mlb/{today, day/:date, schedule/:date, event/:id, history, live, learning,
 simulation, standings}`, `/v1/injuries`,
+`/v1/intelligence/{today,history}`, `/v1/qa/intelligence/today`,
 `/v1/soccer/{today, live, recent, standings, leagues, summary, learning}`,
 `/v1/nba/{today, live, recent, standings, summary, history, learning, simulation,
 pipeline-health}`,

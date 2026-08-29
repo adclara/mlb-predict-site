@@ -641,6 +641,14 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
 .radarwarn{margin:12px;padding:10px 12px;border:1px solid var(--amber);border-radius:12px;background:rgba(245,158,11,.07);color:var(--dim);font-size:12px;line-height:1.55}
 .radarwarn b{color:var(--amber)}
 .radarwarn a{color:var(--sky)}
+.intelhero{margin:12px;padding:14px;border:1px solid rgba(25,222,159,.28);border-radius:16px;background:linear-gradient(135deg,rgba(25,222,159,.09),rgba(59,130,246,.05))}
+.intelhero h2{margin:0 0 5px;font-size:18px}.intelhero p{margin:0;color:var(--dim);font-size:12px;line-height:1.5}
+.intelrow{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;width:calc(100% - 16px);margin:7px 8px;padding:12px;border:1px solid var(--hair);border-radius:14px;background:var(--card);color:var(--text);text-align:left}
+.intelrow:hover,.intelrow.on{border-color:rgba(25,222,159,.42);background:rgba(25,222,159,.05)}
+.intelrank{font-weight:900;color:var(--volt)}.intelteams{display:block;font-weight:800}.intelmeta{display:block;margin-top:3px;color:var(--dim);font-size:11px}.intelprob{font-weight:900;font-size:18px}
+.intelchips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.intelchip{padding:5px 8px;border:1px solid var(--hair);border-radius:999px;color:var(--dim);font-size:11px}.intelchip.good{color:var(--volt);border-color:rgba(25,222,159,.35)}.intelchip.bad{color:var(--amber);border-color:rgba(245,158,11,.4)}
+.intelsource{display:grid;grid-template-columns:1fr auto;gap:5px;margin:6px 0;padding:10px;border:1px solid var(--hair);border-radius:12px}.intelsource small{grid-column:1/-1;color:var(--dim)}
+.intelwhy{margin:10px 0;padding-left:20px;color:var(--dim);line-height:1.55}.intelgate{margin:12px 0;padding:12px;border:1px solid var(--hair);border-radius:12px;color:var(--dim);font-size:12px}
 .tracklive{margin-top:8px;padding-top:8px;border-top:1px solid rgba(245,158,11,.22);display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .tracklive b{color:var(--volt)}
 .newchip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border:1px solid var(--volt);border-radius:999px;color:var(--volt);font-size:11px;font-weight:700;white-space:nowrap}
@@ -1347,7 +1355,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     <button class="sp" data-sport="radar">
       <span class="cnt" id="cntRadar" hidden></span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.6"/><path d="M12 12l5.2-5.2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/></svg>
-      Radar <span class="soon">POLY</span>
+      <span data-i18n="intel_nav">Central AA</span> <span class="soon">30M</span>
     </button>
   </div>
 </nav>
@@ -1561,7 +1569,16 @@ const T = {
     tab_all: 'Todos', tab_favs: 'Favoritos', tab_hist: 'Historial', today: 'Hoy',
     f_all: 'Todos', f_live: 'En vivo', f_final: 'Finales', f_pre: 'Por jugar',
     season: 'USA · Temporada 2026', matches: 'Partidos',
-    radar_sub: 'Radar pausado · sin monitoreo', live_via_espn: 'En vivo · vía ESPN',
+    radar_sub: 'Central de jugadas · inteligencia multifuente', live_via_espn: 'En vivo · vía ESPN',
+    intel_nav: 'Central AA', intel_title: 'Central de Jugadas AA', intel_sub: 'Hasta 7 selecciones públicas, explicadas con AA, casas, Polymarket y Kalshi.',
+    intel_loading: 'Cargando inteligencia de mercados…', intel_empty: 'No hay jugadas públicas elegibles ahora mismo. No rellenamos una cuota.',
+    intel_updated: 'Actualizado', intel_next: 'próxima revisión', intel_agree: 'Mercados de acuerdo', intel_conflict: 'Conflicto de mercado', intel_insufficient: 'Evidencia insuficiente',
+    intel_aa: 'Probabilidad AA calibrada', intel_books: 'Casas / consenso', intel_poly: 'Polymarket', intel_kalshi: 'Kalshi', intel_unmatched: 'sin mercado comparable',
+    intel_why: 'Por qué aparece', intel_market_context: 'Contexto de mercado; no cambia la probabilidad AA en v1.', intel_divergence: 'Una fuente difiere al menos 8 puntos.',
+    intel_move: 'Movimiento de al menos 5 puntos en 30 minutos.', intel_book_dis: 'Las casas discrepan al menos 4 puntos.', intel_possible: 'Patrón compatible con posible información; no es una acusación.',
+    intel_combo: 'Combinadas de 2–3 piernas', intel_combo_closed: 'En sombra hasta 100 resultados conjuntos, calibración y aprobación humana.',
+    intel_honesty: 'Las wallets y los mercados son evidencia contextual. El estudio previo no encontró edge replicable al copiar traders. No son garantía ni acusación.',
+    intel_wallets: 'Wallets calificadas', intel_support: 'apoyan el pick', intel_oppose: 'juegan en contra', intel_mixed: 'señal mixta',
     detail_empty: 'Elige un partido para ver el análisis completo del algoritmo AA.',
     w_perf: 'Rendimiento del algoritmo', w_train: '🧪 Modelo AA en entrenamiento',
     w_train_p: 'Ya te mostramos los marcadores en vivo de este deporte. Las <b>predicciones AA</b> llegarán cuando el modelo pase nuestra validación con datos históricos (walk-forward, intervalos de confianza). No publicamos números que no estén medidos.',
@@ -1752,7 +1769,16 @@ const T = {
     tab_all: 'All', tab_favs: 'Favorites', tab_hist: 'History', today: 'Today',
     f_all: 'All', f_live: 'Live', f_final: 'Final', f_pre: 'Upcoming',
     season: 'USA · 2026 Season', matches: 'Games',
-    radar_sub: 'Radar paused · no monitoring', live_via_espn: 'Live · via ESPN',
+    radar_sub: 'Play central · multi-source intelligence', live_via_espn: 'Live · via ESPN',
+    intel_nav: 'AA Central', intel_title: 'AA Play Central', intel_sub: 'Up to 7 public selections explained with AA, books, Polymarket, and Kalshi.',
+    intel_loading: 'Loading market intelligence…', intel_empty: 'There are no eligible public plays right now. We never fill a quota.',
+    intel_updated: 'Updated', intel_next: 'next review', intel_agree: 'Markets agree', intel_conflict: 'Market conflict', intel_insufficient: 'Insufficient evidence',
+    intel_aa: 'Calibrated AA probability', intel_books: 'Books / consensus', intel_poly: 'Polymarket', intel_kalshi: 'Kalshi', intel_unmatched: 'no comparable market',
+    intel_why: 'Why it appears', intel_market_context: 'Market context; it does not change the AA probability in v1.', intel_divergence: 'A source differs by at least 8 points.',
+    intel_move: 'Move of at least 5 points in 30 minutes.', intel_book_dis: 'Books disagree by at least 4 points.', intel_possible: 'Pattern compatible with possible information; not an accusation.',
+    intel_combo: '2–3 leg combos', intel_combo_closed: 'In shadow until 100 joint results, calibration, and human approval.',
+    intel_honesty: 'Wallets and markets are contextual evidence. The prior study found no replicable edge from copying traders. They are neither a guarantee nor an accusation.',
+    intel_wallets: 'Qualified wallets', intel_support: 'support the pick', intel_oppose: 'oppose the pick', intel_mixed: 'mixed signal',
     detail_empty: 'Pick a game to see the full AA algorithm analysis.',
     w_perf: 'Algorithm performance', w_train: '🧪 AA model in training',
     w_train_p: 'We already show live scores for this sport. <b>AA predictions</b> arrive once the model passes our validation on historical data (walk-forward, confidence intervals). We don\'t publish numbers we haven\'t measured.',
@@ -3944,7 +3970,8 @@ function loadSummary(g){
 }
 
 /* ── 📡 Radar de wallets (Polymarket) — observatorio descriptivo ─────────── */
-const RADAR_PAUSED = true;
+const RADAR_PAUSED = true; // legacy wallet radar/alerts stay unreachable
+const CENTRAL_INTELLIGENCE = true;
 let radarDoc = null, radarAt = 0, radarLoading = false, radarSel = null;
 let alertsDoc = null, alertsAt = 0, alertsLoading = false;
 let trackDoc = null, trackAt = 0; // persistencia viva + wallets nuevas (poly:track)
@@ -4046,6 +4073,11 @@ const agoTxt = (ts) => {
   return m < 1 ? t('ago_now') : m < 60 ? `${pre}${m} ${t('ago_min_s')}` : m < 1440 ? `${pre}${Math.round(m / 60)} ${t('ago_h')}` : `${pre}${Math.round(m / 1440)} ${t('ago_d')}`;
 };
 async function loadAlerts(force){
+  if (CENTRAL_INTELLIGENCE){
+    alertsDoc = null; alertsLoading = false;
+    $('cntRadar').hidden = true; $('cntRadar').textContent = '';
+    return;
+  }
   if (RADAR_PAUSED){
     alertsDoc = null; alertsLoading = false;
     $('cntRadar').hidden = true; $('cntRadar').textContent = '';
@@ -4083,6 +4115,18 @@ const alertRow = (a) => `<div class="alrow${pfollow.has(a.wallet) ? ' followed' 
   <span class="q" title="${esc(a.title || '')}">${esc(a.title || '')}</span>
 </div>`;
 async function loadRadar(){
+  if (CENTRAL_INTELLIGENCE){
+    if (radarLoading || (radarDoc && Date.now() - radarAt < 5 * 60e3)) return;
+    radarLoading = true;
+    try{
+      const r = await fetch(`${API}/v1/intelligence/today`);
+      const d = await r.json();
+      if (d && d.version === 'intelligence_v1' && Array.isArray(d.slate)){ radarDoc = d; radarAt = Date.now(); }
+    }catch(err){ /* se conserva el último snapshot visible */ }
+    radarLoading = false;
+    if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); }
+    return;
+  }
   if (RADAR_PAUSED){ radarDoc = null; trackDoc = null; radarLoading = false; renderRadarList(); renderRadarDetail(); return; }
   if (radarLoading || (radarDoc && Date.now() - radarAt < 6e5)) return;
   radarLoading = true;
@@ -4294,8 +4338,53 @@ const walletCard = (w, i) => `<div class="wcard" data-rw="${esc(w.w)}" role="but
   <span class="row1"><span class="wctl">${pStar(w.w)}${pCmp(w.w)}</span><span class="rank num">#${i + 1}</span><span class="nm">${esc(rName(w))}</span>${w.watch ? `<span class="rankchip num" title="${t('r_informed')}">🎯 ${w.insider_score}</span>` : ''}${riskDot(w)}${trendDot(w)}<span class="spkw">${svgSpark(w.equity_curve)}</span>${netTag(w)}</span>
   <span class="row2">${w.win_rate != null ? `${t('r_acierta')} ${Math.round(100 * w.win_rate)}%` : `${w.wins}-${w.losses}`} · ${w.cats && w.cats[0] ? esc(rCat(w.cats[0].cat)) : '—'} · ${w.n_markets} ${t('r_mercados')}${giveBack(w) >= 0.15 ? ` · <span style="color:var(--red)">${t('bal_of')} +${esc(rUsd(w.pnl_usd))} ${t('bal_gross')}</span>` : (w.portfolio_usd > 0 ? ` · 💼 ${esc(rUsd(w.portfolio_usd))}` : '')}<span class="ver">${t('r_ver_perfil')}</span></span>
 </div>`;
+const intelPct = (value) => value == null || !isFinite(value) ? '—' : `${(100 * Number(value)).toFixed(1)}%`;
+const intelStateText = (state) => state === 'agree' ? t('intel_agree') : state === 'conflict' ? t('intel_conflict') : t('intel_insufficient');
+const intelProvider = (label, source) => {
+  const prob = source && (source.prob ?? source.mid ?? source.indicative);
+  return `<div class="intelsource"><b>${esc(label)}</b><span class="num">${prob == null ? t('intel_unmatched') : intelPct(prob)}</span>
+    ${source && source.spread != null ? `<small>spread ${(100 * source.spread).toFixed(1)} pts${source.volume_24h != null ? ` · vol ${Number(source.volume_24h).toLocaleString(LOCALE())}` : ''}</small>` : ''}</div>`;
+};
+function centralListHtml(){
+  const doc = radarDoc || {}, slate = doc.slate || [];
+  const fresh = doc.state === 'fresh';
+  const stamp = doc.as_of ? new Date(doc.as_of).toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' }) : '—';
+  const next = doc.next_refresh ? new Date(doc.next_refresh).toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' }) : '—';
+  const hero = `<div class="intelhero"><h2>${t('intel_title')}</h2><p>${t('intel_sub')}</p><div class="intelchips">
+    <span class="intelchip ${fresh ? 'good' : 'bad'}">${esc(doc.state || 'degraded')}</span><span class="intelchip">${t('intel_updated')} ${esc(stamp)}</span><span class="intelchip">${t('intel_next')} ${esc(next)}</span></div></div>`;
+  if (!slate.length) return hero + `<div class="lempty">${radarLoading ? t('intel_loading') : t('intel_empty')}</div>`;
+  return hero + slate.map((item, i) => `<button class="intelrow ${radarSel === item.id ? 'on' : ''}" data-rw="${esc(item.id)}">
+    <span class="intelrank num">#${i + 1}</span><span><span class="intelteams">${esc(item.away?.code || '')} @ ${esc(item.home?.code || '')}</span>
+    <span class="intelmeta">${esc(String(item.sport || '').toUpperCase())} · ${esc(item.pick)} · ${esc(intelStateText(item.consensus?.state))}</span></span>
+    <span class="intelprob num">${intelPct(item.aa?.prob)}</span></button>`).join('');
+}
+function centralDetailHtml(){
+  const doc = radarDoc || {}, slate = doc.slate || [];
+  const item = slate.find((row) => row.id === radarSel) || slate[0];
+  if (!item) return `<div class="dempty">${radarLoading ? t('intel_loading') : t('intel_empty')}</div>`;
+  const anomalies = (item.consensus?.anomalies || []).map((a) => ({
+    provider_divergence: t('intel_divergence'), market_move_30m: t('intel_move'), book_disagreement: t('intel_book_dis'), possible_informed_pattern: t('intel_possible'),
+  }[a.code] || a.code));
+  const reasons = (item.reasons || []).map((reason) => reason.text || reason.code).filter(Boolean);
+  const stateClass = item.consensus?.state === 'agree' ? 'good' : item.consensus?.state === 'conflict' ? 'bad' : '';
+  const wallet = item.wallet_signal;
+  const walletHtml = wallet ? `<div class="intelsource"><b>${t('intel_wallets')}</b><span>${wallet.side === 'support' ? t('intel_support') : wallet.side === 'oppose' ? t('intel_oppose') : t('intel_mixed')}</span>
+    <small>${wallet.qualified_wallets} · $${Number(wallet.usd || 0).toLocaleString(LOCALE())} · ${t('intel_possible')}</small></div>` : '';
+  return `<div class="dtop"><span class="crumb">${t('intel_title')}</span></div><div class="dbody">
+    <div class="intelhero"><h2>${esc(item.pick)} · ${intelPct(item.aa?.prob)}</h2><p>${esc(item.away?.name || item.away?.code || '')} @ ${esc(item.home?.name || item.home?.code || '')}</p>
+      <div class="intelchips"><span class="intelchip ${stateClass}">${esc(intelStateText(item.consensus?.state))}</span><span class="intelchip">${t('intel_market_context')}</span></div></div>
+    ${intelProvider(t('intel_aa'), { prob: item.aa?.prob })}${intelProvider(t('intel_books'), item.books)}${intelProvider(t('intel_poly'), item.polymarket)}${intelProvider(t('intel_kalshi'), item.kalshi)}${walletHtml}
+    ${(reasons.length || anomalies.length) ? `<div class="secttl">${t('intel_why')}</div><ul class="intelwhy">${[...reasons, ...anomalies].slice(0, 8).map((text) => `<li>${esc(text)}</li>`).join('')}</ul>` : ''}
+    <div class="intelgate"><b>${t('intel_combo')}</b><br>${t('intel_combo_closed')}<br><span class="num">${doc.combos?.sample?.n || 0} / ${doc.combos?.sample?.min_forward || 100}</span></div>
+    <div class="radarwarn"><b>${t('warn_legal')}:</b> ${t('intel_honesty')}</div></div>`;
+}
 function renderRadarList(){
   if (sport !== 'radar') return;
+  if (CENTRAL_INTELLIGENCE){
+    $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
+    $('lgcount').innerHTML = radarDoc?.slate?.length ? `<b>${radarDoc.slate.length}</b>/7` : '';
+    $('list').innerHTML = centralListHtml(); return;
+  }
   if (RADAR_PAUSED){
     $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
     $('lgcount').innerHTML = '';
@@ -4746,6 +4835,9 @@ function compareHtml(ws){
 function renderRadarDetail(){
   if (sport !== 'radar') return;
   const dc = $('dcard');
+  if (CENTRAL_INTELLIGENCE){
+    dc.classList.remove('enter'); dc.innerHTML = centralDetailHtml(); return;
+  }
   if (RADAR_PAUSED){
     dc.classList.remove('enter');
     dc.innerHTML = `<div class="dempty"><b>${t('r_paused_title')}</b><br><br>${t('r_paused_body')}</div>`;

@@ -648,16 +648,19 @@ export default {
 
     try {
       if (isModelPublish) return await internalModelPublish(request, env, origin);
+      if (path === '/v1/qa/intelligence/today') return await qaIntelligenceToday(request, env);
       const qaRoute = path.match(/^\/v1\/qa\/(wnba|nfl|ncaaf|nhl|ncaam)\/(today|history|learning|simulation|pipeline-health)$/);
       if (qaRoute) return await qaSportRoute(url, request, env, qaRoute[1], qaRoute[2]);
       if (path === '/' || path === '/v1' || path === '/v1/health') {
         return json(
-          { service: 'aa-sports-api', ok: true, sports: ['mlb', 'soccer', 'nba', 'wnba', 'tennis', ...Object.keys(US_SPORTS)], routes: ['/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live', '/v1/mlb/pipeline-health', '/v1/:sport/today', '/v1/:sport/live', '/v1/:sport/recent', '/v1/:sport/standings', '/v1/:sport/summary', '/v1/:sport/history', '/v1/:sport/learning', '/v1/:sport/simulation', '/v1/:sport/pipeline-health', '/v1/qa/:sport/:view (authenticated)', '/v1/injuries'] },
+          { service: 'aa-sports-api', ok: true, sports: ['mlb', 'soccer', 'nba', 'wnba', 'tennis', ...Object.keys(US_SPORTS)], routes: ['/v1/intelligence/today', '/v1/intelligence/history', '/v1/mlb/today', '/v1/mlb/event/:id', '/v1/mlb/history', '/v1/mlb/live', '/v1/mlb/pipeline-health', '/v1/:sport/today', '/v1/:sport/live', '/v1/:sport/recent', '/v1/:sport/standings', '/v1/:sport/summary', '/v1/:sport/history', '/v1/:sport/learning', '/v1/:sport/simulation', '/v1/:sport/pipeline-health', '/v1/qa/:sport/:view (authenticated)', '/v1/qa/intelligence/today (authenticated)', '/v1/injuries'] },
           200, origin,
         );
       }
 
       if (path === '/v1/mlb/today') return await today(env, origin);
+      if (path === '/v1/intelligence/today') return await intelligenceToday(env, origin);
+      if (path === '/v1/intelligence/history') return await intelligenceHistory(url, env, origin);
       if (path === '/v1/mlb/pipeline-health') return await mlbPipelineHealth(env, origin);
       const sm = path.match(/^\/v1\/mlb\/schedule\/(\d{4}-\d{2}-\d{2})$/);
       if (sm) return await schedule(sm[1], origin);
@@ -837,6 +840,118 @@ async function today(env, origin) {
     }
     return json({ sport: 'mlb', date, events: [], record: null, note: 'sin datos aún' }, 200, origin, 30);
   }
+}
+
+// Provider-neutral, already-calculated intelligence. The Worker only applies
+// a strict public allowlist and freshness policy; it never ranks or models.
+const intelligenceNumber = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+const intelligenceText = (value, max = 120) => typeof value === 'string' ? value.slice(0, max) : null;
+
+function safeIntelligenceProvider(source) {
+  if (!source || typeof source !== 'object') return null;
+  const out = {};
+  for (const key of ['matched', 'fresh', 'usable']) if (typeof source[key] === 'boolean') out[key] = source[key];
+  for (const key of ['prob', 'bid', 'ask', 'mid', 'spread', 'indicative', 'volume_24h', 'liquidity', 'n', 'disagreement']) {
+    const value = intelligenceNumber(source[key]); if (value != null) out[key] = value;
+  }
+  for (const key of ['as_of', 'market_id', 'ticker']) {
+    const value = intelligenceText(source[key]); if (value) out[key] = value;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+export function sanitizeIntelligenceDoc(source, nowMs = Date.now()) {
+  const doc = source && typeof source === 'object' ? source : {};
+  const asOf = intelligenceText(doc.as_of, 40);
+  const stale = !asOf || !Number.isFinite(Date.parse(asOf)) || nowMs - Date.parse(asOf) > 75 * 60 * 1000;
+  const slate = (Array.isArray(doc.slate) ? doc.slate : []).slice(0, 7).map((item) => {
+    const prob = intelligenceNumber(item?.aa?.prob);
+    if (!item?.id || !item?.event_id || !item?.pick || prob == null || item?.aa?.public_gate !== true) return null;
+    const consensus = item.consensus && typeof item.consensus === 'object' ? {
+      state: stale ? 'insufficient' : ['agree', 'conflict', 'insufficient'].includes(item.consensus.state) ? item.consensus.state : 'insufficient',
+      market_prob: stale ? null : intelligenceNumber(item.consensus.market_prob),
+      divergence: stale ? null : intelligenceNumber(item.consensus.divergence),
+      anomalies: stale ? [] : (Array.isArray(item.consensus.anomalies) ? item.consensus.anomalies : []).slice(0, 6).map((a) => ({
+        code: intelligenceText(a?.code, 50), value: intelligenceNumber(a?.value),
+      })).filter((a) => a.code),
+    } : { state: 'insufficient', market_prob: null, divergence: null, anomalies: [] };
+    const walletSignal = !stale && item.wallet_signal && ['support', 'oppose', 'mixed'].includes(item.wallet_signal.side) ? {
+      side: item.wallet_signal.side, qualified_wallets: Math.min(25, Math.max(0, intelligenceNumber(item.wallet_signal.qualified_wallets) || 0)),
+      usd: Math.max(0, intelligenceNumber(item.wallet_signal.usd) || 0), label: 'possible_informed_pattern',
+      profiles: (Array.isArray(item.wallet_signal.profiles) ? item.wallet_signal.profiles : []).slice(0, 5).map((profile) => ({
+        wallet: intelligenceText(profile?.wallet, 42), usd: Math.max(0, intelligenceNumber(profile?.usd) || 0),
+        n: Math.max(0, intelligenceNumber(profile?.n) || 0), win_rate: intelligenceNumber(profile?.win_rate),
+        wr_lb: intelligenceNumber(profile?.wr_lb), pnl: intelligenceNumber(profile?.pnl),
+      })).filter((profile) => /^0x[0-9a-f]{40}$/i.test(profile.wallet || '')),
+    } : null;
+    return {
+      id: intelligenceText(item.id), sport: intelligenceText(item.sport, 20), event_id: intelligenceText(item.event_id),
+      start: intelligenceText(item.start, 40), home: safeSportSide(item.home), away: safeSportSide(item.away),
+      market: intelligenceText(item.market, 30), pick: intelligenceText(item.pick),
+      aa: { prob, engine: intelligenceText(item.aa.engine, 60), public_gate: true },
+      books: stale ? null : safeIntelligenceProvider(item.books),
+      polymarket: stale ? null : safeIntelligenceProvider(item.polymarket),
+      kalshi: stale ? null : safeIntelligenceProvider(item.kalshi),
+      wallet_signal: walletSignal, consensus,
+      reasons: (Array.isArray(item.reasons) ? item.reasons : []).slice(0, 5).map((reason) => typeof reason === 'string'
+        ? { code: 'measured_reason', text: reason.slice(0, 160) }
+        : { code: intelligenceText(reason?.code, 60), value: intelligenceNumber(reason?.value) }).filter((reason) => reason.code),
+    };
+  }).filter(Boolean);
+  const comboSample = safeMarketSample(doc?.combos?.sample) || { n: 0, dates: 0, min_forward: 100, min_dates: 30 };
+  return {
+    version: 'intelligence_v1', date: intelligenceText(doc.date, 10), state: stale ? 'stale' : (slate.length ? 'fresh' : 'degraded'),
+    as_of: asOf, next_refresh: intelligenceText(doc.next_refresh, 40), cadence: '30m_active_2h_calm',
+    sources: {
+      aa: { ok: doc?.sources?.aa?.ok === true }, books: { ok: doc?.sources?.books?.ok === true },
+      polymarket: { ok: doc?.sources?.polymarket?.ok === true, markets: Math.max(0, intelligenceNumber(doc?.sources?.polymarket?.markets) || 0) },
+      kalshi: { ok: doc?.sources?.kalshi?.ok === true, markets: Math.max(0, intelligenceNumber(doc?.sources?.kalshi?.markets) || 0) },
+    }, slate,
+    combos: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'combos_forward_validation_pending' }, sample: comboSample },
+    budget: { kv_writes: Math.min(120, Math.max(0, intelligenceNumber(doc?.budget?.kv_writes) || 0)),
+      d1_rows: Math.min(5000, Math.max(0, intelligenceNumber(doc?.budget?.d1_rows) || 0)), max_kv_writes_day: 120, max_d1_rows_day: 5000 },
+    alerts: false, telegram: false,
+  };
+}
+
+async function intelligenceToday(env, origin) {
+  const raw = await env.AA_LATEST.get('intelligence:today');
+  if (!raw) return json(sanitizeIntelligenceDoc({ state: 'degraded', slate: [] }), 200, origin, 30);
+  let parsed; try { parsed = JSON.parse(raw); } catch (error) { parsed = {}; }
+  return json(sanitizeIntelligenceDoc(parsed), 200, origin, 60);
+}
+
+async function intelligenceHistory(url, env, origin) {
+  const days = Math.min(30, Math.max(1, parseInt(url.searchParams.get('days') || '7', 10) || 7));
+  const cutoff = new Date(); cutoff.setUTCDate(cutoff.getUTCDate() - days);
+  let snapshots = [];
+  try {
+    const result = await env.DB.prepare(
+      'SELECT payload FROM market_intelligence_snapshots WHERE date >= ? ORDER BY slot_at DESC LIMIT 336',
+    ).bind(cutoff.toISOString().slice(0, 10)).all();
+    snapshots = (result?.results || []).map((row) => { try { return sanitizeIntelligenceDoc(JSON.parse(row.payload)); } catch (error) { return null; } }).filter(Boolean);
+  } catch (error) { /* migration/storage unavailable -> explicit empty history */ }
+  return json({ version: 'intelligence_history_v1', days, count: snapshots.length, snapshots }, 200, origin, 300);
+}
+
+async function qaIntelligenceToday(request, env) {
+  const session = await sessionUser(request, env);
+  if (!session) return credJson({ error: 'qa_auth_required' }, 401, request, env);
+  if (!qaSessionAllowed(session, env)) return credJson({ error: 'qa_forbidden' }, 403, request, env);
+  const raw = await env.AA_LATEST.get('intelligence:today');
+  let parsed; try { parsed = raw ? JSON.parse(raw) : {}; } catch (error) { parsed = {}; }
+  const shadowCombos = (Array.isArray(parsed?.combos?.items) ? parsed.combos.items : []).slice(0, 3).map((combo) => ({
+    combo_id: intelligenceText(combo?.combo_id), state: 'shadow', joint_prob: null,
+    independence_prob: intelligenceNumber(combo?.independence_prob), reason: 'correlation_forward_sample_pending',
+    legs: (Array.isArray(combo?.legs) ? combo.legs : []).slice(0, 3).map((leg) => ({
+      id: intelligenceText(leg?.id), sport: intelligenceText(leg?.sport, 20), event_id: intelligenceText(leg?.event_id),
+      pick: intelligenceText(leg?.pick), prob: intelligenceNumber(leg?.prob), start: intelligenceText(leg?.start, 40),
+    })).filter((leg) => leg.id && leg.pick),
+  })).filter((combo) => combo.combo_id && combo.legs.length >= 2);
+  return credJson({ ...sanitizeIntelligenceDoc(parsed), qa: true, public: false, shadow_combos: shadowCombos }, 200, request, env);
 }
 
 // Normalización pura del schedule mínimo de respaldo (exportada para tests).

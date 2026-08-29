@@ -535,15 +535,15 @@ try {
     await assertNoOverflow(page, `${viewport.name}-wnba-en`);
     await page.locator('.sp[data-sport="radar"]').click();
     const radarEn = await page.locator('#list').textContent();
-    assert.match(radarEn, /Polymarket Radar paused/i, `${viewport.name}: missing Radar pause EN`);
-    assert.match(radarEn, /Telegram notifications are fully stopped/i, `${viewport.name}: missing Telegram stop EN`);
-    assert.equal(await page.locator('#list .mrow').count(), 0, `${viewport.name}: Radar rendered stale rows while paused`);
+    assert.match(radarEn, /AA Play Central/i, `${viewport.name}: missing intelligence central EN`);
+    assert.match(radarEn, /never fill a quota/i, `${viewport.name}: missing honest empty state EN`);
+    assert.equal(await page.locator('#list .mrow').count(), 0, `${viewport.name}: Central rendered stale legacy rows`);
     await page.locator('#langbtn').evaluate((el) => el.click());
     const radarEs = await page.locator('#list').textContent();
-    assert.match(radarEs, /Radar de Polymarket pausado/i, `${viewport.name}: falta pausa Radar ES`);
-    assert.match(radarEs, /notificaciones de Telegram[^.]*detuvimos|alertas y las notificaciones de Telegram/i, `${viewport.name}: falta detención Telegram ES`);
-    assert.doesNotMatch(radarEs, /Wallet monitoring|fully stopped/i, `${viewport.name}: English leaked into Radar ES`);
-    await assertNoOverflow(page, `${viewport.name}-radar-paused`);
+    assert.match(radarEs, /Central de Jugadas AA/i, `${viewport.name}: falta Central AA ES`);
+    assert.match(radarEs, /No hay jugadas públicas elegibles|No rellenamos una cuota|Cargando inteligencia/i, `${viewport.name}: falta estado honesto ES`);
+    assert.doesNotMatch(radarEs, /AA Play Central|never fill a quota/i, `${viewport.name}: English leaked into Central ES`);
+    await assertNoOverflow(page, `${viewport.name}-intelligence-central`);
     assert.deepEqual(errors, [], `${viewport.name}: errores de consola/red de la app`);
     await context.close();
   }
