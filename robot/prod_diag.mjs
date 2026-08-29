@@ -59,9 +59,16 @@ try {
   console.log('record:', JSON.stringify(d.record));
   const probs = (d.events || []).filter(e => e.prediction && e.prediction.prob_pct != null).map(e => ({ m: e.matchup, p: e.prediction.prob_pct }));
   console.log('probs mostradas:', JSON.stringify(probs.slice(0, 8)));
+  const now = new Date(), todayEt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  const hourEt = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false }).format(now)) % 24;
+  const future = (d.events || []).filter((event) => Number.isFinite(Date.parse(event.start)) && Date.parse(event.start) > now.getTime()).length;
+  const publicationOk = d.date === todayEt && (!(d.events || []).length || hourEt < 7 || probs.length > 0 || future === 0);
+  console.log(publicationOk ? '✅ publicación MLB saludable' : '❌ publicación MLB ATRASADA',
+    '| estado API:', d.publication?.state || 'legacy', '| hora ET:', hourEt, '| futuras:', future, '| publicadas:', probs.length);
+  if (!publicationOk) marketContractFailures++;
   const maxP = Math.max(0, ...probs.map(x => x.p));
-  console.log('máx prob_pct:', maxP, maxP > 66 ? '→ ⚠️ AÚN INFLADA (no calibrada)' : '→ ✅ en rango calibrado');
-} catch (e) { console.log('no-json / error:', t.status, t.text.slice(0, 200)); }
+  console.log('máx prob_pct:', maxP, maxP > 66 ? '→ ⚠️ AÚN INFLADA (no calibrada)' : probs.length ? '→ ✅ en rango calibrado' : '→ sin predicciones publicadas');
+} catch (e) { console.log('no-json / error:', t.status, t.text.slice(0, 200)); marketContractFailures++; }
 
 console.log('\n== /v1/mlb/simulation (¿validación OOS publicada?) ==');
 const sim = await get(`${API}/v1/mlb/simulation`);
@@ -206,6 +213,6 @@ if (!polyPaused) {
 
 console.log('\n████ fin diagnóstico ████');
 if (marketContractFailures) {
-  console.error(`❌ ${marketContractFailures} contrato(s) WNBA/NFL fallaron la frontera pública`);
+  console.error(`❌ ${marketContractFailures} contrato(s) de producción fallaron`);
   process.exitCode = 1;
 }

@@ -448,6 +448,9 @@ test('/v1/mlb/today reemplaza un KV viejo por el calendario real pendiente de ho
     assert.equal(body.events[0].event_id, '824409');
     assert.equal(body.events[0].prediction, null);
     assert.equal(body.events[0].pending, true);
+    assert.equal(body.publication.predictions, 0);
+    assert.equal(body.publication.expected_hour_et, 7);
+    assert.ok(['waiting', 'overdue', 'closed'].includes(body.publication.state));
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -497,7 +500,11 @@ test('/v1/mlb/today degrada al blob anterior si StatsAPI falla, sin responder 50
     );
     assert.equal(result.status, 200);
     assert.equal(result.headers.get('cache-control'), 'public, max-age=30');
-    assert.deepEqual(await result.json(), JSON.parse(old));
+    const body = await result.json();
+    const { publication, ...stored } = body;
+    assert.deepEqual(stored, JSON.parse(old));
+    assert.equal(publication.state, 'wrong_date');
+    assert.equal(publication.predictions, 0);
   } finally {
     globalThis.fetch = originalFetch;
     console.error = originalError;

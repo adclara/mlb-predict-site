@@ -9,8 +9,9 @@ const publisher = readFileSync(new URL('../robot/market_intelligence.mjs', impor
 
 test('intelligence workflow has independent redundant triggers and self-dedupes at 30 minutes', () => {
   assert.match(workflow, /cron: '7,22,37,52 \* \* \* \*'/);
-  assert.match(workflow, /workflow_run:[\s\S]*adrian-daily[\s\S]*soccer-shadow[\s\S]*wnba-shadow/);
-  assert.match(workflow, /data\/history\/\*\*/);
+  assert.match(workflow, /workflow_run:[\s\S]*soccer-shadow[\s\S]*wnba-shadow[\s\S]*US sports freshness QA/);
+  assert.doesNotMatch(workflow, /workflows:\s*\[[^\]]*adrian-daily/);
+  assert.doesNotMatch(workflow, /data\/history\/\*\*/);
   assert.match(workflow, /cancel-in-progress: false/);
   assert.match(workflow, /AA_INTELLIGENCE_MIN_AGE_MINUTES: '30'/);
   assert.match(workflow, /AA_INTELLIGENCE_FORCE/);

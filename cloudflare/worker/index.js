@@ -805,16 +805,40 @@ export default {
 
 // --- rutas ---------------------------------------------------------------
 
+export function mlbPublicationStatus(doc, now = new Date()) {
+  const events = Array.isArray(doc?.events) ? doc.events : [];
+  const predictions = events.filter((event) => event?.prediction?.pick
+    && Number.isFinite(Number(event?.prediction?.prob))).length;
+  const starts = events.map((event) => Date.parse(event?.start || ''));
+  const future = starts.filter((start) => Number.isFinite(start) && start > now.getTime()).length;
+  const unknown = starts.filter((start) => !Number.isFinite(start)).length;
+  const hourEt = Number(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', hour: 'numeric', hour12: false,
+  }).format(now)) % 24;
+  const todayEt = etDate(now);
+  let state = 'waiting';
+  if (doc?.date !== todayEt) state = 'wrong_date';
+  else if (!events.length) state = 'no_games';
+  else if (predictions > 0) state = 'published';
+  else if (unknown && hourEt >= 7) state = 'invalid';
+  else if (!future) state = 'closed';
+  else if (hourEt >= 7) state = 'overdue';
+  return { state, expected_hour_et: 7, events: events.length, predictions, future, unknown,
+    checked_at: now.toISOString() };
+}
+
+const withMlbPublicationStatus = (doc, now = new Date()) => ({
+  ...(doc && typeof doc === 'object' ? doc : {}), publication: mlbPublicationStatus(doc, now),
+});
+
 async function today(env, origin) {
   const raw = await env.AA_LATEST.get('mlb:today');
   let stored = null;
   try { stored = raw ? JSON.parse(raw) : null; } catch (e) { /* blob inválido: intenta el fallback */ }
-  const date = etDate(new Date());
+  const now = new Date();
+  const date = etDate(now);
   if (raw && stored && stored.date === date) {
-    return new Response(raw, {
-      status: 200,
-      headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=60' },
-    });
+    return json(withMlbPublicationStatus(stored, now), 200, origin, 60);
   }
 
   // GitHub Actions puede retrasar el cron horario. Si el blob aún es de ayer,
@@ -826,19 +850,16 @@ async function today(env, origin) {
       { headers: { 'user-agent': 'aa-sports/1.0', accept: 'application/json' }, cf: { cacheTtl: 120, cacheEverything: true } },
     );
     if (!res.ok) throw new Error('statsapi ' + res.status);
-    const doc = mlbPendingDoc(await res.json(), date, stored && stored.record, new Date().toISOString());
-    return json(doc, 200, origin, 120);
+    const doc = mlbPendingDoc(await res.json(), date, stored && stored.record, now.toISOString());
+    return json(withMlbPublicationStatus(doc, now), 200, origin, 120);
   } catch (err) {
     console.error(JSON.stringify({ message: 'mlb today fallback failed', error: String(err && err.message || err), date }));
     // Ante una caída solo degradamos a un blob realmente anterior. Un blob
     // futuro/manual no debe presentarse como si fuera la cartelera de hoy.
     if (raw && stored && stored.date && stored.date < date) {
-      return new Response(raw, {
-        status: 200,
-        headers: { ...cors(origin), 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=30' },
-      });
+      return json(withMlbPublicationStatus(stored, now), 200, origin, 30);
     }
-    return json({ sport: 'mlb', date, events: [], record: null, note: 'sin datos aún' }, 200, origin, 30);
+    return json(withMlbPublicationStatus({ sport: 'mlb', date, events: [], record: null, note: 'sin datos aún' }, now), 200, origin, 30);
   }
 }
 

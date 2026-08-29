@@ -141,13 +141,14 @@ header{
 @media (prefers-reduced-motion:reduce){.ldot{animation:none}}
 
 /* ═════════ SPORTS NAV ═════════ */
-nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
-.spwrap{max-width:1380px;margin:0 auto;padding:0 14px;display:flex;overflow-x:auto;scrollbar-width:none}
+nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:relative}
+.spwrap{max-width:1380px;margin:0 auto;padding:0 14px;display:flex;overflow-x:auto;scrollbar-width:none;
+  scroll-snap-type:x proximity;scroll-padding-inline:14px;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch}
 .spwrap::-webkit-scrollbar{display:none}
 .sp{
   display:flex;flex-direction:column;align-items:center;gap:4px;min-width:84px;position:relative;
   padding:11px 14px 9px;border-bottom:2px solid transparent;color:var(--dim);
-  font-size:13px;font-weight:600;white-space:nowrap;transition:color .15s;
+  font-size:13px;font-weight:600;white-space:nowrap;transition:color .15s;scroll-snap-align:start;
 }
 .sp:hover{color:var(--text)}
 .sp.on{color:var(--text);border-bottom-color:var(--blaze)}
@@ -159,6 +160,12 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page)}
   display:inline-flex;align-items:center;justify-content:center;padding:0 4px;
 }
 .sp .soon{font-size:8.5px;letter-spacing:.12em;color:var(--faint);font-weight:700}
+.sports-hint{display:none}
+@media(max-width:900px){
+  .sports-hint{display:flex;align-items:center;justify-content:center;gap:7px;padding:5px 14px 6px;
+    border-top:1px solid var(--hair);color:var(--dim);font-size:11.5px;font-weight:700;letter-spacing:.015em}
+  .sports-hint .gesture{color:var(--sky);font-size:15px;line-height:1}
+}
 
 /* ═════════ LAYOUT ═════════ */
 .layout{max-width:1380px;margin:0 auto;padding:16px 20px 80px;display:grid;grid-template-columns:400px minmax(0,1fr) 308px;gap:16px;align-items:start}
@@ -1319,8 +1326,13 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 <div class="ticker" id="ticker" hidden><div class="tk" id="tk"></div></div>
 
 <nav class="sports" aria-label="Deportes" data-i18n-aria="aria_sports">
-  <div class="spwrap">
-    <button class="sp on" data-sport="mlb">
+  <div class="spwrap" aria-describedby="sportsSwipeHint">
+    <button class="sp on" data-sport="radar">
+      <span class="cnt" id="cntRadar" hidden></span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.6"/><path d="M12 12l5.2-5.2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/></svg>
+      <span data-i18n="intel_nav">Central AA</span> <span class="soon">30M</span>
+    </button>
+    <button class="sp" data-sport="mlb">
       <span class="cnt" id="cntMLB" hidden></span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M5.5 5.5c2 2.5 2 10.5 0 13M18.5 5.5c-2 2.5-2 10.5 0 13" stroke-linecap="round"/></svg>
       Baseball
@@ -1357,12 +1369,8 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M6 5a12 12 0 0 1 0 14M18 5a12 12 0 0 0 0 14" stroke-linecap="round"/></svg>
       <span data-i18n="sport_tennis">Tenis</span> <span class="soon">LIVE</span>
     </button>
-    <button class="sp" data-sport="radar">
-      <span class="cnt" id="cntRadar" hidden></span>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.6"/><path d="M12 12l5.2-5.2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/></svg>
-      <span data-i18n="intel_nav">Central AA</span> <span class="soon">30M</span>
-    </button>
   </div>
+  <div class="sports-hint" id="sportsSwipeHint" role="note"><span class="gesture" aria-hidden="true">↔</span><span data-i18n="sports_swipe_hint">Desliza a izquierda o derecha para explorar deportes</span></div>
 </nav>
 
 <div class="layout">
@@ -1574,7 +1582,7 @@ const T = {
     tab_all: 'Todos', tab_favs: 'Favoritos', tab_hist: 'Historial', today: 'Hoy',
     f_all: 'Todos', f_live: 'En vivo', f_final: 'Finales', f_pre: 'Por jugar',
     season: 'USA · Temporada 2026', matches: 'Partidos',
-    radar_sub: 'Central de jugadas · inteligencia multifuente', live_via_espn: 'En vivo · vía ESPN',
+    radar_sub: 'Central de jugadas · inteligencia multifuente', live_via_espn: 'En vivo · vía ESPN', sports_swipe_hint: 'Desliza a izquierda o derecha para explorar deportes',
     intel_nav: 'Central AA', intel_title: 'Central de Jugadas AA', intel_sub: 'Selecciones pregame >60% en las próximas 36h: AA validado o probabilidad real del mercado.',
     intel_loading: 'Cargando inteligencia de mercados…', intel_empty: 'No hay jugadas públicas elegibles ahora mismo. No rellenamos una cuota.',
     intel_updated: 'Actualizado', intel_next: 'próxima revisión', intel_agree: 'Mercados de acuerdo', intel_conflict: 'Conflicto de mercado', intel_insufficient: 'Evidencia insuficiente',
@@ -1774,7 +1782,7 @@ const T = {
     mk_rest: '{t} llega más descansado ({d} vs {o} días)', mk_series: 'juego {g} de {n} de la serie', mk_series_rec: 'juego {g} de {n} · serie {hW}-{aW}',
     mk_field: 'defensa floja: {n} errores en 10 juegos', mk_sweep: '{t} necesita ganar para evitar la barrida',
     mk_stakes: '{r}º en su división · a {gb} juegos', mk_note: 'Claves basadas en datos reales del juego — no es recomendación; tú decides.',
-    pred_pending: 'Predicción AA · se publica ~7am ET',
+    pred_pending: 'Predicción AA aún no publicada', pred_overdue: 'Publicación atrasada · recuperación automática activa',
     pred_invalid_list: 'Pronóstico invalidado · cambió el abridor',
     pred_invalid_detail: 'Pronóstico AA invalidado: cambió el abridor probable. El análisis original ya no aplica.',
   },
@@ -1783,7 +1791,7 @@ const T = {
     tab_all: 'All', tab_favs: 'Favorites', tab_hist: 'History', today: 'Today',
     f_all: 'All', f_live: 'Live', f_final: 'Final', f_pre: 'Upcoming',
     season: 'USA · 2026 Season', matches: 'Games',
-    radar_sub: 'Play central · multi-source intelligence', live_via_espn: 'Live · via ESPN',
+    radar_sub: 'Play central · multi-source intelligence', live_via_espn: 'Live · via ESPN', sports_swipe_hint: 'Swipe left or right to explore sports',
     intel_nav: 'AA Central', intel_title: 'AA Play Central', intel_sub: 'Pregame selections above 60% over the next 36h: gated AA or measured market probability.',
     intel_loading: 'Loading market intelligence…', intel_empty: 'There are no eligible public plays right now. We never fill a quota.',
     intel_updated: 'Updated', intel_next: 'next review', intel_agree: 'Markets agree', intel_conflict: 'Market conflict', intel_insufficient: 'Insufficient evidence',
@@ -1983,7 +1991,7 @@ const T = {
     mk_rest: '{t} comes in more rested ({d} vs {o} days)', mk_series: 'game {g} of {n} in the series', mk_series_rec: 'game {g} of {n} · series {hW}-{aW}',
     mk_field: 'sloppy fielding: {n} errors in 10 games', mk_sweep: '{t} needs a win to avoid the sweep',
     mk_stakes: '{r} in its division · {gb} games back', mk_note: 'Keys are built from the game’s real data — not a recommendation; you decide.',
-    pred_pending: 'AA prediction · publishes around 7am ET',
+    pred_pending: 'AA prediction not published yet', pred_overdue: 'Publication delayed · automatic recovery active',
     pred_invalid_list: 'Prediction invalidated · starter changed',
     pred_invalid_detail: 'AA prediction invalidated: the probable starter changed. The original analysis no longer applies.',
     how_html: `<h2>How AA Sports works</h2>
@@ -2159,6 +2167,7 @@ function injuryRows(sportKey, code){
 let events = [], liveByKey = new Map();
 let todayRecord = null; // récord AA por nivel del doc de hoy (para el Boleto del día)
 let runIndicatorMeta = null; // estado agregado del experimento forward de Altas
+let mlbPublication = null; // waiting | overdue | published | no_games | closed (decidido por el Worker)
 let injuriesDoc = null; // bajas por equipo (mlb/nba), del robot cada hora
 async function loadInjuries(){
   try{
@@ -2372,6 +2381,7 @@ function visibleRows(){
     (order[effStatus(a)] ?? 3) - (order[effStatus(b)] ?? 3) ||
     (b.prediction?.prob ?? 0) - (a.prediction?.prob ?? 0));
 }
+const pendingPredictionLabel = () => t(mlbPublication?.state === 'overdue' ? 'pred_overdue' : 'pred_pending');
 function rowHtml(ev, idx){
   const lv = lvOf(ev), st = effStatus(ev), p = ev.prediction || {};
   const hs = lv ? lv.home.score : null, as2 = lv ? lv.away.score : null;
@@ -2405,7 +2415,7 @@ function rowHtml(ev, idx){
   const ln = n => n ? esc(n.split(' ').slice(-1)[0]) : '?';
   const spLine = (st === 'pre' && sp2 && (sp2.away?.name || sp2.home?.name))
     ? `<span class="mmeta">⚾ ${ln(sp2.away?.name)} <span class="vs">vs</span> ${ln(sp2.home?.name)}</span>` : '';
-  const pendingLine = ev.pending && !p.pick ? `<span class="mmeta pending">⏳ ${t('pred_pending')}</span>` : '';
+  const pendingLine = ev.pending && !p.pick ? `<span class="mmeta pending">⏳ ${pendingPredictionLabel()}</span>` : '';
   const invalidLine = p.invalidated ? `<span class="mmeta invalid">⚠️ ${t('pred_invalid_list')}</span>` : '';
 
   return `<button class="mrow ${ev.event_id === selectedId ? 'sel' : ''}" data-id="${esc(ev.event_id)}" style="--i:${idx ?? 0}">
@@ -3189,7 +3199,7 @@ function renderDetail(){
       ? `${aaGauge(Math.round(p.prob * 1000) / 10, tNick(p.pick))}
          <div class="dsub" style="margin-top:6px">${startTime ? t('first_pitch') + ' ' + startTime : t('to_play_today')}</div>`
       : `<div class="dscore num" style="font-size:22px;color:var(--dim);font-weight:700">${startTime || t('o_today')}</div>
-         <div class="dsub">${ev.pending ? t('pred_pending') : p.invalidated ? t('pred_invalid_list') : t('o_toplay')}</div>`;
+         <div class="dsub">${ev.pending ? pendingPredictionLabel() : p.invalidated ? t('pred_invalid_list') : t('o_toplay')}</div>`;
   }
   const recA = lv && lv.away.rec ? `<span class="rc num">${esc(lv.away.rec)}</span>` : '';
   const recH = lv && lv.home.rec ? `<span class="rc num">${esc(lv.home.rec)}</span>` : '';
@@ -3782,6 +3792,7 @@ async function loadToday(){
     events = d.events || [];
     todayRecord = d.record || null;
     runIndicatorMeta = d.run_indicator_meta || null;
+    mlbPublication = d.publication || null;
     todayDate = d.date || todayDate;
     // Fecha REAL (reloj, horario del Este) vs la fecha del doc: si el doc es de
     // un día pasado (p. ej. no hay juegos hoy — receso del Juego de Estrellas o
@@ -3809,7 +3820,7 @@ async function loadToday(){
   }
 }
 /* ── multideporte (marcadores en vivo; predicciones cuando el modelo valide) ── */
-let sport = 'mlb';
+let sport = 'radar';
 let soccerLeague = 'eng.1';
 const SOCCER_LEAGUES = { 'eng.1': 'Premier', 'esp.1': 'LaLiga', 'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1', 'uefa.champions': 'Champions', 'usa.1': 'MLS', 'mex.1': 'Liga MX' };
 const SPORT_LABEL = { nba: 'NBA', wnba: 'WNBA', nfl: 'NFL', ncaaf: 'College Football', nhl: 'NHL', ncaam: 'College Basketball', soccer: 'Soccer', tennis: 'Tenis', radar: 'Central AA' };
@@ -5305,7 +5316,11 @@ function setSport(sp2){
   }
   renderLeagueChips();
   const activeSport = document.querySelector(`.sp[data-sport="${sport}"]`);
-  if (activeSport) activeSport.scrollIntoView({ block: 'nearest', inline: 'center' });
+  if (activeSport) {
+    const wrap = activeSport.parentElement;
+    if (wrap && activeSport === wrap.firstElementChild) wrap.scrollLeft = 0;
+    else activeSport.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }
   if (sport === 'mlb') renderAll();
   else if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); loadRadar(); loadAlerts(); }
   else { renderOtherList(); renderOtherDetail(); loadOther(); }
@@ -5480,7 +5495,6 @@ $('legalclose').onclick = () => $('legaldlg').close();
 $('legaldlg').addEventListener('click', (e) => { if (e.target === $('legaldlg')) $('legaldlg').close(); });
 
 applyI18n(); // pinta el idioma guardado antes de cargar datos
-loadToday(); loadLive(); loadInjuries(); loadMe();
 // PWA: registra el service worker y fuerza la comprobación de su versión. El
 // shell sigue siendo network-first; nunca se cachean respuestas deportivas.
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker
@@ -5491,10 +5505,12 @@ if ('serviceWorker' in navigator) addEventListener('load', () => navigator.servi
   const _wp = (qp.get('w') || '').match(/0x[0-9a-fA-F]{40}/);
   const gid = qp.get('g'), tab = qp.get('tab'), scid = qp.get('sc');
   if (_wp){ try { setSport('radar'); loadWalletSearch(_wp[0]); } catch (e) {} }
-  else if (['soccer', 'nba', 'wnba', 'tennis', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(tab)){ try { setSport(tab); if (scid) pendingOther = scid; } catch (e) {} }
+  else if (['mlb', 'soccer', 'nba', 'wnba', 'tennis', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(tab)){ try { setSport(tab); if (scid) pendingOther = scid; } catch (e) {} }
   else if (/^radar\./i.test(location.hostname) || tab === 'radar'){ try { setSport('radar'); } catch (e) {} }
-  else if (gid){ pendingGame = gid; }   // se aplica cuando cargan los eventos
+  else if (gid){ try { setSport('mlb'); pendingGame = gid; } catch (e) {} } // se aplica cuando cargan los eventos
+  else { try { setSport('radar'); } catch (e) {} }
 }
+loadToday(); loadLive(); loadInjuries(); loadMe();
 setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
 setInterval(() => { sport === 'mlb' ? loadLive() : sport === 'radar' ? loadAlerts() : loadOther(); }, 45 * 1000);
 setInterval(loadInjuries, 30 * 60 * 1000);

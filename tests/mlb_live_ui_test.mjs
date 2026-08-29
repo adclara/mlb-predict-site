@@ -330,7 +330,7 @@ try {
       ],
       [live('yesterday-final', yesterday, `${yesterday}T22:40:00Z`, 'final', 4, 13)],
     );
-    await page.goto(`${base}/?mlb-live-date-regression=${viewport.name}`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${base}/?tab=mlb&mlb-live-date-regression=${viewport.name}`, { waitUntil: 'domcontentloaded' });
     const state = await rowState(page, 'today-game');
     assert.notEqual(state.time, 'Final', `${viewport.name}: el final de ayer contaminó hoy`);
     assert.deepEqual(state.scores, ['', ''], `${viewport.name}: aparecen marcadores de ayer`);
@@ -358,7 +358,8 @@ try {
       await page.locator('#dcard .market-first').screenshot({ path: process.env.AA_MARKET_QA_SCREENSHOT });
     }
     await page.locator('#dback').evaluate(el => el.click());
-    assert.match(await page.locator('.mrow[data-id="pending-game"]').textContent(), /se publica ~7am ET/i, `${viewport.name}: falta pending ES`);
+    await page.evaluate(() => { mlbPublication = { state: 'overdue' }; renderList(); });
+    assert.match(await page.locator('.mrow[data-id="pending-game"]').textContent(), /Publicación atrasada · recuperación automática activa/i, `${viewport.name}: falta overdue ES`);
     const invalidRowEs = await page.locator('.mrow[data-id="invalidated-game"]').textContent();
     assert.match(invalidRowEs, /pronóstico invalidado · cambió el abridor/i, `${viewport.name}: falta aviso scratch ES`);
     assert.doesNotMatch(invalidRowEs, /AA\s*61%/i, `${viewport.name}: pick invalidado visible en fila ES`);
@@ -455,7 +456,7 @@ try {
     assert.doesNotMatch(detailEn, /Prob\. AA calibrada/i, `${viewport.name}: Spanish metric label leaked into detail EN`);
     assert.doesNotMatch(detailEn, /\bmedia\b|\boro\b|\bfijo\b/i, `${viewport.name}: Spanish confidence or badge leaked into detail EN`);
     await page.locator('#dback').evaluate(el => el.click());
-    assert.match(await page.locator('.mrow[data-id="pending-game"]').textContent(), /publishes around 7am ET/i, `${viewport.name}: missing pending EN`);
+    assert.match(await page.locator('.mrow[data-id="pending-game"]').textContent(), /Publication delayed · automatic recovery active/i, `${viewport.name}: missing overdue EN`);
     const invalidRowEn = await page.locator('.mrow[data-id="invalidated-game"]').textContent();
     assert.match(invalidRowEn, /prediction invalidated · starter changed/i, `${viewport.name}: missing scratch warning EN`);
     assert.doesNotMatch(invalidRowEn, /pronóstico|abridor|análisis/i, `${viewport.name}: Spanish leaked into scratch warning EN`);
@@ -533,7 +534,10 @@ try {
     assert.match(wnbaBrainEn, /model remains in shadow/i, `${viewport.name}: missing WNBA shadow disclosure EN`);
     assert.doesNotMatch(wnbaBrainEn, /Cerebro|Histórico|muestra|cerrado|entrenamiento/i, `${viewport.name}: Spanish leaked into WNBA Brain EN`);
     await assertNoOverflow(page, `${viewport.name}-wnba-en`);
-    await page.locator('.sp[data-sport="radar"]').click();
+    await page.goto(`${base}/?central-default-regression=${viewport.name}`, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => /AA Play Central/i.test(document.querySelector('#list')?.textContent || ''));
+    assert.equal(await page.locator('.sp.on').getAttribute('data-sport'), 'radar', `${viewport.name}: Central no abrió por defecto`);
+    assert.equal(await page.locator('.spwrap .sp').first().getAttribute('data-sport'), 'radar', `${viewport.name}: Central no es primera`);
     const radarEn = await page.locator('#list').textContent();
     assert.match(radarEn, /AA Play Central/i, `${viewport.name}: missing intelligence central EN`);
     assert.match(radarEn, /never fill a quota/i, `${viewport.name}: missing honest empty state EN`);
@@ -565,7 +569,7 @@ try {
       live('live-2', today, `${today}T23:00:00Z`, 'live', 3, 4),
     ],
   );
-  await page.goto(`${base}/?mlb-doubleheader-regression=1`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${base}/?tab=mlb&mlb-doubleheader-regression=1`, { waitUntil: 'domcontentloaded' });
   assert.deepEqual(await rowState(page, 'double-1'), { time: 'Final', scores: ['1', '2'] });
   const second = await rowState(page, 'double-2');
   assert.deepEqual(second.scores, ['3', '4']);
