@@ -7,13 +7,15 @@ on:
     - cron: '7,22,37,52 * * * *'
   workflow_dispatch: {}
   workflow_run:
-    workflows: [adrian-daily, soccer-shadow, wnba-shadow, US sports freshness QA]
+    workflows: [soccer-shadow, wnba-shadow, US sports freshness QA]
     types: [completed]
   push:
     branches: [main]
     paths:
       - '.github/poke-intelligence'
-      - 'data/history/**'
+      # Deliberately exclude data/history: adrian-daily writes that tree. Since
+      # market-intelligence is an MLB repair wake source, listening to the same
+      # commit would create market -> daily -> market completion cycles.
       - 'data/fase2/**'
 permissions:
   contents: read

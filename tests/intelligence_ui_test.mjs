@@ -60,13 +60,39 @@ try {
     page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
     await page.route('**/v1/**', (route) => new URL(route.request().url()).pathname === '/v1/intelligence/today' ? json(route, intelligence) : json(route, {}));
     await page.route('https://fonts.googleapis.com/**', (route) => route.fulfill({ status: 200, body: '' })); await page.route('https://fonts.gstatic.com/**', (route) => route.fulfill({ status: 204, body: '' }));
-    await page.goto(base, { waitUntil: 'domcontentloaded' }); await page.locator('.sp[data-sport="radar"]').click(); await page.locator('.intelrow').first().waitFor();
+    await page.goto(base, { waitUntil: 'domcontentloaded' }); await page.locator('.intelrow').first().waitFor();
+    assert.equal(await page.locator('.spwrap .sp').first().getAttribute('data-sport'), 'radar', `${viewport.n}: Central no es la primera`);
+    assert.equal(await page.locator('.sp.on').getAttribute('data-sport'), 'radar', `${viewport.n}: Central no es la vista inicial`);
+    const navState = await page.evaluate(() => {
+      const wrap = document.querySelector('.spwrap'), central = document.querySelector('.sp[data-sport="radar"]');
+      const rect = central.getBoundingClientRect();
+      return { scrollLeft: wrap.scrollLeft, left: rect.left, right: rect.right, width: document.documentElement.clientWidth };
+    });
+    assert.equal(navState.scrollLeft, 0, `${viewport.n}: navegación no inicia a la izquierda`);
+    assert.ok(navState.left >= 0 && navState.right <= navState.width, `${viewport.n}: Central no está visible al cargar`);
+    const hint = page.locator('#sportsSwipeHint');
+    if (viewport.n === 'desktop') assert.equal(await hint.isVisible(), false, 'desktop: hint móvil visible');
+    else {
+      assert.equal(await hint.isVisible(), true, `${viewport.n}: falta hint de swipe`);
+      assert.match(await hint.textContent(), /Desliza a izquierda o derecha para explorar deportes/i);
+      const contrast = await hint.evaluate((el) => {
+        const nums = (value) => (value.match(/[\d.]+/g) || []).map(Number);
+        const [fr, fg, fb, fa = 1] = nums(getComputedStyle(el).color);
+        const [br, bg, bb] = nums(getComputedStyle(document.body).backgroundColor);
+        const mix = (front, back) => (front * fa + back * (1 - fa)) / 255;
+        const lum = (rgb) => { const c = rgb.map((v) => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+        const l1 = lum([mix(fr, br), mix(fg, bg), mix(fb, bb)]), l2 = lum([br / 255, bg / 255, bb / 255]);
+        return (Math.max(l1, l2) + .05) / (Math.min(l1, l2) + .05);
+      });
+      assert.ok(contrast >= 4.5, `${viewport.n}: contraste del hint ${contrast.toFixed(2)} < 4.5`);
+    }
     assert.equal(await page.locator('.intelrow').count(), 12, `${viewport.n}: expected full 12-play slate`);
     const listEs = await page.locator('#list').textContent(); assert.match(listEs, /Central de Jugadas AA/); assert.match(listEs, /WNBA[\s\S]*Favorito del mercado/); assert.match(listEs, /Combinaciones multideporte/);
     assert.match(await page.locator('#dcard').textContent(), /Polymarket[\s\S]*61[,.]0%/); assert.match(await page.locator('#dcard').textContent(), /Pitcheo[\s\S]*A\. Ace/);
     await page.locator('.intelrow[data-rw="wnba:2"]').click(); const wnbaEs = await page.locator('#dcard').textContent();
     assert.match(wnbaEs, /Probabilidad del mercado des-vigada[\s\S]*76[,.]0%/); assert.match(wnbaEs, /Polymarket[\s\S]*78[,.]5%/); assert.match(wnbaEs, /23-16 vs 15-24/);
     assert.match(wnbaEs, /12 \/ 100/); await page.locator('#langbtn').evaluate((el) => el.click()); assert.match(await page.locator('#dcard').textContent(), /AA Play Central/); assert.match(await page.locator('#dcard').textContent(), /De-vigged market probability/);
+    if (viewport.n !== 'desktop') assert.match(await hint.textContent(), /Swipe left or right to explore sports/i, `${viewport.n}: falta hint EN`);
     assert.match(await page.locator('.lghead .sub').textContent(), /multi-source intelligence/i); assert.doesNotMatch(await page.locator('.lghead .sub').textContent(), /Season/i);
     await page.locator('.intelrow[data-rw="mlb:1"]').evaluate((el) => el.click()); assert.match(await page.locator('#dcard').textContent(), /Starters:[\s\S]*A\. Ace/); assert.doesNotMatch(await page.locator('#dcard').textContent(), /Abridores|riesgo bajo/i);
     if (viewport.n === 'desktop') {

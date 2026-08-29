@@ -20,7 +20,9 @@ jobs:
         with:
           node-version: '20'
       - name: Regresión MLB — aislamiento de fechas live
-        run: node --test tests/mlb_live_date.test.mjs
+        run: node --test tests/mlb_live_date.test.mjs tests/mlb_publication_health.test.mjs
+      - name: Gate de publicación MLB post-7am ET
+        run: node robot/mlb_publication_health_check.mjs
       - name: Diagnóstico de producción (aasport.net + API)
         shell: /bin/bash {0}
         run: node robot/prod_diag.mjs

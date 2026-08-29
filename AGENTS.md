@@ -72,7 +72,9 @@ path dispara el workflow. Mapa verificado (poke → workflow):
   y diagnosticar producción" en aasport.net) ← el deploy principal
 - `.github/poke-qa` → qa.yml (qa_check.mjs contra producción)
 - `.github/poke` → adrian-daily.yml (slate + gradación + publicación; cron horario
-  + watchdog redundante 7–8am ET que corre solo si producción sigue pendiente)
+  + watchdog redundante y triggers `workflow_run` independientes que corren solo
+  si después de 7am ET producción sigue pendiente; el readback post-publicación
+  y deploy fallan si hay juegos futuros pero 0 predicciones)
 - `.github/poke-learn` → mlb-learning-daily.yml (refit + Cerebro AA una vez al día)
 - `.github/poke-live` → mlb-live-observer.yml (multi-book/WP en vivo; no bloquea daily)
 - `.github/poke-us-sports` → us-sports-qa.yml (frescura NFL/NCAAF/NHL/NCAAM; cron 4×/día)
@@ -145,7 +147,9 @@ humana ni scope público. No requiere copiar `CLOUDFLARE_API_TOKEN` al repo priv
   - `robot/daily.mjs` — arma/gradúa el MLB del día y congela un ledger pregame
     inmutable. `robot/mlb_ingest_consumer.mjs` consume los slots públicos D1.
     `robot/mlb_publish_watchdog.mjs` comprueba producción varias veces entre
-    7–8am ET y reintenta la publicación solo si hoy tiene 0 predicciones AA.
+    7–8am ET y también al completar pipelines independientes; reintenta la
+    publicación solo si hoy tiene juegos futuros y 0 predicciones AA.
+    `robot/mlb_publication_health_check.mjs` impide falsos verdes post-7am.
   - `robot/learn.js` + `robot/mlb_learn_daily.mjs` — re-ajuste diario causal +
     walk-forward; `FORMULA_VERSION = 'v2'`;
     calibración Platt → `prob_v2` (el número calibrado que se muestra).

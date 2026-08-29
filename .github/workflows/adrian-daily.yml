@@ -11,6 +11,12 @@ on:
     # preflight below skips every attempt once today's AA predictions exist.
     - cron: '12,27,42,57 11,12 * * *'
   workflow_dispatch: {}
+  # Independent repair paths. GitHub can omit any individual schedule event;
+  # these completed data workflows wake the MLB preflight without creating a
+  # completion cycle back into market-intelligence.
+  workflow_run:
+    workflows: [market-intelligence, US sports freshness QA, soccer-shadow, wnba-shadow]
+    types: [completed]
   # Manual "poke": committing any change to .github/poke to main fires a run
   # immediately (the GitHub App token can't call workflow_dispatch, and a brand
   # new cron can take a while to register — this is the no-permissions lever).
@@ -24,6 +30,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   run:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -100,3 +107,8 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: node cloudflare/upload.mjs
+      - name: Verificar publicación MLB en producción
+        # Corre incluso cuando el preflight decide omitir: así una decisión
+        # equivocada nunca puede volver a producir un workflow verde falso.
+        if: always()
+        run: node robot/mlb_publication_health_check.mjs
