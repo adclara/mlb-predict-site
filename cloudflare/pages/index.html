@@ -5144,13 +5144,13 @@ function renderOtherList(){
   rows = [...rows].sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3));
   const banner = top2Banner() + (otherRecent && rows.length
     ? `<div class="recentnote">${t('o_recentnote')}</div>` : '');
-  const pickTtl = t('sc_pickttl');   // (t global; dentro del map se sombrea con la hora)
+  const pickTtl = t('sc_pickttl');
   const marketSourceLabel = t('market_source_short');
   $('list').innerHTML = otherLoading && !rows.length
     ? '<div class="skel"></div><div class="skel"></div><div class="skel"></div>'
     : rows.length ? banner + rows.map((g, i) => {
       const scored = g.home.score != null && g.status !== 'pre';
-      const t = g.status === 'live' ? `<span class="lv">${esc((g.status_detail || 'LIVE').slice(0, 12))}</span>`
+      const timeLabel = g.status === 'live' ? `<span class="lv">${esc((g.status_detail || 'LIVE').slice(0, 12))}</span>`
         : g.status === 'final' ? (g._recent && g.date ? esc(shortDate(g.date)) : 'Final')
         : (g.start ? new Date(g.start).toLocaleTimeString(LOCALE(), {hour: '2-digit', minute: '2-digit'}) : 'Hoy');
       const setsA = sport === 'tennis' && g.away.sets ? ` <span class="stdet num">(${g.away.sets.join('-')})</span>` : '';
@@ -5164,7 +5164,7 @@ function renderOtherList(){
         ? { team: rawSpread <= 0 ? g.home.code : g.away.code, spread: -Math.abs(rawSpread) } : null;
       const displayPct = (value) => Number(value).toFixed(Number(value) % 1 ? 1 : 0) + '%';
       return `<button class="mrow" data-oid="${esc(g.espn_id)}" style="--i:${i}">
-        <span class="mtime num">${t}</span>
+        <span class="mtime num">${timeLabel}</span>
         <span class="mteams">
           <span class="mt ${g.away.winner ? 'win' : ''}">${oLogo(g.away)}<span class="nm">${esc(oName(g.away))}</span>${rankChip(g.away)}${setsA}</span>
           <span class="mt ${g.home.winner ? 'win' : ''}">${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}</span>${rankChip(g.home)}${setsH}</span>
