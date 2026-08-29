@@ -235,7 +235,12 @@ async function installApiMocks(page, date, events, games) {
         away: { code: 'AWY', name: 'Away Team', score: null, logo: null, rec: '0-0' },
         home: { code: 'HME', name: 'Home Team', score: null, logo: null, rec: '0-0' },
         market: { away_ml: 150, home_ml: -175, away_prob: .4, home_prob: .6, probability_source: 'market_devigged' },
-      }] });
+      }, ...(sport === 'ncaaf' ? [{
+        espn_id: 'ncaaf-line-only', start: `${date}T23:30:00Z`, status: 'pre', status_detail: 'Scheduled',
+        away: { code: 'SJSU', name: 'San José State', score: null, logo: null, rec: '0-0' },
+        home: { code: 'USC', name: 'USC', score: null, logo: null, rec: '0-0' },
+        market: { provider: 'DraftKings', spread: -38.5, total: 61.5 },
+      }] : [])] });
     }
     return json(route, {});
   });
@@ -432,6 +437,7 @@ try {
     await page.locator('.sp[data-sport="ncaaf"]').click();
     await page.locator('.mrow[data-oid="ncaaf-1"]').waitFor({ state: 'visible' });
     assert.match(await page.locator('#list').textContent(), /40%[\s\S]*60%[\s\S]*Mercado/i, `${viewport.name}: NCAAF no muestra porcentajes de mercado ES`);
+    assert.match(await page.locator('#list').textContent(), /USC -38\.5[\s\S]*Línea/i, `${viewport.name}: NCAAF sin fallback de spread ES`);
     if (viewport.name !== 'desktop') await page.locator('.mrow[data-oid="ncaaf-1"]').click();
     await page.waitForFunction(() => /Predictor externo de ESPN[\s\S]*45%[\s\S]*55%/i.test(document.querySelector('#dcard')?.textContent || ''));
     const ncaafEs = await page.locator('#dcard').textContent();
@@ -548,6 +554,7 @@ try {
       const sportDetail = await page.locator('#dcard').textContent();
       assert.match(sportDetail, /Gate closed/i, `${viewport.name}: ${newSport} missing honest market gate`);
       assert.match(await page.locator('#list').textContent(), /40%[\s\S]*60%[\s\S]*Market/i, `${viewport.name}: ${newSport} per-game market percentages missing`);
+      if (newSport === 'ncaaf') assert.match(await page.locator('#list').textContent(), /USC -38\.5[\s\S]*Line/i, `${viewport.name}: NCAAF spread fallback missing`);
       if (newSport === 'nfl') {
         await page.waitForFunction(() => /Historical model evidence[\s\S]*63\.7%/i.test(document.querySelector('#list')?.textContent || ''));
         const nflList = await page.locator('#list').textContent();
