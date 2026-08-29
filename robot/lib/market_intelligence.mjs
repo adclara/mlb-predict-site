@@ -92,7 +92,10 @@ export function qualifiesWallet(profile) {
 }
 
 export function intelligenceState({ aaProb, bookProb, polyProb, kalshiProb, bookDisagreement = 0, move30m = 0, walletSignal = null } = {}) {
-  const sources = [bookProb, polyProb, kalshiProb].filter((x) => Number.isFinite(Number(x))).map(Number);
+  // `Number(null) === 0`; explicitly reject absent values so an unmatched
+  // provider can never masquerade as a measured 0% market probability.
+  const sources = [bookProb, polyProb, kalshiProb]
+    .filter((x) => x != null && x !== '' && Number.isFinite(Number(x))).map(Number);
   const divergence = sources.length && Number.isFinite(Number(aaProb))
     ? Math.max(...sources.map((p) => Math.abs(p - Number(aaProb)))) : null;
   const anomalies = [];

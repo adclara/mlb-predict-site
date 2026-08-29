@@ -36,6 +36,15 @@ test('stale snapshots withdraw consensus claims but preserve authorized AA pick'
   assert.equal(doc.slate[0].polymarket, null);
 });
 
+test('sanitizer preserves missing market numbers as null instead of manufacturing 0%', () => {
+  const doc = sample();
+  doc.slate[0].consensus.market_prob = null;
+  doc.slate[0].consensus.divergence = null;
+  const safe = sanitizeIntelligenceDoc(doc, Date.now());
+  assert.equal(safe.slate[0].consensus.market_prob, null);
+  assert.equal(safe.slate[0].consensus.divergence, null);
+});
+
 test('public intelligence route reads one KV blob and returns sanitized contract', async () => {
   let reads = 0;
   const env = { ALLOWED_ORIGIN: '*', AA_LATEST: { async get(key) { reads++; assert.equal(key, 'intelligence:today'); return JSON.stringify(sample()); } } };

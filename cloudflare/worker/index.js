@@ -845,6 +845,7 @@ async function today(env, origin) {
 // Provider-neutral, already-calculated intelligence. The Worker only applies
 // a strict public allowlist and freshness policy; it never ranks or models.
 const intelligenceNumber = (value) => {
+  if (value == null || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 };
