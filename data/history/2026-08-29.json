@@ -295,6 +295,21 @@
     "824961": "2026-08-30T02:05:00Z"
   },
   "starter_invalidations": {
+    "823176": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-08-30T00:05:49.487Z",
+      "scheduled_start_utc": "2026-08-30T02:05:00Z",
+      "phase": "pregame",
+      "changes": [
+        {
+          "side": "home",
+          "from_id": null,
+          "to_id": "805074",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (local: TBD → Yunior Marte) — el análisis original ya no aplica"
+    },
     "823177": {
       "reason": "probable_starter_changed",
       "detected_at": "2026-08-29T18:19:30.272Z",
@@ -356,6 +371,21 @@
         }
       ],
       "note": "Abridor cambió (local: TBD → Matt Wilkinson) — el análisis original ya no aplica"
+    },
+    "823501": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-08-30T00:05:49.487Z",
+      "scheduled_start_utc": "2026-08-29T23:15:00Z",
+      "phase": "late_or_unknown",
+      "changes": [
+        {
+          "side": "away",
+          "from_id": null,
+          "to_id": "687941",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (visita: TBD → Alec Gamboa) — el análisis original ya no aplica"
     },
     "824874": {
       "reason": "probable_starter_changed",
@@ -1324,17 +1354,19 @@
           "aa_home_prob": 0.4578,
           "agrees_with_aa": true,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.706,
+            "away_lineup_ops": 0.732,
+            "ops_diff": -0.026,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-08-30T00:05:49.487Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": true,
           "scheduled_start_utc": "2026-08-30T02:05:00Z",
           "feature_as_of": "2026-08-29T13:52:32.466Z",
           "features": {
@@ -1357,7 +1389,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "a2716acb009ebe3f6388903797ed6f018bfbbc2b0146b850096663b979e58653"
         },
         {
           "game_pk": 823986,
@@ -1373,17 +1406,19 @@
           "aa_home_prob": 0.3914,
           "agrees_with_aa": true,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.664,
+            "away_lineup_ops": 0.742,
+            "ops_diff": -0.078,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-08-30T00:05:49.487Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": true,
           "scheduled_start_utc": "2026-08-30T02:07:00Z",
           "feature_as_of": "2026-08-29T13:52:32.466Z",
           "features": {
@@ -1406,7 +1441,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "9660dcdc137f92dc49e133ef930127c60edbe1bd8fb40f49114be98350c81fe7"
         }
       ]
     }
