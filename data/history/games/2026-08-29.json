@@ -53,7 +53,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T17:05:00Z",
@@ -373,7 +373,7 @@
           "home": 0,
           "away": 6
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.217Z",
         "first_pitch": "2026-08-29T17:05:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -393,7 +393,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.973Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -553,7 +553,7 @@
             }
           ],
           "espn_id": "401874913",
-          "requested_stage": "open",
+          "requested_stage": "final",
           "p_home_close": 0.5012,
           "ml_home_close": -104,
           "ml_away_close": -103,
@@ -561,7 +561,7 @@
           "over_price_close": -112,
           "under_price_close": -108,
           "spread_close": 1.5,
-          "captured_at_close": "2026-08-30T00:05:51.973Z",
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
@@ -794,6 +794,14 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T13:52:32.466Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Sunny",
+          "temp": 76,
+          "wind": "5 mph, In From CF",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.217Z"
         }
       },
       "value": {
@@ -845,7 +853,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "a4a18819a4bf4b7fae2bd3695fe2ed2b13db914ec951c6f48e2c32f3dd6329ca"
+      "feature_hash": "a4a18819a4bf4b7fae2bd3695fe2ed2b13db914ec951c6f48e2c32f3dd6329ca",
+      "home_win": 0,
+      "total_runs": 6,
+      "f5_home_score": 0,
+      "f5_away_score": 2,
+      "f5_complete": true,
+      "f5_total_runs": 2,
+      "f5_result": "away",
+      "final": "6-0",
+      "ml_result": "win",
+      "total_result": "win",
+      "outcome_status": "final"
     },
     {
       "game_pk": 823501,
@@ -891,7 +910,7 @@
         "away": null
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T23:15:00Z",
@@ -1122,12 +1141,12 @@
         "requested_stage": "open"
       },
       "observed": {
-        "status": "In Progress",
+        "status": "Final",
         "scores": {
           "home": 0,
           "away": 1
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.232Z",
         "first_pitch": "2026-08-29T23:15:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -1137,17 +1156,17 @@
           "over_price": -125,
           "under_price": 104,
           "spread": -1.5,
-          "p_home_mkt": 0.4961,
-          "p_away_mkt": 0.504,
+          "p_home_mkt": 0.573,
+          "p_away_mkt": 0.427,
           "consensus": {
-            "p_home": 0.4961,
-            "p_away": 0.504,
-            "n_books": 2
+            "p_home": 0.573,
+            "p_away": 0.427,
+            "n_books": 1
           },
-          "stage": "live",
-          "capture_phase": "live",
+          "stage": "final",
+          "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.973Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "caa6acf78588bdcb0c7aec5fd44410ddc4197973eaf691b78958f8cfeb6fff3a",
@@ -1161,9 +1180,9 @@
           "captured_at_open": "2026-08-29T06:40:36.395Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": -0.0483,
+          "line_move": 0.0286,
           "total_line_move": -0.5,
-          "fav_side": "away",
+          "fav_side": "home",
           "books": [
             {
               "provider": "DraftKings",
@@ -1175,20 +1194,9 @@
               "spread": -1.5,
               "p_home_mkt": 0.573,
               "p_away_mkt": 0.427
-            },
-            {
-              "provider": "DraftKings - Live Odds",
-              "ml_home": 131,
-              "ml_away": -150,
-              "over_under": 6.5,
-              "over_price": -113,
-              "under_price": -115,
-              "spread": 1.5,
-              "p_home_mkt": 0.4191,
-              "p_away_mkt": 0.5809
             }
           ],
-          "book_disagreement": 0.1539,
+          "book_disagreement": 0,
           "wp_curve": [
             {
               "half": "T",
@@ -1221,13 +1229,107 @@
             {
               "half": "T",
               "inn": 3,
-              "home_wp": 0.495,
+              "home_wp": 0.548,
               "home_score": 0,
               "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 3,
+              "home_wp": 0.836,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 4,
+              "home_wp": 0.856,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.837,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.859,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 5,
+              "home_wp": 0.837,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 6,
+              "home_wp": 0.876,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.911,
+              "home_score": 4,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.946,
+              "home_score": 4,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.938,
+              "home_score": 4,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.914,
+              "home_score": 4,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 8,
+              "home_wp": 0.999,
+              "home_score": 9,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 9,
+              "home_wp": 1,
+              "home_score": 9,
+              "away_score": 2
             }
           ],
           "espn_id": "401816717",
-          "requested_stage": "open"
+          "requested_stage": "final",
+          "p_home_close": 0.573,
+          "ml_home_close": -140,
+          "ml_away_close": 130,
+          "over_under_close": 7,
+          "over_price_close": -125,
+          "under_price_close": 104,
+          "spread_close": -1.5,
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
+          "provider_close": "DraftKings",
+          "close_provenance": "explicit_close_capture"
         },
         "weather_forecast": {
           "temp": 82,
@@ -1458,6 +1560,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T21:39:10.988Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Clear",
+          "temp": 75,
+          "wind": "4 mph, In From LF",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.232Z"
+        },
+        "live": {
+          "n": 18,
+          "steam": 0.0718,
+          "min_wp_winner": 0.135
         }
       },
       "value": {
@@ -1512,7 +1627,18 @@
         "selection_policy": "public_ledger_v1"
       },
       "feature_hash": "80a5a12258bfbea9a10ebee17ac079c3aee25907147e09293f86408e23405fce",
-      "invalid_reason": "probable_starter_changed_pregame"
+      "invalid_reason": "probable_starter_changed_pregame",
+      "home_win": 1,
+      "total_runs": 11,
+      "f5_home_score": 3,
+      "f5_away_score": 1,
+      "f5_complete": true,
+      "f5_total_runs": 4,
+      "f5_result": "home",
+      "final": "2-9",
+      "ml_result": "loss",
+      "total_result": "loss",
+      "outcome_status": "final"
     },
     {
       "game_pk": 824230,
@@ -1562,7 +1688,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T17:10:00Z",
@@ -1801,7 +1927,7 @@
           "home": 2,
           "away": 1
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.251Z",
         "first_pitch": "2026-08-29T17:10:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -1821,7 +1947,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.973Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -1981,7 +2107,7 @@
             }
           ],
           "espn_id": "401816721",
-          "requested_stage": "open",
+          "requested_stage": "final",
           "p_home_close": 0.3668,
           "ml_home_close": 168,
           "ml_away_close": -181,
@@ -1989,7 +2115,7 @@
           "over_price_close": -120,
           "under_price_close": 100,
           "spread_close": 1.5,
-          "captured_at_close": "2026-08-30T00:05:51.973Z",
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
@@ -2222,6 +2348,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T14:23:09.972Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Partly Cloudy",
+          "temp": 80,
+          "wind": "10 mph, R To L",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.251Z"
+        },
+        "live": {
+          "n": 9,
+          "steam": 0,
+          "min_wp_winner": 0.344
         }
       },
       "value": {
@@ -2273,7 +2412,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "637b7fe9e3d88597d5e806858242f788a9363fa530ac7924e962d117d9b279a3"
+      "feature_hash": "637b7fe9e3d88597d5e806858242f788a9363fa530ac7924e962d117d9b279a3",
+      "home_win": 1,
+      "total_runs": 3,
+      "f5_home_score": 1,
+      "f5_away_score": 0,
+      "f5_complete": true,
+      "f5_total_runs": 1,
+      "f5_result": "home",
+      "final": "1-2",
+      "ml_result": "loss",
+      "total_result": "win",
+      "outcome_status": "final"
     },
     {
       "game_pk": 823665,
@@ -2323,7 +2473,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T18:10:00Z",
@@ -2561,7 +2711,7 @@
           "home": 2,
           "away": 3
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.265Z",
         "first_pitch": "2026-08-29T18:10:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -2581,7 +2731,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.973Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -2741,7 +2891,7 @@
             }
           ],
           "espn_id": "401816725",
-          "requested_stage": "open",
+          "requested_stage": "final",
           "p_home_close": 0.5036,
           "ml_home_close": -105,
           "ml_away_close": -102,
@@ -2749,7 +2899,7 @@
           "over_price_close": -113,
           "under_price_close": -106,
           "spread_close": 1.5,
-          "captured_at_close": "2026-08-30T00:05:51.973Z",
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
@@ -2982,6 +3132,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T13:52:32.466Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Cloudy",
+          "temp": 75,
+          "wind": "10 mph, In From LF",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.265Z"
+        },
+        "live": {
+          "n": 9,
+          "steam": 0,
+          "min_wp_winner": 0.308
         }
       },
       "value": {
@@ -3031,7 +3194,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "599810ef38cb54ce3666b2d4dc147b6007bceb6d8bce665d7f560050c92725a6"
+      "feature_hash": "599810ef38cb54ce3666b2d4dc147b6007bceb6d8bce665d7f560050c92725a6",
+      "home_win": 0,
+      "total_runs": 5,
+      "f5_home_score": 2,
+      "f5_away_score": 2,
+      "f5_complete": true,
+      "f5_total_runs": 4,
+      "f5_result": "push",
+      "final": "3-2",
+      "ml_result": "loss",
+      "total_result": "win",
+      "outcome_status": "final"
     },
     {
       "game_pk": 823011,
@@ -3081,7 +3255,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T18:15:00Z",
@@ -3320,7 +3494,7 @@
           "home": 2,
           "away": 6
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.280Z",
         "first_pitch": "2026-08-29T18:15:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -3340,7 +3514,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.973Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -3500,7 +3674,7 @@
             }
           ],
           "espn_id": "401816727",
-          "requested_stage": "open",
+          "requested_stage": "final",
           "p_home_close": 0.5414,
           "ml_home_close": -123,
           "ml_away_close": 114,
@@ -3508,7 +3682,7 @@
           "over_price_close": -114,
           "under_price_close": -106,
           "spread_close": -1.5,
-          "captured_at_close": "2026-08-30T00:05:51.973Z",
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
@@ -3741,6 +3915,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T13:52:32.466Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Cloudy",
+          "temp": 87,
+          "wind": "7 mph, In From RF",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.280Z"
+        },
+        "live": {
+          "n": 9,
+          "steam": 0,
+          "min_wp_winner": 0.378
         }
       },
       "value": {
@@ -3792,7 +3979,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "4e6db6859bcd655e035e8f68adb768a1d7bb8342116da8fc4485360a1095cd1f"
+      "feature_hash": "4e6db6859bcd655e035e8f68adb768a1d7bb8342116da8fc4485360a1095cd1f",
+      "home_win": 0,
+      "total_runs": 8,
+      "f5_home_score": 1,
+      "f5_away_score": 5,
+      "f5_complete": true,
+      "f5_total_runs": 6,
+      "f5_result": "away",
+      "final": "6-2",
+      "ml_result": "loss",
+      "total_result": "push",
+      "outcome_status": "final"
     },
     {
       "game_pk": 824637,
@@ -3842,7 +4040,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T18:20:00Z",
@@ -4082,7 +4280,7 @@
           "home": 17,
           "away": 5
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.307Z",
         "first_pitch": "2026-08-29T18:20:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -4102,7 +4300,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.974Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -4255,7 +4453,7 @@
             }
           ],
           "espn_id": "401816726",
-          "requested_stage": "open",
+          "requested_stage": "final",
           "p_home_close": 0.6598,
           "ml_home_close": -204,
           "ml_away_close": 189,
@@ -4263,7 +4461,7 @@
           "over_price_close": -107,
           "under_price_close": -113,
           "spread_close": -1.5,
-          "captured_at_close": "2026-08-30T00:05:51.974Z",
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
@@ -4496,6 +4694,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T18:19:30.272Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Partly Cloudy",
+          "temp": 81,
+          "wind": "10 mph, Out To CF",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.307Z"
+        },
+        "live": {
+          "n": 9,
+          "steam": 0,
+          "min_wp_winner": 0.758
         }
       },
       "value": {
@@ -4547,7 +4758,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "ac53c9cc8e7ab0f8583298ecf45a28cd99885d922d158c7a1206ffe4544209ab"
+      "feature_hash": "ac53c9cc8e7ab0f8583298ecf45a28cd99885d922d158c7a1206ffe4544209ab",
+      "home_win": 1,
+      "total_runs": 22,
+      "f5_home_score": 10,
+      "f5_away_score": 5,
+      "f5_complete": true,
+      "f5_total_runs": 15,
+      "f5_result": "home",
+      "final": "5-17",
+      "ml_result": "win",
+      "total_result": "win",
+      "outcome_status": "final"
     },
     {
       "game_pk": 822770,
@@ -4597,7 +4819,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T19:07:00Z",
@@ -4835,7 +5057,7 @@
           "home": 4,
           "away": 3
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.321Z",
         "first_pitch": "2026-08-29T19:07:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -4855,7 +5077,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.974Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -5008,7 +5230,7 @@
             }
           ],
           "espn_id": "401816724",
-          "requested_stage": "open",
+          "requested_stage": "final",
           "p_home_close": 0.5298,
           "ml_home_close": -117,
           "ml_away_close": 109,
@@ -5016,7 +5238,7 @@
           "over_price_close": -110,
           "under_price_close": -110,
           "spread_close": 1.5,
-          "captured_at_close": "2026-08-30T00:05:51.974Z",
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
@@ -5249,6 +5471,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T18:19:30.272Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Partly Cloudy",
+          "temp": 75,
+          "wind": "9 mph, Out To CF",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.321Z"
+        },
+        "live": {
+          "n": 12,
+          "steam": 0.0262,
+          "min_wp_winner": 0.792
         }
       },
       "value": {
@@ -5300,7 +5535,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "029c2d5884b04d401f61489906317c2f128a778dbebdba1489e513dc70bf4d60"
+      "feature_hash": "029c2d5884b04d401f61489906317c2f128a778dbebdba1489e513dc70bf4d60",
+      "home_win": 1,
+      "total_runs": 7,
+      "f5_home_score": 2,
+      "f5_away_score": 3,
+      "f5_complete": true,
+      "f5_total_runs": 5,
+      "f5_result": "away",
+      "final": "3-4",
+      "ml_result": "win",
+      "total_result": "win",
+      "outcome_status": "final"
     },
     {
       "game_pk": 823177,
@@ -5346,7 +5592,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T20:05:00Z",
@@ -5585,7 +5831,7 @@
           "home": 1,
           "away": 7
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.335Z",
         "first_pitch": "2026-08-29T20:05:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -5605,7 +5851,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.974Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "3db8476b9fbaa037e38ba12316a5a65da311b82e609c6e1224dc6f4f8b5e2351",
@@ -5765,7 +6011,7 @@
             }
           ],
           "espn_id": "401816744",
-          "requested_stage": "open",
+          "requested_stage": "final",
           "p_home_close": 0.4768,
           "ml_home_close": 106,
           "ml_away_close": -114,
@@ -5773,7 +6019,7 @@
           "over_price_close": -107,
           "under_price_close": -112,
           "spread_close": 1.5,
-          "captured_at_close": "2026-08-30T00:05:51.974Z",
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
@@ -6006,6 +6252,14 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T13:52:32.466Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Sunny",
+          "temp": 65,
+          "wind": "13 mph, Out To CF",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.335Z"
         }
       },
       "value": {
@@ -6062,7 +6316,18 @@
         "selection_policy": "public_ledger_v1"
       },
       "feature_hash": "3c5e095cced0595277d7bae60a6ac405515589d95c356a145624974fb4286f8a",
-      "invalid_reason": "probable_starter_changed_pregame"
+      "invalid_reason": "probable_starter_changed_pregame",
+      "home_win": 0,
+      "total_runs": 8,
+      "f5_home_score": 0,
+      "f5_away_score": 0,
+      "f5_complete": true,
+      "f5_total_runs": 0,
+      "f5_result": "push",
+      "final": "7-1",
+      "ml_result": "win",
+      "total_result": "loss",
+      "outcome_status": "final"
     },
     {
       "game_pk": 823176,
@@ -6108,7 +6373,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-30T02:05:00Z",
@@ -6299,32 +6564,32 @@
         "captured_at_open": "2026-08-29T13:52:34.498Z"
       },
       "observed": {
-        "status": "Pre-Game",
+        "status": "Final",
         "scores": {
           "home": null,
           "away": null
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.350Z",
         "first_pitch": "2026-08-30T02:05:00Z",
         "odds": {
           "provider": "DraftKings",
-          "ml_home": 114,
-          "ml_away": -123,
+          "ml_home": 116,
+          "ml_away": -124,
           "over_under": 8,
-          "over_price": -118,
-          "under_price": -102,
+          "over_price": -112,
+          "under_price": -108,
           "spread": 1.5,
-          "p_home_mkt": 0.4586,
-          "p_away_mkt": 0.5414,
+          "p_home_mkt": 0.4554,
+          "p_away_mkt": 0.5446,
           "consensus": {
-            "p_home": 0.4586,
-            "p_away": 0.5414,
+            "p_home": 0.4554,
+            "p_away": 0.5446,
             "n_books": 1
           },
-          "stage": "pregame",
-          "capture_phase": "pregame",
-          "is_pregame": true,
-          "captured_at": "2026-08-30T00:05:51.974Z",
+          "stage": "final",
+          "capture_phase": "postgame",
+          "is_pregame": false,
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "d1e4fe537630470cbcee0e0c5e047269fec49b1aa5519a2fb848f25614faa4d0",
@@ -6338,25 +6603,156 @@
           "captured_at_open": "2026-08-29T14:00:07.930Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": -0.0197,
+          "line_move": -0.0229,
           "total_line_move": 0.5,
           "fav_side": "away",
           "books": [
             {
               "provider": "DraftKings",
-              "ml_home": 114,
-              "ml_away": -123,
+              "ml_home": 116,
+              "ml_away": -124,
               "over_under": 8,
-              "over_price": -118,
-              "under_price": -102,
+              "over_price": -112,
+              "under_price": -108,
               "spread": 1.5,
-              "p_home_mkt": 0.4586,
-              "p_away_mkt": 0.5414
+              "p_home_mkt": 0.4554,
+              "p_away_mkt": 0.5446
             }
           ],
           "book_disagreement": 0,
           "espn_id": "401816729",
-          "requested_stage": "open"
+          "requested_stage": "final",
+          "wp_curve": [
+            {
+              "half": "T",
+              "inn": 1,
+              "home_wp": 0.544,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 1,
+              "home_wp": 0.613,
+              "home_score": 1,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 2,
+              "home_wp": 0.641,
+              "home_score": 1,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 2,
+              "home_wp": 0.617,
+              "home_score": 1,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 3,
+              "home_wp": 0.495,
+              "home_score": 1,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 3,
+              "home_wp": 0.494,
+              "home_score": 1,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 4,
+              "home_wp": 0.569,
+              "home_score": 1,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.498,
+              "home_score": 1,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.569,
+              "home_score": 1,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 5,
+              "home_wp": 0.868,
+              "home_score": 4,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 6,
+              "home_wp": 0.924,
+              "home_score": 4,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.908,
+              "home_score": 4,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.895,
+              "home_score": 4,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.934,
+              "home_score": 5,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.977,
+              "home_score": 5,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 8,
+              "home_wp": 0.995,
+              "home_score": 7,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 9,
+              "home_wp": 1,
+              "home_score": 7,
+              "away_score": 2
+            }
+          ],
+          "p_home_close": 0.4554,
+          "ml_home_close": 116,
+          "ml_away_close": -124,
+          "over_under_close": 8,
+          "over_price_close": -112,
+          "under_price_close": -108,
+          "spread_close": 1.5,
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
+          "provider_close": "DraftKings",
+          "close_provenance": "explicit_close_capture"
         },
         "weather_forecast": {
           "temp": 63,
@@ -6505,6 +6901,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T13:52:32.466Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Clear",
+          "temp": 63,
+          "wind": "11 mph, Varies",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.350Z"
+        },
+        "live": {
+          "n": 9,
+          "steam": 0,
+          "min_wp_winner": 0.007
         }
       },
       "value": null,
@@ -6542,7 +6951,18 @@
         "selection_policy": "public_ledger_v1"
       },
       "feature_hash": "72fbadf1ffb8b3788c3168c70092e0aaa8e6afce71dedac11caba42601c803ed",
-      "invalid_reason": "probable_starter_changed_pregame"
+      "invalid_reason": "probable_starter_changed_pregame",
+      "home_win": 1,
+      "total_runs": 9,
+      "f5_home_score": 4,
+      "f5_away_score": 1,
+      "f5_complete": true,
+      "f5_total_runs": 5,
+      "f5_result": "home",
+      "final": "2-7",
+      "ml_result": "loss",
+      "total_result": "win",
+      "outcome_status": "final"
     },
     {
       "game_pk": 822690,
@@ -6592,7 +7012,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T20:05:00Z",
@@ -6832,7 +7252,7 @@
           "home": 5,
           "away": 4
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.366Z",
         "first_pitch": "2026-08-29T20:05:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -6852,7 +7272,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.974Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -7026,7 +7446,7 @@
             }
           ],
           "espn_id": "401816722",
-          "requested_stage": "open",
+          "requested_stage": "final",
           "p_home_close": 0.4882,
           "ml_home_close": 101,
           "ml_away_close": -109,
@@ -7034,7 +7454,7 @@
           "over_price_close": -108,
           "under_price_close": -111,
           "spread_close": 1.5,
-          "captured_at_close": "2026-08-30T00:05:51.974Z",
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
@@ -7267,6 +7687,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T18:19:30.272Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Partly Cloudy",
+          "temp": 84,
+          "wind": "5 mph, R To L",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.366Z"
+        },
+        "live": {
+          "n": 9,
+          "steam": 0,
+          "min_wp_winner": 0.515
         }
       },
       "value": {
@@ -7318,7 +7751,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "8723a98d4de190486a3b1bd98b9a7a2f5556e7ac061b09f12911bd3cd8c7d54d"
+      "feature_hash": "8723a98d4de190486a3b1bd98b9a7a2f5556e7ac061b09f12911bd3cd8c7d54d",
+      "home_win": 1,
+      "total_runs": 9,
+      "f5_home_score": 4,
+      "f5_away_score": 0,
+      "f5_complete": true,
+      "f5_total_runs": 4,
+      "f5_result": "home",
+      "final": "4-5",
+      "ml_result": "win",
+      "total_result": "push",
+      "outcome_status": "final"
     },
     {
       "game_pk": 824392,
@@ -7368,7 +7812,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T20:10:00Z",
@@ -7605,7 +8049,7 @@
           "home": 3,
           "away": 8
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.390Z",
         "first_pitch": "2026-08-29T20:10:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -7625,7 +8069,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.974Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -7785,7 +8229,7 @@
             }
           ],
           "espn_id": "401816720",
-          "requested_stage": "open",
+          "requested_stage": "final",
           "p_home_close": 0.6036,
           "ml_home_close": -159,
           "ml_away_close": 148,
@@ -7793,7 +8237,7 @@
           "over_price_close": -105,
           "under_price_close": -114,
           "spread_close": -1.5,
-          "captured_at_close": "2026-08-30T00:05:51.974Z",
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
@@ -8026,6 +8470,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T18:19:30.272Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Partly Cloudy",
+          "temp": 81,
+          "wind": "4 mph, L To R",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.390Z"
+        },
+        "live": {
+          "n": 9,
+          "steam": 0,
+          "min_wp_winner": 0.915
         }
       },
       "value": {
@@ -8075,7 +8532,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "c7b9903ae5318432da498e262b9533e780b9ebeae5ec72893685aa078e91c4e6"
+      "feature_hash": "c7b9903ae5318432da498e262b9533e780b9ebeae5ec72893685aa078e91c4e6",
+      "home_win": 0,
+      "total_runs": 11,
+      "f5_home_score": 2,
+      "f5_away_score": 2,
+      "f5_complete": true,
+      "f5_total_runs": 4,
+      "f5_result": "push",
+      "final": "8-3",
+      "ml_result": "loss",
+      "total_result": "loss",
+      "outcome_status": "final"
     },
     {
       "game_pk": 823582,
@@ -8121,7 +8589,7 @@
         "away": null
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T20:10:00Z",
@@ -8359,7 +8827,7 @@
           "home": 6,
           "away": 2
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.412Z",
         "first_pitch": "2026-08-29T20:10:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -8379,7 +8847,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.974Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -8532,7 +9000,7 @@
             }
           ],
           "espn_id": "401816719",
-          "requested_stage": "open",
+          "requested_stage": "final",
           "p_home_close": 0.5957,
           "ml_home_close": -154,
           "ml_away_close": 143,
@@ -8540,7 +9008,7 @@
           "over_price_close": -114,
           "under_price_close": -105,
           "spread_close": -1.5,
-          "captured_at_close": "2026-08-30T00:05:51.974Z",
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
@@ -8773,6 +9241,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T18:19:30.272Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Sunny",
+          "temp": 79,
+          "wind": "4 mph, In From LF",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.412Z"
+        },
+        "live": {
+          "n": 9,
+          "steam": 0,
+          "min_wp_winner": 0.905
         }
       },
       "value": {
@@ -8824,7 +9305,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "41f2f802b3ecbf91605f412bcde951f117c1cc8266050e302f5686fa8c5e7c5f"
+      "feature_hash": "41f2f802b3ecbf91605f412bcde951f117c1cc8266050e302f5686fa8c5e7c5f",
+      "home_win": 1,
+      "total_runs": 8,
+      "f5_home_score": 4,
+      "f5_away_score": 1,
+      "f5_complete": true,
+      "f5_total_runs": 5,
+      "f5_result": "home",
+      "final": "2-6",
+      "ml_result": "loss",
+      "total_result": "loss",
+      "outcome_status": "final"
     },
     {
       "game_pk": 822936,
@@ -8874,7 +9366,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T20:10:00Z",
@@ -9113,7 +9605,7 @@
           "home": 7,
           "away": 6
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.427Z",
         "first_pitch": "2026-08-29T20:10:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -9133,7 +9625,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.974Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -9286,7 +9778,7 @@
             }
           ],
           "espn_id": "401816723",
-          "requested_stage": "open",
+          "requested_stage": "final",
           "p_home_close": 0.5515,
           "ml_home_close": -128,
           "ml_away_close": 119,
@@ -9294,7 +9786,7 @@
           "over_price_close": -108,
           "under_price_close": -112,
           "spread_close": -1.5,
-          "captured_at_close": "2026-08-30T00:05:51.974Z",
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
@@ -9527,6 +10019,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T18:19:30.272Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Dome",
+          "temp": 72,
+          "wind": "0 mph, None",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.427Z"
+        },
+        "live": {
+          "n": 9,
+          "steam": 0,
+          "min_wp_winner": 0.108
         }
       },
       "value": {
@@ -9578,7 +10083,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "d74143c9fae7a25794e345e21d4c65813068f1d9529a52e0ec8b146538f3f18a"
+      "feature_hash": "d74143c9fae7a25794e345e21d4c65813068f1d9529a52e0ec8b146538f3f18a",
+      "home_win": 1,
+      "total_runs": 13,
+      "f5_home_score": 2,
+      "f5_away_score": 1,
+      "f5_complete": true,
+      "f5_total_runs": 3,
+      "f5_result": "home",
+      "final": "6-7",
+      "ml_result": "win",
+      "total_result": "win",
+      "outcome_status": "final"
     },
     {
       "game_pk": 824874,
@@ -9628,7 +10144,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T20:10:00Z",
@@ -9867,7 +10383,7 @@
           "home": 2,
           "away": 1
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.448Z",
         "first_pitch": "2026-08-29T20:10:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -9887,7 +10403,7 @@
           "stage": "final",
           "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.974Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -10040,7 +10556,7 @@
             }
           ],
           "espn_id": "401816718",
-          "requested_stage": "open",
+          "requested_stage": "final",
           "p_home_close": 0.6886,
           "ml_home_close": -233,
           "ml_away_close": 216,
@@ -10048,7 +10564,7 @@
           "over_price_close": -120,
           "under_price_close": 100,
           "spread_close": -1.5,
-          "captured_at_close": "2026-08-30T00:05:51.974Z",
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
           "provider_close": "DraftKings",
           "close_provenance": "explicit_close_capture"
         },
@@ -10281,6 +10797,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T18:19:30.272Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Partly Cloudy",
+          "temp": 85,
+          "wind": "6 mph, L To R",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.448Z"
+        },
+        "live": {
+          "n": 9,
+          "steam": 0,
+          "min_wp_winner": 0.367
         }
       },
       "value": {
@@ -10338,7 +10867,18 @@
         "selection_policy": "public_ledger_v1"
       },
       "feature_hash": "d5798b4afaa0a571a36c39ea05cdd7812bea1c4868581d70abd7858573792f05",
-      "invalid_reason": "probable_starter_changed_pregame"
+      "invalid_reason": "probable_starter_changed_pregame",
+      "home_win": 1,
+      "total_runs": 3,
+      "f5_home_score": 0,
+      "f5_away_score": 0,
+      "f5_complete": true,
+      "f5_total_runs": 0,
+      "f5_result": "push",
+      "final": "1-2",
+      "ml_result": "win",
+      "total_result": "loss",
+      "outcome_status": "final"
     },
     {
       "game_pk": 823741,
@@ -10388,7 +10928,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-29T23:15:00Z",
@@ -10622,12 +11162,12 @@
         "requested_stage": "open"
       },
       "observed": {
-        "status": "In Progress",
+        "status": "Final",
         "scores": {
           "home": 3,
           "away": 0
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.463Z",
         "first_pitch": "2026-08-29T23:15:00Z",
         "odds": {
           "provider": "DraftKings",
@@ -10637,17 +11177,17 @@
           "over_price": -112,
           "under_price": -108,
           "spread": -1.5,
-          "p_home_mkt": 0.734,
-          "p_away_mkt": 0.266,
+          "p_home_mkt": 0.6132,
+          "p_away_mkt": 0.3868,
           "consensus": {
-            "p_home": 0.734,
-            "p_away": 0.266,
-            "n_books": 2
+            "p_home": 0.6132,
+            "p_away": 0.3868,
+            "n_books": 1
           },
-          "stage": "live",
-          "capture_phase": "live",
+          "stage": "final",
+          "capture_phase": "postgame",
           "is_pregame": false,
-          "captured_at": "2026-08-30T00:05:51.974Z",
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -10661,7 +11201,7 @@
           "captured_at_open": "2026-08-29T04:00:37.198Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": 0.1307,
+          "line_move": 0.0099,
           "total_line_move": 0,
           "fav_side": "home",
           "books": [
@@ -10675,20 +11215,9 @@
               "spread": -1.5,
               "p_home_mkt": 0.6132,
               "p_away_mkt": 0.3868
-            },
-            {
-              "provider": "DraftKings - Live Odds",
-              "ml_home": -760,
-              "ml_away": 566,
-              "over_under": 8.5,
-              "over_price": -138,
-              "under_price": 106,
-              "spread": -3.5,
-              "p_home_mkt": 0.8548,
-              "p_away_mkt": 0.1452
             }
           ],
-          "book_disagreement": 0.2416,
+          "book_disagreement": 0,
           "wp_curve": [
             {
               "half": "T",
@@ -10724,10 +11253,104 @@
               "home_wp": 0.869,
               "home_score": 3,
               "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 3,
+              "home_wp": 0.884,
+              "home_score": 3,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 4,
+              "home_wp": 0.914,
+              "home_score": 3,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.897,
+              "home_score": 3,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.883,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 5,
+              "home_wp": 0.865,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 6,
+              "home_wp": 0.91,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.892,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.928,
+              "home_score": 3,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.973,
+              "home_score": 5,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.933,
+              "home_score": 5,
+              "away_score": 3
+            },
+            {
+              "half": "B",
+              "inn": 8,
+              "home_wp": 0.95,
+              "home_score": 5,
+              "away_score": 3
+            },
+            {
+              "half": "T",
+              "inn": 9,
+              "home_wp": 1,
+              "home_score": 5,
+              "away_score": 3
             }
           ],
           "espn_id": "401816728",
-          "requested_stage": "open"
+          "requested_stage": "final",
+          "p_home_close": 0.6132,
+          "ml_home_close": -166,
+          "ml_away_close": 154,
+          "over_under_close": 8,
+          "over_price_close": -112,
+          "under_price_close": -108,
+          "spread_close": -1.5,
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
+          "provider_close": "DraftKings",
+          "close_provenance": "explicit_close_capture"
         },
         "weather_forecast": {
           "temp": 82,
@@ -10958,6 +11581,19 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-29T21:39:10.988Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Roof Closed",
+          "temp": 77,
+          "wind": "0 mph, None",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.463Z"
+        },
+        "live": {
+          "n": 9,
+          "steam": 0,
+          "min_wp_winner": 0.86
         }
       },
       "value": {
@@ -11009,7 +11645,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "8614269933b29e224633928fbe722bf1491b3b8a16c725fcf0506836dd0c9841"
+      "feature_hash": "8614269933b29e224633928fbe722bf1491b3b8a16c725fcf0506836dd0c9841",
+      "home_win": 1,
+      "total_runs": 8,
+      "f5_home_score": 3,
+      "f5_away_score": 1,
+      "f5_complete": true,
+      "f5_total_runs": 4,
+      "f5_result": "home",
+      "final": "3-5",
+      "ml_result": "win",
+      "total_result": "push",
+      "outcome_status": "final"
     },
     {
       "game_pk": 824961,
@@ -11059,7 +11706,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-30T02:05:00Z",
@@ -11294,19 +11941,19 @@
         "book_disagreement": 0
       },
       "observed": {
-        "status": "Pre-Game",
+        "status": "Final",
         "scores": {
           "home": 0,
           "away": 0
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.484Z",
         "first_pitch": "2026-08-30T02:05:00Z",
         "odds": {
           "provider": "DraftKings",
           "ml_home": 132,
           "ml_away": -142,
           "over_under": 10,
-          "over_price": -105,
+          "over_price": -104,
           "under_price": -115,
           "spread": 1.5,
           "p_home_mkt": 0.4235,
@@ -11316,10 +11963,10 @@
             "p_away": 0.5765,
             "n_books": 1
           },
-          "stage": "pregame",
-          "capture_phase": "pregame",
-          "is_pregame": true,
-          "captured_at": "2026-08-30T00:05:51.974Z",
+          "stage": "final",
+          "capture_phase": "postgame",
+          "is_pregame": false,
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "8409baccf0860ee2bbf913882fd6bb9587f13070ac4ec42d98f9847f44c39b21",
@@ -11342,7 +11989,7 @@
               "ml_home": 132,
               "ml_away": -142,
               "over_under": 10,
-              "over_price": -105,
+              "over_price": -104,
               "under_price": -115,
               "spread": 1.5,
               "p_home_mkt": 0.4235,
@@ -11351,7 +11998,145 @@
           ],
           "book_disagreement": 0,
           "espn_id": "401816730",
-          "requested_stage": "open"
+          "requested_stage": "final",
+          "wp_curve": [
+            {
+              "half": "T",
+              "inn": 1,
+              "home_wp": 0.461,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 1,
+              "home_wp": 0.409,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 2,
+              "home_wp": 0.47,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 2,
+              "home_wp": 0.415,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 3,
+              "home_wp": 0.356,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 3,
+              "home_wp": 0.332,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 4,
+              "home_wp": 0.372,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.369,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.209,
+              "home_score": 0,
+              "away_score": 2
+            },
+            {
+              "half": "B",
+              "inn": 5,
+              "home_wp": 0.187,
+              "home_score": 0,
+              "away_score": 2
+            },
+            {
+              "half": "T",
+              "inn": 6,
+              "home_wp": 0.067,
+              "home_score": 0,
+              "away_score": 4
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.156,
+              "home_score": 2,
+              "away_score": 4
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.191,
+              "home_score": 2,
+              "away_score": 4
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.124,
+              "home_score": 2,
+              "away_score": 4
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.164,
+              "home_score": 2,
+              "away_score": 4
+            },
+            {
+              "half": "B",
+              "inn": 8,
+              "home_wp": 0.475,
+              "home_score": 3,
+              "away_score": 4
+            },
+            {
+              "half": "T",
+              "inn": 9,
+              "home_wp": 0.087,
+              "home_score": 3,
+              "away_score": 5
+            },
+            {
+              "half": "B",
+              "inn": 9,
+              "home_wp": 0,
+              "home_score": 3,
+              "away_score": 5
+            }
+          ],
+          "p_home_close": 0.4235,
+          "ml_home_close": 132,
+          "ml_away_close": -142,
+          "over_under_close": 10,
+          "over_price_close": -104,
+          "under_price_close": -115,
+          "spread_close": 1.5,
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
+          "provider_close": "DraftKings",
+          "close_provenance": "explicit_close_capture"
         },
         "weather_forecast": {
           "temp": 79,
@@ -11582,6 +12367,14 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-30T00:05:49.487Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Clear",
+          "temp": 83,
+          "wind": "11 mph, R To L",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.484Z"
         }
       },
       "value": {
@@ -11634,7 +12427,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "d779f667b60ce589e18ccb008b978e7bbb28c4218cf8632f7354e291f5441b6f"
+      "feature_hash": "d779f667b60ce589e18ccb008b978e7bbb28c4218cf8632f7354e291f5441b6f",
+      "home_win": 0,
+      "total_runs": 8,
+      "f5_home_score": 0,
+      "f5_away_score": 2,
+      "f5_complete": true,
+      "f5_total_runs": 2,
+      "f5_result": "away",
+      "final": "5-3",
+      "ml_result": "win",
+      "total_result": "loss",
+      "outcome_status": "final"
     },
     {
       "game_pk": 823986,
@@ -11684,7 +12488,7 @@
         }
       },
       "formula_version": "v2",
-      "graded": false,
+      "graded": true,
       "date": "2026-08-29",
       "game_date": "2026-08-29",
       "game_datetime": "2026-08-30T02:07:00Z",
@@ -11919,32 +12723,32 @@
         "requested_stage": "open"
       },
       "observed": {
-        "status": "Pre-Game",
+        "status": "Game Over",
         "scores": {
           "home": 0,
           "away": 0
         },
-        "captured_at": "2026-08-30T00:05:49.487Z",
+        "captured_at": "2026-08-30T05:15:45.501Z",
         "first_pitch": "2026-08-30T02:07:00Z",
         "odds": {
           "provider": "DraftKings",
-          "ml_home": 216,
-          "ml_away": -234,
-          "over_under": 8,
-          "over_price": -119,
-          "under_price": -101,
+          "ml_home": 206,
+          "ml_away": -223,
+          "over_under": 8.5,
+          "over_price": -104,
+          "under_price": -116,
           "spread": 1.5,
-          "p_home_mkt": 0.3111,
-          "p_away_mkt": 0.6889,
+          "p_home_mkt": 0.3213,
+          "p_away_mkt": 0.6787,
           "consensus": {
-            "p_home": 0.3111,
-            "p_away": 0.6889,
+            "p_home": 0.3213,
+            "p_away": 0.6787,
             "n_books": 1
           },
-          "stage": "pregame",
-          "capture_phase": "pregame",
-          "is_pregame": true,
-          "captured_at": "2026-08-30T00:05:51.974Z",
+          "stage": "final",
+          "capture_phase": "postgame",
+          "is_pregame": false,
+          "captured_at": "2026-08-30T05:15:45.196Z",
           "source": "mlb_ingest_v1",
           "ingest_slot_id": null,
           "source_hash": "806d8b58e9fe95d839877436bfe31f3ac29ba5c71f4feee0e345b9c182f82a98",
@@ -11958,25 +12762,177 @@
           "captured_at_open": "2026-08-29T04:00:37.198Z",
           "open_provenance": "explicit_pregame",
           "provider_open": "DraftKings",
-          "line_move": -0.0143,
-          "total_line_move": 0,
+          "line_move": -0.0041,
+          "total_line_move": 0.5,
           "fav_side": "away",
           "books": [
             {
               "provider": "DraftKings",
-              "ml_home": 216,
-              "ml_away": -234,
-              "over_under": 8,
-              "over_price": -119,
-              "under_price": -101,
+              "ml_home": 206,
+              "ml_away": -223,
+              "over_under": 8.5,
+              "over_price": -104,
+              "under_price": -116,
               "spread": 1.5,
-              "p_home_mkt": 0.3111,
-              "p_away_mkt": 0.6889
+              "p_home_mkt": 0.3213,
+              "p_away_mkt": 0.6787
             }
           ],
           "book_disagreement": 0,
           "espn_id": "401816731",
-          "requested_stage": "open"
+          "requested_stage": "final",
+          "wp_curve": [
+            {
+              "half": "T",
+              "inn": 1,
+              "home_wp": 0.284,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "B",
+              "inn": 1,
+              "home_wp": 0.332,
+              "home_score": 0,
+              "away_score": 0
+            },
+            {
+              "half": "T",
+              "inn": 2,
+              "home_wp": 0.269,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 2,
+              "home_wp": 0.269,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 3,
+              "home_wp": 0.274,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 3,
+              "home_wp": 0.309,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 4,
+              "home_wp": 0.281,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 4,
+              "home_wp": 0.262,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 5,
+              "home_wp": 0.311,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 5,
+              "home_wp": 0.304,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 6,
+              "home_wp": 0.322,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 6,
+              "home_wp": 0.301,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 7,
+              "home_wp": 0.35,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 7,
+              "home_wp": 0.244,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 8,
+              "home_wp": 0.26,
+              "home_score": 0,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 8,
+              "home_wp": 0.517,
+              "home_score": 1,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 9,
+              "home_wp": 0.656,
+              "home_score": 1,
+              "away_score": 1
+            },
+            {
+              "half": "B",
+              "inn": 9,
+              "home_wp": 0.497,
+              "home_score": 1,
+              "away_score": 1
+            },
+            {
+              "half": "T",
+              "inn": 10,
+              "home_wp": 0.056,
+              "home_score": 1,
+              "away_score": 4
+            },
+            {
+              "half": "B",
+              "inn": 10,
+              "home_wp": 0,
+              "home_score": 2,
+              "away_score": 4
+            }
+          ],
+          "p_home_close": 0.3213,
+          "ml_home_close": 206,
+          "ml_away_close": -223,
+          "over_under_close": 8.5,
+          "over_price_close": -104,
+          "under_price_close": -116,
+          "spread_close": 1.5,
+          "captured_at_close": "2026-08-30T05:15:45.196Z",
+          "provider_close": "DraftKings",
+          "close_provenance": "explicit_close_capture"
         },
         "weather_forecast": {
           "temp": 81,
@@ -12207,6 +13163,14 @@
           "changes_public_probability": false,
           "captured_at": "2026-08-30T00:05:49.487Z",
           "temporal_scope": "pregame_context"
+        },
+        "weather": {
+          "condition": "Clear",
+          "temp": 84,
+          "wind": "6 mph, R To L",
+          "source": "mlb",
+          "stage": "observed",
+          "captured_at": "2026-08-30T05:15:45.501Z"
         }
       },
       "value": {
@@ -12256,7 +13220,18 @@
         "feature_generator": "daily_integrity_v1",
         "selection_policy": "public_ledger_v1"
       },
-      "feature_hash": "a59a3b3b8ea6c09f6d6df136e1a688b94e800330488f4825398ee5b1a5c49f6b"
+      "feature_hash": "a59a3b3b8ea6c09f6d6df136e1a688b94e800330488f4825398ee5b1a5c49f6b",
+      "home_win": 0,
+      "total_runs": 6,
+      "f5_home_score": 0,
+      "f5_away_score": 1,
+      "f5_complete": true,
+      "f5_total_runs": 1,
+      "f5_result": "away",
+      "final": "4-2",
+      "ml_result": "win",
+      "total_result": "win",
+      "outcome_status": "final"
     }
   ]
 }
