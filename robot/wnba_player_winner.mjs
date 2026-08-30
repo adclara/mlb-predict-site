@@ -297,19 +297,28 @@ export function backtestWnbaPlayerWinner({ write = true } = {}) {
   const selectionPolicy = eligiblePolicies[0] || policies[0]
   const heldoutSelection = selectionMetrics(selectTop2(heldout, selectionPolicy))
   const heldoutBaseSelection = selectionMetrics(selectTop2(heldout, { ...selectionPolicy, player_weight: 0 }))
+  const heldoutAccuracyDelta = heldoutSelection.accuracy - heldoutBaseSelection.accuracy
+  const brierCi95 = pairedBootstrap(heldout)
+  const qualityChecks = {
+    rolling_brier_better_than_elo: selected.brier < validationElo.brier,
+    heldout_brier_better_than_elo: playerMetrics.brier < eloMetrics.brier,
+    heldout_brier_advantage_significant: brierCi95[1] < 0,
+    heldout_selection_accuracy_not_worse_than_elo: heldoutAccuracyDelta >= 0,
+  }
   const report = {
     schema: 'aa_wnba_player_aware_winner_v1', generated_at: new Date().toISOString(), features: FEATURES,
     method: { rolling_selection: '2023-2025', untouched_test: 2026, causal_roster: 'most recently observed participants only', current_game_leakage: false },
     data_audit: { ...attached.audit, player_rows: boxRows.length, both_team_feature_coverage: built.bothTeamCoverage, timestamp_violations: 0 },
     selected: { ...selected, calibration: 'Platt fit on 2023-2025 rolling predictions only' }, heldout_2026: playerMetrics, elo_heldout_2026: eloMetrics,
     elo_rolling_2023_2025: validationElo,
-    delta_vs_elo: { accuracy: playerMetrics.accuracy - eloMetrics.accuracy, brier: playerMetrics.brier - eloMetrics.brier, logloss: playerMetrics.logloss - eloMetrics.logloss, brier_ci95: pairedBootstrap(heldout) },
+    delta_vs_elo: { accuracy: playerMetrics.accuracy - eloMetrics.accuracy, brier: playerMetrics.brier - eloMetrics.brier, logloss: playerMetrics.logloss - eloMetrics.logloss, brier_ci95: brierCi95 },
     player_aware_selection: {
       policy: selectionPolicy, heldout_2026: heldoutSelection, elo_only_heldout_2026: heldoutBaseSelection,
-      heldout_accuracy_delta: heldoutSelection.accuracy - heldoutBaseSelection.accuracy,
+      heldout_accuracy_delta: heldoutAccuracyDelta,
       candidates: policies,
     },
-    gate: { passed: false, approved: false, public: false, state: 'shadow', reason: 'forward_sample_pending' },
+    quality_checks: qualityChecks,
+    gate: { passed: false, approved: false, public: false, state: 'shadow', reason: 'forward_sample_pending', quality_checks: qualityChecks },
   }
   if (write) fs.writeFileSync(OUTPUT, JSON.stringify(report, null, 2))
   return report
@@ -317,5 +326,15 @@ export function backtestWnbaPlayerWinner({ write = true } = {}) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const report = backtestWnbaPlayerWinner({ write: !process.argv.includes('--no-write') })
-  console.log(JSON.stringify(report ? { selected: report.selected, heldout_2026: report.heldout_2026, elo_heldout_2026: report.elo_heldout_2026, delta: report.delta_vs_elo, gate: report.gate } : { ran: false, reason: 'wnba_player_box_missing' }, null, 2))
+  console.log(JSON.stringify(report ? {
+    selected: report.selected, heldout_2026: report.heldout_2026,
+    elo_heldout_2026: report.elo_heldout_2026, delta: report.delta_vs_elo,
+    player_aware_selection: {
+      policy: report.player_aware_selection.policy,
+      heldout_2026: report.player_aware_selection.heldout_2026,
+      elo_only_heldout_2026: report.player_aware_selection.elo_only_heldout_2026,
+      heldout_accuracy_delta: report.player_aware_selection.heldout_accuracy_delta,
+    },
+    quality_checks: report.quality_checks, gate: report.gate,
+  } : { ran: false, reason: 'wnba_player_box_missing' }, null, 2))
 }
