@@ -14,11 +14,19 @@ test('WNBA player-aware winner challenger is causal and nearly complete', () => 
   assert.ok(report.data_audit.player_rows > 25_000)
 })
 
-test('WNBA player signal improves rolling selection but remains shadow on probability gate', () => {
-  assert.ok(report.selected.brier < report.elo_rolling_2023_2025.brier)
+test('WNBA player signal reports evolving quality evidence and remains shadow on probability gate', () => {
   assert.ok(report.player_aware_selection.heldout_2026.n >= 100)
-  assert.ok(report.player_aware_selection.heldout_2026.accuracy
-    >= report.player_aware_selection.elo_only_heldout_2026.accuracy)
+  assert.ok(Number.isFinite(report.player_aware_selection.heldout_accuracy_delta))
+  assert.equal(report.quality_checks.rolling_brier_better_than_elo,
+    report.selected.brier < report.elo_rolling_2023_2025.brier)
+  assert.equal(report.quality_checks.heldout_brier_better_than_elo,
+    report.heldout_2026.brier < report.elo_heldout_2026.brier)
+  assert.equal(report.quality_checks.heldout_brier_advantage_significant,
+    report.delta_vs_elo.brier_ci95[1] < 0)
+  assert.equal(report.quality_checks.heldout_selection_accuracy_not_worse_than_elo,
+    report.player_aware_selection.heldout_accuracy_delta >= 0)
+  assert.deepEqual(report.gate.quality_checks, report.quality_checks)
+  assert.equal(report.gate.passed, false)
   assert.equal(report.gate.public, false)
   assert.equal(report.gate.approved, false)
   assert.equal(report.gate.reason, 'forward_sample_pending')
