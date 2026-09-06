@@ -1,46 +1,46 @@
 {
-  "updated_at": "2026-09-05T13:00:10.485Z",
+  "updated_at": "2026-09-06T13:04:54.703Z",
   "cohort_version": "causal_ledger_v2",
-  "n_graded": 1870,
-  "n_total": 2140,
+  "n_graded": 1885,
+  "n_total": 2155,
   "first_date": "2026-03-25",
-  "last_date": "2026-09-04",
+  "last_date": "2026-09-05",
   "formula_version": "v2",
   "cal": {
     "gap": 11,
-    "ece": 10.9,
+    "ece": 11,
     "says": 65,
     "hits": 54.1,
     "curve": [
       {
         "conf": 52.5,
         "emp": 48.8,
-        "n": 211
+        "n": 213
       },
       {
         "conf": 57.6,
-        "emp": 55,
-        "n": 271
+        "emp": 55.3,
+        "n": 273
       },
       {
         "conf": 62.5,
-        "emp": 50.9,
-        "n": 401
+        "emp": 51,
+        "n": 402
       },
       {
         "conf": 67.4,
-        "emp": 52.6,
-        "n": 466
+        "emp": 52.8,
+        "n": 468
       },
       {
         "conf": 72.2,
-        "emp": 58.1,
-        "n": 382
+        "emp": 57.5,
+        "n": 388
       },
       {
-        "conf": 77.1,
-        "emp": 63,
-        "n": 119
+        "conf": 77,
+        "emp": 62.8,
+        "n": 121
       },
       {
         "conf": 81.7,
@@ -66,54 +66,59 @@
   },
   "market": {
     "model_acc": 54.8,
-    "market_acc": 57.3,
+    "market_acc": 56.4,
     "verdict": "mercado mejor",
     "auditable": true,
-    "n": 538,
+    "n": 553,
     "min_n": 40
   },
   "lock_gate": {
     "rule": "market_agree5_starter_v1",
     "passes": false,
-    "cut": "2026-07-21",
-    "n": 58,
+    "cut": "2026-07-22",
+    "n": 60,
     "wins": 37,
-    "losses": 21,
-    "rate": 63.8
+    "losses": 23,
+    "rate": 61.7
   },
   "signals": [
     {
       "id": "aux_haf",
       "label": "Mejor forma casa/ruta específica",
       "label_en": "Better venue-specific form",
-      "edge_pp": 7.6,
+      "edge_pp": 6.9,
       "verdict": "robusto",
-      "fav_rate": 57.7
+      "fav_rate": 57.4
     },
     {
       "id": "agree5",
       "label": "5+ factores de acuerdo con el pick",
       "label_en": "5+ factors agree with the pick",
-      "edge_pp": 7.1,
+      "edge_pp": 6.7,
       "verdict": "robusto",
-      "fav_rate": 59.3
+      "fav_rate": 59
     }
   ],
   "state_es": [
-    "Ya llevo 1870 predicciones medidas (desde 2026-03-25). Todo lo que aprendo sale de mis propios aciertos y errores.",
+    "Ya llevo 1885 predicciones medidas (desde 2026-03-25). Todo lo que aprendo sale de mis propios aciertos y errores.",
     "Sé que soy algo sobre-confiado: cuando digo ~65% en promedio, ocurre ~54.1% (hueco de 11 pts). Por eso el número que muestro ya viene calibrado hacia abajo.",
-    "Estas hipótesis pasaron el filtro histórico: Mejor forma casa/ruta específica (+7.6 pts), 5+ factores de acuerdo con el pick (+7.1 pts). Son diferencias medidas en el replay y siguen en validación forward; todavía no prueban una ventaja futura.",
-    "En la cohorte de aperturas auditables, el acierto medido de la apertura es 57.3% y el del modelo 54.8%; no afirmo ventaja sobre el mercado.",
-    "De mi último error (OAK @ SEA 7-6): me fié de pitcheo y primeras cinco entradas y no funcionó. Lo peso en la próxima re-calibración."
+    "Estas hipótesis pasaron el filtro histórico: Mejor forma casa/ruta específica (+6.9 pts), 5+ factores de acuerdo con el pick (+6.7 pts). Son diferencias medidas en el replay y siguen en validación forward; todavía no prueban una ventaja futura.",
+    "En la cohorte de aperturas auditables, el acierto medido de la apertura es 56.4% y el del modelo 54.8%; no afirmo ventaja sobre el mercado.",
+    "De mi último error (OAK @ SEA 6-2): me fié de pitcheo y primeras cinco entradas y no funcionó. Lo peso en la próxima re-calibración."
   ],
   "state_en": [
-    "I've now measured 1870 predictions (since 2026-03-25). Everything I learn comes from my own hits and misses.",
+    "I've now measured 1885 predictions (since 2026-03-25). Everything I learn comes from my own hits and misses.",
     "I know I run a bit overconfident: when I say ~65% on average, it happens ~54.1% (a 11-pt gap). That's why the number I show is already calibrated downward.",
-    "These hypotheses passed the historical screen: Better venue-specific form (+7.6 pts), 5+ factors agree with the pick (+7.1 pts). They are measured replay differences and remain under forward validation; they do not yet prove a future edge.",
-    "In the auditable-opening cohort, measured opener accuracy is 57.3% versus 54.8% for the model; I do not claim an edge over the market.",
-    "From my latest miss (OAK @ SEA 7-6): I leaned on pitching and first-five innings and it didn't pan out. I weigh that into the next re-calibration."
+    "These hypotheses passed the historical screen: Better venue-specific form (+6.9 pts), 5+ factors agree with the pick (+6.7 pts). They are measured replay differences and remain under forward validation; they do not yet prove a future edge.",
+    "In the auditable-opening cohort, measured opener accuracy is 56.4% versus 54.8% for the model; I do not claim an edge over the market.",
+    "From my latest miss (OAK @ SEA 6-2): I leaned on pitching and first-five innings and it didn't pan out. I weigh that into the next re-calibration."
   ],
   "log": [
+    {
+      "date": "2026-09-05",
+      "es": "Sumé 15 predicciones medidas nuevas.",
+      "en": "Added 15 newly measured predictions."
+    },
     {
       "date": "2026-09-04",
       "es": "Sumé 16 predicciones medidas nuevas.",
@@ -208,11 +213,6 @@
       "date": "2026-08-16",
       "es": "Sumé 15 predicciones medidas nuevas.",
       "en": "Added 15 newly measured predictions."
-    },
-    {
-      "date": "2026-08-15",
-      "es": "Sumé 14 predicciones medidas nuevas.",
-      "en": "Added 14 newly measured predictions."
     }
   ],
   "history": [
@@ -430,6 +430,15 @@
       "ece": 10.9,
       "model_acc": 54.8,
       "market_acc": 57.3,
+      "cohort_version": "causal_ledger_v2"
+    },
+    {
+      "date": "2026-09-05",
+      "n": 1885,
+      "gap": 11,
+      "ece": 11,
+      "model_acc": 54.8,
+      "market_acc": 56.4,
       "cohort_version": "causal_ledger_v2"
     }
   ],
