@@ -24,7 +24,9 @@
       "scheduled_start_utc": "2026-09-07T17:35:00Z",
       "record_scope": "public_live",
       "eligible_public_record": true,
-      "ledger_version": "v2"
+      "ledger_version": "v2",
+      "scratch_warning": true,
+      "scratch_note": "Abridor cambió (local: TBD → Brayan Bello) — el análisis original ya no aplica"
     },
     {
       "game_pk": 823254,
@@ -196,7 +198,53 @@
     "824793": "2026-09-07T17:35:00Z",
     "824958": "2026-09-08T02:05:00Z"
   },
-  "starter_invalidations": {},
+  "starter_invalidations": {
+    "824062": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-09-07T15:47:10.400Z",
+      "scheduled_start_utc": "2026-09-07T18:10:00Z",
+      "phase": "pregame",
+      "changes": [
+        {
+          "side": "away",
+          "from_id": null,
+          "to_id": "571882",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (visita: TBD → Derek Law) — el análisis original ya no aplica"
+    },
+    "824229": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-09-07T15:47:10.400Z",
+      "scheduled_start_utc": "2026-09-07T19:10:00Z",
+      "phase": "pregame",
+      "changes": [
+        {
+          "side": "away",
+          "from_id": null,
+          "to_id": "657746",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (visita: TBD → Joe Ryan) — el análisis original ya no aplica"
+    },
+    "824715": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-09-07T15:47:10.400Z",
+      "scheduled_start_utc": "2026-09-07T17:35:00Z",
+      "phase": "pregame",
+      "changes": [
+        {
+          "side": "home",
+          "from_id": null,
+          "to_id": "678394",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (local: TBD → Brayan Bello) — el análisis original ya no aplica"
+    }
+  },
   "starter_observations": {},
   "shadow": {
     "late_plays": [],
@@ -400,17 +448,19 @@
           "aa_home_prob": 0.5982,
           "agrees_with_aa": true,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.734,
+            "away_lineup_ops": 0.698,
+            "ops_diff": 0.036,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-09-07T15:47:10.400Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": true,
           "scheduled_start_utc": "2026-09-07T17:05:00Z",
           "feature_as_of": "2026-09-07T12:33:23.402Z",
           "features": {
@@ -433,7 +483,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "68982f6eb1fa966a9a28d2e6101ec565885d9c795091aaef24711da8161f85b8"
         },
         {
           "game_pk": 823820,
@@ -449,17 +500,19 @@
           "aa_home_prob": 0.5363,
           "agrees_with_aa": true,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.733,
+            "away_lineup_ops": 0.687,
+            "ops_diff": 0.046,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-09-07T15:47:10.400Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": true,
           "scheduled_start_utc": "2026-09-07T17:10:00Z",
           "feature_as_of": "2026-09-07T12:33:23.402Z",
           "features": {
@@ -482,7 +535,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "44e595a8a07b5963e050087da441c86ed016709b6c633c86878c1e568718ff18"
         },
         {
           "game_pk": 824715,
@@ -498,17 +552,19 @@
           "aa_home_prob": 0.616,
           "agrees_with_aa": true,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.705,
+            "away_lineup_ops": 0.692,
+            "ops_diff": 0.013,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-09-07T15:47:10.400Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": true,
           "scheduled_start_utc": "2026-09-07T17:35:00Z",
           "feature_as_of": "2026-09-07T12:33:23.402Z",
           "features": {
@@ -531,7 +587,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "ea166744c51f9220bedb7ff8ce17d35d09302b2fb07bf1f64c8806ad609e785c"
         },
         {
           "game_pk": 824793,
@@ -547,17 +604,19 @@
           "aa_home_prob": 0.5333,
           "agrees_with_aa": false,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.661,
+            "away_lineup_ops": 0.676,
+            "ops_diff": -0.015,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-09-07T15:47:10.400Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": false,
           "scheduled_start_utc": "2026-09-07T17:35:00Z",
           "feature_as_of": "2026-09-07T12:33:23.402Z",
           "features": {
@@ -580,7 +639,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "fbb440ad2740eb6ff11be1b080f1c62f387844e7bc31d372cacae8b4bfa6732b"
         },
         {
           "game_pk": 824062,
@@ -596,17 +656,19 @@
           "aa_home_prob": 0.5152,
           "agrees_with_aa": true,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.695,
+            "away_lineup_ops": 0.716,
+            "ops_diff": -0.021,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-09-07T15:47:10.400Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": false,
           "scheduled_start_utc": "2026-09-07T18:10:00Z",
           "feature_as_of": "2026-09-07T12:33:23.402Z",
           "features": {
@@ -629,7 +691,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "bb278186bcf683ad23ac08b0406453475fcbfeffd57141078f141e243b61c67b"
         },
         {
           "game_pk": 823742,
@@ -694,17 +757,19 @@
           "aa_home_prob": 0.5472,
           "agrees_with_aa": false,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.718,
+            "away_lineup_ops": 0.741,
+            "ops_diff": -0.023,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-09-07T15:47:10.400Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": false,
           "scheduled_start_utc": "2026-09-07T19:10:00Z",
           "feature_as_of": "2026-09-07T12:33:23.402Z",
           "features": {
@@ -727,7 +792,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "b93e9ce25ad87b73e118dc2c1922342f0a17f8e900bff8e7750878126424bb68"
         },
         {
           "game_pk": 823254,
