@@ -199,6 +199,21 @@
     "824958": "2026-09-08T02:05:00Z"
   },
   "starter_invalidations": {
+    "823902": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-09-07T22:45:01.879Z",
+      "scheduled_start_utc": "2026-09-08T01:10:00Z",
+      "phase": "pregame",
+      "changes": [
+        {
+          "side": "home",
+          "from_id": null,
+          "to_id": "686218",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (local: TBD → Emmet Sheehan) — el análisis original ya no aplica"
+    },
     "824062": {
       "reason": "probable_starter_changed",
       "detected_at": "2026-09-07T15:47:10.400Z",
@@ -907,17 +922,19 @@
           "aa_home_prob": 0.5424,
           "agrees_with_aa": false,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.692,
+            "away_lineup_ops": 0.771,
+            "ops_diff": -0.079,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-09-07T22:45:01.879Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": false,
           "scheduled_start_utc": "2026-09-08T00:10:00Z",
           "feature_as_of": "2026-09-07T12:33:23.402Z",
           "features": {
@@ -940,7 +957,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "1acc9e3f1c465c4f0daf4a60b6a25a7a463049c644cfe0a1016c4ef5c16d5d38"
         },
         {
           "game_pk": 823902,
@@ -956,17 +974,19 @@
           "aa_home_prob": 0.5825,
           "agrees_with_aa": false,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.744,
+            "away_lineup_ops": 0.645,
+            "ops_diff": 0.099,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-09-07T22:45:01.879Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": true,
           "scheduled_start_utc": "2026-09-08T01:10:00Z",
           "feature_as_of": "2026-09-07T12:33:23.402Z",
           "features": {
@@ -989,7 +1009,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "1989957c82050145f85974ce0c4b6c562781033b9c2bbba4ef5df3e670c0273b"
         },
         {
           "game_pk": 824958,
