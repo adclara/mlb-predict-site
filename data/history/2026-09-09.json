@@ -332,7 +332,23 @@
       "note": "Abridor cambió (local: TBD → Reynaldo López) — el análisis original ya no aplica"
     }
   },
-  "starter_observations": {},
+  "starter_observations": {
+    "824871": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-09-10T00:02:53.426Z",
+      "scheduled_start_utc": "2026-09-09T23:15:00Z",
+      "phase": "late_or_unknown",
+      "changes": [
+        {
+          "side": "home",
+          "from_id": null,
+          "to_id": "625643",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (local: TBD → Reynaldo López) — el análisis original ya no aplica"
+    }
+  },
   "shadow": {
     "late_plays": [],
     "market_plays": [],
@@ -1336,17 +1352,19 @@
           "aa_home_prob": 0.7171,
           "agrees_with_aa": true,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.702,
+            "away_lineup_ops": 0.568,
+            "ops_diff": 0.134,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-09-10T00:02:53.426Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": true,
           "scheduled_start_utc": "2026-09-10T02:10:00Z",
           "feature_as_of": "2026-09-09T11:15:33.205Z",
           "features": {
@@ -1369,7 +1387,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "4994a3dcbbe447c0d14345a8a6defeb873ca9c2018c9d68e73ac4562200d9474"
         }
       ]
     }
