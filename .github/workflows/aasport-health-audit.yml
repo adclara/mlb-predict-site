@@ -1,0 +1,82 @@
+name: AA Sports read-only health audit
+on:
+  workflow_dispatch:
+  push:
+    branches: ['audit/aasport-health-20260912']
+    paths:
+      - '.github/workflows/aasport-health-audit.yml'
+      - 'robot/site_browser_audit.cjs'
+permissions:
+  contents: read
+concurrency:
+  group: aasport-health-audit-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Full local regression suite
+        run: |
+          mkdir -p audit-results
+          set -o pipefail
+          node --test tests/*.test.mjs 2>&1 | tee audit-results/unit-tests.log
+      - name: Production diagnostics and freshness (read-only)
+        if: always()
+        run: |
+          mkdir -p audit-results
+          failed=0
+          for script in mlb_publication_health_check intelligence_health_check prod_diag qa_check us_sports_qa; do
+            echo "=== $script ==="
+            if timeout 180 node "robot/$script.mjs" > "audit-results/$script.log" 2>&1; then
+              echo "$script PASS"
+            else
+              echo "$script FAIL"
+              failed=1
+            fi
+            cat "audit-results/$script.log"
+          done
+          exit "$failed"
+      - name: Capture public repository source for reproducible offline inspection
+        if: always()
+        run: |
+          mkdir -p audit-results
+          git archive --format=tar HEAD | gzip > audit-results/public-source.tar.gz
+          git rev-parse HEAD > audit-results/commit.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aasport-contract-audit
+          path: audit-results/
+          retention-days: 7
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Install isolated browser test dependency
+        run: |
+          mkdir -p /tmp/aa-browser
+          cd /tmp/aa-browser
+          npm init -y
+          npm install --save-exact playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Exercise public desktop and mobile interfaces without signing in
+        run: node robot/site_browser_audit.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aasport-browser-audit
+          path: audit-results/
+          retention-days: 7
