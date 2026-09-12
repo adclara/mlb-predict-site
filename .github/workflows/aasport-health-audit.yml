@@ -1,11 +1,10 @@
 name: AA Sports read-only health audit
 on:
   workflow_dispatch:
-  push:
-    branches: ['audit/aasport-health-20260912']
-    paths:
-      - '.github/workflows/aasport-health-audit.yml'
-      - 'robot/site_browser_audit.cjs'
+  workflow_run:
+    workflows: ['deploy']
+    types: [completed]
+    branches: [main]
 permissions:
   contents: read
 concurrency:
@@ -13,6 +12,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   contracts:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -22,17 +22,19 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - name: Full local regression suite
+      - name: Syntax and full regression suite
         run: |
           mkdir -p audit-results
+          node --check cloudflare/worker/index.js
+          node --check robot/mlb_standings_health_check.mjs
           set -o pipefail
           node --test tests/*.test.mjs 2>&1 | tee audit-results/unit-tests.log
-      - name: Production diagnostics and freshness (read-only)
+      - name: Production diagnostics, factual standings and freshness (read-only)
         if: always()
         run: |
           mkdir -p audit-results
           failed=0
-          for script in mlb_publication_health_check intelligence_health_check prod_diag qa_check us_sports_qa; do
+          for script in mlb_standings_health_check mlb_publication_health_check intelligence_health_check prod_diag qa_check us_sports_qa; do
             echo "=== $script ==="
             if timeout 180 node "robot/$script.mjs" > "audit-results/$script.log" 2>&1; then
               echo "$script PASS"
@@ -43,11 +45,10 @@ jobs:
             cat "audit-results/$script.log"
           done
           exit "$failed"
-      - name: Capture public repository source for reproducible offline inspection
+      - name: Record tested revision
         if: always()
         run: |
           mkdir -p audit-results
-          git archive --format=tar HEAD | gzip > audit-results/public-source.tar.gz
           git rev-parse HEAD > audit-results/commit.txt
       - uses: actions/upload-artifact@v4
         if: always()
@@ -56,6 +57,7 @@ jobs:
           path: audit-results/
           retention-days: 7
   browser:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
