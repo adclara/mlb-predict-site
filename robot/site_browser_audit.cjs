@@ -10,21 +10,26 @@ fs.mkdirSync(OUT, { recursive: true });
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
-  const report = { started_at: new Date().toISOString(), cases: [], page_errors: [], console_errors: [], failed_requests: [], http_errors: [], http_checks: [] };
+  const report = { started_at: new Date().toISOString(), cases: [], skipped_cases: [], page_errors: [], console_errors: [], failed_requests: [], http_errors: [], http_checks: [] };
   try {
+    const year = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric' }).format(new Date());
     for (const [name, url] of [
       ['site', SITE + '/'], ['www', 'https://www.aasport.net/'],
       ['manifest', SITE + '/manifest.webmanifest'], ['service-worker', SITE + '/sw.js'],
       ['icon192', SITE + '/assets/icon-192.png'], ['icon512', SITE + '/assets/icon-512.png'],
       ['mlb-standings-api', API + '/v1/mlb/standings'],
       ['mlb-standings-source', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings?level=3'],
+      ['mlb-standings-explicit-season', `https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings?level=3&season=${year}`],
       ['anonymous-qa', API + '/v1/qa/nfl/today'],
     ]) {
       try {
         const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
         const text = r.headers.get('content-type')?.includes('image/') ? '' : await r.text();
         const result = { name, url, final_url: r.url, status: r.status, headers: Object.fromEntries(r.headers) };
-        if (name.includes('standings')) { const d = JSON.parse(text); result.season = d.season; }
+        if (name.includes('standings')) {
+          const d = JSON.parse(text); result.season = d.season;
+          fs.writeFileSync(`${OUT}/${name}.json`, JSON.stringify(d, null, 2));
+        }
         if (name === 'site') result.bytes = Buffer.byteLength(text);
         result.pass = r.status === (name === 'anonymous-qa' ? 401 : 200);
         report.http_checks.push(result);
@@ -101,11 +106,15 @@ fs.mkdirSync(OUT, { recursive: true });
           });
         }
         if (sp === 'mlb') {
-          await run('mlb-search-empty', async () => {
-            await page.locator('#q').fill('AA_AUDIT_NO_MATCH_928');
-            assert.equal(await page.locator('#list .mrow').count(), 0);
-          });
-          await page.locator('#q').fill('');
+          // The existing responsive CSS explicitly removes search below 900px.
+          // Record that coverage gap instead of force-interacting with a hidden field.
+          if (await page.locator('#q').isVisible()) {
+            await run('mlb-search-empty', async () => {
+              await page.locator('#q').fill('AA_AUDIT_NO_MATCH_928');
+              assert.equal(await page.locator('#list .mrow').count(), 0);
+            });
+            await page.locator('#q').fill('');
+          } else report.skipped_cases.push({ viewport: label, name: 'mlb-search-empty', reason: 'Search is a desktop-only control in the current UI' });
           await run('mlb-previous-day', async () => {
             await page.locator('#dPrev').click();
             await page.waitForFunction(() => !!viewDate && !viewFuture);
@@ -138,7 +147,7 @@ fs.mkdirSync(OUT, { recursive: true });
     await browser.close();
     report.finished_at = new Date().toISOString();
     fs.writeFileSync(`${OUT}/browser-report.json`, JSON.stringify(report, null, 2));
-    console.log('BROWSER_SUMMARY', JSON.stringify({ cases: report.cases.length, failed: report.cases.filter(c => !c.pass), page_errors: report.page_errors, console_errors: report.console_errors, http_errors: report.http_errors, failed_requests: report.failed_requests, http_checks: report.http_checks, fatal: report.fatal }));
+    console.log('BROWSER_SUMMARY', JSON.stringify({ cases: report.cases.length, skipped: report.skipped_cases, failed: report.cases.filter(c => !c.pass), page_errors: report.page_errors, console_errors: report.console_errors, http_errors: report.http_errors, failed_requests: report.failed_requests, http_checks: report.http_checks, fatal: report.fatal }));
     if (report.fatal || report.page_errors.length || report.console_errors.length || report.http_errors.length || report.failed_requests.length || report.cases.some(c => !c.pass) || report.http_checks.some(c => !c.pass)) process.exitCode = 1;
   }
 })();
