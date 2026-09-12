@@ -72,7 +72,24 @@ jobs:
           npm init -y
           npm install --save-exact playwright@1.55.1
           npx playwright install --with-deps chromium
+      - name: Existing desktop and mobile UI regressions with mocked data
+        env:
+          NODE_PATH: /tmp/aa-browser/node_modules
+        run: |
+          mkdir -p audit-results
+          failed=0
+          for script in mlb_live_ui_test qa_shadow_ui_test intelligence_ui_test; do
+            if timeout 240 node "tests/$script.mjs" > "audit-results/$script.log" 2>&1; then
+              echo "$script PASS"
+            else
+              echo "$script FAIL"
+              failed=1
+            fi
+            cat "audit-results/$script.log"
+          done
+          exit "$failed"
       - name: Exercise public desktop and mobile interfaces without signing in
+        if: always()
         run: node robot/site_browser_audit.cjs
       - uses: actions/upload-artifact@v4
         if: always()
