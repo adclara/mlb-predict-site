@@ -1,0 +1,101 @@
+name: AA Sports read-only health audit
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['deploy']
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: aasport-health-audit-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  contracts:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Syntax and full regression suite
+        run: |
+          mkdir -p audit-results
+          node --check cloudflare/worker/index.js
+          node --check robot/mlb_standings_health_check.mjs
+          set -o pipefail
+          node --test tests/*.test.mjs 2>&1 | tee audit-results/unit-tests.log
+      - name: Production diagnostics, factual standings and freshness (read-only)
+        if: always()
+        run: |
+          mkdir -p audit-results
+          failed=0
+          for script in mlb_standings_health_check mlb_publication_health_check intelligence_health_check prod_diag qa_check us_sports_qa; do
+            echo "=== $script ==="
+            if timeout 180 node "robot/$script.mjs" > "audit-results/$script.log" 2>&1; then
+              echo "$script PASS"
+            else
+              echo "$script FAIL"
+              failed=1
+            fi
+            cat "audit-results/$script.log"
+          done
+          exit "$failed"
+      - name: Record tested revision
+        if: always()
+        run: |
+          mkdir -p audit-results
+          git rev-parse HEAD > audit-results/commit.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aasport-contract-audit
+          path: audit-results/
+          retention-days: 7
+  browser:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Install isolated browser test dependency
+        run: |
+          mkdir -p /tmp/aa-browser
+          cd /tmp/aa-browser
+          npm init -y
+          npm install --save-exact playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Existing desktop and mobile UI regressions with mocked data
+        env:
+          NODE_PATH: /tmp/aa-browser/node_modules
+        run: |
+          mkdir -p audit-results
+          failed=0
+          for script in mlb_live_ui_test qa_shadow_ui_test intelligence_ui_test; do
+            if timeout 240 node "tests/$script.mjs" > "audit-results/$script.log" 2>&1; then
+              echo "$script PASS"
+            else
+              echo "$script FAIL"
+              failed=1
+            fi
+            cat "audit-results/$script.log"
+          done
+          exit "$failed"
+      - name: Exercise public desktop and mobile interfaces without signing in
+        if: always()
+        run: node robot/site_browser_audit.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aasport-browser-audit
+          path: audit-results/
+          retention-days: 7

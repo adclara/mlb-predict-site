@@ -21,7 +21,7 @@ const scoreboard = (sport = 'mlb') => ({
 });
 
 const standingsFixture = {
-  season: { displayName: '2026' },
+  season: { displayName: etToday().slice(0, 4) },
   children: [{
     name: 'East',
     standings: {

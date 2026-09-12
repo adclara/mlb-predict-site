@@ -14,6 +14,8 @@
 //   GET /v1/mlb/history?days= -> historial de predicciones (D1)
 //   GET /v1/mlb/live          -> marcadores en vivo (proxy ESPN, cache 30s)
 
+import { mlbStandingsRequest, parseMlbStandings } from '../lib/mlb_standings.mjs';
+
 const ESPN_SCOREBOARD =
   'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard';
 const MLB_ABBR_FIX = { ATH: 'OAK', CHW: 'CWS', ARI: 'AZ' };
@@ -743,7 +745,10 @@ export default {
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
         return await recentGames(ctx, origin, 'soccer:' + lg, `${ESPN_BASE}/soccer/${lg}/scoreboard`);
       }
-      if (path === '/v1/mlb/standings') return await standings(ctx, origin, 'mlb-div', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings?level=3', 'https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings');
+      if (path === '/v1/mlb/standings') {
+        const request = mlbStandingsRequest();
+        return await standings(ctx, origin, request.cacheTag, request.upstream, request.alternate, request.season);
+      }
       if (path === '/v1/soccer/standings') {
         const lg = url.searchParams.get('league') || DEFAULT_SOCCER_LEAGUE;
         if (!SOCCER_LEAGUES[lg]) return json({ error: 'unknown_league' }, 400, origin);
@@ -3481,7 +3486,7 @@ async function tennisRankings(ctx, origin) {
 
 // Tabla de posiciones (NBA por conferencia; soccer tabla de liga o grupos).
 // En off-season ESPN devuelve la última temporada — justo lo que queremos.
-async function standings(ctx, origin, cacheTag, upstream, altUpstream) {
+async function standings(ctx, origin, cacheTag, upstream, altUpstream, expectedMlbSeason = null) {
   const cache = caches.default;
   const cacheKey = new Request('https://aa-sports.cache/' + cacheTag + '/standings', { method: 'GET' });
   const cached = await cache.match(cacheKey);
@@ -3506,6 +3511,7 @@ async function standings(ctx, origin, cacheTag, upstream, altUpstream) {
     ? [{ name: node.name || node.abbreviation || '', rows: mapEntries(node.standings.entries) }]
     : (node.children || []).flatMap(collect);
   const parse = (data) => {
+    if (expectedMlbSeason !== null) return parseMlbStandings(data, expectedMlbSeason);
     let sections = (data.children || []).flatMap(collect).filter((s) => s.rows.length);
     if (!sections.length && data.standings && data.standings.entries) {
       sections = [{ name: data.name || '', rows: mapEntries(data.standings.entries) }];
