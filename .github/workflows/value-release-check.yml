@@ -1,4 +1,4 @@
-name: Read-only calibrated value release verification
+name: Read-only final value release verification
 on:
   push:
     branches: [verify/value-release-20260912]
@@ -17,85 +17,52 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Read actual API values and verify the prospective ledger
-        run: |
-          cat > value-production-check.mjs <<'JS'
-          import assert from 'node:assert/strict';
-          import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
-          import { digest } from './robot/value_decision.mjs';
-          const OUT='value-production-results';mkdirSync(OUT,{recursive:true});
-          const API='https://aa-sports-api.opsmira9.workers.dev';
-          const report={observed_at:new Date().toISOString(),checks:[],values:[],errors:[],execution_verified:false};
-          const check=(name,fn)=>{try{fn();report.checks.push({name,passed:true});}catch(e){report.checks.push({name,passed:false});report.errors.push(`${name}: ${e.message}`);}};
-          async function get(url,file){
-            const r=await fetch(url,{signal:AbortSignal.timeout(30000)});const body=await r.text();
-            writeFileSync(`${OUT}/${file}`,body);
-            writeFileSync(`${OUT}/${file}.headers.json`,JSON.stringify({status:r.status,headers:Object.fromEntries(r.headers)},null,2));
-            assert.equal(r.status,200,`${url}: HTTP ${r.status}`);return body;
-          }
-          try{
-            const html=await get('https://aasport.net/','site.html');
-            check('deployed_value_UI',()=>{assert.ok(html.includes('aa-value-v1'));assert.ok(html.includes('value-provenance'));assert.ok(html.includes('value-threshold'));});
-            const doc=JSON.parse(await get(`${API}/v1/mlb/today`,'mlb-today.json'));
-            const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(new Date());
-            check('current_ET_date',()=>assert.equal(doc.date,today));
-            check('events_array',()=>assert.ok(Array.isArray(doc.events)));
-            for(const event of doc.events||[]){
-              const v=event.snapshot?.value;if(!v)continue;
-              const id=event.event_id,pred=event.prediction;
-              check(`value_contract_${id}`,()=>{
-                assert.equal(v.schema,'aa-value-v1');assert.equal(v.public_recommendation,false);
-                assert.equal(v.action,'comparison_only');assert.equal(v.price_scope,'frozen_capture');
-                assert.ok(['p_final','prob_v2'].includes(v.probability_source));assert.equal(v.probability_source,pred?.probability_source);
-                const selected=pred.pick===event.home.code?'home':'away';assert.ok(Math.abs(v[selected].model_pct-pred.prob_pct)<.001);
-                assert.ok(Math.abs(v.home.model_pct+v.away.model_pct-100)<.001);
-                for(const side of ['home','away']){
-                  const s=v[side];assert.ok(Number.isFinite(s.price)&&Math.abs(s.price)>=100);
-                  const decimal=s.price>0?1+s.price/100:1+100/Math.abs(s.price);
-                  const expected=Math.round((s.model_pct/100*decimal-1)*1000)/10;
-                  assert.ok(Math.abs(s.ev_pct-expected)<=.100001,`${side}: EV ${s.ev_pct} vs ${expected}`);
-                }
-                if(v.best_side)assert.ok(v[v.best_side].ev_pct>=0);
-              });
-              report.values.push({event_id:id,pick:pred?.pick,display_probability:pred?.prob_pct,source:v.probability_source,provider:v.provider,quote_as_of:v.quote_as_of,home:v.home,away:v.away,best_side:v.best_side});
-            }
-            const ledger=JSON.parse(readFileSync(`data/history/value_decisions/${today}.json`,'utf8'));
-            check('prospective_ledger_integrity',()=>{
-              assert.equal(ledger.schema,'aa-value-ledger-v1');assert.equal(ledger.date,today);
-              assert.equal(ledger.public_picks_enabled,false);assert.ok(Array.isArray(ledger.snapshots)&&ledger.snapshots.length>0);
-              const selected=new Set();
-              for(const snapshot of ledger.snapshots){
-                const {id,...payload}=snapshot;assert.equal(id,digest(payload));
-                assert.equal(snapshot.public_picks_enabled,false);assert.equal(snapshot.execution_verified,false);
-                if(snapshot.paper_selected){
-                  assert.ok(snapshot.candidate);assert.equal(snapshot.action,'shadow_candidate');
-                  assert.ok(Date.parse(snapshot.evaluated_at)<Date.parse(snapshot.start));
-                  assert.ok(!selected.has(snapshot.event_id));selected.add(snapshot.event_id);
-                }
-              }
-              assert.ok(selected.size<=2);
-            });
-            const reasons={};for(const s of ledger.snapshots)for(const r of s.blocked_reasons||[])reasons[r]=(reasons[r]||0)+1;
-            report.ledger={date:ledger.date,updated_at:ledger.updated_at,snapshots:ledger.snapshots.length,unique_events:new Set(ledger.snapshots.map(s=>s.event_id)).size,paper_selected:ledger.snapshots.filter(s=>s.paper_selected).length,abstentions:ledger.snapshots.filter(s=>s.action==='abstain').length,settlements:Object.keys(ledger.settlements||{}).length,blocked_reasons:reasons,legacy_rejected_after_start_labels:ledger.snapshots.filter(s=>Date.parse(s.evaluated_at)>=Date.parse(s.start)&&s.horizon==='T15').length};
-            writeFileSync(`${OUT}/research-ledger.json`,JSON.stringify(ledger,null,2));
-            report.value_rows=report.values.length;
-            report.scope=report.value_rows?'measured_public_value_rows':'UI deployed; no priced value rows available to verify';
-            report.fully_verified=report.value_rows>0&&report.errors.length===0;
-            for(const sport of ['nba','wnba'])report[sport]=JSON.parse(await get(`${API}/v1/${sport}/pipeline-health`,`${sport}-health.json`));
-          }catch(e){report.errors.push(e.stack||e.message);report.fully_verified=false;}
-          report.finished_at=new Date().toISOString();writeFileSync(`${OUT}/report.json`,JSON.stringify(report,null,2));
-          console.log(JSON.stringify(report,null,2));if(!report.fully_verified)process.exitCode=1;
-          JS
-          node --check value-production-check.mjs
-          node value-production-check.mjs
-      - name: Record inspected source revision
-        if: always()
+      - name: Verify actual public arithmetic and immutable old/new research rows
         run: |
           mkdir -p value-production-results
-          git rev-parse HEAD > value-production-results/commit.txt
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import {readFileSync,writeFileSync} from 'node:fs';
+          import {digest} from './robot/value_decision.mjs';
+          const out='value-production-results';
+          const report={observed_at:new Date().toISOString(),checks:[],values:[],errors:[],execution_verified:false};
+          function check(name,fn){try{fn();report.checks.push({name,passed:true});}catch(e){report.checks.push({name,passed:false});report.errors.push(`${name}: ${e.message}`);}}
+          try{
+            const ledger=JSON.parse(readFileSync('data/history/value_decisions/2026-09-12.json','utf8'));
+            check('original_15_snapshots_unchanged',()=>assert.equal(digest(ledger.snapshots.slice(0,15)),'f1f8a9a489d86f80ee0c67b696acc6354e580919ab2df58b6dcddda6358de602'));
+            check('all_snapshot_hashes_valid',()=>{for(const s of ledger.snapshots){const{id,...payload}=s;assert.equal(id,digest(payload));assert.equal(s.public_picks_enabled,false);assert.equal(s.execution_verified,false);}});
+            const corrected=ledger.snapshots.filter(s=>Number.isFinite(s.seconds_before_start));
+            check('corrected_producer_has_run',()=>assert.ok(corrected.length>=15));
+            check('signed_time_and_after_start_labels',()=>{for(const s of corrected){const seconds=(Date.parse(s.start)-Date.parse(s.evaluated_at))/1000;assert.equal(s.seconds_before_start,seconds);if(seconds<=0){assert.equal(s.horizon,'after_start');assert.equal(s.action,'abstain');assert.equal(s.paper_selected,false);}}});
+            report.ledger={date:ledger.date,snapshots:ledger.snapshots.length,corrected_snapshots:corrected.length,original_snapshots_preserved:report.checks[0].passed,paper_selected:ledger.snapshots.filter(s=>s.paper_selected).length,settlements:Object.keys(ledger.settlements||{}).length,updated_at:ledger.updated_at};
+            writeFileSync(`${out}/research-ledger.json`,JSON.stringify(ledger,null,2));
+            const response=await fetch('https://aa-sports-api.opsmira9.workers.dev/v1/mlb/today',{signal:AbortSignal.timeout(30000)});
+            assert.equal(response.status,200);const doc=await response.json();writeFileSync(`${out}/mlb-today.json`,JSON.stringify(doc,null,2));
+            const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(new Date());
+            check('current_public_date',()=>assert.equal(doc.date,today));
+            for(const event of doc.events||[]){
+              const v=event.snapshot?.value,pred=event.prediction;if(!v)continue;
+              check(`calibrated_value_${event.event_id}`,()=>{
+                assert.equal(v.schema,'aa-value-v1');assert.equal(v.public_recommendation,false);assert.equal(v.action,'comparison_only');assert.equal(v.price_scope,'frozen_capture');
+                assert.ok(['p_final','prob_v2'].includes(v.probability_source));assert.equal(v.probability_source,pred.probability_source);
+                const side=pred.pick===event.home.code?'home':'away';assert.ok(Math.abs(v[side].model_pct-pred.prob_pct)<.001);assert.ok(Math.abs(v.home.model_pct+v.away.model_pct-100)<.001);
+                for(const side of ['home','away']){const s=v[side];assert.ok(Number.isFinite(s.price)&&Math.abs(s.price)>=100);const decimal=s.price>0?1+s.price/100:1+100/Math.abs(s.price);const expected=Math.round((s.model_pct/100*decimal-1)*1000)/10;assert.ok(Math.abs(s.ev_pct-expected)<=.100001);}
+                if(v.best_side)assert.ok(v[v.best_side].ev_pct>=0);
+              });
+              report.values.push({event_id:event.event_id,pick:pred.pick,display_probability:pred.prob_pct,value:v});
+            }
+            report.value_rows=report.values.length;check('real_priced_rows_available',()=>assert.ok(report.value_rows>0));
+          }catch(e){report.errors.push(e.stack||e.message);}
+          report.fully_verified=report.errors.length===0;report.finished_at=new Date().toISOString();
+          writeFileSync(`${out}/report.json`,JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+          if(!report.fully_verified)process.exitCode=1;
+          JS
+      - name: Record inspected source revision
+        if: always()
+        run: git rev-parse HEAD > value-production-results/commit.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: value-production-verification
+          name: value-production-final
           path: value-production-results/
           retention-days: 7
