@@ -20,6 +20,8 @@ import { fetchForecasts } from './weather.mjs'
 import { auxForGame, buildTeamContext } from './context.mjs'
 import { backfillSeasons, buildHistoryStudy } from './backfill_history.mjs'
 import { buildAaLabForwardReport, buildAaLabSlate } from './aa_lab.mjs'
+import { twoSidedValue } from '../cloudflare/lib/value_contract.mjs'
+import { appendValueDecisions, settleValueDecisions } from './value_decision.mjs'
 
 const API = 'https://statsapi.mlb.com/api/v1'
 const DATA = process.env.DATA_DIR || 'data'
@@ -821,7 +823,11 @@ async function computeDay(date) {
     r.edge = r.value?.best_edge ?? null
     r.value_side = r.value?.best_side ?? null
     r.risk = riskScore({ odds: r.odds, adrian_p: r.adrian_p, pitcher_recent: r.pitcher_recent, news_delta: r.news_delta, ml_pick: r.ml_pick, home: r.home })
-    return applyBrainV2(a, r)
+    const applied = applyBrainV2(a, r)
+    // Preserve legacy raw `value` for existing research/feature provenance.
+    // Every new economic calculation uses the authorized p_final instead.
+    r.value_final = twoSidedValue(r.p_final, r.odds)
+    return applied
   })
   const { plays } = selectPlays(analysesV2)
   const oddsByPk = new Map(rows.map((r) => [r.game_pk, r.odds]))
@@ -1423,6 +1429,21 @@ async function main() {
   const aaLabHistoryRows = readAllGameRows({ purpose: 'context' })
   const day = await computeDay(today)
   if (day) {
+    // Actual completion time, never the earlier job-start timestamp. The new
+    // strategy is append-only shadow research, not a rewrite of public picks.
+    const evaluatedAt = new Date().toISOString()
+    const valueDir = `${HIST}/value_decisions`
+    fs.mkdirSync(valueDir, { recursive: true })
+    const valuePath = `${valueDir}/${today}.json`
+    const modelSignature = sha256({ formula: FORMULA_VERSION, snapshot: prevSnap, priors_hash: sha256(priors),
+      source: ['adrian.js', 'learn.js', 'engine.js', 'value_decision.mjs'].map(name =>
+        createHash('sha256').update(fs.readFileSync(new URL(name, import.meta.url))).digest('hex')) })
+    const valueLedger = appendValueDecisions(fs.existsSync(valuePath) ? j(valuePath) : null, day.rows, {
+      date: today, asOf: evaluatedAt, probabilityAsOf: evaluatedAt, modelSignature,
+      officialPitchers: day.officialPitcherMap,
+    })
+    fs.writeFileSync(`${valuePath}.tmp`, JSON.stringify(valueLedger, null, 2))
+    fs.renameSync(`${valuePath}.tmp`, valuePath)
     // AA Lab is a frozen, private forward challenger. It consumes only final
     // games from dates strictly before today's slate and never changes AA.
     if (today.startsWith('2026-')) {
@@ -1470,6 +1491,19 @@ async function main() {
       const liveFp = `${HIST}/live/${date}.json`
       if (fs.existsSync(liveFp)) { try { liveAdded = attachLiveSummary(gamesRec.games, j(liveFp)) } catch { /* best-effort */ } }
       if (changed || oddsAdded || wxAdded || liveAdded) fs.writeFileSync(`${GAMES}/${date}.json`, JSON.stringify(gamesRec, null, 2))
+    }
+  }
+
+  // Settle research decisions separately, including records from earlier runs.
+  // Read only factual finalized outcomes; never substitute a closing price.
+  const valueDir = `${HIST}/value_decisions`
+  for (const file of fs.existsSync(valueDir) ? fs.readdirSync(valueDir).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().slice(-45) : []) {
+    const gamePath = `${GAMES}/${file}`
+    if (!fs.existsSync(gamePath)) continue
+    const path = `${valueDir}/${file}`, previous = j(path)
+    const settled = settleValueDecisions(previous, j(gamePath).games || [], new Date().toISOString())
+    if (JSON.stringify(previous) !== JSON.stringify(settled)) {
+      fs.writeFileSync(`${path}.tmp`, JSON.stringify(settled, null, 2)); fs.renameSync(`${path}.tmp`, path)
     }
   }
 
