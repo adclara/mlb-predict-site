@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Verify exact patch, allowed paths and resulting source hashes
+      - name: Verify reviewed source patch; workflow edits are handled separately
         run: |
           python3 - <<'PY'
           import gzip, hashlib, pathlib, subprocess
@@ -39,12 +39,18 @@ jobs:
           stats = subprocess.check_output(['git', 'apply', '--numstat'], input=patch).decode()
           paths = {line.split('\t', 2)[2] for line in stats.splitlines()}
           assert paths == set(expected), f'unexpected paths: {paths}'
-          subprocess.run(['git', 'apply', '--check'], input=patch, check=True)
-          subprocess.run(['git', 'apply', '--index'], input=patch, check=True)
+          # The connected GitHub editor installed the reviewed CI change. The
+          # Actions token has contents permission only and never edits workflows.
+          exclude = '--exclude=.github/workflows/reliability-ci.yml'
+          subprocess.run(['git', 'apply', '--check', exclude], input=patch, check=True)
+          subprocess.run(['git', 'apply', '--index', exclude], input=patch, check=True)
           for path, sha in expected.items():
               actual = subprocess.check_output(['git', 'hash-object', path]).decode().strip()
               assert actual == sha, f'source hash mismatch: {path}'
-          print('Exact reviewed patch and all ten source hashes verified.')
+          changed = subprocess.check_output(['git','diff','--cached','--name-only']).decode().splitlines()
+          assert set(changed) == set(expected) - {'.github/workflows/reliability-ci.yml'}
+          assert not any(p.startswith('.github/workflows/') for p in changed)
+          print('Exact source patch verified; no workflow edits staged by this job.')
           PY
       - name: Complete unit and syntax validation before commit
         run: |
@@ -57,15 +63,14 @@ jobs:
           git diff --check --cached
           set -o pipefail
           node --test tests/*.test.mjs 2>&1 | tee value-assembly-results/unit-tests.log
-      - name: Commit verified source only to isolated improvement branch
+      - name: Commit reviewed application source only to isolated improvement branch
         run: |
-          git rm .ops/value-*.gzpart .github/workflows/value-assembly.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'Unify calibrated EV and add prospective two-sided value research ledger'
-          git push origin HEAD:refs/heads/improvement/value-engine-20260912
           git rev-parse HEAD > value-assembly-results/commit.txt
           git archive --format=tar.gz HEAD > value-assembly-results/source.tar.gz
+          git push origin HEAD:refs/heads/improvement/value-engine-20260912
       - uses: actions/upload-artifact@v4
         if: always()
         with:

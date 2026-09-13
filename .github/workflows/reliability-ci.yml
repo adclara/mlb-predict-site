@@ -58,6 +58,8 @@ jobs:
           for browser in chromium firefox webkit; do
             if ! AA_TEST_BROWSER="$browser" timeout 240 node tests/reliability_ui_test.mjs > "reliability-results/$browser.log" 2>&1; then failed=1; fi
             cat "reliability-results/$browser.log"
+            if ! AA_TEST_BROWSER="$browser" timeout 240 node tests/value_ui_test.mjs > "reliability-results/value-$browser.log" 2>&1; then failed=1; fi
+            cat "reliability-results/value-$browser.log"
           done
           exit "$failed"
       - name: Record tested source and patch provenance
