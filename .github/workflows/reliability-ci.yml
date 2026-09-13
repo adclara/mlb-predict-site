@@ -1,0 +1,74 @@
+name: Reliability contracts and cross-browser UI
+on:
+  pull_request:
+    branches: [main]
+    paths: ['cloudflare/**', 'robot/**', 'tests/**', '.github/workflows/**']
+permissions:
+  contents: read
+concurrency:
+  group: reliability-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Syntax and complete unit suite
+        run: |
+          mkdir -p reliability-results
+          node --check cloudflare/worker/index.js
+          node --check cloudflare/lib/normalize.mjs
+          node --check robot/nba_shadow.mjs
+          node --check robot/basketball_heartbeat.mjs
+          node --check robot/sport_brain.mjs
+          node --check robot/wnba_publish_simulation.mjs
+          node --check robot/odds.js
+          set -o pipefail
+          node --test tests/*.test.mjs 2>&1 | tee reliability-results/unit-tests.log
+      - name: Install isolated pinned browser dependency
+        run: |
+          mkdir -p /tmp/aa-browser
+          cd /tmp/aa-browser
+          npm init -y
+          npm install --save-exact playwright@1.55.1
+          npx playwright install --with-deps chromium firefox webkit
+      - name: Existing Chromium regressions
+        env:
+          NODE_PATH: /tmp/aa-browser/node_modules
+        run: |
+          failed=0
+          for script in mlb_live_ui_test qa_shadow_ui_test intelligence_ui_test; do
+            if ! timeout 240 node "tests/$script.mjs" > "reliability-results/$script.log" 2>&1; then failed=1; fi
+            cat "reliability-results/$script.log"
+          done
+          exit "$failed"
+      - name: Desktop and mobile reliability contracts in three browser engines
+        if: ${{ !cancelled() }}
+        env:
+          NODE_PATH: /tmp/aa-browser/node_modules
+          AA_UI_ARTIFACT_DIR: ${{ github.workspace }}/reliability-results/screenshots
+        run: |
+          failed=0
+          for browser in chromium firefox webkit; do
+            if ! AA_TEST_BROWSER="$browser" timeout 240 node tests/reliability_ui_test.mjs > "reliability-results/$browser.log" 2>&1; then failed=1; fi
+            cat "reliability-results/$browser.log"
+          done
+          exit "$failed"
+      - name: Record tested source and patch provenance
+        if: always()
+        run: |
+          mkdir -p reliability-results
+          git rev-parse HEAD > reliability-results/commit.txt
+          git archive --format=tar.gz HEAD > reliability-results/source.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reliability-verification
+          path: reliability-results/
+          retention-days: 7
