@@ -7,6 +7,7 @@
 // this imports './odds.js' (deploy_demo.sh copies odds.js next to it). It is run
 // from that flat dir, never from scripts/ directly (same as daily.mjs/learn.js).
 import { mergeExtraBooks, parseCoreOdds, parseScoreboard, parseSummaryOdds } from './odds.js'
+import { currentQuotes } from './value_decision.mjs'
 
 const ESPN = 'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb'
 const CORE = 'https://sports.core.api.espn.com/v2/sports/baseball/leagues/mlb'
@@ -75,8 +76,15 @@ export async function buildOddsForDate(dateISO, mlbGames) {
   for (let i = 0; i < ids.length; i += POOL) {
     await Promise.all(ids.slice(i, i + POOL).map(async (id) => {
       try {
-        let odds = { ...parseSummaryOdds(await fetchSummary(id)), espn_id: id }
-        try { odds = mergeExtraBooks(odds, parseCoreOdds({ items: await fetchCoreOddsItems(id) })) } catch { /* core is a bonus */ }
+        const summary = await fetchSummary(id)
+        const economicQuotes = currentQuotes(summary?.pickcenter, new Date().toISOString(), 'espn_summary')
+        let odds = { ...parseSummaryOdds(summary), espn_id: id }
+        try {
+          const items = await fetchCoreOddsItems(id)
+          economicQuotes.push(...currentQuotes(items, new Date().toISOString(), 'espn_core'))
+          odds = mergeExtraBooks(odds, parseCoreOdds({ items }))
+        } catch { /* core is a bonus; never relabel old quotes as current */ }
+        odds.economic_quotes = economicQuotes
         for (const pk of idToPks.get(id)) out.set(pk, odds)
       } catch { /* leave those games with no odds */ }
     }))

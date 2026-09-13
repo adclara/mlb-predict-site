@@ -11,6 +11,8 @@
 // objeto plano. Lo usan tanto el uploader (Node) como, si hiciera falta, el
 // Worker (Cloudflare) sin cambios.
 
+import { twoSidedValue, VALUE_SCHEMA, validProbability } from './value_contract.mjs';
+
 const PCT = (x) => (x == null || Number.isNaN(x) ? null : Math.round(x * 1000) / 10);
 
 // A model output is public only after the robot has sealed an immutable,
@@ -228,15 +230,21 @@ function totalFor(g) {
 
 // Valor por lado: modelo vs mercado vs precio, con EV — lo que un apostador
 // necesita para ver DÓNDE está el valor. Son salidas del modelo, no internals.
-function valueFor(g) {
-  const v = g.value;
-  if (!v || !v.home || !v.away) return null;
-  const side = (s) => ({
-    model_pct: PCT(s.model), market_pct: PCT(s.market),
-    price: s.price ?? null,
+function valueFor(g, prob, probabilitySource) {
+  // Never forward legacy raw g.value: display, EV and threshold share ONE
+  // authorized, side-oriented probability. Non-calibrated fallbacks have no EV.
+  if (!probabilitySource || !validProbability(prob) || ![g.home, g.away].includes(g.ml_pick)) return null;
+  const home = g.ml_pick === g.home ? prob : 1 - prob;
+  const v = twoSidedValue(home, g.odds);
+  if (!v) return null;
+  const side = s => ({ model_pct: PCT(s.model), market_pct: PCT(s.market), price: s.price,
     edge_pct: PCT(s.edge), ev_pct: PCT(s.ev),
-  });
-  return { home: side(v.home), away: side(v.away), best_side: v.best_side || null };
+    break_even_decimal: s.break_even_decimal == null ? null : Math.round(s.break_even_decimal * 10000) / 10000 });
+  return { schema: VALUE_SCHEMA, probability_source: probabilitySource,
+    home: side(v.home), away: side(v.away), best_side: v.best_side,
+    probability_as_of: g.decision_captured_at || g.feature_as_of || null,
+    quote_as_of: g.odds?.captured_at || null, provider: g.odds?.provider || null,
+    price_scope: 'frozen_capture', action: 'comparison_only', public_recommendation: false };
 }
 
 // Libros individuales (multi-casa) + bandera de discrepancia entre casas.
@@ -398,7 +406,7 @@ function platoonFor(g) {
   return (h != null || v != null) ? { home: h, away: v } : null;
 }
 
-function snapshotFor(g, formIdx, pitcherNames, prob, liveGame) {
+function snapshotFor(g, formIdx, pitcherNames, prob, liveGame, probabilitySource) {
   const formOf = (team) => {
     const arr = (formIdx && formIdx.get(team)) || [];
     return arr.slice(0, 5);
@@ -421,7 +429,7 @@ function snapshotFor(g, formIdx, pitcherNames, prob, liveGame) {
     context: contextFor(g),
     total: totalFor(g),
     market: marketFor(g),
-    value: valueFor(g),
+    value: valueFor(g, prob, probabilitySource),
     books: booksFor(g),
     reasons: reasonsFor(g),
     wp: wpFor(g, liveGame),
@@ -489,13 +497,16 @@ function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
   const finalProb = finalProbForPick(g);
   // Prob CALIBRADA del lado del pick (honestidad — ver calibratedProb). Antes se
   // mostraba la clásica sobre-confiada; ahora se prefiere prob_v2 / p_final.
-  const prob = calibratedProb(finalProb, pickInfo, pp);
+  const computedProb = calibratedProb(finalProb, pickInfo, pp);
+  const prob = validProbability(computedProb) ? Math.round(computedProb * 1000) / 1000 : null;
+  const probabilitySource = validProbability(finalProb) ? 'p_final'
+    : validProbability(pickInfo?.prob_v2) ? 'prob_v2' : null;
   const confidence = pickInfo && pickInfo.confidence ? pickInfo.confidence : confFromProb(prob);
   const badges = [];
   if (!invalidated && pickInfo && pickInfo.badge) badges.push(pickInfo.badge);
   if (!invalidated && pickInfo && pickInfo.tier) badges.push(pickInfo.tier);
 
-  let snapshot = invalidated ? null : snapshotFor(g, formIdx, pitcherNames, prob, liveGame);
+  let snapshot = invalidated ? null : snapshotFor(g, formIdx, pitcherNames, prob, liveGame, probabilitySource);
   if (!invalidated && observed?.odds) {
     const overlay = {
       market: marketFor(currentGame),
@@ -519,6 +530,7 @@ function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
       pick: invalidated ? null : (g.ml_pick || (pickInfo && pickInfo.pick) || null),
       prob: invalidated || prob == null ? null : Math.round(prob * 1000) / 1000,
       prob_pct: invalidated ? null : PCT(prob),
+      probability_source: invalidated ? null : probabilitySource,
       price: invalidated ? null : normalizeAmericanPrice(pickInfo?.price),
       confidence: invalidated ? null : (confidence || null),
       engine_version: invalidated ? null : (g.formula_version || g.engine || 'v2'),
