@@ -38,9 +38,12 @@ const states={
   producer_unknown:['Sin ejecución correcta verificada','No verified successful run'],
   unavailable:['Monitoreo no disponible','Monitoring unavailable'],
 };
-let healthState='idle_no_games',checks=0;
+let checks=0;
 try {
   for(const width of [1280,390,360]){
+    // Each browser context has independent mock state. Never carry the prior
+    // viewport's final 'unavailable' response into a fresh navigation.
+    let healthState='idle_no_games';
     const context=await browser.newContext({viewport:{width,height:900},locale:'es-ES',timezoneId:'America/New_York',serviceWorkers:'block'});
     const page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));
@@ -82,8 +85,13 @@ try {
       assert.doesNotMatch(await page.locator('#dcard').innerText(),/Ventaja moderada|0\/100/);
       checks+=4;
       for(const sport of ['nba','wnba']){
+        healthState='idle_no_games';
         await page.locator(`.sp[data-sport="${sport}"]`).click();
         await page.locator('.ltab[data-lt="brain"]').click();
+        // Navigation may start loadLearning(). Drain that request before
+        // invalidating its cache: the production loader correctly deduplicates
+        // concurrent calls rather than returning a second in-flight request.
+        await page.waitForFunction(target=>sport===target && listTab==='brain' && !sportLearningLoading.has(target) && sportProducerHealth.has(target),sport);
         for(const [state,labels] of Object.entries(states)){
           healthState=state;
           await page.evaluate(async()=>{sportLearningAt.delete(sport);await loadLearning();});
