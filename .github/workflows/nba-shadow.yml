@@ -18,11 +18,19 @@ jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      AA_REQUIRE_PRODUCER_EVIDENCE: '1'
+      AA_PRODUCER_EVIDENCE: /tmp/aa-nba-producer-evidence-${{ github.run_id }}-${{ github.run_attempt }}.json
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+      - name: Begin independent producer attempt
+        id: producer_attempt
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/basketball_heartbeat.mjs begin nba
       - name: Modo sombra NBA
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
@@ -31,3 +39,12 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: node robot/sport_brain.mjs nba
+      - name: Record successful producer completion with capture evidence
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/basketball_heartbeat.mjs success nba
+      - name: Record failed producer attempt without refreshing last success
+        if: failure() && steps.producer_attempt.outcome == 'success'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/basketball_heartbeat.mjs failure nba

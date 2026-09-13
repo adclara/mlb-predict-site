@@ -348,6 +348,9 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .blogr .bd{flex:none;color:var(--faint);font-size:11px}
 .bempty{font-size:12px;color:var(--faint);padding:6px 0}
 .bnote{margin-top:16px;font-size:11px;line-height:1.5;color:var(--faint);border-top:1px solid var(--hair);padding-top:10px}
+.producer-status{font-size:13px;line-height:1.55;color:var(--dim);overflow-wrap:anywhere}
+.producer-status b{font-size:14px;color:var(--text)}
+.producer-status small{display:block;font-size:12px;margin-top:6px;color:var(--dim)}
 .simcard{margin-top:18px;border-top:1px solid var(--hair);padding-top:6px}
 .bsubtle{font-size:11.5px;line-height:1.5;color:var(--faint);margin-bottom:10px}
 .simlearn{background:var(--inner);border:1px solid var(--hair);border-left:3px solid var(--volt);border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.5;color:var(--text);margin-top:4px}
@@ -1272,7 +1275,9 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
      columna y cortar el contenido por la derecha: se encogen al ancho del móvil
      y reflujan/scrollean por dentro. */
   .layout > *{min-width:0;max-width:100%}
-  .search{display:none}
+  .hwrap{flex-wrap:wrap}
+  .search{display:block;flex:1 0 100%;order:10;max-width:none;min-width:0;margin:4px 0 0}
+  .search input{width:100%;min-height:44px;font-size:16px}
   .record{display:none}
   .detail{display:none;position:fixed;inset:0;z-index:200;background:var(--page);overflow-y:auto;padding:0 10px 40px;max-height:none;border-radius:0}
   .detail.open{display:block}
@@ -1727,7 +1732,7 @@ const T = {
     runind_over: 'Alta', runind_projection: 'Proyección AA', runind_forward: 'récord forward', runind_push: 'push',
     runind_gate_closed: 'gate de Altas cerrado', runind_gate_review: 'gate aprobado; pendiente de revisión humana', runind_gate_unknown: 'gate aún sin dato',
     runind_note: 'En observación · no es una jugada verificada ni recomendación.',
-    bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto',
+    bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto', risk_desconocido: 'datos insuficientes', risk_unknown_help: 'No hay datos suficientes para evaluar este índice. No es una probabilidad de perder.',
     props_title: '🎯 Props a seguir', props_hr: 'Jonrones (más poder)', props_k: 'Ponches (K/9 del abridor)', props_note: 'Datos que informan estas props — no es una predicción AA.',
     tab_brain: '🧠 Cerebro', brain_title: 'Cerebro AA — qué aprende con el tiempo',
     brain_sub: 'El modelo se re-ajusta cada día con sus propios aciertos y errores. Esto es lo que ha aprendido — medido, no inventado. El algoritmo sigue siendo privado.',
@@ -1736,6 +1741,7 @@ const T = {
     brain_caltime: '📉 Mi calibración en el tiempo (menos hueco = mejor)', brain_accum: 'Acumulando historial — la tendencia aparece en unos días.',
     brain_log: '🗓 Bitácora de cambios', brain_note: 'Aprendizaje del propio modelo; ilustra cómo mejora, no es garantía de resultados.',
     brain_soon: 'El Cerebro AA está preparando su primer diario de aprendizaje.',
+    producer_title: 'Estado del productor', producer_active: 'Ejecución completa y calendario verificado', producer_idle_no_games: 'Ejecución completa; hoy no hay partidos', producer_producer_unknown: 'Sin ejecución correcta verificada', producer_producer_stale: 'Productor atrasado o detenido', producer_producer_failed: 'La última ejecución falló', producer_producer_running: 'Ejecución en curso; aún no confirmada', producer_schedule_unverified: 'Calendario no verificado o atrasado', producer_pending_grading: 'Resultados históricos pendientes de resolver', producer_grading_unverified: 'Estado de resultados no verificado', producer_unavailable: 'Monitoreo no disponible', producer_last_success: 'Última ejecución correcta', producer_prediction_time: 'Última fila de predicción', producer_note: 'Este estado no aprueba el modelo ni demuestra precisión o rentabilidad.',
     brain_sport_title: 'Cerebro AA · {sport}', brain_sport_sub: 'Estado medido del entrenamiento: validación cronológica, muestra forward y gate de publicación. El algoritmo y sus pesos siguen privados.',
     brain_hist_oos: 'Histórico OOS', brain_forward_n: 'Muestra forward', brain_brier: 'Brier', brain_brier_sub: 'menos es mejor',
     brain_forward_acc: 'Acierto forward', brain_gate: 'Gate público', brain_gate_open: 'abierto', brain_gate_closed: 'cerrado',
@@ -1763,7 +1769,7 @@ const T = {
     d_moment: 'Momento del juego', d_why: 'Por qué esta jugada', d_metrics: 'Métricas AA', d_based: 'En base a los datos', d_risk: 'Índice de riesgo', d_duel: 'Duelo de señales AA', d_h2h: 'Comparación cara a cara', d_f5: 'Primeras 5 entradas · NRFI', d_injuries: 'Bajas por lesión o suspensión', d_injury_note: '★ = jugador clave (buenas estadísticas esta temporada). Informativo: el modelo AA no se altera con esto sin re-validación.',
     metric_prob_cal: 'Prob. AA calibrada', metric_agree: 'Acuerdo', metric_risk: 'Riesgo', metric_edge: 'Ventaja vs mercado',
     d_starters: 'Abridores probables', d_form: 'Forma reciente (últimos {n})', d_bats5: 'Bateo últimos 5', d_lineup: 'Alineación al bate', d_hitters: 'Mejores bateadores', d_context: 'Contexto del juego',
-    d_value: '¿Dónde está el valor? (moneyline)', d_vs_market: 'AA vs mercado', d_line_move: 'Movimiento de línea', d_ou: 'Línea O/U', d_ev_note: 'EV = retorno esperado por unidad apostada según el modelo AA. Positivo = el precio paga más de lo que el riesgo real amerita.', d_note: 'Predicción informativa del algoritmo AA. No es consejo de apuestas; la decisión es tuya. Juego responsable 18/21+.',
+    d_value: '¿Dónde está el valor? (moneyline)', d_vs_market: 'AA vs mercado', d_line_move: 'Movimiento de línea', d_ou: 'Línea O/U', d_ev_note: 'EV = retorno esperado por unidad según la probabilidad estimada por AA y la cuota indicada. Es una estimación, no una ganancia garantizada; depende de la calibración y de que la cuota siga disponible.', d_note: 'Predicción informativa del algoritmo AA. No es consejo de apuestas; la decisión es tuya. Juego responsable 18/21+.',
     d_rpg5: 'carreras/juego últimos 5', d_season: 'temporada',
     lineup_na: 'Sin alineación.', lineup_none: 'Sin alineación publicada.', lineup_pending: 'Alineación aún no publicada.', no_box: 'Sin box score.', starter: 'Titular', winner: 'Ganador',
     first_pitch: 'Primer lanzamiento', to_play_today: 'Por jugar hoy', upcoming: 'Por jugar', won_l: 'ganó', lost_l: 'perdió',
@@ -1936,7 +1942,7 @@ const T = {
     runind_over: 'Over', runind_projection: 'AA projection', runind_forward: 'forward record', runind_push: 'push',
     runind_gate_closed: 'Over gate closed', runind_gate_review: 'gate passed; awaiting human review', runind_gate_unknown: 'gate data pending',
     runind_note: 'Under observation · not a verified play or recommendation.',
-    bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high',
+    bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high', risk_desconocido: 'insufficient data', risk_unknown_help: 'There is not enough data to evaluate this index. It is not a probability of losing.',
     props_title: '🎯 Props to watch', props_hr: 'Home runs (most power)', props_k: 'Strikeouts (starter K/9)', props_note: 'Data that informs these props — not an AA prediction.',
     tab_brain: '🧠 Brain', brain_title: 'AA Brain — what it learns over time',
     brain_sub: 'The model re-tunes itself every day from its own hits and misses. This is what it has learned — measured, not made up. The algorithm stays private.',
@@ -1945,6 +1951,7 @@ const T = {
     brain_caltime: '📉 My calibration over time (smaller gap = better)', brain_accum: 'Building history — the trend shows up in a few days.',
     brain_log: '🗓 Change log', brain_note: "The model's own learning; it shows how it improves, not a guarantee of results.",
     brain_soon: 'AA Brain is preparing its first learning journal.',
+    producer_title: 'Producer status', producer_active: 'Run completed and schedule verified', producer_idle_no_games: 'Run completed; no games today', producer_producer_unknown: 'No verified successful run', producer_producer_stale: 'Producer is delayed or stopped', producer_producer_failed: 'The latest run failed', producer_producer_running: 'Run in progress; not yet confirmed', producer_schedule_unverified: 'Schedule unverified or stale', producer_pending_grading: 'Historical results need resolution', producer_grading_unverified: 'Grading status unverified', producer_unavailable: 'Monitoring unavailable', producer_last_success: 'Last successful completion', producer_prediction_time: 'Last prediction row', producer_note: 'This status does not approve the model or establish accuracy or profitability.',
     brain_sport_title: 'AA Brain · {sport}', brain_sport_sub: 'Measured training status: chronological validation, forward sample and publication gate. The algorithm and its weights remain private.',
     brain_hist_oos: 'Historical OOS', brain_forward_n: 'Forward sample', brain_brier: 'Brier', brain_brier_sub: 'lower is better',
     brain_forward_acc: 'Forward accuracy', brain_gate: 'Public gate', brain_gate_open: 'open', brain_gate_closed: 'closed',
@@ -1972,7 +1979,7 @@ const T = {
     d_moment: 'Game moment', d_why: 'Why this play', d_metrics: 'AA metrics', d_based: 'Based on the data', d_risk: 'Risk index', d_duel: 'AA signal duel', d_h2h: 'Head to head', d_f5: 'First 5 innings · NRFI', d_injuries: 'Injuries or suspensions', d_injury_note: '★ = key player (good stats this season). Informational: the AA model does not change from this without re-validation.',
     metric_prob_cal: 'Calibrated AA prob.', metric_agree: 'Agreement', metric_risk: 'Risk', metric_edge: 'Edge vs market',
     d_starters: 'Probable starters', d_form: 'Recent form (last {n})', d_bats5: 'Batting, last 5', d_lineup: 'Batting lineup', d_hitters: 'Top hitters', d_context: 'Game context',
-    d_value: 'Where is the value? (moneyline)', d_vs_market: 'AA vs market', d_line_move: 'Line movement', d_ou: 'O/U line', d_ev_note: 'EV = expected return per unit staked per the AA model. Positive = the price pays more than the real risk warrants.', d_note: 'Informational prediction by the AA model. Not betting advice; the decision is yours. Play responsibly 18/21+.',
+    d_value: 'Where is the value? (moneyline)', d_vs_market: 'AA vs market', d_line_move: 'Line movement', d_ou: 'O/U line', d_ev_note: 'EV = expected return per unit using AA’s estimated probability and the quoted odds. It is an estimate, not guaranteed profit; it depends on calibration and the quote still being available.', d_note: 'Informational prediction by the AA model. Not betting advice; the decision is yours. Play responsibly 18/21+.',
     d_rpg5: 'runs/game last 5', d_season: 'season',
     lineup_na: 'No lineup.', lineup_none: 'No lineup published.', lineup_pending: 'Lineup not published yet.', no_box: 'No box score.', starter: 'Starter', winner: 'Winner',
     first_pitch: 'First pitch', to_play_today: 'To be played today', upcoming: 'Upcoming', won_l: 'won', lost_l: 'lost',
@@ -2486,6 +2493,7 @@ function renderHistList(){
 // al navegador y un gate cerrado nunca se convierte aquí en una predicción.
 let learningDoc = null, simDoc = null, learningLoading = false, learningLoadedAt = 0;
 const sportLearningDocs = new Map(), sportLearningLoading = new Set(), sportLearningAt = new Map();
+const sportProducerHealth = new Map();
 async function loadLearning(){
   const target = sport;
   const maxAge = 5 * 60 * 1000;
@@ -2513,6 +2521,14 @@ async function loadLearning(){
     if (!r.ok) throw new Error('sport learning');
     sportLearningDocs.set(target, await r.json());
   }catch(err){ sportLearningDocs.set(target, { note: 'err' }); }
+  if (['nba', 'wnba'].includes(target)) {
+    try {
+      const response = await fetch(`${API}/v1/${target}/pipeline-health`, { signal: AbortSignal.timeout(10000) });
+      if (!response.ok) throw new Error('producer status');
+      const health = await response.json();
+      sportProducerHealth.set(target, health.schema === 'aa-basketball-producer-health-v1' ? health : { state: 'producer_unknown' });
+    } catch { sportProducerHealth.set(target, { state: 'unavailable' }); }
+  }
   sportLearningAt.set(target, Date.now()); sportLearningLoading.delete(target);
   if (sport === target && listTab === 'brain') renderBrain();
   else if (sport === target && ['wnba', 'nfl'].includes(target)){ renderOtherList(); renderOtherDetail(); }
@@ -2564,12 +2580,24 @@ function calChart(hist){
     </svg>
     <div class="bcaphint num">${h[0].date} · ${gaps[0]}% → ${h[h.length - 1].date} · ${gaps[gaps.length - 1]}%</div>`;
 }
+function producerStatusCard(target) {
+  if (!['nba', 'wnba'].includes(target)) return '';
+  const h = sportProducerHealth.get(target) || { state: 'producer_unknown' };
+  const key = 'producer_' + (h.state || 'producer_unknown');
+  const message = T[lang][key] || t('producer_producer_unknown');
+  const when = value => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString(LOCALE()) : '—';
+  return `<section class="bnote producer-status" role="status" aria-live="polite" data-producer-state="${esc(h.state || 'producer_unknown')}">
+    <b>${t('producer_title')}: ${esc(message)}</b><br>
+    ${t('producer_last_success')}: ${esc(when(h.last_success_at))}<br>
+    ${t('producer_prediction_time')}: ${esc(when(h.prediction_updated_at))}<br>
+    <small>${t('producer_note')}</small></section>`;
+}
 function renderBrain(){
   $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
   $('lgcount').innerHTML = '';
   if (sport !== 'mlb'){
     const d = sportLearningDocs.get(sport);
-    if (!d || d.note){ $('list').innerHTML = `<div class="lempty">${t('brain_soon')}</div>`; return; }
+    if (!d || d.note){ $('list').innerHTML = producerStatusCard(sport) + `<div class="lempty">${t('brain_soon')}</div>`; return; }
     const h = d.historical || {}, f = d.forward || {}, gate = d.gate || {};
     const hasN = (v) => v != null && v !== '' && Number.isFinite(Number(v));
     const fmtN = (v) => hasN(v) ? Number(v).toLocaleString(LOCALE()) : '—';
@@ -2583,6 +2611,7 @@ function renderBrain(){
     $('list').innerHTML = `<div class="brain sportbrain">
       <div class="brainhead">🧠 <b>${t('brain_sport_title').replace('{sport}', esc(sportLabel(sport)))}</b></div>
       <div class="bsubtle">${t('brain_sport_sub')}</div>
+      ${producerStatusCard(sport)}
       <div class="braintiles">
         <div class="btile"><div class="bl">${t('brain_hist_oos')}</div><div class="bv num">${fmtN(h.n)}</div><div class="bs">${h.accuracy == null ? '—' : fmtPct(h.accuracy)}</div></div>
         <div class="btile"><div class="bl">${t('brain_brier')}</div><div class="bv num">${fmt4(h.brier)}</div><div class="bs">${t('brain_brier_sub')}</div></div>
@@ -2648,6 +2677,17 @@ function boletoLegs(){
     .sort((a, b) => (BOL_RANK[b.tier] || 0) - (BOL_RANK[a.tier] || 0) || (b.pct || 0) - (a.pct || 0))
     .slice(0, 4);
 }
+// Cached pre-migration risk labels lack evidence and must not look verified.
+function publicRiskView(value) {
+  const complete = value?.coverage === 1 && typeof value.score === 'number'
+    && Number.isFinite(value.score) && value.score >= 0 && value.score <= 100
+    && ['bajo','medio','alto'].includes(value.level);
+  return complete ? value : { level: 'desconocido', score: null, coverage: null };
+}
+function publicVerdictView(snapshot, language, fallback) {
+  return typeof snapshot?.verdict_es === 'string' && typeof snapshot?.verdict_en === 'string'
+    ? snapshot[language === 'en' ? 'verdict_en' : 'verdict_es'] : fallback;
+}
 function boletoHtml(){
   const legs = boletoLegs();
   const recLine = (name, r) => {
@@ -2660,7 +2700,7 @@ function boletoHtml(){
   if (!legs.length) return `<div class="boleto"><div class="boleto-in">${head}<div class="bolempty">${t('bol_none')}</div></div></div>`;
   const tierTxt = tr => tr === 'gema' ? t('tag_gem') : confLabel(tr);
   const rows = legs.map(({ ev, tier, pct }) => {
-    const rk = ev.risk && ev.risk.level ? `<span class="bolrisk">${t('bol_risk')}: ${t('risk_' + ev.risk.level) || esc(ev.risk.level)}</span>` : '';
+    const rk = ev.risk && ev.risk.level ? `<span class="bolrisk">${t('bol_risk')}: ${t('risk_' + publicRiskView(ev.risk).level)}</span>` : '';
     return `<button class="bleg" data-id="${esc(ev.event_id)}">
       <span class="blteam">${logoImg(ev.prediction.pick)}<span class="blnm">${t('bol_win')} <b>${esc(tNick(ev.prediction.pick))}</b><span class="blmu">${esc(tNick(ev.away.code))} @ ${esc(tNick(ev.home.code))}</span></span></span>
       <span class="blright">${pct != null ? `<span class="blpct num">AA ${pct}%</span>` : ''}<span class="bltags"><span class="tag ${esc(tier)}">${tierTxt(tier)}</span>${rk}</span></span>
@@ -3216,17 +3256,17 @@ function renderDetail(){
   const recH = lv && lv.home.rec ? `<span class="rc num">${esc(lv.home.rec)}</span>` : '';
   const tags = p.invalidated ? '' : (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${badgeMuted ? 'muted' : ''}">${b === 'gema' ? t('tag_gem') : esc(confLabel(b))}</span>`).join(' ');
 
-  const risk = ev.risk || {};
+  const risk = publicRiskView(ev.risk);
   const riskPct = risk.score != null ? Math.min(100, risk.score) : null;
-  const riskColor = risk.level === 'alto' ? 'var(--red)' : risk.level === 'medio' ? 'var(--amber)' : 'var(--volt)';
+  const riskColor = risk.level === 'alto' ? 'var(--red)' : risk.level === 'medio' ? 'var(--amber)' : risk.level === 'bajo' ? 'var(--volt)' : 'var(--faint)';
 
   const metricCls = m => {
-    if (m.kind === 'risk') return m.value === 'bajo' ? 'pos' : m.value === 'medio' ? 'mid' : 'neg';
-    if (m.kind === 'edge') return String(m.value).startsWith('+') ? 'pos' : 'neg';
+    if (m.kind === 'risk') return risk.level === 'bajo' ? 'pos' : risk.level === 'medio' ? 'mid' : risk.level === 'alto' ? 'neg' : '';
+    if (m.kind === 'edge') { const v = parseFloat(m.value); return Number.isFinite(v) && v !== 0 ? (v > 0 ? 'pos' : 'neg') : ''; }
     return '';
   };
   const metricLabel = m => m.key ? t(m.key) : m.label;
-  const metricValue = m => m.kind === 'risk' ? t('risk_' + m.value) : m.value;
+  const metricValue = m => m.kind === 'risk' ? t('risk_' + risk.level) : m.kind === 'edge' ? String(m.value).replace(/%$/, ' pp') : m.value;
 
   const snap = ev.snapshot || {};
   const invalidNotice = p.invalidated ? `<div class="pred-invalid-notice" role="alert"><span class="ic">⚠</span><span>${t('pred_invalid_detail')}</span></div>` : '';
@@ -3234,7 +3274,7 @@ function renderDetail(){
   const verdictBox = snap.verdict_es ? `
     <div class="verdict">
       <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFC53D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 8.5 22 9.3 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.3 9 8.5z"/></svg></span>
-      <p><span class="vt">${t('d_verdict')}</span>${esc(snap.verdict_es)}</p>
+      <p><span class="vt">${t('d_verdict')}</span>${esc(publicVerdictView(snap, lang, t('d_note')))}</p>
     </div>` : '';
 
 
@@ -3300,9 +3340,10 @@ function renderDetail(){
       <div class="mgrid">${ev.metrics.map(m => `<div class="mcard"><div class="lb">${esc(metricLabel(m))}</div><div class="vl num ${metricCls(m)}">${esc(metricValue(m))}</div></div>`).join('')}</div>` : ''}
     ${keysBlock(ev, lv)}
     ${whyList || (ev.summary_es ? `<div class="secttl">${t('d_based')}</div><div class="summary">${esc(ev.summary_es)}</div>` : '')}
+    ${risk.level === 'desconocido' ? `<div class="bnote">${t('risk_unknown_help')}</div>` : ''}
     ${riskPct != null ? `<div class="secttl">${t('d_risk')}</div>
       <div class="riskbar"><i style="width:${riskPct}%;background:${riskColor}"></i></div>
-      <div class="riskrow num"><span>${riskPct}/100 · ${esc(risk.level || '')}</span><span>${t('d_lower_better')}</span></div>` : ''}`;
+      <div class="riskrow num"><span>${riskPct}/100 · ${esc(t('risk_' + risk.level))}</span><span>${t('d_lower_better')}</span></div>` : ''}`;
 
   /* ── tab EQUIPOS (snapshot para decidir) ── */
   const formSide = (side, code) => {

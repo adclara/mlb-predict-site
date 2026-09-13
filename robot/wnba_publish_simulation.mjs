@@ -13,6 +13,7 @@ const TOKEN = process.env.CLOUDFLARE_API_TOKEN
 const DATA = process.env.DATA_DIR || path.join(process.cwd(), 'data')
 
 if (!TOKEN) {
+  if (process.env.AA_REQUIRE_PRODUCER_EVIDENCE === '1') throw new Error('producer_missing_credentials')
   console.log('Sin CLOUDFLARE_API_TOKEN; publicación wnba:simulation omitida.')
   process.exit(0)
 }
@@ -32,7 +33,7 @@ async function d1Rows(sql, params = []) {
     body: JSON.stringify({ sql, params }),
   })
   const body = await response.json()
-  if (!response.ok || body?.success === false) throw new Error(`D1 query ${response.status}: ${JSON.stringify(body?.errors || body).slice(0, 200)}`)
+  if (!response.ok || body?.success !== true || !Array.isArray(body.result) || body.result.length !== 1 || body.result.some(r => r.success !== true || !Array.isArray(r.results))) throw new Error('producer_simulation_d1_failed')
   return body?.result?.[0]?.results || []
 }
 
@@ -43,7 +44,7 @@ try {
     d1Rows("SELECT date,result,prob,market_prob FROM sport_market_predictions WHERE sport='wnba' AND market_key='winner' AND selection_key='winner:player-aware' AND result IN ('win','loss') ORDER BY date,event_id"),
     d1Rows("SELECT date,result,prob,market_prob FROM sport_market_predictions WHERE sport='wnba' AND market_key='total' AND result IS NOT NULL ORDER BY date,event_id"),
   ])
-} catch { /* fail closed with a zero sample; never invent evidence */ }
+} catch (error) { if (process.env.AA_REQUIRE_PRODUCER_EVIDENCE === '1') throw error; /* legacy caller remains fail-closed */ }
 let backtest = null
 try { backtest = JSON.parse(fs.readFileSync(path.join(DATA, 'fase2', 'wnba', 'wnba_backtest.json'), 'utf8')) } catch { /* historical gate stays closed */ }
 const brain = buildSportBrain({ sport: 'wnba', backtest, rows: winnerRows, now: report.generated_at })
@@ -110,9 +111,14 @@ const todayDoc = {
 
 for (const [key, value] of [['wnba:simulation', publicDoc], ['wnba:today', todayDoc]]) {
   const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${KV_NAMESPACE_ID}/values/${encodeURIComponent(key)}`, {
-    method: 'PUT', headers: { Authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' }, body: JSON.stringify(value),
+    method: 'PUT', headers: { Authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' }, body: JSON.stringify(value), signal: AbortSignal.timeout(15000),
   })
   const body = await response.text()
   if (!response.ok) throw new Error(`KV ${key} ${response.status}: ${body.slice(0, 240)}`)
+  if (process.env.AA_REQUIRE_PRODUCER_EVIDENCE === '1') {
+    let receipt = null
+    try { receipt = JSON.parse(body) } catch {}
+    if (receipt?.success !== true) throw new Error('producer_simulation_kv_unverified')
+  }
 }
 console.log(`WNBA evidencia publicada · winner forward n=${winnerForward.n} · total forward n=${totalForward.n} · total gate=${totalGate.reason}`)

@@ -106,15 +106,12 @@ fs.mkdirSync(OUT, { recursive: true });
           });
         }
         if (sp === 'mlb') {
-          // The existing responsive CSS explicitly removes search below 900px.
-          // Record that coverage gap instead of force-interacting with a hidden field.
-          if (await page.locator('#q').isVisible()) {
-            await run('mlb-search-empty', async () => {
-              await page.locator('#q').fill('AA_AUDIT_NO_MATCH_928');
-              assert.equal(await page.locator('#list .mrow').count(), 0);
-            });
-            await page.locator('#q').fill('');
-          } else report.skipped_cases.push({ viewport: label, name: 'mlb-search-empty', reason: 'Search is a desktop-only control in the current UI' });
+          await run('mlb-search-empty', async () => {
+            assert.ok(await page.locator('#q').isVisible(), 'Search must be available on mobile and desktop');
+            await page.locator('#q').fill('AA_AUDIT_NO_MATCH_928');
+            assert.equal(await page.locator('#list .mrow').count(), 0);
+          });
+          await page.locator('#q').fill('');
           await run('mlb-previous-day', async () => {
             await page.locator('#dPrev').click();
             await page.waitForFunction(() => !!viewDate && !viewFuture);
