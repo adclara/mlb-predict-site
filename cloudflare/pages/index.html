@@ -348,6 +348,9 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .blogr .bd{flex:none;color:var(--faint);font-size:11px}
 .bempty{font-size:12px;color:var(--faint);padding:6px 0}
 .bnote{margin-top:16px;font-size:11px;line-height:1.5;color:var(--faint);border-top:1px solid var(--hair);padding-top:10px}
+.producer-status{font-size:13px;line-height:1.55;color:var(--dim);overflow-wrap:anywhere}
+.producer-status b{font-size:14px;color:var(--text)}
+.producer-status small{display:block;font-size:12px;margin-top:6px;color:var(--dim)}
 .simcard{margin-top:18px;border-top:1px solid var(--hair);padding-top:6px}
 .bsubtle{font-size:11.5px;line-height:1.5;color:var(--faint);margin-bottom:10px}
 .simlearn{background:var(--inner);border:1px solid var(--hair);border-left:3px solid var(--volt);border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.5;color:var(--text);margin-top:4px}
@@ -1766,7 +1769,7 @@ const T = {
     d_moment: 'Momento del juego', d_why: 'Por qué esta jugada', d_metrics: 'Métricas AA', d_based: 'En base a los datos', d_risk: 'Índice de riesgo', d_duel: 'Duelo de señales AA', d_h2h: 'Comparación cara a cara', d_f5: 'Primeras 5 entradas · NRFI', d_injuries: 'Bajas por lesión o suspensión', d_injury_note: '★ = jugador clave (buenas estadísticas esta temporada). Informativo: el modelo AA no se altera con esto sin re-validación.',
     metric_prob_cal: 'Prob. AA calibrada', metric_agree: 'Acuerdo', metric_risk: 'Riesgo', metric_edge: 'Ventaja vs mercado',
     d_starters: 'Abridores probables', d_form: 'Forma reciente (últimos {n})', d_bats5: 'Bateo últimos 5', d_lineup: 'Alineación al bate', d_hitters: 'Mejores bateadores', d_context: 'Contexto del juego',
-    d_value: '¿Dónde está el valor? (moneyline)', d_vs_market: 'AA vs mercado', d_line_move: 'Movimiento de línea', d_ou: 'Línea O/U', d_ev_note: 'EV = retorno esperado por unidad apostada según el modelo AA. Positivo = el precio paga más de lo que el riesgo real amerita.', d_note: 'Predicción informativa del algoritmo AA. No es consejo de apuestas; la decisión es tuya. Juego responsable 18/21+.',
+    d_value: '¿Dónde está el valor? (moneyline)', d_vs_market: 'AA vs mercado', d_line_move: 'Movimiento de línea', d_ou: 'Línea O/U', d_ev_note: 'EV = retorno esperado por unidad según la probabilidad estimada por AA y la cuota indicada. Es una estimación, no una ganancia garantizada; depende de la calibración y de que la cuota siga disponible.', d_note: 'Predicción informativa del algoritmo AA. No es consejo de apuestas; la decisión es tuya. Juego responsable 18/21+.',
     d_rpg5: 'carreras/juego últimos 5', d_season: 'temporada',
     lineup_na: 'Sin alineación.', lineup_none: 'Sin alineación publicada.', lineup_pending: 'Alineación aún no publicada.', no_box: 'Sin box score.', starter: 'Titular', winner: 'Ganador',
     first_pitch: 'Primer lanzamiento', to_play_today: 'Por jugar hoy', upcoming: 'Por jugar', won_l: 'ganó', lost_l: 'perdió',
@@ -1976,7 +1979,7 @@ const T = {
     d_moment: 'Game moment', d_why: 'Why this play', d_metrics: 'AA metrics', d_based: 'Based on the data', d_risk: 'Risk index', d_duel: 'AA signal duel', d_h2h: 'Head to head', d_f5: 'First 5 innings · NRFI', d_injuries: 'Injuries or suspensions', d_injury_note: '★ = key player (good stats this season). Informational: the AA model does not change from this without re-validation.',
     metric_prob_cal: 'Calibrated AA prob.', metric_agree: 'Agreement', metric_risk: 'Risk', metric_edge: 'Edge vs market',
     d_starters: 'Probable starters', d_form: 'Recent form (last {n})', d_bats5: 'Batting, last 5', d_lineup: 'Batting lineup', d_hitters: 'Top hitters', d_context: 'Game context',
-    d_value: 'Where is the value? (moneyline)', d_vs_market: 'AA vs market', d_line_move: 'Line movement', d_ou: 'O/U line', d_ev_note: 'EV = expected return per unit staked per the AA model. Positive = the price pays more than the real risk warrants.', d_note: 'Informational prediction by the AA model. Not betting advice; the decision is yours. Play responsibly 18/21+.',
+    d_value: 'Where is the value? (moneyline)', d_vs_market: 'AA vs market', d_line_move: 'Line movement', d_ou: 'O/U line', d_ev_note: 'EV = expected return per unit using AA’s estimated probability and the quoted odds. It is an estimate, not guaranteed profit; it depends on calibration and the quote still being available.', d_note: 'Informational prediction by the AA model. Not betting advice; the decision is yours. Play responsibly 18/21+.',
     d_rpg5: 'runs/game last 5', d_season: 'season',
     lineup_na: 'No lineup.', lineup_none: 'No lineup published.', lineup_pending: 'Lineup not published yet.', no_box: 'No box score.', starter: 'Starter', winner: 'Winner',
     first_pitch: 'First pitch', to_play_today: 'To be played today', upcoming: 'Upcoming', won_l: 'won', lost_l: 'lost',
@@ -2674,6 +2677,17 @@ function boletoLegs(){
     .sort((a, b) => (BOL_RANK[b.tier] || 0) - (BOL_RANK[a.tier] || 0) || (b.pct || 0) - (a.pct || 0))
     .slice(0, 4);
 }
+// Cached pre-migration risk labels lack evidence and must not look verified.
+function publicRiskView(value) {
+  const complete = value?.coverage === 1 && typeof value.score === 'number'
+    && Number.isFinite(value.score) && value.score >= 0 && value.score <= 100
+    && ['bajo','medio','alto'].includes(value.level);
+  return complete ? value : { level: 'desconocido', score: null, coverage: null };
+}
+function publicVerdictView(snapshot, language, fallback) {
+  return typeof snapshot?.verdict_es === 'string' && typeof snapshot?.verdict_en === 'string'
+    ? snapshot[language === 'en' ? 'verdict_en' : 'verdict_es'] : fallback;
+}
 function boletoHtml(){
   const legs = boletoLegs();
   const recLine = (name, r) => {
@@ -2686,7 +2700,7 @@ function boletoHtml(){
   if (!legs.length) return `<div class="boleto"><div class="boleto-in">${head}<div class="bolempty">${t('bol_none')}</div></div></div>`;
   const tierTxt = tr => tr === 'gema' ? t('tag_gem') : confLabel(tr);
   const rows = legs.map(({ ev, tier, pct }) => {
-    const rk = ev.risk && ev.risk.level ? `<span class="bolrisk">${t('bol_risk')}: ${t('risk_' + ev.risk.level) || esc(ev.risk.level)}</span>` : '';
+    const rk = ev.risk && ev.risk.level ? `<span class="bolrisk">${t('bol_risk')}: ${t('risk_' + publicRiskView(ev.risk).level)}</span>` : '';
     return `<button class="bleg" data-id="${esc(ev.event_id)}">
       <span class="blteam">${logoImg(ev.prediction.pick)}<span class="blnm">${t('bol_win')} <b>${esc(tNick(ev.prediction.pick))}</b><span class="blmu">${esc(tNick(ev.away.code))} @ ${esc(tNick(ev.home.code))}</span></span></span>
       <span class="blright">${pct != null ? `<span class="blpct num">AA ${pct}%</span>` : ''}<span class="bltags"><span class="tag ${esc(tier)}">${tierTxt(tier)}</span>${rk}</span></span>
@@ -3242,17 +3256,17 @@ function renderDetail(){
   const recH = lv && lv.home.rec ? `<span class="rc num">${esc(lv.home.rec)}</span>` : '';
   const tags = p.invalidated ? '' : (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${badgeMuted ? 'muted' : ''}">${b === 'gema' ? t('tag_gem') : esc(confLabel(b))}</span>`).join(' ');
 
-  const risk = ev.risk || {};
+  const risk = publicRiskView(ev.risk);
   const riskPct = risk.score != null ? Math.min(100, risk.score) : null;
   const riskColor = risk.level === 'alto' ? 'var(--red)' : risk.level === 'medio' ? 'var(--amber)' : risk.level === 'bajo' ? 'var(--volt)' : 'var(--faint)';
 
   const metricCls = m => {
-    if (m.kind === 'risk') return m.value === 'bajo' ? 'pos' : m.value === 'medio' ? 'mid' : m.value === 'alto' ? 'neg' : '';
-    if (m.kind === 'edge') return String(m.value).startsWith('+') ? 'pos' : 'neg';
+    if (m.kind === 'risk') return risk.level === 'bajo' ? 'pos' : risk.level === 'medio' ? 'mid' : risk.level === 'alto' ? 'neg' : '';
+    if (m.kind === 'edge') { const v = parseFloat(m.value); return Number.isFinite(v) && v !== 0 ? (v > 0 ? 'pos' : 'neg') : ''; }
     return '';
   };
   const metricLabel = m => m.key ? t(m.key) : m.label;
-  const metricValue = m => m.kind === 'risk' ? t('risk_' + m.value) : m.value;
+  const metricValue = m => m.kind === 'risk' ? t('risk_' + risk.level) : m.kind === 'edge' ? String(m.value).replace(/%$/, ' pp') : m.value;
 
   const snap = ev.snapshot || {};
   const invalidNotice = p.invalidated ? `<div class="pred-invalid-notice" role="alert"><span class="ic">⚠</span><span>${t('pred_invalid_detail')}</span></div>` : '';
@@ -3260,7 +3274,7 @@ function renderDetail(){
   const verdictBox = snap.verdict_es ? `
     <div class="verdict">
       <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFC53D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 8.5 22 9.3 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.3 9 8.5z"/></svg></span>
-      <p><span class="vt">${t('d_verdict')}</span>${esc(lang === 'en' ? (snap.verdict_en || t('d_note')) : snap.verdict_es)}</p>
+      <p><span class="vt">${t('d_verdict')}</span>${esc(publicVerdictView(snap, lang, t('d_note')))}</p>
     </div>` : '';
 
 
@@ -3329,7 +3343,7 @@ function renderDetail(){
     ${risk.level === 'desconocido' ? `<div class="bnote">${t('risk_unknown_help')}</div>` : ''}
     ${riskPct != null ? `<div class="secttl">${t('d_risk')}</div>
       <div class="riskbar"><i style="width:${riskPct}%;background:${riskColor}"></i></div>
-      <div class="riskrow num"><span>${riskPct}/100 · ${esc(risk.level || '')}</span><span>${t('d_lower_better')}</span></div>` : ''}`;
+      <div class="riskrow num"><span>${riskPct}/100 · ${esc(t('risk_' + risk.level))}</span><span>${t('d_lower_better')}</span></div>` : ''}`;
 
   /* ── tab EQUIPOS (snapshot para decidir) ── */
   const formSide = (side, code) => {

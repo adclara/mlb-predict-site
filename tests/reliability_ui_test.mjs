@@ -73,8 +73,13 @@ try {
       assert.doesNotMatch(await page.locator('#dcard').innerText(),/Ventaja moderada|Riesgo bajo/);
       await page.locator('#langbtn').evaluate(el=>el.click());
       assert.match(await page.locator('#dcard').innerText(),/No comparable price; value cannot be determined/);
+      // A cached older payload must not resurrect a green risk label or a value claim.
+      await page.evaluate(()=>{const ev=events.find(e=>e.event_id==='reliability-1');ev.risk={level:'bajo',score:0};ev.snapshot={verdict_es:'Ventaja moderada: legacy'};ev.metrics=[{kind:'risk',key:'metric_risk',value:'bajo'}];renderDetail();});
+      assert.match(await page.locator('#dcard').innerText(),/insufficient|enough data/i);
+      assert.doesNotMatch(await page.locator('#dcard').innerText(),/Ventaja moderada|0\/100/);
       if(width<900)await page.locator('#dback').click();
       await page.locator('#langbtn').click();
+      assert.doesNotMatch(await page.locator('#dcard').innerText(),/Ventaja moderada|0\/100/);
       checks+=4;
       for(const sport of ['nba','wnba']){
         await page.locator(`.sp[data-sport="${sport}"]`).click();

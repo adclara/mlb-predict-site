@@ -79,7 +79,7 @@ function honestEdge(g, prob) {
   if (!o || prob == null || !g.ml_pick) return null;
   const pHomeMkt = typeof o.p_home_mkt === 'number' ? o.p_home_mkt
     : (o.consensus && typeof o.consensus.p_home === 'number' ? o.consensus.p_home : null);
-  if (pHomeMkt == null) return null;
+  if (!Number.isFinite(pHomeMkt) || pHomeMkt < 0 || pHomeMkt > 1) return null;
   const mktForPick = g.ml_pick === g.home ? pHomeMkt : 1 - pHomeMkt;
   return prob - mktForPick;
 }
