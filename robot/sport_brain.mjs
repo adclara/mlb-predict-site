@@ -172,7 +172,7 @@ export function buildSportBrain({ sport, backtest = null, rows = [], now = new D
 }
 
 async function d1Rows(sport) {
-  if (!TOKEN) return []
+  if (!TOKEN) { if (process.env.AA_REQUIRE_PRODUCER_EVIDENCE === '1') throw new Error('producer_missing_credentials'); return [] }
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/d1/database/${D1_DATABASE_ID}/query`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
@@ -182,16 +182,20 @@ async function d1Rows(sport) {
     }),
   })
   const body = await res.json().catch(() => ({}))
-  if (!res.ok || body.success === false) throw new Error(`D1 ${sport}: ${JSON.stringify(body.errors || body).slice(0, 300)}`)
+  if (!res.ok || body.success !== true || !Array.isArray(body.result) || body.result.length !== 1 || body.result.some(r => r.success !== true || !Array.isArray(r.results))) throw new Error('producer_brain_d1_failed')
   return body.result?.[0]?.results || []
 }
 
 async function publish(sport, doc) {
   if (!TOKEN) return false
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${KV_NAMESPACE_ID}/values/${encodeURIComponent(`${sport}:learning`)}`, {
-    method: 'PUT', headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(doc),
+    method: 'PUT', headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(doc), signal: AbortSignal.timeout(15000),
   })
   if (!res.ok) throw new Error(`KV ${sport}:learning: ${res.status} ${(await res.text()).slice(0, 180)}`)
+  if (process.env.AA_REQUIRE_PRODUCER_EVIDENCE === '1') {
+    const receipt = await res.json().catch(() => null)
+    if (receipt?.success !== true) throw new Error('producer_brain_kv_unverified')
+  }
   return true
 }
 
@@ -200,7 +204,9 @@ async function main() {
   const sports = requested === 'all' ? [...SUPPORTED] : [requested]
   for (const sport of sports) {
     if (!SUPPORTED.includes(sport)) throw new Error(`Uso: node robot/sport_brain.mjs [${SUPPORTED.join('|')}|all]`)
-    const doc = buildSportBrain({ sport, backtest: loadBacktest(sport), rows: await d1Rows(sport) })
+    const backtest = loadBacktest(sport)
+    if (process.env.AA_REQUIRE_PRODUCER_EVIDENCE === '1' && !backtest) throw new Error('producer_backtest_missing')
+    const doc = buildSportBrain({ sport, backtest, rows: await d1Rows(sport) })
     const didPublish = await publish(sport, doc)
     console.log(JSON.stringify({ sport, published: didPublish, state: doc.state, gate: doc.gate, historical_n: doc.historical.n, forward_n: doc.forward.n }))
   }

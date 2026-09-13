@@ -15,6 +15,7 @@
 //   GET /v1/mlb/live          -> marcadores en vivo (proxy ESPN, cache 30s)
 
 import { mlbStandingsRequest, parseMlbStandings } from '../lib/mlb_standings.mjs';
+import { assessBasketballHealth, basketballDate } from '../lib/basketball_health.mjs';
 
 const ESPN_SCOREBOARD =
   'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard';
@@ -3057,20 +3058,20 @@ async function internalModelPublish(request, env, origin) {
 async function usSportsPipelineHealth(env, sport, origin) {
   if (['nba', 'wnba'].includes(sport)) {
     try {
-      const row = await env.DB.prepare(
-        `SELECT COUNT(*) AS n, MAX(updated_at) AS updated_at,
-                SUM(CASE WHEN result IN ('win','loss','push','void') THEN 1 ELSE 0 END) AS graded
-         FROM predictions WHERE sport = ?`,
-      ).bind(sport).first();
-      const ageSeconds = row?.updated_at ? Math.max(0, Math.floor((Date.now() - Date.parse(row.updated_at)) / 1000)) : null;
-      return json({
-        sport, ok: ageSeconds != null && ageSeconds <= 2 * 60 * 60,
-        state: ageSeconds == null ? 'empty' : ageSeconds > 2 * 60 * 60 ? 'stale' : 'ok',
-        interval_minutes: 60, age_seconds: ageSeconds,
-        latest: { captured_at: row?.updated_at || null, n: Number(row?.n || 0), graded: Number(row?.graded || 0) },
-      }, 200, origin, 30);
-    } catch (e) {
-      return json({ sport, ok: false, state: 'unavailable', interval_minutes: 60 }, 200, origin, 15);
+      const [heartbeat, predictions, unifiedPending] = await Promise.all([
+        env.DB.prepare('SELECT * FROM basketball_producer_health WHERE sport=?').bind(sport).first(),
+        env.DB.prepare(`SELECT COUNT(*) AS n,MAX(updated_at) AS updated_at,
+          SUM(CASE WHEN result IN ('win','loss','push','void') THEN 1 ELSE 0 END) AS graded,
+          COALESCE(SUM(CASE WHEN result IS NULL AND pick IS NOT NULL AND date < ? THEN 1 ELSE 0 END),0) AS pending_grading
+          FROM predictions WHERE sport=?`).bind(basketballDate(), sport).first(),
+        sport === 'wnba' ? env.DB.prepare(`SELECT COUNT(*) AS pending FROM sport_market_predictions
+          WHERE sport=? AND result IS NULL AND date < ?`).bind(sport, basketballDate()).first() : Promise.resolve({ pending: 0 }),
+      ]);
+      if (predictions && unifiedPending?.pending != null) predictions.pending_grading += Number(unifiedPending.pending);
+      else if (predictions) predictions.pending_grading = null;
+      return json(assessBasketballHealth({ sport, heartbeat, predictions }), 200, origin, 30);
+    } catch {
+      return json({ ...assessBasketballHealth({ sport }), state: 'unavailable' }, 200, origin, 15);
     }
   }
   try {

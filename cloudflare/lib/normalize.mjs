@@ -90,9 +90,9 @@ function metricsFor(g, prob) {
   // beside p_final would reintroduce the measured overconfidence we removed.
   if (prob != null) out.push({ key: 'metric_prob_cal', label: 'Prob. AA calibrada', value: `${PCT(prob)}%`, kind: 'pct' });
   if (typeof g.agree === 'number') out.push({ key: 'metric_agree', label: 'Acuerdo', value: `${g.agree}/6`, kind: 'agree' });
-  if (g.risk && g.risk.level) out.push({ key: 'metric_risk', label: 'Riesgo', value: g.risk.level, kind: 'risk', score: g.risk.score ?? null });
+  if (g.risk) { const complete = g.risk.coverage === 1; out.push({ key: 'metric_risk', label: 'Riesgo', value: complete ? g.risk.level : 'desconocido', kind: 'risk', score: complete ? g.risk.score : null }); }
   const edge = honestEdge(g, prob);
-  if (edge != null) out.push({ key: 'metric_edge', label: 'Ventaja vs mercado', value: `${edge >= 0 ? '+' : ''}${PCT(edge)}%`, kind: 'edge' });
+  if (edge != null) out.push({ key: 'metric_edge', label: 'Ventaja vs mercado', value: `${edge >= 0 ? '+' : ''}${PCT(edge)} pp`, kind: 'edge' });
   return out;
 }
 
@@ -294,20 +294,22 @@ function marketFor(g) {
 }
 
 // Recomendación honesta en una frase, a partir de pick + edge + riesgo.
-function verdictFor(g, prob) {
-  const pick = g.ml_pick;
-  if (!pick || prob == null) return 'El algoritmo no publica un pick para este juego: las señales no son concluyentes.';
-  const edge = honestEdge(g, prob);
-  const risk = (g.risk && g.risk.level) || null;
-  const p = PCT(prob);
-  let s = `El algoritmo da ${p}% a ${pick}`;
-  s += edge != null ? `, ${edge >= 0 ? '+' : ''}${PCT(edge)}% frente al precio del mercado` : '';
-  s += risk ? ` y clasifica el riesgo como ${risk}.` : '.';
-  if (edge != null && edge >= 0.04 && prob >= 0.6 && risk !== 'alto') s += ' Candidato sólido según los datos.';
-  else if (edge != null && edge < 0) s += ' Ojo: el mercado paga menos de lo que vale → sin valor real, considera pasar.';
-  else if (risk === 'alto') s += ' Riesgo alto: si juegas, que sea con unidad reducida.';
-  else s += ' Ventaja moderada: decide con el cuadro completo de abajo.';
-  return s;
+export function verdictFor(g, prob, language = 'es') {
+  const en = language === 'en', pick = g.ml_pick;
+  if (!pick || typeof prob !== 'number' || !Number.isFinite(prob) || prob < 0 || prob > 1) return en
+    ? 'AA does not publish a pick for this game: the evidence is inconclusive.'
+    : 'AA no publica un pick para este juego: la evidencia no es concluyente.';
+  const edge = honestEdge(g, prob), p = PCT(prob);
+  let text = en ? `AA estimates ${p}% for ${pick}.` : `AA estima ${p}% para ${pick}.`;
+  if (edge == null || !Number.isFinite(edge)) return text + (en
+    ? ' No comparable market probability is available; value cannot be determined.'
+    : ' No hay probabilidad de mercado comparable; el valor no se puede determinar.');
+  text += en ? ` Difference versus market: ${edge >= 0 ? '+' : ''}${PCT(edge)} percentage points.`
+    : ` Diferencia frente al mercado: ${edge >= 0 ? '+' : ''}${PCT(edge)} puntos porcentuales.`;
+  if (edge <= 0) return text + (en ? ' No positive probability edge is measured.' : ' No se mide una ventaja probabilística positiva.');
+  return text + (en
+    ? ' A positive probability difference does not establish profitable odds. Check price, data quality and uncertainty.'
+    : ' Una diferencia probabilística positiva no demuestra una cuota rentable. Revisa precio, calidad de datos e incertidumbre.');
 }
 
 // Ofensiva de temporada del brief (OPS + carreras/juego), sanitizada.
@@ -424,6 +426,7 @@ function snapshotFor(g, formIdx, pitcherNames, prob, liveGame) {
     reasons: reasonsFor(g),
     wp: wpFor(g, liveGame),
     verdict_es: verdictFor(g, prob),
+    verdict_en: verdictFor(g, prob, 'en'),
   };
   return Object.values(snap).some((v) => v != null) ? snap : null;
 }
@@ -525,7 +528,7 @@ function toEvent(g, pickInfo, formIdx, pitcherNames, liveGame) {
     metrics: invalidated ? [] : metricsFor(g, prob),
     summary_es: invalidated ? null : summarize(g),
     snapshot,
-    risk: !invalidated && g.risk ? { level: g.risk.level || null, score: g.risk.score ?? null } : null,
+    risk: !invalidated && g.risk ? { level: g.risk.coverage === 1 ? g.risk.level : 'desconocido', score: g.risk.coverage === 1 ? g.risk.score : null, coverage: g.risk.coverage ?? null } : null,
     odds: oddsFor(currentGame),
     badges,
     result: invalidated ? null : (g.ml_result || null), // no gradúa una predicción retirada

@@ -21,7 +21,8 @@
 // Uso NBA: node robot/nba_shadow.mjs
 // Uso WNBA: AA_BASKETBALL_SPORT=wnba node robot/nba_shadow.mjs
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { basketballDate, basketballNextDate } from '../cloudflare/lib/basketball_health.mjs';
 import { join } from 'node:path';
 import { makeElo, loadSeasons } from './nba_model.mjs';
 import { priceFrom, probs2way } from './lib/espn_odds.mjs';
@@ -35,8 +36,11 @@ const SPORT = String(process.env.AA_BASKETBALL_SPORT || 'nba').toLowerCase();
 if (!['nba', 'wnba'].includes(SPORT)) throw new Error(`AA_BASKETBALL_SPORT inválido: ${SPORT}`);
 const ESPN = `https://site.api.espn.com/apis/site/v2/sports/basketball/${SPORT}`;
 const ENGINE = `${SPORT}-shadow-v1`;
+const STRICT_PRODUCER = process.env.AA_REQUIRE_PRODUCER_EVIDENCE === '1';
+const captureSchedule = [];
+let sourceFailures = 0;
 
-if (!API_TOKEN) { console.log('Sin CLOUDFLARE_API_TOKEN; modo sombra omitido.'); process.exit(0); }
+if (!API_TOKEN) { if (STRICT_PRODUCER) throw new Error('producer_missing_credentials'); console.log('Sin CLOUDFLARE_API_TOKEN; modo sombra omitido.'); process.exit(0); }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const day = (d) => d.toISOString().slice(0, 10);
@@ -68,27 +72,36 @@ function wnbaTotalOffer(game, forecaster) {
 }
 
 async function espn(path) {
-  try {
-    const res = await fetch(`${ESPN}/${path}`, { headers: { 'user-agent': 'aa-sports-shadow/1.0' } });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (e) { return null; }
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(`${ESPN}/${path}`, { headers: { 'user-agent': 'aa-sports-shadow/1.0' }, signal: AbortSignal.timeout(12000) });
+      if (!res.ok) throw new Error('provider_http_' + res.status);
+      const payload = await res.json();
+      if (path.startsWith('scoreboard') && !Array.isArray(payload?.events)) throw new Error('provider_invalid_scoreboard');
+      return payload;
+    } catch (error) {
+      if (attempt < 2) { await sleep(250 * (attempt + 1)); continue; }
+      sourceFailures++;
+      if (STRICT_PRODUCER) throw new Error(`producer_source_failed:${path}`);
+      return null;
+    }
+  }
 }
 
 async function d1(sql, params = []) {
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/d1/database/${D1_DATABASE_ID}/query`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${API_TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sql, params }),
+    body: JSON.stringify({ sql, params }), signal: AbortSignal.timeout(15000),
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok || body.success === false) throw new Error(`D1: ${JSON.stringify(body.errors || body).slice(0, 300)}`);
+  if (!res.ok || body.success !== true || !Array.isArray(body.result) || body.result.length !== 1 || body.result.some(r => r.success !== true || !Array.isArray(r.results))) throw new Error('producer_d1_failed');
   return (body.result && body.result[0] && body.result[0].results) || [];
 }
 
 async function ensureMarketProb() {
   try { await d1('ALTER TABLE predictions ADD COLUMN market_prob REAL'); console.log('D1: columna market_prob creada'); }
-  catch (e) { /* ya existe */ }
+  catch (e) { if (STRICT_PRODUCER) { const columns = await d1('PRAGMA table_info(predictions)'); if (!columns.some(c => c.name === 'market_prob')) throw e; } }
 }
 
 /* ── 1) ratings: histórico + temporada en curso ──────────────────────────── */
@@ -122,6 +135,7 @@ async function buildRatings(today, totalForecaster = null) {
   const params = frozenParams();
   const elo = makeElo(params);
   const seasons = loadSeasons(join(process.env.DATA_DIR || join(process.cwd(), 'data'), 'fase2', SPORT));
+  if (STRICT_PRODUCER && !seasons.length) throw new Error('producer_history_missing');
   let lastDate = '2000-01-01';
   for (const s of seasons) {
     elo.newSeason();
@@ -192,6 +206,7 @@ async function insertUnifiedMarket(row) {
     ]);
     return true;
   } catch (error) {
+    if (STRICT_PRODUCER) throw error;
     unifiedMarketTable = false;
     console.log(`D1 unified market ledger unavailable until migration: ${error.message}`);
     return false;
@@ -205,6 +220,7 @@ async function gradeUnifiedMarkets(today) {
     pending = await d1(`SELECT date,event_id,market_key,selection_key,pick,side,line FROM sport_market_predictions
       WHERE sport='wnba' AND result IS NULL AND date <= ? ORDER BY date,event_id LIMIT 200`, [day(today)]);
   } catch (error) {
+    if (STRICT_PRODUCER) throw error;
     unifiedMarketTable = false;
     console.log(`D1 unified grading unavailable until migration: ${error.message}`);
     return;
@@ -236,7 +252,8 @@ const tierOf = (p) => (p >= 0.7 ? 't70' : p >= 0.65 ? 't65' : p >= 0.6 ? 't60' :
 
 async function main() {
   const today = new Date();
-  const dates = [day(today), day(new Date(today.getTime() + 86400000))];
+  const todayDate = basketballDate(today.getTime());
+  const dates = [todayDate, basketballNextDate(todayDate)];
   await ensureMarketProb();
   const totalForecaster = SPORT === 'wnba' ? createWnbaTotalForecaster() : null;
   const playerWinnerForecaster = SPORT === 'wnba' ? createWnbaPlayerWinnerForecaster() : null;
@@ -245,7 +262,7 @@ async function main() {
   /* gradear pendientes (hasta 5 días atrás) */
   const pending = await d1(
     'SELECT date, event_id, home, away, pick FROM predictions WHERE sport = ? AND result IS NULL AND pick IS NOT NULL AND date < ? ORDER BY date DESC LIMIT 80',
-    [SPORT, day(today)],
+    [SPORT, todayDate],
   );
   console.log(`Sombra ${SPORT.toUpperCase()}: ${pending.length} picks por gradear`);
   const byDate = new Map();
@@ -276,13 +293,14 @@ async function main() {
   for (const d of dates) {
     const data = await espn(`scoreboard?dates=${d.replaceAll('-', '')}`);
     if (!data || !Array.isArray(data.events)) continue;
-    let nEv = 0, nPre = 0;
+    const checkedAt = new Date().toISOString();
+    let nEv = 0, nPre = 0, dateLogged = 0;
     for (const ev of data.events) {
       nEv++;
       const g = gameFromEvent(ev, d);
       if (![2, 3].includes(g._seasonType)) continue;              // ni Summer League ni pretemporada
       if (String(g._status.state || '').toLowerCase() !== 'pre') continue;
-      if (!g.home || !g.away) continue;
+      if (!g.home || !g.away) { if (STRICT_PRODUCER) throw new Error('producer_incomplete_event'); continue; }
       nPre++;
       const pH = elo.predict({ date: d, home: g.home, away: g.away, neutral: g.neutral });
       const side = pH >= 0.5 ? { code: g.home, p: pH } : { code: g.away, p: 1 - pH };
@@ -329,8 +347,9 @@ async function main() {
           home: g.home, away: g.away, start: ev.date || d, featureAsOf: frozenAt, engine: 'wnba-total-shadow-v1',
         });
       }
-      logged++;
+      logged++; dateLogged++;
     }
+    captureSchedule.push({ date: d, checked_at: checkedAt, source: 'espn', complete: true, events: nEv, eligible_pregame: nPre, logged: dateLogged });
     if (nEv) console.log(`  ${SPORT} ${d}: ${nEv} eventos, ${nPre} pre (regular/playoffs)`);
     await sleep(150);
   }
@@ -341,6 +360,14 @@ async function main() {
   console.log('Track record sombra por tier:', JSON.stringify(rec));
   const mvsm = await d1("SELECT COUNT(*) n, AVG(prob - market_prob) avg_edge, AVG(ABS(prob - market_prob)) avg_gap FROM predictions WHERE sport = ? AND market_prob IS NOT NULL", [SPORT]);
   console.log('Modelo vs mercado (picks con odds):', JSON.stringify(mvsm));
+  if (STRICT_PRODUCER) {
+    if (!process.env.AA_PRODUCER_EVIDENCE || !process.env.GITHUB_RUN_ID || captureSchedule.length !== 2 || sourceFailures) throw new Error('producer_evidence_incomplete');
+    writeFileSync(process.env.AA_PRODUCER_EVIDENCE, JSON.stringify({
+      schema: 'aa-basketball-capture-v1', sport: SPORT,
+      run_id: `${process.env.GITHUB_RUN_ID}.${process.env.GITHUB_RUN_ATTEMPT || '1'}`,
+      complete: true, source_failures: sourceFailures, schedule: captureSchedule,
+    }));
+  }
 }
 
 await main();

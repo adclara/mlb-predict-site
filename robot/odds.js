@@ -322,7 +322,20 @@ export function valueEdge(pModelHome, odds) {
 // big line move, and a tired/injured pick-side starter all add risk. Purely
 // descriptive (a UI flag), never an input to the pick itself.
 export function riskScore({ odds, adrian_p, pitcher_recent, news_delta, ml_pick, home } = {}) {
-  if (!odds) return null
+  const finite = x => typeof x === 'number' && Number.isFinite(x)
+  const consensus = odds?.consensus?.p_home ?? odds?.p_home_mkt
+  const rawFatigue = ml_pick === home ? pitcher_recent?.home?.fatigue : pitcher_recent?.away?.fatigue
+  const selectedFatigue = rawFatigue?.level ?? rawFatigue
+  const available = {
+    books: finite(odds?.book_disagreement),
+    model_market: finite(adrian_p) && adrian_p >= 0 && adrian_p <= 1 && finite(consensus) && consensus >= 0 && consensus <= 1,
+    line_move: finite(odds?.line_move),
+    starter: Boolean(ml_pick && home && ['alta','media','baja','normal'].includes(selectedFatigue)),
+    news: finite(news_delta) && Boolean(ml_pick && home),
+  }
+  const missing = Object.keys(available).filter(key => !available[key])
+  const coverage = (5 - missing.length) / 5
+  if (missing.length) return { score: null, level: 'desconocido', reasons: [], coverage, missing, kind: 'descriptive_not_loss_probability' }
   const reasons = []
   let s = 0
   const dis = odds.book_disagreement ?? 0
@@ -333,11 +346,11 @@ export function riskScore({ odds, adrian_p, pitcher_recent, news_delta, ml_pick,
   if (lm != null) { s += clampR(Math.abs(lm) * 150, 0, 15); if (Math.abs(lm) >= 0.05) reasons.push('La línea se movió fuerte tras la apertura') }
   const pickHome = ml_pick === home
   const pr = pickHome ? pitcher_recent?.home : pitcher_recent?.away
-  const fat = pr?.fatigue
+  const fat = pr?.fatigue?.level ?? pr?.fatigue
   if (fat === 'alta') { s += 15; reasons.push('Abridor del pick con fatiga alta') } else if (fat === 'media') { s += 7 }
   if (news_delta != null && ml_pick) { const against = pickHome ? news_delta < 0 : news_delta > 0; if (against) { s += clampR(Math.abs(news_delta) * 40, 0, 15); reasons.push('Lesiones/noticias en contra del pick') } }
   const score = clampR(Math.round(s), 0, 100)
-  return { score, level: score >= 55 ? 'alto' : score >= 30 ? 'medio' : 'bajo', reasons }
+  return { score, level: score >= 55 ? 'alto' : score >= 30 ? 'medio' : 'bajo', reasons, coverage, missing, kind: 'descriptive_not_loss_probability' }
 }
 
 // --- curve-derived features (need who won; computed by the study, not capture) -

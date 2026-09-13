@@ -243,7 +243,7 @@ test('p_final causal tiene prioridad y ninguna métrica vuelve a publicar el por
   assert.equal(event.prediction.prob_pct, 55)
   assert.deepEqual(event.metrics, [
     { key: 'metric_prob_cal', label: 'Prob. AA calibrada', value: '55%', kind: 'pct' },
-    { key: 'metric_edge', label: 'Ventaja vs mercado', value: '+1%', kind: 'edge' },
+    { key: 'metric_edge', label: 'Ventaja vs mercado', value: '+1 pp', kind: 'edge' },
   ])
   assert.equal(event.metrics.some(metric => /modelo|adrián/i.test(metric.label)), false)
   assert.deepEqual(event.badges, [])

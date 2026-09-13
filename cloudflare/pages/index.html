@@ -1272,7 +1272,9 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
      columna y cortar el contenido por la derecha: se encogen al ancho del móvil
      y reflujan/scrollean por dentro. */
   .layout > *{min-width:0;max-width:100%}
-  .search{display:none}
+  .hwrap{flex-wrap:wrap}
+  .search{display:block;flex:1 0 100%;order:10;max-width:none;min-width:0;margin:4px 0 0}
+  .search input{width:100%;min-height:44px;font-size:16px}
   .record{display:none}
   .detail{display:none;position:fixed;inset:0;z-index:200;background:var(--page);overflow-y:auto;padding:0 10px 40px;max-height:none;border-radius:0}
   .detail.open{display:block}
@@ -1727,7 +1729,7 @@ const T = {
     runind_over: 'Alta', runind_projection: 'Proyección AA', runind_forward: 'récord forward', runind_push: 'push',
     runind_gate_closed: 'gate de Altas cerrado', runind_gate_review: 'gate aprobado; pendiente de revisión humana', runind_gate_unknown: 'gate aún sin dato',
     runind_note: 'En observación · no es una jugada verificada ni recomendación.',
-    bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto',
+    bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto', risk_desconocido: 'datos insuficientes', risk_unknown_help: 'No hay datos suficientes para evaluar este índice. No es una probabilidad de perder.',
     props_title: '🎯 Props a seguir', props_hr: 'Jonrones (más poder)', props_k: 'Ponches (K/9 del abridor)', props_note: 'Datos que informan estas props — no es una predicción AA.',
     tab_brain: '🧠 Cerebro', brain_title: 'Cerebro AA — qué aprende con el tiempo',
     brain_sub: 'El modelo se re-ajusta cada día con sus propios aciertos y errores. Esto es lo que ha aprendido — medido, no inventado. El algoritmo sigue siendo privado.',
@@ -1736,6 +1738,7 @@ const T = {
     brain_caltime: '📉 Mi calibración en el tiempo (menos hueco = mejor)', brain_accum: 'Acumulando historial — la tendencia aparece en unos días.',
     brain_log: '🗓 Bitácora de cambios', brain_note: 'Aprendizaje del propio modelo; ilustra cómo mejora, no es garantía de resultados.',
     brain_soon: 'El Cerebro AA está preparando su primer diario de aprendizaje.',
+    producer_title: 'Estado del productor', producer_active: 'Ejecución completa y calendario verificado', producer_idle_no_games: 'Ejecución completa; hoy no hay partidos', producer_producer_unknown: 'Sin ejecución correcta verificada', producer_producer_stale: 'Productor atrasado o detenido', producer_producer_failed: 'La última ejecución falló', producer_producer_running: 'Ejecución en curso; aún no confirmada', producer_schedule_unverified: 'Calendario no verificado o atrasado', producer_pending_grading: 'Resultados históricos pendientes de resolver', producer_grading_unverified: 'Estado de resultados no verificado', producer_unavailable: 'Monitoreo no disponible', producer_last_success: 'Última ejecución correcta', producer_prediction_time: 'Última fila de predicción', producer_note: 'Este estado no aprueba el modelo ni demuestra precisión o rentabilidad.',
     brain_sport_title: 'Cerebro AA · {sport}', brain_sport_sub: 'Estado medido del entrenamiento: validación cronológica, muestra forward y gate de publicación. El algoritmo y sus pesos siguen privados.',
     brain_hist_oos: 'Histórico OOS', brain_forward_n: 'Muestra forward', brain_brier: 'Brier', brain_brier_sub: 'menos es mejor',
     brain_forward_acc: 'Acierto forward', brain_gate: 'Gate público', brain_gate_open: 'abierto', brain_gate_closed: 'cerrado',
@@ -1936,7 +1939,7 @@ const T = {
     runind_over: 'Over', runind_projection: 'AA projection', runind_forward: 'forward record', runind_push: 'push',
     runind_gate_closed: 'Over gate closed', runind_gate_review: 'gate passed; awaiting human review', runind_gate_unknown: 'gate data pending',
     runind_note: 'Under observation · not a verified play or recommendation.',
-    bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high',
+    bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high', risk_desconocido: 'insufficient data', risk_unknown_help: 'There is not enough data to evaluate this index. It is not a probability of losing.',
     props_title: '🎯 Props to watch', props_hr: 'Home runs (most power)', props_k: 'Strikeouts (starter K/9)', props_note: 'Data that informs these props — not an AA prediction.',
     tab_brain: '🧠 Brain', brain_title: 'AA Brain — what it learns over time',
     brain_sub: 'The model re-tunes itself every day from its own hits and misses. This is what it has learned — measured, not made up. The algorithm stays private.',
@@ -1945,6 +1948,7 @@ const T = {
     brain_caltime: '📉 My calibration over time (smaller gap = better)', brain_accum: 'Building history — the trend shows up in a few days.',
     brain_log: '🗓 Change log', brain_note: "The model's own learning; it shows how it improves, not a guarantee of results.",
     brain_soon: 'AA Brain is preparing its first learning journal.',
+    producer_title: 'Producer status', producer_active: 'Run completed and schedule verified', producer_idle_no_games: 'Run completed; no games today', producer_producer_unknown: 'No verified successful run', producer_producer_stale: 'Producer is delayed or stopped', producer_producer_failed: 'The latest run failed', producer_producer_running: 'Run in progress; not yet confirmed', producer_schedule_unverified: 'Schedule unverified or stale', producer_pending_grading: 'Historical results need resolution', producer_grading_unverified: 'Grading status unverified', producer_unavailable: 'Monitoring unavailable', producer_last_success: 'Last successful completion', producer_prediction_time: 'Last prediction row', producer_note: 'This status does not approve the model or establish accuracy or profitability.',
     brain_sport_title: 'AA Brain · {sport}', brain_sport_sub: 'Measured training status: chronological validation, forward sample and publication gate. The algorithm and its weights remain private.',
     brain_hist_oos: 'Historical OOS', brain_forward_n: 'Forward sample', brain_brier: 'Brier', brain_brier_sub: 'lower is better',
     brain_forward_acc: 'Forward accuracy', brain_gate: 'Public gate', brain_gate_open: 'open', brain_gate_closed: 'closed',
@@ -2486,6 +2490,7 @@ function renderHistList(){
 // al navegador y un gate cerrado nunca se convierte aquí en una predicción.
 let learningDoc = null, simDoc = null, learningLoading = false, learningLoadedAt = 0;
 const sportLearningDocs = new Map(), sportLearningLoading = new Set(), sportLearningAt = new Map();
+const sportProducerHealth = new Map();
 async function loadLearning(){
   const target = sport;
   const maxAge = 5 * 60 * 1000;
@@ -2513,6 +2518,14 @@ async function loadLearning(){
     if (!r.ok) throw new Error('sport learning');
     sportLearningDocs.set(target, await r.json());
   }catch(err){ sportLearningDocs.set(target, { note: 'err' }); }
+  if (['nba', 'wnba'].includes(target)) {
+    try {
+      const response = await fetch(`${API}/v1/${target}/pipeline-health`, { signal: AbortSignal.timeout(10000) });
+      if (!response.ok) throw new Error('producer status');
+      const health = await response.json();
+      sportProducerHealth.set(target, health.schema === 'aa-basketball-producer-health-v1' ? health : { state: 'producer_unknown' });
+    } catch { sportProducerHealth.set(target, { state: 'unavailable' }); }
+  }
   sportLearningAt.set(target, Date.now()); sportLearningLoading.delete(target);
   if (sport === target && listTab === 'brain') renderBrain();
   else if (sport === target && ['wnba', 'nfl'].includes(target)){ renderOtherList(); renderOtherDetail(); }
@@ -2564,12 +2577,24 @@ function calChart(hist){
     </svg>
     <div class="bcaphint num">${h[0].date} · ${gaps[0]}% → ${h[h.length - 1].date} · ${gaps[gaps.length - 1]}%</div>`;
 }
+function producerStatusCard(target) {
+  if (!['nba', 'wnba'].includes(target)) return '';
+  const h = sportProducerHealth.get(target) || { state: 'producer_unknown' };
+  const key = 'producer_' + (h.state || 'producer_unknown');
+  const message = T[lang][key] || t('producer_producer_unknown');
+  const when = value => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString(LOCALE()) : '—';
+  return `<section class="bnote producer-status" role="status" aria-live="polite" data-producer-state="${esc(h.state || 'producer_unknown')}">
+    <b>${t('producer_title')}: ${esc(message)}</b><br>
+    ${t('producer_last_success')}: ${esc(when(h.last_success_at))}<br>
+    ${t('producer_prediction_time')}: ${esc(when(h.prediction_updated_at))}<br>
+    <small>${t('producer_note')}</small></section>`;
+}
 function renderBrain(){
   $('nAll').textContent = ''; $('nLive').textContent = ''; $('nPre').textContent = ''; $('nFinal').textContent = '';
   $('lgcount').innerHTML = '';
   if (sport !== 'mlb'){
     const d = sportLearningDocs.get(sport);
-    if (!d || d.note){ $('list').innerHTML = `<div class="lempty">${t('brain_soon')}</div>`; return; }
+    if (!d || d.note){ $('list').innerHTML = producerStatusCard(sport) + `<div class="lempty">${t('brain_soon')}</div>`; return; }
     const h = d.historical || {}, f = d.forward || {}, gate = d.gate || {};
     const hasN = (v) => v != null && v !== '' && Number.isFinite(Number(v));
     const fmtN = (v) => hasN(v) ? Number(v).toLocaleString(LOCALE()) : '—';
@@ -2583,6 +2608,7 @@ function renderBrain(){
     $('list').innerHTML = `<div class="brain sportbrain">
       <div class="brainhead">🧠 <b>${t('brain_sport_title').replace('{sport}', esc(sportLabel(sport)))}</b></div>
       <div class="bsubtle">${t('brain_sport_sub')}</div>
+      ${producerStatusCard(sport)}
       <div class="braintiles">
         <div class="btile"><div class="bl">${t('brain_hist_oos')}</div><div class="bv num">${fmtN(h.n)}</div><div class="bs">${h.accuracy == null ? '—' : fmtPct(h.accuracy)}</div></div>
         <div class="btile"><div class="bl">${t('brain_brier')}</div><div class="bv num">${fmt4(h.brier)}</div><div class="bs">${t('brain_brier_sub')}</div></div>
@@ -3218,10 +3244,10 @@ function renderDetail(){
 
   const risk = ev.risk || {};
   const riskPct = risk.score != null ? Math.min(100, risk.score) : null;
-  const riskColor = risk.level === 'alto' ? 'var(--red)' : risk.level === 'medio' ? 'var(--amber)' : 'var(--volt)';
+  const riskColor = risk.level === 'alto' ? 'var(--red)' : risk.level === 'medio' ? 'var(--amber)' : risk.level === 'bajo' ? 'var(--volt)' : 'var(--faint)';
 
   const metricCls = m => {
-    if (m.kind === 'risk') return m.value === 'bajo' ? 'pos' : m.value === 'medio' ? 'mid' : 'neg';
+    if (m.kind === 'risk') return m.value === 'bajo' ? 'pos' : m.value === 'medio' ? 'mid' : m.value === 'alto' ? 'neg' : '';
     if (m.kind === 'edge') return String(m.value).startsWith('+') ? 'pos' : 'neg';
     return '';
   };
@@ -3234,7 +3260,7 @@ function renderDetail(){
   const verdictBox = snap.verdict_es ? `
     <div class="verdict">
       <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFC53D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 8.5 22 9.3 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.3 9 8.5z"/></svg></span>
-      <p><span class="vt">${t('d_verdict')}</span>${esc(snap.verdict_es)}</p>
+      <p><span class="vt">${t('d_verdict')}</span>${esc(lang === 'en' ? (snap.verdict_en || t('d_note')) : snap.verdict_es)}</p>
     </div>` : '';
 
 
@@ -3300,6 +3326,7 @@ function renderDetail(){
       <div class="mgrid">${ev.metrics.map(m => `<div class="mcard"><div class="lb">${esc(metricLabel(m))}</div><div class="vl num ${metricCls(m)}">${esc(metricValue(m))}</div></div>`).join('')}</div>` : ''}
     ${keysBlock(ev, lv)}
     ${whyList || (ev.summary_es ? `<div class="secttl">${t('d_based')}</div><div class="summary">${esc(ev.summary_es)}</div>` : '')}
+    ${risk.level === 'desconocido' ? `<div class="bnote">${t('risk_unknown_help')}</div>` : ''}
     ${riskPct != null ? `<div class="secttl">${t('d_risk')}</div>
       <div class="riskbar"><i style="width:${riskPct}%;background:${riskColor}"></i></div>
       <div class="riskrow num"><span>${riskPct}/100 · ${esc(risk.level || '')}</span><span>${t('d_lower_better')}</span></div>` : ''}`;
