@@ -1,0 +1,26 @@
+name: Reliability branch validation
+on:
+  push:
+    branches: [improvement/reliability-20260912]
+    paths: ['.github/workflows/reliability-branch.yml', '.github/reliability.patch']
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    if: github.ref == 'refs/heads/improvement/reliability-20260912'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Capture exact branch source (no production access)
+        run: |
+          mkdir -p /tmp/reliability-source
+          git rev-parse HEAD > /tmp/reliability-source/commit.txt
+          git archive --format=tar.gz HEAD > /tmp/reliability-source/source.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reliability-source
+          path: /tmp/reliability-source/
+          retention-days: 3
