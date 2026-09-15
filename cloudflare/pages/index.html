@@ -25,7 +25,7 @@
 <meta name="twitter:title" content="AA Sports — Los datos deciden">
 <meta name="twitter:description" content="Predicciones deportivas con IA y marcadores en vivo. Tú decides.">
 <meta name="twitter:image" content="https://aasport.net/assets/og.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23FF4D1C'/%3E%3Cstop offset='.55' stop-color='%23FFC53D'/%3E%3Cstop offset='1' stop-color='%2315E39F'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23080B12'/%3E%3Cg transform='skewX(-9)' fill='url(%23g)'%3E%3Cpath d='M22 46 L32 18 L38 18 L28 46 Z'/%3E%3Cpath d='M36 46 L46 18 L52 18 L28 46 Z' fill-opacity='0'/%3E%3Cpath d='M36 46 L46 18 L52 18 L42 46 Z'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2394d3ff'/%3E%3Cstop offset='.55' stop-color='%234da8ff'/%3E%3Cstop offset='1' stop-color='%2332dfb4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23060c15'/%3E%3Cg transform='skewX(-9)' fill='url(%23g)'%3E%3Cpath d='M22 46 L32 18 L38 18 L28 46 Z'/%3E%3Cpath d='M36 46 L46 18 L52 18 L28 46 Z' fill-opacity='0'/%3E%3Cpath d='M36 46 L46 18 L52 18 L42 46 Z'/%3E%3C/g%3E%3C/svg%3E">
 <style>
 /* ═════════ TOKENS ═════════ */
 :root{
@@ -1357,6 +1357,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 .pcard{min-width:0}
 .formside{min-width:0}
 /* AA_STUDIO_APP_V1 — Inicio/Partidos/Historial/Cerebro/Educación/Herramientas/Config */
+/* AA_STUDIO_QA_V1 — favicon/rail Studio, posiciones con encabezado, gates intactos */
 .pagehead{padding:14px 14px 8px}
 .pagehead.tight{padding:0 0 12px}
 .pagehead h2{font-family:"Barlow Condensed",Manrope,sans-serif;font-size:22px;font-weight:700;letter-spacing:.02em;line-height:1.15;margin:0 0 6px}
@@ -1417,8 +1418,11 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 <aside class="aa-rail" id="aaRail" aria-label="Navegación principal">
   <a class="aa-raillogo" href="#" aria-label="AA Sports — inicio" data-i18n-aria="aria_home">
     <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true">
+      <defs><linearGradient id="railg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#94d3ff"/><stop offset=".55" stop-color="#4da8ff"/><stop offset="1" stop-color="#32dfb4"/>
+      </linearGradient></defs>
       <rect width="64" height="64" rx="15" fill="#0b1624"/>
-      <g transform="skewX(-9)" fill="url(#lg)">
+      <g transform="skewX(-9)" fill="url(#railg)">
         <path d="M22 46 L32 18 L38 18 L28 46 Z"/><path d="M36 46 L46 18 L52 18 L42 46 Z"/>
       </g>
     </svg>
@@ -1448,7 +1452,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
         <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stop-color="#94d3ff"/><stop offset=".55" stop-color="#4da8ff"/><stop offset="1" stop-color="#1c87e9"/>
         </linearGradient></defs>
-        <rect width="64" height="64" rx="15" fill="#151A23"/>
+        <rect width="64" height="64" rx="15" fill="#0b1624"/>
         <g transform="skewX(-9)" fill="url(#lg)">
           <path d="M22 46 L32 18 L38 18 L28 46 Z"/><path d="M36 46 L46 18 L52 18 L42 46 Z"/>
         </g>
@@ -1811,7 +1815,7 @@ const T = {
     r_follow: 'Seguir', r_following: 'Siguiendo', r_compare: 'Comparar', r_myfollowed: 'Mis seguidas', r_no_follow: 'Aún no sigues ninguna wallet. Toca ☆ en una cuenta para seguirla.',
     r_comparing: 'Comparando', r_pick_second: 'elige otra', r_close_cmp: 'Cerrar', r_compare_title: 'Comparación', r_cmp_won: 'Ganó', r_cmp_hits: 'Aciertos', r_cmp_markets: 'Mercados', r_cmp_type: 'Tipo', r_cmp_when: 'Cuándo entra', r_cmp_bet: 'Apuesta típica', r_cmp_cat: 'Dónde', r_cmp_beforew: 'antes',
     cmp_settled: 'Ganado (cerrado)', cmp_open: 'En bolsas abiertas', cmp_giveback: 'Devuelve', cmp_dead: 'Bolsas muertas', cmp_howplay: 'Cómo juega', cmp_better: 'mejor',
-    tab_standings: 'Posiciones', st_title: 'Tabla de posiciones', st_rank_title: 'Ranking mundial', st_team: 'Equipo', st_player: 'Jugador', st_points: 'Puntos', st_gp: 'PJ', st_w: 'G', st_d: 'E', st_l: 'P', st_gd: 'DG', st_pts: 'Pts', st_pct: '%', st_gb: 'Dif', st_loading: 'Cargando posiciones…', st_none: 'Posiciones no disponibles ahora.',
+    tab_standings: 'Posiciones', st_title: 'Tabla de posiciones', st_sub: 'Clasificación del feed. Fuente medida; no es un pick AA.', st_rank_title: 'Ranking mundial', st_team: 'Equipo', st_player: 'Jugador', st_points: 'Puntos', st_gp: 'PJ', st_w: 'G', st_d: 'E', st_l: 'P', st_gd: 'DG', st_pts: 'Pts', st_pct: '%', st_gb: 'Dif', st_loading: 'Cargando posiciones…', st_none: 'Posiciones no disponibles ahora.',
     notif_live: 'En vivo', notif_final: 'Final', notif_live_b: 'Empezó un juego que sigues ⭐', notif_final_b: 'Terminó un juego que sigues ⭐',
     r_search_ph: 'Buscar cualquier wallet (0x… o link)', r_search_go: 'Buscar', r_ws_bad: 'Dirección no válida. Pega una wallet 0x… o el link de un perfil de Polymarket.', r_ws_empty: 'Sin movimientos recientes.', r_ws_moves: 'movimientos', r_ws_vol: 'volumen', r_ws_recent: 'Movimientos recientes', r_ws_note: 'Consulta en vivo de la actividad reciente de esta wallet — datos crudos, sin nuestro filtro anti-trampa. Para el historial completo, abre su perfil en Polymarket ↗.',
     r_cat_all: 'Todas', r_no_cat: 'Ninguna cuenta en esta categoría.', r_share: 'Compartir', r_share_txt: 'Mira esta wallet en el Radar AA', r_copied: 'Link copiado ✓', track_measuring: 'midiendo hace', track_days: 'días',
@@ -2088,7 +2092,7 @@ const T = {
     r_follow: 'Follow', r_following: 'Following', r_compare: 'Compare', r_myfollowed: 'My followed', r_no_follow: 'You don\'t follow any wallet yet. Tap ☆ on an account to follow it.',
     r_comparing: 'Comparing', r_pick_second: 'pick another', r_close_cmp: 'Close', r_compare_title: 'Comparison', r_cmp_won: 'Won', r_cmp_hits: 'Hits', r_cmp_markets: 'Markets', r_cmp_type: 'Type', r_cmp_when: 'When it enters', r_cmp_bet: 'Typical bet', r_cmp_cat: 'Where', r_cmp_beforew: 'before',
     cmp_settled: 'Won (settled)', cmp_open: 'On open bags', cmp_giveback: 'Gives back', cmp_dead: 'Dead bags', cmp_howplay: 'How they play', cmp_better: 'better',
-    tab_standings: 'Standings', st_title: 'Standings', st_rank_title: 'World ranking', st_team: 'Team', st_player: 'Player', st_points: 'Points', st_gp: 'GP', st_w: 'W', st_d: 'D', st_l: 'L', st_gd: 'GD', st_pts: 'Pts', st_pct: '%', st_gb: 'GB', st_loading: 'Loading standings…', st_none: 'Standings unavailable right now.',
+    tab_standings: 'Standings', st_title: 'Standings', st_sub: 'Feed classification. Measured source; not an AA pick.', st_rank_title: 'World ranking', st_team: 'Team', st_player: 'Player', st_points: 'Points', st_gp: 'GP', st_w: 'W', st_d: 'D', st_l: 'L', st_gd: 'GD', st_pts: 'Pts', st_pct: '%', st_gb: 'GB', st_loading: 'Loading standings…', st_none: 'Standings unavailable right now.',
     notif_live: 'Live', notif_final: 'Final', notif_live_b: 'A game you follow ⭐ just started', notif_final_b: 'A game you follow ⭐ just ended',
     r_search_ph: 'Search any wallet (0x… or link)', r_search_go: 'Search', r_ws_bad: 'Invalid address. Paste a 0x… wallet or a Polymarket profile link.', r_ws_empty: 'No recent moves.', r_ws_moves: 'moves', r_ws_vol: 'volume', r_ws_recent: 'Recent moves', r_ws_note: 'Live lookup of this wallet\'s recent activity — raw data, without our anti-manipulation filter. For the full history, open its Polymarket profile ↗.',
     r_cat_all: 'All', r_no_cat: 'No accounts in this category.', r_share: 'Share', r_share_txt: 'Check this wallet on the AA Radar', r_copied: 'Link copied ✓', track_measuring: 'measuring for', track_days: 'days',
@@ -2946,7 +2950,8 @@ function renderSportStandings(){
   $('lgcount').innerHTML = '';
   const html = standingsHtml();
   const key = sport === 'soccer' ? `soccer:${soccerLeague}` : sport;
-  $('list').innerHTML = html || `<div class="lempty">${standingsCache.has(key) ? t('st_none') : t('st_loading')}</div>`;
+  const body = html || `<div class="lempty">${standingsCache.has(key) ? t('st_none') : t('st_loading')}</div>`;
+  $('list').innerHTML = pageHead(t('st_title'), t('st_sub')) + body;
 }
 // Boleto del día: junta las mejores selecciones AA de hoy (fijos ORO/PLATA +
 // gemas) en una tarjeta compacta arriba de la lista. Honesto: número calibrado,
@@ -4443,7 +4448,7 @@ async function loadOther(){
   if (pendingOther){ const hit = otherGames.find(x => String(x.espn_id) === String(pendingOther)); if (hit){ otherSel = hit.espn_id; } pendingOther = null; }
   loadStandings();
   if (['wnba', 'nfl'].includes(sport) || (qaMode && ['ncaaf', 'nhl', 'ncaam'].includes(sport))) loadLearning();
-  if (sport === 'soccer') loadSoccerPreds();
+  if (sport === 'soccer') await loadSoccerPreds();
   if (sport !== 'mlb') renderAll();
 }
 
