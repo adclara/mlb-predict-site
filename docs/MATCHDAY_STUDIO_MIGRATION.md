@@ -45,6 +45,11 @@ hero con silo MLB si hay person id, logos ESPN 500-dark. Sin cambios de pick/gat
 Resumen → Equipos → Pitchers → resto. Cada PR es squash-mergeable y reversible.
 No abrir Totales/Jugadores/Combos.
 
+**Hecho 2026-09-15:** `AA_STUDIO_VIEWS_V1` en el HTML único. Pestañas de partido
+Resumen / Equipos / Pitchers / Bateadores / Total / Jugadores / Combos /
+Simulación / Mercado. Abridores con silo MLB oficial (no midfield). Total,
+Jugadores y Combos muestran `gatePanel` cerrado. Sin cambios de pick/gates.
+
 ### Fase 4 — Resto de app
 Inicio, Partidos, Historial, Cerebro, Educación, Herramientas, Config. ES+EN.
 
@@ -69,8 +74,9 @@ Familias: navy NYY LAD SEA MIN DET CHC KC TOR TEX COL CWS; red CIN STL BOS LAA P
 
 - Fase 0: skill + master prompt + pack de arte. Hecho.
 - Fase 1: `heroArt` / `PlayerFace` cableados. 30 logos ESPN. 29 fotos oficiales de la jornada. Retratos 80% de los abridores con id. Hecho en Studio.
-- Fase 2: tokens + rail + hero silo en el HTML único (`AA_STUDIO_TOKENS_V1`). Hecho.
-- Fase 3–5: restyle de vistas de partido una a una, QA Playwright, poke-deploy.
+- Fase 2: tokens + rail + hero silo en el HTML único (`AA_STUDIO_TOKENS_V1`). Hecho ([#256](https://github.com/adclara/mlb-predict-site/pull/256)).
+- Fase 3: vistas de partido (`AA_STUDIO_VIEWS_V1`): pestañas Studio, silos oficiales, gates Total/Jugadores/Combos cerrados.
+- Fase 4–5: resto de app, QA Playwright, poke-deploy.
 
 ## Riesgos
 
