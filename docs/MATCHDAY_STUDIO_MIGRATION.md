@@ -37,6 +37,10 @@ Rama `agent/studio-tokens` en `mlb-predict-site`.
 Copiar paleta, tipografía, rail, topbar, hero al HTML **sin** cambiar `dPick` / publicación.
 Mantener `id="authbox"`, date guard, `T`/`t()`, ticker, Central AA.
 
+**Hecho 2026-09-15:** `AA_STUDIO_TOKENS_V1` en `cloudflare/pages/index.html`.
+Night-blue (`#060c15`), Manrope + Barlow Condensed, rail 184→78→oculto <900px,
+hero con silo MLB si hay person id, logos ESPN 500-dark. Sin cambios de pick/gates.
+
 ### Fase 3 — Vistas de partido en producción
 Resumen → Equipos → Pitchers → resto. Cada PR es squash-mergeable y reversible.
 No abrir Totales/Jugadores/Combos.
@@ -65,7 +69,8 @@ Familias: navy NYY LAD SEA MIN DET CHC KC TOR TEX COL CWS; red CIN STL BOS LAA P
 
 - Fase 0: skill + master prompt + pack de arte. Hecho.
 - Fase 1: `heroArt` / `PlayerFace` cableados. 30 logos ESPN. 29 fotos oficiales de la jornada. Retratos 80% de los abridores con id. Hecho en Studio.
-- Fase 2–5: pendientes en `mlb-predict-site` (tokens en el HTML único, no sustituir por React).
+- Fase 2: tokens + rail + hero silo en el HTML único (`AA_STUDIO_TOKENS_V1`). Hecho.
+- Fase 3–5: restyle de vistas de partido una a una, QA Playwright, poke-deploy.
 
 ## Riesgos
 

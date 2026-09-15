@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AA Sports — Los datos deciden</title>
 <meta name="description" content="Predicciones deportivas con IA. Marcadores en vivo, métricas honestas y el análisis del algoritmo AA. Tú decides.">
-<meta name="theme-color" content="#080B12">
+<meta name="theme-color" content="#060c15">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,23 +29,28 @@
 <style>
 /* ═════════ TOKENS ═════════ */
 :root{
-  --page:#0A0C11;
-  --panel:rgba(255,255,255,.045); --panel-2:rgba(255,255,255,.085); --inner:rgba(7,9,14,.5);
-  --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.18);
-  /* jerarquía Apple-style: texto secundario por opacidad sobre blanco */
-  --text:#F2F4F8; --dim:rgba(242,244,248,.62); --faint:rgba(242,244,248,.40);
-  --blaze:#FF4D1C; --volt:#19DE9F; --amber:#FFC53D; --sky:#4DA8FF; --red:#FF4655;
-  --grad:linear-gradient(100deg,#FF4D1C,#FFC53D 55%,#19DE9F);
-  --glass:blur(22px) saturate(150%);
-  --shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 1px 2px rgba(0,0,0,.35), 0 14px 34px -16px rgba(0,0,0,.6);
+  /* AA_STUDIO_TOKENS_V1 — paleta Matchday Studio; mismos nombres de variable */
+  --rail:184px;
+  --page:#060c15;
+  --panel:#0b1624e6; --panel-2:#101f30; --inner:#101f30d9;
+  --hair:#21354c; --hair-2:#2d4a68;
+  --text:#f2f5fc; --dim:#a0b0c6; --faint:#7d91aa;
+  --blaze:#4da8ff; --volt:#32dfb4; --amber:#f8c657; --sky:#4da8ff; --red:#ff6277;
+  --grad:linear-gradient(100deg,#94d3ff,#1c87e9 55%,#32dfb4);
+  --glass:blur(16px) saturate(140%);
+  --shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 1px 2px rgba(0,0,0,.35), 0 14px 48px #0003;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scrollbar-color:#2A3342 var(--page);overflow-x:hidden}
 body{
   background:var(--page); color:var(--text);
-  font:14.5px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Inter",Roboto,Helvetica,Arial,sans-serif;
+  font:14.5px/1.5 Manrope,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   min-height:100vh;
+  padding-left:var(--rail);
   overflow-x:hidden; /* clip de desborde horizontal accidental (glow/ticker) en móvil */
+}
+.wordmark, .dteam .nm, .dscore, .prob-pct, .sp, h2, h3{
+  font-family:"Barlow Condensed",Manrope,sans-serif;
 }
 /* ambiente de color detrás del vidrio (liquid glass) */
 body::before{
@@ -50,7 +58,7 @@ body::before{
   transform:translate3d(0, calc(var(--refract, 0px) * -1), 0);
   will-change:transform;
   background:
-    radial-gradient(42% 34% at 82% 4%,  rgba(255,77,28,.14), transparent 70%),
+    radial-gradient(42% 34% at 82% 4%,  rgba(77,168,255,.16), transparent 70%),
     radial-gradient(38% 30% at 8% 12%,  rgba(77,168,255,.11), transparent 70%),
     radial-gradient(34% 30% at 55% 96%, rgba(25,222,159,.08), transparent 70%),
     radial-gradient(30% 26% at 30% 55%, rgba(255,197,61,.05), transparent 70%);
@@ -59,7 +67,7 @@ body::before{
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 img{max-width:100%;display:block}
 .num{font-variant-numeric:tabular-nums}
-::selection{background:rgba(255,77,28,.35)}
+::selection{background:rgba(77,168,255,.35)}
 :focus-visible{outline:2px solid var(--sky);outline-offset:2px;border-radius:6px}
 .lbl{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
 
@@ -98,8 +106,8 @@ body::before{animation:glowShift 14s ease-in-out infinite}
 /* ═════════ HEADER ═════════ */
 header{
   position:sticky;top:0;z-index:90;
-  background:linear-gradient(180deg,rgba(12,14,20,.78),rgba(12,14,20,.62));
-  backdrop-filter:blur(26px) saturate(160%);-webkit-backdrop-filter:blur(26px) saturate(160%);
+  background:linear-gradient(180deg,rgba(6,12,21,.94),rgba(8,15,26,.82));
+  backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
   border-bottom:1px solid var(--hair);box-shadow:inset 0 -1px 0 rgba(255,255,255,.03);
 }
 .hwrap{max-width:1380px;margin:0 auto;padding:11px 20px;display:flex;align-items:center;gap:16px}
@@ -171,11 +179,10 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .layout{max-width:1380px;margin:0 auto;padding:16px 20px 80px;display:grid;grid-template-columns:400px minmax(0,1fr) 308px;gap:16px;align-items:start}
 /* ═════ GLASS ENGINE 2.0 — clases reutilizables ═════ */
 .glass,.pane{
-  background:linear-gradient(165deg,rgba(255,255,255,.095),rgba(255,255,255,.03) 40%,rgba(255,255,255,.055));
+  background:linear-gradient(145deg,#0c1929,#091421 85%);
   backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
-  border:1px solid rgba(255,255,255,.14);border-radius:18px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 .5px rgba(255,255,255,.04),
-             0 1px 2px rgba(0,0,0,.35), 0 18px 44px -20px rgba(0,0,0,.65);
+  border:1px solid var(--hair);border-radius:13px;
+  box-shadow:var(--shadow);
 }
 .glass-inset{background:var(--inner);border:1px solid var(--hair);border-radius:12px}
 
@@ -389,7 +396,16 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .sharebtn:hover{color:var(--volt);border-color:var(--volt)}
 .dclose{margin-left:auto;width:30px;height:30px;display:none;place-items:center;border-radius:9px;color:var(--dim)}
 .dclose:hover{background:var(--panel-2)}
-.dhero{padding:20px 22px 18px;text-align:center}
+.dhero{padding:20px 22px 18px;text-align:center;position:relative;isolation:isolate;overflow:hidden;min-height:220px;
+  background:
+    radial-gradient(ellipse at 8% 90%, #6d182940, transparent 55%),
+    radial-gradient(ellipse at 92% 40%, #1a528240, transparent 52%),
+    linear-gradient(95deg,#180e1c,#070e18 47%,#0b1a2d);}
+.dhero-portrait{position:absolute;bottom:0;height:100%;width:28%;object-fit:cover;object-position:top;z-index:0;opacity:.82;pointer-events:none;}
+.dhero-portrait.left{left:0;-webkit-mask-image:linear-gradient(to right,black 42%,transparent);mask-image:linear-gradient(to right,black 42%,transparent);}
+.dhero-portrait.right{right:0;-webkit-mask-image:linear-gradient(to left,black 40%,transparent);mask-image:linear-gradient(to left,black 40%,transparent);}
+.dhero .dwhen,.dhero .dgrid,.dhero-note{position:relative;z-index:1}
+.dhero-note{margin-top:10px;font-size:10px;color:var(--faint);letter-spacing:.04em;text-transform:uppercase}
 .dwhen{display:inline-block;font-size:12.5px;color:var(--dim);background:var(--inner);border:1px solid var(--hair);border-radius:8px;padding:4px 12px;margin-bottom:16px}
 .dgrid{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:start}
 .dteam{display:flex;flex-direction:column;align-items:center;gap:7px;padding-top:4px}
@@ -432,7 +448,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .ww-head .eng{font-size:11px;color:var(--faint)}
 .probhead{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:7px}
 .probtrack{height:9px;border-radius:6px;background:var(--panel-2);overflow:hidden;display:flex}
-.probtrack .aw{background:#FF6B3D;height:100%}
+.probtrack .aw{background:var(--sky);height:100%}
 .probtrack .hm{background:var(--volt);height:100%}
 .probtrack.f3 .tie{background:var(--hair-2);height:100%}
 /* Mercados primero: selector común + comparación vertical accesible. */
@@ -454,12 +470,12 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .prob-neutral{position:absolute;left:0;right:0;bottom:calc(33px + (100% - 105px)/2);border-top:1px dashed var(--faint);z-index:2}
 .prob-neutral span{position:absolute;left:0;top:-19px;font-size:10px;font-weight:800;color:var(--faint)}
 .prob-col{position:relative;display:grid;grid-template-rows:auto 44px 1fr auto;justify-items:center;min-width:0;z-index:3}
-.prob-pct{font-size:28px;font-weight:900;line-height:1;color:#ff6b3d}
+.prob-pct{font-size:28px;font-weight:900;line-height:1;color:var(--sky)}
 .prob-col.home .prob-pct{color:var(--volt)}
 .prob-logo{height:40px;display:grid;place-items:center;margin-top:3px}
 .prob-logo img,.prob-logo .tfall{width:38px;height:38px;object-fit:contain}
 .prob-barwell{height:100%;width:100%;display:flex;align-items:flex-end;justify-content:center}
-.prob-barv{width:50px;min-height:4px;border-radius:9px 9px 3px 3px;background:#ff6b3d;border:1px dashed rgba(255,255,255,.48);box-shadow:0 8px 24px rgba(255,107,61,.12)}
+.prob-barv{width:50px;min-height:4px;border-radius:9px 9px 3px 3px;background:var(--sky);border:1px dashed rgba(255,255,255,.48);box-shadow:0 8px 24px rgba(77,168,255,.12)}
 .prob-col.home .prob-barv{background:var(--volt);border-style:solid;box-shadow:0 8px 24px rgba(25,222,159,.13)}
 .prob-name{max-width:150px;font-size:12.5px;font-weight:800;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-top:7px}
 .market-callout{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;border:1px solid rgba(25,222,159,.32);background:rgba(25,222,159,.055);border-radius:12px;padding:11px 13px;font-size:13px;color:var(--dim)}
@@ -1265,11 +1281,30 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 .fwrap b{color:var(--dim)}
 
 /* ═════════ RESPONSIVE ═════════ */
+/* ═════════ RAIL STUDIO ═════════ */
+.aa-rail{position:fixed;inset:0 auto 0 0;width:var(--rail);z-index:120;
+  background:linear-gradient(160deg,#0b1522,#080f1a);border-right:1px solid var(--hair);
+  display:flex;flex-direction:column;padding:18px 10px 14px;gap:4px}
+.aa-rail .aa-raillogo{display:flex;align-items:center;gap:8px;padding:4px 8px 16px;text-decoration:none;color:var(--text);flex-shrink:0}
+.aa-rail .aa-raillogo b{font-family:"Barlow Condensed",sans-serif;font-size:18px;letter-spacing:.04em;font-style:italic}
+.aa-railbtn{height:42px;border:1px solid transparent;border-radius:8px;padding:0 12px;display:flex;align-items:center;gap:10px;
+  color:var(--dim);font-size:12px;font-weight:650;width:100%;text-align:left;background:transparent}
+.aa-railbtn:hover{color:var(--text);background:rgba(77,168,255,.08)}
+.aa-railbtn.on{color:#e9f4ff;background:linear-gradient(105deg,#123361,#102143);border-color:#1d4471;box-shadow:inset 3px 0 var(--sky)}
+.aa-rail .rlabel{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aa-rail .rail-foot{margin-top:auto;padding:10px 8px 0;font-size:10px;color:var(--faint);line-height:1.45;border-top:1px solid var(--hair)}
 @media (max-width:1180px){
+  :root{--rail:78px}
+  .aa-rail{padding:18px 8px 14px}
+  .aa-rail .rlabel,.aa-rail .rail-foot,.aa-rail .aa-raillogo span{display:none}
+  .aa-railbtn{justify-content:center;padding:0}
   .layout{grid-template-columns:380px minmax(0,1fr)}
   .colside{display:none}
 }
 @media (max-width:900px){
+  :root{--rail:0px}
+  .aa-rail{display:none}
+  body{padding-left:0}
   .layout{display:flex;flex-direction:column;padding:12px 12px 60px}
   /* En columna, un hijo ancho (ticker, pestañas, fecha) NO debe ensanchar la
      columna y cortar el contenido por la derecha: se encogen al ancho del móvil
@@ -1305,6 +1340,26 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 </head>
 <body>
 
+<aside class="aa-rail" id="aaRail" aria-label="Navegación principal">
+  <a class="aa-raillogo" href="#" aria-label="AA Sports — inicio" data-i18n-aria="aria_home">
+    <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="15" fill="#0b1624"/>
+      <g transform="skewX(-9)" fill="url(#lg)">
+        <path d="M22 46 L32 18 L38 18 L28 46 Z"/><path d="M36 46 L46 18 L52 18 L42 46 Z"/>
+      </g>
+    </svg>
+    <span><b>AA Sports</b></span>
+  </a>
+  <button type="button" class="aa-railbtn" data-rail="radar"><span aria-hidden="true">◎</span><span class="rlabel" data-i18n="intel_nav">Central AA</span></button>
+  <button type="button" class="aa-railbtn on" data-rail="mlb"><span aria-hidden="true">▣</span><span class="rlabel" data-i18n="matches">Partidos</span></button>
+  <button type="button" class="aa-railbtn" data-rail="favs"><span aria-hidden="true">★</span><span class="rlabel" data-i18n="tab_favs">Favoritos</span></button>
+  <button type="button" class="aa-railbtn" data-rail="analisis"><span aria-hidden="true">⌖</span><span class="rlabel" data-i18n="tab_analysis">Análisis</span></button>
+  <button type="button" class="aa-railbtn" data-rail="pos"><span aria-hidden="true">☰</span><span class="rlabel" data-i18n="tab_standings">Posiciones</span></button>
+  <button type="button" class="aa-railbtn" data-rail="hist"><span aria-hidden="true">↺</span><span class="rlabel" data-i18n="tab_hist">Historial</span></button>
+  <button type="button" class="aa-railbtn" data-rail="brain"><span aria-hidden="true">✦</span><span class="rlabel" data-i18n="tab_brain">Cerebro</span></button>
+  <div class="rail-foot">MLB publicado<br>otros en gate</div>
+</aside>
+
 <script src="vendor/lottie_light.min.js" defer></script>
 <script src="vendor/gsap.min.js" defer></script>
 <script src="vendor/Flip.min.js" defer></script>
@@ -1314,7 +1369,7 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     <a class="logo" href="#" aria-label="AA Sports — inicio" data-i18n-aria="aria_home">
       <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true">
         <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#FF4D1C"/><stop offset=".55" stop-color="#FFC53D"/><stop offset="1" stop-color="#19DE9F"/>
+          <stop offset="0" stop-color="#94d3ff"/><stop offset=".55" stop-color="#4da8ff"/><stop offset="1" stop-color="#1c87e9"/>
         </linearGradient></defs>
         <rect width="64" height="64" rx="15" fill="#151A23"/>
         <g transform="skewX(-9)" fill="url(#lg)">
@@ -1802,6 +1857,8 @@ const T = {
     pred_pending: 'Predicción AA aún no publicada', pred_overdue: 'Publicación atrasada · recuperación automática activa',
     pred_invalid_list: 'Pronóstico invalidado · cambió el abridor',
     pred_invalid_detail: 'Pronóstico AA invalidado: cambió el abridor probable. El análisis original ya no aplica.',
+    hero_photo_note: 'Foto oficial MLB del abridor probable.',
+    rail_live: 'MLB publicado · otros en gate',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -2012,6 +2069,8 @@ const T = {
     pred_pending: 'AA prediction not published yet', pred_overdue: 'Publication delayed · automatic recovery active',
     pred_invalid_list: 'Prediction invalidated · starter changed',
     pred_invalid_detail: 'AA prediction invalidated: the probable starter changed. The original analysis no longer applies.',
+    hero_photo_note: 'Official MLB photo of the probable starter.',
+    rail_live: 'MLB published · others gated',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
       <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
@@ -2104,7 +2163,7 @@ const CANON = {
 };
 const canon = c => CANON[String(c || '').toUpperCase()] || String(c || '').toUpperCase();
 const tNick = c => (TEAMS[canon(c)] || [c])[0];
-const tLogo = c => { const t = TEAMS[canon(c)]; return t ? `https://a.espncdn.com/i/teamlogos/mlb/500/${t[1]}.png` : null; };
+const tLogo = c => { const t = TEAMS[canon(c)]; return t ? `https://a.espncdn.com/i/teamlogos/mlb/500-dark/${t[1]}.png` : null; };
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const key = (a, h) => canon(a) + '@' + canon(h);
@@ -2113,6 +2172,12 @@ function logoImg(code){
   if (!url) return `<span class="tfall">${esc(canon(code))}</span>`;
   return `<img src="${url}" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;tfall&quot;>${esc(canon(code))}</span>'">`;
 }
+function siloFace(id, name, side){
+  if (!id) return '';
+  const alt = name ? esc(name) : '';
+  return `<img class="dhero-portrait ${side}" alt="${alt}" src="https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_80/v1/people/${id}/headshot/silo/current" loading="lazy" onerror="this.remove()">`;
+}
+
 
 /* ── Simulación Monte Carlo del juego ─────────────────────────────────────
    10,000 corridas derivadas SOLO de números ya publicados (prob del modelo
@@ -2932,7 +2997,7 @@ function aaGauge(pct, pickNick){
     </svg>
     <span class="pc num">${Math.round(pct)}%</span>
     <svg width="0" height="0"><defs><linearGradient id="aagrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#FF4D1C"/><stop offset="1" stop-color="#19DE9F"/></linearGradient></defs></svg>
+      <stop offset="0" stop-color="#4da8ff"/><stop offset="1" stop-color="#32dfb4"/></linearGradient></defs></svg>
   </div>
   <div class="gaugelbl">${t('d_wins_lbl')}<b>${esc(pickNick)}</b></div>`;
 }
@@ -3626,12 +3691,15 @@ function renderDetail(){
       <button class="sharebtn" data-share="mlb" data-shid="${esc(ev.event_id)}" title="${t('share')}" aria-label="${t('share')}">${SHARE_SVG}</button>
     </div>
     <div class="dhero">
+      ${siloFace(ev.snapshot && ev.snapshot.pitchers && ev.snapshot.pitchers.away && ev.snapshot.pitchers.away.id, ev.snapshot && ev.snapshot.pitchers && ev.snapshot.pitchers.away && ev.snapshot.pitchers.away.name, 'left')}
+      ${siloFace(ev.snapshot && ev.snapshot.pitchers && ev.snapshot.pitchers.home && ev.snapshot.pitchers.home.id, ev.snapshot && ev.snapshot.pitchers && ev.snapshot.pitchers.home && ev.snapshot.pitchers.home.name, 'right')}
       <span class="dwhen num">${esc(ev.start && String(ev.start).includes('T') ? new Date(ev.start).toLocaleString(LOCALE(), { dateStyle: 'medium', timeStyle: 'short' }) : (ev.start || ''))}${ev.result ? `<span class="reschip ${ev.result === 'win' ? 'won' : 'lost'}">${ev.result === 'win' ? '✓ ' + t('pick_hit') : '✗ ' + t('pick_miss')}</span>` : ''}</span>
       <div class="dgrid">
         <div class="dteam">${logoImg(ev.away.code)}<span class="nm">${esc(CITY[canon(ev.away.code)] || '')}<br>${esc(tNick(ev.away.code))}</span>${recA}</div>
         <div class="dmid">${mid}</div>
         <div class="dteam">${logoImg(ev.home.code)}<span class="nm">${esc(CITY[canon(ev.home.code)] || '')}<br>${esc(tNick(ev.home.code))}</span>${recH}</div>
       </div>
+      ${(ev.snapshot && ev.snapshot.pitchers && ((ev.snapshot.pitchers.away && ev.snapshot.pitchers.away.id) || (ev.snapshot.pitchers.home && ev.snapshot.pitchers.home.id))) ? `<p class="dhero-note">${t('hero_photo_note')}</p>` : ''}
     </div>
     <div class="dtabs">
       <button class="dtab ${dtab === 'analisis' ? 'on' : ''}" data-dt="analisis">${t('tab_analysis')}</button>
@@ -3773,6 +3841,32 @@ document.addEventListener('click', e => {
   if (dt){ dtab = dt.dataset.dt; renderDetail(); return; }
   const market = e.target.closest('[data-market-kind]');
   if (market){ marketTab = market.dataset.marketKind || 'winner'; sport === 'mlb' ? renderDetail() : renderOtherDetail(); return; }
+  const railBtn = e.target.closest('[data-rail]');
+  if (railBtn){
+    const v = railBtn.dataset.rail;
+    if (v === 'radar' || v === 'mlb'){
+      if (sport !== v) setSport(v);
+    } else {
+      if (sport !== 'mlb') setSport('mlb');
+      const tabKey = v === 'analisis' ? 'all' : v;
+      const tab = document.querySelector('.ltab[data-lt="'+tabKey+'"]');
+      if (tab){
+        listTab = tab.dataset.lt;
+        document.querySelectorAll('.ltab').forEach(c => c.classList.toggle('on', c === tab));
+        document.getElementById('pills').style.display = (listTab === 'hist' || listTab === 'pos' || listTab === 'brain') ? 'none' : '';
+        if (listTab === 'hist') loadHistory();
+        if (listTab === 'pos') loadStandings();
+        if (listTab === 'brain') loadLearning();
+        renderList(); renderDetail();
+      }
+      if (v === 'analisis'){
+        const first = document.querySelector('.mrow[data-id]');
+        if (first) select(first.dataset.id, true);
+      }
+    }
+    syncRail();
+    return;
+  }
   const lt = e.target.closest('.ltab');
   if (lt){
     listTab = lt.dataset.lt;
@@ -3781,7 +3875,9 @@ document.addEventListener('click', e => {
     if (listTab === 'hist') loadHistory();
     if (listTab === 'pos') loadStandings();
     if (listTab === 'brain') loadLearning();
-    renderList(); renderDetail(); return;
+    renderList(); renderDetail();
+    syncRail();
+    return;
   }
   const f = e.target.closest('.pill[data-f]');
   if (f){
@@ -5413,6 +5509,17 @@ function renderLeagueChips(){
     `<button class="pill ${k === soccerLeague ? 'on neutral' : ''}" data-lg="${esc(k)}">${esc(v)}</button>`).join('');
 }
 
+function syncRail(){
+  const map = sport === 'radar' ? 'radar'
+    : listTab === 'favs' ? 'favs'
+    : listTab === 'pos' ? 'pos'
+    : listTab === 'hist' ? 'hist'
+    : listTab === 'brain' ? 'brain'
+    : 'mlb';
+  document.querySelectorAll('[data-rail]').forEach(b => b.classList.toggle('on', b.dataset.rail === map));
+  const foot = document.querySelector('.aa-rail .rail-foot');
+  if (foot) foot.innerHTML = t('rail_live').replace(' · ', '<br>');
+}
 function setSport(sp2){
   sport = sp2;
   listTab = 'all'; filter = 'all'; otherSel = null; otherGames = []; marketTab = 'winner';
@@ -5433,6 +5540,7 @@ function setSport(sp2){
   $('wRecord').style.display = sport === 'mlb' ? '' : 'none';
   updateTrainWidget();
   $('ticker').hidden = sport !== 'mlb' || !$('tk').children.length;
+  syncRail();
   document.querySelector('.lghead .ttl').textContent = sport === 'mlb' ? 'MLB' : sportLabel(sport);
   document.querySelector('.lghead .sub').textContent = sport === 'mlb' ? t('season')
     : sport === 'radar' ? t('radar_sub')
