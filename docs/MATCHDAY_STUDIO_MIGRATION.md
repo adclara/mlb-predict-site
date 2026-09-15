@@ -62,6 +62,14 @@ Sin cambios de pick/gates.
 ### Fase 5 — QA y publicación
 Playwright 1440/390/360. `qa_check.mjs`. Poke-deploy. Verificar aasport.net y pages.dev.
 
+**Hecho 2026-09-15:** `AA_STUDIO_QA_V1`. Favicon y marca del rail en night-blue.
+Posiciones con encabezado medido. Soccer espera `/v1/soccer/today` antes del primer
+pintado (chip AA visible). Suite UI: MLB live, intelligence, reliability (108),
+value (51), qa_shadow, legacy_evidence, lock_gate. Worker + Pages verdes;
+el gate WNBA ESPN 403 no revierte el frontend.
+
+
+
 ## Arte
 
 | Recurso | Fuente | Uso |
@@ -83,7 +91,7 @@ Familias: navy NYY LAD SEA MIN DET CHC KC TOR TEX COL CWS; red CIN STL BOS LAA P
 - Fase 2: tokens + rail + hero silo en el HTML único (`AA_STUDIO_TOKENS_V1`). Hecho ([#256](https://github.com/adclara/mlb-predict-site/pull/256)).
 - Fase 3: vistas de partido (`AA_STUDIO_VIEWS_V1`): pestañas Studio, silos oficiales, gates Total/Jugadores/Combos cerrados.
 - Fase 4: resto de app (`AA_STUDIO_APP_V1`): Inicio, Partidos, Historial, Cerebro, Educación, Herramientas, Config. ES+EN.
-- Fase 5: QA Playwright, poke-deploy.
+- Fase 5: QA Playwright + `AA_STUDIO_QA_V1` (favicon/rail, posiciones, soccer AA).
 
 ## Riesgos
 
