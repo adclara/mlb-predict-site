@@ -436,11 +436,22 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .lvsum{font-size:11.5px;color:var(--dim);margin-left:auto;flex-shrink:0}
 .lvplay{font-size:11.5px;color:var(--dim);border-top:1px solid var(--hair-2);padding-top:6px;line-height:1.45}
 
-.dtabs{display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--hair)}
-.dtab{font-size:14px;font-weight:700;color:var(--dim);padding:10px 14px;border-bottom:2px solid transparent;transition:color .15s}
+/* AA_STUDIO_VIEWS_V1 — pestañas Matchday + silos; gates Total/Jugadores/Combos cerrados */
+.dtabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--hair);
+  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.dtabs::-webkit-scrollbar{display:none}
+.dtab{flex:none;font-size:13px;font-weight:700;color:var(--dim);padding:11px 13px;border-bottom:2px solid transparent;
+  transition:color .15s;scroll-snap-align:start;letter-spacing:.01em;white-space:nowrap}
 .dtab:hover{color:var(--text)}
-.dtab.on{color:var(--sky);border-bottom-color:var(--sky)}
+.dtab.on{color:var(--sky);border-bottom-color:var(--sky);text-shadow:0 0 18px rgba(77,168,255,.35)}
+.dtab.locked{opacity:.78}
+.dtab.locked small{display:block;font-size:8.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);line-height:1;margin-top:2px}
 .dbody{padding:16px 20px 20px}
+@media(max-width:520px){
+  .pgrid,.formgrid{grid-template-columns:1fr}
+  .dtab{font-size:12.5px;padding:10px 11px}
+  .pstats4{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
 
 .whowin{background:var(--inner);border:1px solid var(--hair);border-radius:14px;padding:16px 18px;margin-bottom:14px}
 .ww-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
@@ -518,7 +529,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .cmpwrap{display:flex;flex-direction:column;align-items:center;gap:5px}
 .cmpbar{position:relative;height:8px;width:100%;border-radius:5px;background:var(--panel-2);overflow:hidden}
 .cmpbar::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--hair-2);z-index:1}
-.cmpbar .cmpa{position:absolute;right:50%;height:100%;background:#FF6B3D;border-radius:5px 0 0 5px;transform-origin:right}
+.cmpbar .cmpa{position:absolute;right:50%;height:100%;background:var(--sky);border-radius:5px 0 0 5px;transform-origin:right}
 .cmpbar .cmph{position:absolute;left:50%;height:100%;background:var(--volt);border-radius:0 5px 5px 0;transform-origin:left}
 .cmpl{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
 .dcard.enter .cmpbar .cmpa,.dcard.enter .cmpbar .cmph{animation:barIn .6s .1s cubic-bezier(.2,.7,.3,1) both}
@@ -554,7 +565,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .mstatl{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);text-align:center;flex:1}
 .mstatbar{display:flex;height:6px;border-radius:4px;overflow:hidden;background:var(--panel-2);margin-top:6px;gap:2px}
 .mstatbar .mseg{height:100%;border-radius:3px}
-.mstatbar .mseg.a{background:#FF6B3D}
+.mstatbar .mseg.a{background:var(--sky)}
 .mstatbar .mseg.h{background:var(--volt)}
 .dcard.enter .mstatbar .mseg{animation:barIn .5s .05s cubic-bezier(.2,.7,.3,1) both}
 .soclu .luname{flex:1;min-width:0}
@@ -588,7 +599,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .bigprob{font-size:18.5px;font-weight:800;color:var(--volt)}
 .confpill{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border:1px solid var(--hair-2);padding:3px 10px;border-radius:999px}
 
-.secttl{font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:16px 0 9px}
+.secttl{font-family:"Barlow Condensed",Manrope,sans-serif;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:16px 0 9px}
 .secttl:first-child{margin-top:0}
 .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
 .mcard{background:var(--inner);border:1px solid var(--hair);border-radius:11px;padding:9px 12px}
@@ -622,7 +633,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 }
 .verdict .ic{
   width:34px;height:34px;flex-shrink:0;border-radius:10px;display:grid;place-items:center;
-  background:linear-gradient(120deg,rgba(255,77,28,.18),rgba(255,197,61,.14));
+  background:linear-gradient(120deg,rgba(248,198,87,.22),rgba(77,168,255,.12));
 }
 .verdict p{font-size:14px;line-height:1.65;color:var(--text)}
 .verdict .vt{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);display:block;margin-bottom:3px}
@@ -1156,10 +1167,18 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .ctxgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
 
 /* headshots (caras) */
-.hs{width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;
+.hs{width:44px;height:44px;border-radius:50%;object-fit:cover;object-position:top;flex-shrink:0;
   background:var(--inner);border:1px solid var(--hair-2);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+.hs.sq{width:56px;height:56px;border-radius:10px}
 .hsfall{width:44px;height:44px;border-radius:50%;background:var(--inner);border:1px solid var(--hair-2);
   display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--dim);flex-shrink:0}
+.hs.sq + .hsfall,.pchd .hsfall{width:56px;height:56px;border-radius:10px}
+.pstats4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+.pstat4{text-align:center;background:var(--panel);border:1px solid var(--hair);border-radius:8px;padding:7px 4px;min-width:0}
+.pstat4 b{display:block;font-size:16px;font-weight:800;font-family:"Barlow Condensed",Manrope,sans-serif;color:var(--text)}
+.pstat4 span{display:block;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-top:2px}
+.photocap{display:block;font-size:9.5px;color:var(--faint);margin-top:3px;letter-spacing:.02em}
+.pcard{background:linear-gradient(145deg,#0c1929,#091421 85%);border:1px solid var(--hair);border-radius:13px;padding:13px 14px}
 .sprow{display:flex;gap:11px;align-items:center}
 
 /* razones (por qué esta jugada) */
@@ -1829,7 +1848,7 @@ const T = {
     lineup_na: 'Sin alineación.', lineup_none: 'Sin alineación publicada.', lineup_pending: 'Alineación aún no publicada.', no_box: 'Sin box score.', starter: 'Titular', winner: 'Ganador',
     first_pitch: 'Primer lanzamiento', to_play_today: 'Por jugar hoy', upcoming: 'Por jugar', won_l: 'ganó', lost_l: 'perdió',
     no_recent_games: 'Sin juegos recientes medidos.', no_data_enough: 'Sin datos suficientes aún.', bats_hot: '🔥 Bates calientes', bats_cold: '❄️ Bates fríos', bats_normal: 'Bates normales', no_data_yet: 'Sin datos aún.', no_snapshot: 'Snapshot no disponible para este juego todavía.', no_sim: 'Simulación no disponible: este juego no tiene predicción publicada.',
-    pick_hit: 'pick acertado', pick_miss: 'pick fallado', tab_analysis: 'Análisis AA', tab_sim: 'Simulación', postponed: 'Pospuesto',
+    pick_hit: 'pick acertado', pick_miss: 'pick fallado', tab_analysis: 'Análisis AA', tab_summary: 'Resumen', tab_sim: 'Simulación', tab_pitchers: 'Pitchers', tab_hitters: 'Bateadores', postponed: 'Pospuesto',
     sim_ntimes: 'Simulamos este juego {n} veces', sim_top: 'Marcador más probable', sim_freq: 'Marcadores más frecuentes', sim_runs: 'Carreras totales por juego', sim_margin: '¿Por cuánto gana {t}?', sim_by1: 'Por 1 carrera', sim_by23: 'Por 2-3', sim_by4: 'Por 4+', sim_loses: 'Pierde', sim_of_sims: 'de las simulaciones',
     o_recentnote: 'Sin juegos hoy · mostrando los últimos resultados', o_no_events: 'Sin eventos ahora mismo en {s}.', o_loading: 'Cargando…', o_no_events2: 'Sin eventos por ahora. Vuelve más tarde.', o_compare: 'Comparación', o_lineups: 'Alineaciones', o_match_stats: 'Estadísticas del partido', o_events: 'Eventos', o_team_stats: 'Estadísticas del equipo', o_today: 'HOY', o_toplay: 'Por jugar', o_recent_form: 'Racha reciente', o_prev_form: 'Últimos 5 · temporada anterior', o_leaders: 'Líderes del partido', o_player_data: 'Datos de jugadores', o_player_pending: 'La comparación de jugadores se completa con box scores verificados cuando existen. No la convertimos en probabilidad AA sin validación.', o_injuries: 'Bajas reportadas', o_venue: 'Sede', o_external_predictor: 'Predictor externo de ESPN', o_external_predictor_note: 'Contexto independiente de ESPN; no es una predicción AA ni abre el gate.', o_why_factual: 'Por qué los datos favorecen a este lado', o_reason_market: '{provider} asigna {p} a {team} después de quitar el margen.', o_reason_predictor: 'ESPN Matchup Predictor: {away} {ap} · {home} {hp}.', o_reason_recent: 'Últimos 5 de la temporada anterior: {away} {aw}-{al} · {home} {hw}-{hl}.', o_reason_line: 'Línea actual: {team} {spread} · total {total}.', o_note: 'Datos en vivo vía AA Sports API. Actualización automática cada 45s.', no_data: 'Sin datos.',
     stat_fg: 'Tiros de campo', stat_fg_pct: '% Tiros de campo', stat_3pt: 'Triples', stat_3pt_pct: '% Triples', stat_ft: 'Tiros libres', stat_rebounds: 'Rebotes', stat_assists: 'Asistencias', stat_steals: 'Robos', stat_blocks: 'Tapones', stat_turnovers: 'Pérdidas', stat_fast_break: 'Puntos al contragolpe', stat_paint: 'Puntos en la pintura',
@@ -1859,6 +1878,15 @@ const T = {
     pred_invalid_detail: 'Pronóstico AA invalidado: cambió el abridor probable. El análisis original ya no aplica.',
     hero_photo_note: 'Foto oficial MLB del abridor probable.',
     rail_live: 'MLB publicado · otros en gate',
+    d_starts_n: 'Inicios',
+    d_pitch_note: 'Rendimiento del abridor con ERA reciente, FIP y K/9. El historial de carrera contra este rival no está conectado. Un cambio de abridor invalida el contexto.',
+    d_hit_note: 'AVG y OPS de temporada del corte. Sin muestra de enfrentamiento directo no hay 0%. El guion no es una probabilidad.',
+    d_pitch_how: 'Qué aporta cada dato',
+    d_pitch_how_hand: 'Mano de lanzamiento: LHP o RHP del feed, cuando el productor la confirma.',
+    d_pitch_how_sample: 'ERA reciente y FIP describen el corte publicado, no una carrera completa.',
+    d_pitch_how_lineup: 'Alineación pendiente: un cambio de abridor invalida el contexto. El productor debe confirmarlo.',
+    d_pitch_how_pre: 'Antes del partido: estas cifras son pregame. No se reescriben con el resultado.',
+    d_gate_tab_note: 'Este mercado sigue en gate. No publicamos un pick hasta validación forward, calibración y aprobación.',
   },
   en: {
     tagline: 'The data decides', search_ph: 'Search teams, games…',
@@ -2041,7 +2069,7 @@ const T = {
     lineup_na: 'No lineup.', lineup_none: 'No lineup published.', lineup_pending: 'Lineup not published yet.', no_box: 'No box score.', starter: 'Starter', winner: 'Winner',
     first_pitch: 'First pitch', to_play_today: 'To be played today', upcoming: 'Upcoming', won_l: 'won', lost_l: 'lost',
     no_recent_games: 'No recent games tracked.', no_data_enough: 'Not enough data yet.', bats_hot: '🔥 Hot bats', bats_cold: '❄️ Cold bats', bats_normal: 'Normal bats', no_data_yet: 'No data yet.', no_snapshot: 'Snapshot not available for this game yet.', no_sim: 'Simulation not available: this game has no published prediction.',
-    pick_hit: 'pick hit', pick_miss: 'pick missed', tab_analysis: 'AA analysis', tab_sim: 'Simulation', postponed: 'Postponed',
+    pick_hit: 'pick hit', pick_miss: 'pick missed', tab_analysis: 'AA analysis', tab_summary: 'Summary', tab_sim: 'Simulation', tab_pitchers: 'Pitchers', tab_hitters: 'Hitters', postponed: 'Postponed',
     sim_ntimes: 'We simulated this game {n} times', sim_top: 'Most likely score', sim_freq: 'Most frequent scores', sim_runs: 'Total runs per game', sim_margin: 'By how much does {t} win?', sim_by1: 'By 1 run', sim_by23: 'By 2-3', sim_by4: 'By 4+', sim_loses: 'Loses', sim_of_sims: 'of the simulations',
     o_recentnote: 'No games today · showing the latest results', o_no_events: 'No events right now in {s}.', o_loading: 'Loading…', o_no_events2: 'No events for now. Check back later.', o_compare: 'Comparison', o_lineups: 'Lineups', o_match_stats: 'Match stats', o_events: 'Events', o_team_stats: 'Team stats', o_today: 'TODAY', o_toplay: 'Upcoming', o_recent_form: 'Recent form', o_prev_form: 'Last 5 · previous season', o_leaders: 'Match leaders', o_player_data: 'Player data', o_player_pending: 'Player comparison fills from verified box scores when available. We do not turn it into an AA probability without validation.', o_injuries: 'Reported injuries', o_venue: 'Venue', o_external_predictor: 'External ESPN predictor', o_external_predictor_note: 'Independent ESPN context; not an AA prediction and does not open the gate.', o_why_factual: 'Why the data favors this side', o_reason_market: '{provider} assigns {p} to {team} after removing vig.', o_reason_predictor: 'ESPN Matchup Predictor: {away} {ap} · {home} {hp}.', o_reason_recent: 'Previous-season last 5: {away} {aw}-{al} · {home} {hw}-{hl}.', o_reason_line: 'Current line: {team} {spread} · total {total}.', o_note: 'Live data via AA Sports API. Auto-refresh every 45s.', no_data: 'No data.',
     stat_fg: 'Field goals', stat_fg_pct: 'Field goal %', stat_3pt: 'Three-pointers', stat_3pt_pct: 'Three-point %', stat_ft: 'Free throws', stat_rebounds: 'Rebounds', stat_assists: 'Assists', stat_steals: 'Steals', stat_blocks: 'Blocks', stat_turnovers: 'Turnovers', stat_fast_break: 'Fast-break points', stat_paint: 'Points in the paint',
@@ -2071,6 +2099,15 @@ const T = {
     pred_invalid_detail: 'AA prediction invalidated: the probable starter changed. The original analysis no longer applies.',
     hero_photo_note: 'Official MLB photo of the probable starter.',
     rail_live: 'MLB published · others gated',
+    d_starts_n: 'Starts',
+    d_pitch_note: 'Starter cut with recent ERA, FIP and K/9. Career history against this opponent is not connected. A starter change invalidates the context.',
+    d_hit_note: 'Season AVG and OPS from the published cut. No head-to-head sample is not 0%. A dash is not a probability.',
+    d_pitch_how: 'What each figure means',
+    d_pitch_how_hand: 'Throwing hand: LHP or RHP from the feed, once the producer confirms it.',
+    d_pitch_how_sample: 'Recent ERA and FIP describe the published cut, not a full career.',
+    d_pitch_how_lineup: 'Pending lineup: a starter change invalidates the context. The producer must confirm it.',
+    d_pitch_how_pre: 'Pregame figures. They are not rewritten with the result.',
+    d_gate_tab_note: 'This market remains gated. We do not publish a pick until forward validation, calibration, and approval.',
     how_html: `<h2>How AA Sports works</h2>
       <div class="howsec"><b>1 · A private model, measured in public.</b> The algorithm runs on servers (never in your browser) and produces a probability per game. Everything you see —picks, probabilities, record— is stored exactly as published and <b>is never rewritten</b>.</div>
       <div class="howsec"><b>2 · Validation before publishing.</b> Each sport is tested with walk-forward simulations over years of history (MLB, plus soccer validated on 11 seasons, NBA on 10 and tennis on a decade of matches). If a model doesn't pass our honesty tests, <b>it isn't published</b> — simple as that.</div>
@@ -2176,6 +2213,11 @@ function siloFace(id, name, side){
   if (!id) return '';
   const alt = name ? esc(name) : '';
   return `<img class="dhero-portrait ${side}" alt="${alt}" src="https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_80/v1/people/${id}/headshot/silo/current" loading="lazy" onerror="this.remove()">`;
+}
+function officialFace(id, name, cls){
+  const ini = (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
+  if (!id) return `<span class="hsfall">${esc(ini)}</span>`;
+  return `<img class="${cls || 'hs'}" alt="${esc(name || '')}" src="https://img.mlbstatic.com/mlb-photos/image/upload/w_180,q_80/v1/people/${id}/headshot/silo/current" loading="lazy" onerror="this.outerHTML='<span class=&quot;hsfall&quot;>${esc(ini)}</span>'">`;
 }
 
 
@@ -3024,25 +3066,19 @@ function cmpRow(label, away, home, higherBetter = true, fmt = (x) => x){
     <span class="cmpv num ${homeFav ? 'lead' : ''}">${home == null ? '—' : fmt(home)}</span>
   </div>`;
 }
-// Tarjeta de jugador (abridor): headshot + mini-barras de FIP/ERA + mano.
 function playerCard(pl, role){
   if (!pl) return `<div class="pcard"><div class="pcr">${esc(role)}</div><div class="pcn">${t('d_tbc')}</div></div>`;
-  const ini = (pl.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
-  const face = pl.id
-    ? `<img class="hs" src="https://midfield.mlbstatic.com/v1/people/${pl.id}/spots/120" alt="" loading="lazy"
-         onerror="this.outerHTML='<span class=&quot;hsfall&quot;>${esc(ini)}</span>'">`
-    : `<span class="hsfall">${esc(ini)}</span>`;
+  const face = officialFace(pl.id, pl.name, 'hs sq');
   const hand = pl.hand ? `<span class="handpill">${pl.hand === 'L' ? 'LHP' : 'RHP'}</span>` : '';
-  const bar = (lb, val, max) => val == null ? '' : `<div class="pstat">
-      <span class="pl">${lb}</span>
-      <span class="pbar"><i style="width:${Math.max(6, Math.min(100, (1 - Math.min(val, max) / max) * 100))}%"></i></span>
-      <b class="num">${val}</b></div>`;
+  const cap = pl.id ? t('hero_photo_note') : t('d_tbc');
+  const stat = (lb, val) => `<div class="pstat4"><b class="num">${val == null || val === '' ? '—' : val}</b><span>${lb}</span></div>`;
   return `<div class="pcard">
     <div class="pchd">${face}<div style="min-width:0"><div class="pcn">${esc(pl.name || t('d_tbc'))}${hand}</div>
-      <div class="pcr">${esc(role)}</div></div></div>
-    ${bar('FIP', pl.fip, 7)}${bar('ERA', pl.era_recent, 9)}
+      <div class="pcr">${esc(role)}</div><span class="photocap">${esc(cap)}</span></div></div>
+    <div class="pstats4">${stat(t('d_starts_n'), pl.starts)}${stat('ERA', pl.era_recent)}${stat('FIP', pl.fip)}${stat('K/9', pl.k9)}</div>
     ${pl.fatigue ? `<div class="pfat">${t('d_fatigue')} <b class="fat-${esc(pl.fatigue)}">${esc(pl.fatigue)}</b></div>` : ''}
   </div>`;
+
 }
 
 /* ── componentes del detalle de otros deportes (summary de ESPN) ─────────── */
@@ -3362,12 +3398,12 @@ function renderDetail(){
         <span class="num"><b>${Math.round(last.wp * 100)}%</b>${last.half && last.inn ? ` · ${esc(last.half)}${last.inn}` : ''}</span></div>
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${t('d_wp_aria')}">
         <defs><linearGradient id="wpg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="rgba(25,222,159,.35)"/><stop offset="1" stop-color="rgba(25,222,159,0)"/>
+          <stop offset="0" stop-color="rgba(50,223,180,.35)"/><stop offset="1" stop-color="rgba(50,223,180,0)"/>
         </linearGradient></defs>
         <line x1="${PAD}" y1="${H / 2}" x2="${W - PAD}" y2="${H / 2}" stroke="rgba(255,255,255,.12)" stroke-dasharray="3 4"/>
         <path d="${area}" fill="url(#wpg)"/>
-        <path class="wppath" pathLength="1" d="${line}" fill="none" stroke="#19DE9F" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-        <circle cx="${xy[xy.length - 1][0].toFixed(1)}" cy="${xy[xy.length - 1][1].toFixed(1)}" r="3.2" fill="#19DE9F"/>
+        <path class="wppath" pathLength="1" d="${line}" fill="none" stroke="#32dfb4" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${xy[xy.length - 1][0].toFixed(1)}" cy="${xy[xy.length - 1][1].toFixed(1)}" r="3.2" fill="#32dfb4"/>
         <text x="${PAD}" y="${PAD + 8}" font-size="8" fill="rgba(255,255,255,.35)">${t('d_wins_of').replace('{t}', esc(canon(ev.home.code)))}</text>
         <text x="${PAD}" y="${H - PAD - 3}" font-size="8" fill="rgba(255,255,255,.35)">${t('d_wins_of').replace('{t}', esc(canon(ev.away.code)))}</text>
       </svg>
@@ -3459,7 +3495,7 @@ function renderDetail(){
     const rows = lu.length ? lu.map(h => {
       const ini = (h.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
       const face = h.id
-        ? `<img class="luhs" src="https://midfield.mlbstatic.com/v1/people/${h.id}/spots/120" alt="" loading="lazy"
+        ? `<img class="luhs" src="https://img.mlbstatic.com/mlb-photos/image/upload/w_120,q_80/v1/people/${h.id}/headshot/silo/current" alt="" loading="lazy"
              onerror="this.outerHTML='<span class=&quot;hsfall&quot; style=&quot;width:24px;height:24px;font-size:9px&quot;>${esc(ini)}</span>'">`
         : `<span class="hsfall" style="width:24px;height:24px;font-size:9px">${esc(ini)}</span>`;
       const stat = [h.ops != null ? `<b>${h.ops}</b>` : '', h.hr != null ? `<b>${h.hr}</b>HR` : '', h.avg != null ? h.avg : '']
@@ -3572,6 +3608,33 @@ function renderDetail(){
     ${ctxCards.length ? `<div class="secttl">${t('d_context')}</div>
     <div class="ctxgrid">${ctxCards.map(c => `<div class="mcard"><div class="lb">${esc(c.lb)}</div><div class="vl num ${c.cls}" style="font-size:15.5px">${esc(c.vl)}</div></div>`).join('')}</div>` : ''}
     ${!h2h && !snap.form && !duel && !snap.pitchers && !ctxCards.length ? `<div class="wempty">${t('no_snapshot')}</div>` : ''}`;
+
+  const pitchersBlk = `
+    <div class="secttl">${t('d_starters')}</div>
+    <div class="pgrid">${playerCard(snap.pitchers && snap.pitchers.away, t('d_starts_for') + tNick(ev.away.code))}${playerCard(snap.pitchers && snap.pitchers.home, t('d_starts_for') + tNick(ev.home.code))}</div>
+    ${f5card}
+    <p class="propnote">${t('d_pitch_note')}</p>
+    <div class="secttl">${t('d_pitch_how')}</div>
+    <ul class="whylist">
+      <li>${t('d_pitch_how_hand')}</li>
+      <li>${t('d_pitch_how_sample')}</li>
+      <li>${t('d_pitch_how_lineup')}</li>
+      <li>${t('d_pitch_how_pre')}</li>
+    </ul>`;
+
+  const bateadoresBlk = `
+    <div class="secttl">${t('d_hitters')}</div>
+    <div class="formgrid">${hitSide('away', ev.away.code)}${hitSide('home', ev.home.code)}</div>
+    <p class="propnote">${t('d_hit_note')}</p>
+    ${snap.lineups ? `<div class="secttl">${t('d_lineup')}</div>
+    <div class="formgrid">${lineupSide('away', ev.away.code)}${lineupSide('home', ev.home.code)}</div>` : `<div class="wempty">${t('lineup_pending')}</div>`}`;
+
+  const lockedMarketTab = (kind) => {
+    const block = measuredMarketBlock(mlbMarketBlocks[kind], kind);
+    return `<div class="secttl">${t(kind === 'players' ? 'market_players' : kind === 'combos' ? 'market_combos' : 'market_total')}</div>
+      ${gatePanel(block, kind, 'mlb')}
+      <p class="propnote">${t('d_gate_tab_note')}</p>`;
+  };
 
   const o = ev.odds || {};
   const mkt = snap.market;
@@ -3702,13 +3765,18 @@ function renderDetail(){
       ${(ev.snapshot && ev.snapshot.pitchers && ((ev.snapshot.pitchers.away && ev.snapshot.pitchers.away.id) || (ev.snapshot.pitchers.home && ev.snapshot.pitchers.home.id))) ? `<p class="dhero-note">${t('hero_photo_note')}</p>` : ''}
     </div>
     <div class="dtabs">
-      <button class="dtab ${dtab === 'analisis' ? 'on' : ''}" data-dt="analisis">${t('tab_analysis')}</button>
+      <button class="dtab ${dtab === 'analisis' ? 'on' : ''}" data-dt="analisis">${t('tab_summary')}</button>
       ${ev.snapshot ? `<button class="dtab ${dtab === 'equipos' ? 'on' : ''}" data-dt="equipos">${t('d_teams')}</button>` : ''}
+      ${ev.snapshot ? `<button class="dtab ${dtab === 'pitchers' ? 'on' : ''}" data-dt="pitchers">${t('tab_pitchers')}</button>` : ''}
+      ${ev.snapshot ? `<button class="dtab ${dtab === 'bateadores' ? 'on' : ''}" data-dt="bateadores">${t('tab_hitters')}</button>` : ''}
+      ${ev.snapshot ? `<button class="dtab locked ${dtab === 'total' ? 'on' : ''}" data-dt="total">${t('market_total')}<small>${t('market_gate_closed')}</small></button>` : ''}
+      ${ev.snapshot ? `<button class="dtab locked ${dtab === 'players' ? 'on' : ''}" data-dt="players">${t('market_players')}<small>${t('market_gate_closed')}</small></button>` : ''}
+      ${ev.snapshot ? `<button class="dtab locked ${dtab === 'combos' ? 'on' : ''}" data-dt="combos">${t('market_combos')}<small>${t('market_gate_closed')}</small></button>` : ''}
       ${p.prob != null && !p.invalidated ? `<button class="dtab ${dtab === 'sim' ? 'on' : ''}" data-dt="sim">${t('tab_sim')}</button>` : ''}
       <button class="dtab ${dtab === 'mercado' ? 'on' : ''}" data-dt="mercado">${t('d_market')}</button>
     </div>
     <div class="dbody">
-      ${dtab === 'analisis' ? analisis : dtab === 'equipos' ? equipos : dtab === 'sim' ? simulacion : mercado}
+      ${dtab === 'analisis' ? analisis : dtab === 'equipos' ? equipos : dtab === 'pitchers' ? pitchersBlk : dtab === 'bateadores' ? bateadoresBlk : dtab === 'total' ? lockedMarketTab('total') : dtab === 'players' ? lockedMarketTab('players') : dtab === 'combos' ? lockedMarketTab('combos') : dtab === 'sim' ? simulacion : mercado}
       <p class="dnote">${t('d_note')}</p>
     </div>`;
   // índices para el stagger del contenido
