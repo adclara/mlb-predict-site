@@ -23,7 +23,9 @@ const { chromium } = require('playwright');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../cloudflare/pages');
-const OUT = resolve(HERE, '../docs/redesign/baseline');
+// Por defecto escribe la baseline canónica; con AA_CAPTURE_OUT apunta a otra
+// carpeta (p. ej. docs/redesign/fase-2) sin tocar baseline/.
+const OUT = resolve(HERE, process.env.AA_CAPTURE_OUT || '../docs/redesign/baseline');
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -324,12 +326,17 @@ try {
 
     console.log(`viewport ${vp.name} (${vp.width}×${vp.height})`);
 
-    // 1) Home = Central AA (vista por defecto).
+    // 1) Inicio = vista por defecto (Fase 2: home matchday-first).
     await page.goto(`${base}/?baseline=${vp.name}`, { waitUntil: 'domcontentloaded' });
-    await page.locator('.intelrow').first().waitFor({ state: 'visible' });
-    await snap('home');
+    await page.locator('.homecentral').waitFor({ state: 'visible' });
+    await snap('inicio');
 
-    // 2) Detalle de una jugada de la Central AA.
+    // 2) Central AA (un toque desde Inicio, chip de deportes).
+    await page.locator('.sp[data-sport="radar"]').click();
+    await page.locator('.intelrow').first().waitFor({ state: 'visible' });
+    await snap('central');
+
+    // 3) Detalle de una jugada de la Central AA.
     await page.locator('.intelrow').first().click();
     await page.waitForFunction(() => /Polymarket|mercado/i.test(document.querySelector('#dcard')?.textContent || ''));
     await snap('central-detail');
@@ -383,7 +390,7 @@ try {
 }
 
 await writeFile(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
-console.log(`\nBaseline en docs/redesign/baseline/ · reporte: report.json`);
+console.log(`\nCapturas en ${OUT} · reporte: report.json`);
 if (failures) {
   console.error(`❌ ${failures} problema(s): errores de consola u overflow horizontal`);
   process.exit(1);
