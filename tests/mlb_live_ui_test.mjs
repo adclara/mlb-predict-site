@@ -426,7 +426,13 @@ try {
       await page.screenshot({ path: `${process.env.AA_NCAAF_SOCCER_SCREENSHOT_DIR}/07-soccer-list-fixed-mobile.png`, fullPage: false });
     }
     await page.locator('.mrow[data-oid="soc-1"]').click();
-    await page.waitForFunction(() => /Predicción AA[\s\S]*57%/i.test(document.querySelector('#dcard')?.textContent || ''));
+    // Fase 3: soccer usa la superficie de mercados (Ganador público AA + gates
+    // cerrados), con el bloque de validación (backtest + récord) como supplemental.
+    await page.waitForFunction(() => /Probabilidad de victoria \(AA\)[\s\S]*57%/i.test(document.querySelector('#dcard')?.textContent || ''));
+    const soccerDetailEs = await page.locator('#dcard').textContent();
+    assert.match(soccerDetailEs, /Ganador[\s\S]*Total[\s\S]*Jugadores[\s\S]*Combos/i, `${viewport.name}: soccer sin selector de 4 mercados`);
+    assert.match(soccerDetailEs, /Gate cerrado/i, `${viewport.name}: soccer sin gates cerrados visibles`);
+    assert.match(soccerDetailEs, /16[,.]?059/i, `${viewport.name}: soccer sin evidencia de backtest`);
     const soccerDetailWidth = await page.locator('#detail').evaluate((el) => ({ client: el.clientWidth, scroll: el.scrollWidth }));
     assert.ok(soccerDetailWidth.scroll <= soccerDetailWidth.client + 1, `${viewport.name}: detalle Soccer recortado`);
     if (viewport.name === 'mobile-390' && process.env.AA_NCAAF_SOCCER_SCREENSHOT_DIR) {
