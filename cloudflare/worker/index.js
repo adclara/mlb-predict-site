@@ -3342,22 +3342,8 @@ function nbaSummary(data, sport = 'nba') {
 // hace semanas (p. ej. las Finales de junio), aparece.
 const ymd = (d) => d.toISOString().slice(0, 10).replaceAll('-', '');
 
-async function recentGames(ctx, origin, cacheTag, upstream) {
-  const cache = caches.default;
-  const cacheKey = new Request('https://aa-sports.cache/' + cacheTag + '/recent', { method: 'GET' });
-  const cached = await cache.match(cacheKey);
-  if (cached) return withCors(await cached.text(), origin, 300);
-
-  const to = new Date(), from = new Date(Date.now() - 60 * 86400000);
-  let fetched;
-  try {
-    fetched = await fetchEspnPublicResponse(`${upstream}?dates=${ymd(from)}-${ymd(to)}&limit=350`);
-  } catch (error) {
-    return json({ games: [], note: 'recent upstream ' + ingestError(error) }, 200, origin, 60);
-  }
-  const data = await fetched.response.json();
-
-  const games = (data.events || []).map((ev) => {
+function mapRecentEvents(data) {
+  return (data.events || []).map((ev) => {
     const c = (ev.competitions && ev.competitions[0]) || {};
     const comp = c.competitors || [];
     const home = comp.find((x) => x.homeAway === 'home') || comp[0] || {};
@@ -3381,8 +3367,65 @@ async function recentGames(ctx, origin, cacheTag, upstream) {
   }).filter((g) => g.status === 'final')
     .sort((a, b) => String(b.start).localeCompare(String(a.start)))
     .slice(0, 30);
+}
 
-  const payload = JSON.stringify({ updated_at: new Date().toISOString(), source: fetched.source, games });
+// Fallback día a día: ESPN acepta ?dates=YYYYMMDD suelto aunque rechace el
+// rango con 400. Se prueban los mismos hosts que fetchEspnPublicResponse, pero
+// un host con 2 fallos se descarta para no quemar subrequests (~50/request).
+async function recentGamesByDay(upstream, { maxDays = 45, target = 30 } = {}) {
+  const hosts = [
+    { source: 'espn_site', base: String(upstream) },
+    { source: 'espn_web', base: String(upstream).replace('https://site.api.espn.com', 'https://site.web.api.espn.com') },
+  ].filter((host, index, all) => all.findIndex((item) => item.base === host.base) === index);
+  const failures = new Map(hosts.map((host) => [host.source, 0]));
+  const events = [];
+  let source = null;
+  let games = [];
+  for (let day = 0; day < maxDays; day++) {
+    const alive = hosts.filter((host) => failures.get(host.source) < 2);
+    if (!alive.length) break;
+    const date = ymd(new Date(Date.now() - day * 86400000));
+    for (const host of alive) {
+      const dayUrl = `${host.base}?dates=${date}&limit=100`;
+      try {
+        // fallbackUpstream = la misma URL fija un solo candidato por intento.
+        const fetched = await fetchEspnPublicResponse(dayUrl, { fallbackUpstream: dayUrl });
+        const data = await fetched.response.json();
+        events.push(...(data.events || []));
+        source = host.source;
+        break;
+      } catch (error) {
+        failures.set(host.source, failures.get(host.source) + 1);
+      }
+    }
+    games = mapRecentEvents({ events });
+    if (games.length >= target) break;
+  }
+  return { games, source };
+}
+
+async function recentGames(ctx, origin, cacheTag, upstream) {
+  const cache = caches.default;
+  const cacheKey = new Request('https://aa-sports.cache/' + cacheTag + '/recent', { method: 'GET' });
+  const cached = await cache.match(cacheKey);
+  if (cached) return withCors(await cached.text(), origin, 300);
+
+  const to = new Date(), from = new Date(Date.now() - 60 * 86400000);
+  let games, source;
+  try {
+    const fetched = await fetchEspnPublicResponse(`${upstream}?dates=${ymd(from)}-${ymd(to)}&limit=350`);
+    games = mapRecentEvents(await fetched.response.json());
+    source = fetched.source;
+  } catch (error) {
+    const byDay = await recentGamesByDay(upstream);
+    if (!byDay.games.length) {
+      return json({ games: [], note: 'recent upstream ' + ingestError(error) }, 200, origin, 60);
+    }
+    games = byDay.games;
+    source = (byDay.source || 'espn_site') + ':by_day';
+  }
+
+  const payload = JSON.stringify({ updated_at: new Date().toISOString(), source, games });
   const toCache = new Response(payload, { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=1800' } });
   ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
   return withCors(payload, origin, 300);
