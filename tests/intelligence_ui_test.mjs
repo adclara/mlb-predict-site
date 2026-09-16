@@ -60,9 +60,14 @@ try {
     page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
     await page.route('**/v1/**', (route) => new URL(route.request().url()).pathname === '/v1/intelligence/today' ? json(route, intelligence) : json(route, {}));
     await page.route('https://fonts.googleapis.com/**', (route) => route.fulfill({ status: 200, body: '' })); await page.route('https://fonts.gstatic.com/**', (route) => route.fulfill({ status: 204, body: '' }));
-    await page.goto(base, { waitUntil: 'domcontentloaded' }); await page.locator('.intelrow').first().waitFor();
+    await page.goto(base, { waitUntil: 'domcontentloaded' });
+    // Fase 2: la entrada por defecto es Inicio; Central sigue siendo el primer chip
+    // y queda a un toque.
+    await page.locator('.homecentral').waitFor({ state: 'visible' });
     assert.equal(await page.locator('.spwrap .sp').first().getAttribute('data-sport'), 'radar', `${viewport.n}: Central no es la primera`);
-    assert.equal(await page.locator('.sp.on').getAttribute('data-sport'), 'radar', `${viewport.n}: Central no es la vista inicial`);
+    await page.locator('.sp[data-sport="radar"]').click();
+    await page.locator('.intelrow').first().waitFor();
+    assert.equal(await page.locator('.sp.on').getAttribute('data-sport'), 'radar', `${viewport.n}: Central no abre desde el chip`);
     const navState = await page.evaluate(() => {
       const wrap = document.querySelector('.spwrap'), central = document.querySelector('.sp[data-sport="radar"]');
       const rect = central.getBoundingClientRect();

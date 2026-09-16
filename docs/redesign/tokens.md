@@ -132,6 +132,15 @@ componentes) quedan literales a propósito.
 | `#a78bfa` | `CAT_HUE` del Radar legacy (l. ~4925+), JS | bloque pausado (`RADAR_PAUSED`); además pinta un donut SVG por atributos — **pendiente** con la poda del Radar legacy |
 | `theme-color #060c15` | `<meta>` del head | no es CSS; ya coincide con `--page` |
 
+## Añadidos en Fase 2 (shell + Inicio)
+
+**Ningún token nuevo.** La vista Inicio (`.homecentral`, `.homehero`,
+`.homeactions`) y la bottom-nav móvil (`.aa-bottomnav`) se construyeron
+íntegramente con la capa AA_TOKENS_V2 (`--card-hi/lo`, `--line-active`,
+`--sky-rgb`, `--volt-rgb`, `--font-display`, `--r-8/16`, `--z-header`,
+`--glass`, `--panel`, `--hair`, `--dim`, `--sky`). Si una fase futura necesita
+un valor nuevo, se añade aquí primero.
+
 ## Verificación
 
 `tests/redesign_baseline_capture.mjs` tras la migración: **0 errores de consola,

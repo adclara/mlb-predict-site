@@ -1462,6 +1462,28 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   .jduel{grid-template-columns:1fr}
   .jat{display:none}
 }
+/* AA_HOME_V1 (Fase 2) — vista Inicio matchday-first + bottom-nav móvil.
+   Solo tokens de la capa AA_TOKENS_V2; ningún hex suelto. */
+.homecentral{display:block;width:calc(100% - 16px);margin:10px 8px 8px;padding:14px;text-align:left;cursor:pointer;color:var(--text);
+  border:1px solid var(--line-active);border-radius:var(--r-16);
+  background:linear-gradient(120deg,rgba(var(--sky-rgb),.16),rgba(var(--volt-rgb),.08)),linear-gradient(145deg,var(--card-hi),var(--card-lo) 85%)}
+.homecentral:hover{border-color:var(--sky)}
+.homecentral b{display:block;font-family:var(--font-display);font-size:19px;margin:4px 0}
+.homecentral small{display:block;color:var(--dim);font-size:12px;line-height:1.5}
+.homecentral .hcgo{display:inline-block;margin-top:10px;color:var(--sky);font-weight:800;font-size:12px}
+.homehero h3{font-size:20px;margin:4px 0 8px}
+.homeactions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.aa-bottomnav{display:none}
+@media (max-width:900px){
+  .aa-bottomnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:var(--z-header);
+    background:var(--panel);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
+    border-top:1px solid var(--hair);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+  .aa-bottomnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:6px 2px;font-size:10px;font-weight:700;color:var(--dim);border-radius:var(--r-8)}
+  .aa-bottomnav button .bnicon{font-size:16px;line-height:1}
+  .aa-bottomnav button.on{color:var(--sky);box-shadow:inset 0 2px 0 var(--sky)}
+  footer{margin-bottom:58px}
+}
 </style>
 </head>
 <body>
@@ -1479,8 +1501,9 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     </svg>
     <span><b>AA Sports</b></span>
   </a>
+  <button type="button" class="aa-railbtn on" data-rail="home"><span aria-hidden="true">⌂</span><span class="rlabel" data-i18n="nav_home">Inicio</span></button>
   <button type="button" class="aa-railbtn" data-rail="radar"><span aria-hidden="true">◎</span><span class="rlabel" data-i18n="intel_nav">Central AA</span></button>
-  <button type="button" class="aa-railbtn on" data-rail="mlb"><span aria-hidden="true">▣</span><span class="rlabel" data-i18n="matches">Partidos</span></button>
+  <button type="button" class="aa-railbtn" data-rail="mlb"><span aria-hidden="true">▣</span><span class="rlabel" data-i18n="matches">Partidos</span></button>
   <button type="button" class="aa-railbtn" data-rail="favs"><span aria-hidden="true">★</span><span class="rlabel" data-i18n="tab_favs">Favoritos</span></button>
   <button type="button" class="aa-railbtn" data-rail="analisis"><span aria-hidden="true">⌖</span><span class="rlabel" data-i18n="tab_analysis">Análisis</span></button>
   <button type="button" class="aa-railbtn" data-rail="pos"><span aria-hidden="true">☰</span><span class="rlabel" data-i18n="tab_standings">Posiciones</span></button>
@@ -1665,6 +1688,15 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   </aside>
 </div>
 
+<!-- Bottom-nav móvil (≤900px): mismas secciones que el rail, mismo handler data-rail -->
+<nav class="aa-bottomnav" aria-label="Navegación inferior" data-i18n-aria="aria_nav_bottom">
+  <button type="button" data-rail="home"><span class="bnicon" aria-hidden="true">⌂</span><span data-i18n="nav_home">Inicio</span></button>
+  <button type="button" data-rail="mlb"><span class="bnicon" aria-hidden="true">▣</span><span data-i18n="matches">Partidos</span></button>
+  <button type="button" data-rail="radar"><span class="bnicon" aria-hidden="true">◎</span><span data-i18n="intel_nav">Central AA</span></button>
+  <button type="button" data-rail="pos"><span class="bnicon" aria-hidden="true">☰</span><span data-i18n="tab_standings">Posiciones</span></button>
+  <button type="button" data-rail="cfg"><span class="bnicon" aria-hidden="true">⚙</span><span data-i18n="rail_cfg">Config</span></button>
+</nav>
+
 <!-- Metodología: la transparencia es la marca -->
 <dialog id="howdlg">
   <div class="howcard">
@@ -1777,7 +1809,10 @@ let qaConfigured = false;
 /* ── i18n: Español / English ─────────────────────────────────
    lang guía t(k) (textos), LOCALE (fechas/números) y applyI18n()
    que re-pinta el HTML estático con [data-i18n]/[data-i18n-html]. */
-let lang = (localStorage.getItem('aa_lang') === 'en') ? 'en' : 'es';
+// Idioma: preferencia guardada > navegador (en* → EN) > fallback ES.
+const _savedLang = localStorage.getItem('aa_lang');
+let lang = (_savedLang === 'en' || _savedLang === 'es') ? _savedLang
+  : (String(typeof navigator !== 'undefined' ? navigator.language : '').toLowerCase().startsWith('en') ? 'en' : 'es');
 const LOCALE = () => (lang === 'en' ? 'en-US' : 'es');
 const T = {
   es: {
@@ -2001,6 +2036,14 @@ const T = {
     d_pitch_how_pre: 'Antes del partido: estas cifras son pregame. No se reescriben con el resultado.',
     d_gate_tab_note: 'Este mercado sigue en gate. No publicamos un pick hasta validación forward, calibración y aprobación.',
     rail_edu: 'Educación', rail_tools: 'Herramientas', rail_cfg: 'Config',
+    nav_home: 'Inicio', aria_nav_bottom: 'Navegación inferior',
+    home_title: 'Hoy en AA Sports', home_sub: 'La jornada del día de un vistazo: estado de cada partido, el destacado y la entrada a la Central.',
+    home_central_k: 'Multifuente', home_central_sub: 'Picks AA validados y favoritos factuales de mercado en una sola vista.',
+    home_go_central: 'Abrir Central AA →',
+    home_hero_title: 'Los datos deciden: predicciones medidas, nada inflado.',
+    home_hero_p: 'MLB se publica con probabilidad calibrada; el resto de deportes corre en sombra hasta pasar su gate. Lo que no está medido, no se publica.',
+    home_honesty_t: 'Honestidad primero',
+    home_honesty_p: 'AA Sports informa, no facilita apuestas. 18/21+ según tu jurisdicción. Los datos no garantizan resultados.',
     edu_title: 'Entiende lo que estás viendo.',
     edu_sub: 'Explicaciones breves junto a los indicadores. El diseño reduce avisos repetidos, no la transparencia.',
     edu_q1: 'Porcentaje histórico vs. probabilidad',
@@ -2278,6 +2321,14 @@ const T = {
     d_pitch_how_pre: 'Pregame figures. They are not rewritten with the result.',
     d_gate_tab_note: 'This market remains gated. We do not publish a pick until forward validation, calibration, and approval.',
     rail_edu: 'Education', rail_tools: 'Tools', rail_cfg: 'Settings',
+    nav_home: 'Home', aria_nav_bottom: 'Bottom navigation',
+    home_title: 'Today at AA Sports', home_sub: 'The day’s slate at a glance: every game’s status, the featured matchup and the gate to Central.',
+    home_central_k: 'Multi-source', home_central_sub: 'Gated AA picks and factual market favorites in one view.',
+    home_go_central: 'Open AA Central →',
+    home_hero_title: 'Data decides: measured predictions, nothing inflated.',
+    home_hero_p: 'MLB is public with calibrated probability; every other sport runs in shadow until it passes its gate. If it is not measured, we do not publish it.',
+    home_honesty_t: 'Honesty first',
+    home_honesty_p: 'AA Sports informs — it does not take bets. 18/21+ depending on your jurisdiction. Data does not guarantee results.',
     edu_title: 'Understand what you are looking at.',
     edu_sub: 'Short explanations next to the indicators. The design reduces repeated warnings, not transparency.',
     edu_q1: 'Historical percentage vs. probability',
@@ -3168,6 +3219,53 @@ function renderEdu(){
   const items = [1,2,3,4,5,6].map((i, idx) => `<details class="eduacc"${idx === 0 ? ' open' : ''}><summary>${t('edu_q'+i)}</summary><p>${t('edu_a'+i)}</p></details>`).join('');
   $('list').innerHTML = pageHead(t('edu_title'), t('edu_sub')) + `<div class="educol">${items}</div>`;
 }
+/* ── Inicio (AA_HOME_V1): la jornada del día primero. Reusa las filas MLB
+   (rowHtml/visibleRows), la jornada destacada y una entrada destacada a la
+   Central AA. Solo consume lo ya cargado (events/todayRecord); nada nuevo de red. */
+function renderHomeList(){
+  const n = counts();
+  $('nAll').textContent = n.all || '';
+  $('nLive').textContent = n.live || '';
+  $('nPre').textContent = n.pre || '';
+  $('nFinal').textContent = n.final || '';
+  $('lgcount').innerHTML = n.live ? `<b>${n.live}</b>/${n.all}` : (n.all || '');
+  const central = `<button type="button" class="homecentral" data-rail="radar">
+    <span class="jkicker">${t('home_central_k')}</span>
+    <b>${t('intel_nav')}</b>
+    <small>${t('home_central_sub')}</small>
+    <span class="hcgo">${t('home_go_central')}</span>
+  </button>`;
+  const featured = (!viewDate && !docStale && filter === 'all' && events.length) ? jornadaHtml() : '';
+  const note = viewFuture
+    ? `<div class="recentnote">${t('future_note')}</div>`
+    : (!viewDate && docStale && events.length) ? `<div class="recentnote">${t('mlb_recentnote')}</div>` : '';
+  const rows = visibleRows();
+  const body = rows.length ? rows.map((ev, i) => rowHtml(ev, i)).join('')
+    : (!todayDate ? '<div class="skel"></div><div class="skel"></div><div class="skel"></div>'
+      : `<div class="lempty">${t('mlb_no_filter')}</div>`);
+  $('list').innerHTML = pageHead(t('home_title'), t('home_sub')) + central + featured + note + body;
+}
+function renderHomeDetail(){
+  const dc = $('dcard');
+  dc.classList.toggle('enter', lastAnimKey !== 'home');
+  lastAnimKey = 'home';
+  dc.innerHTML = `<div class="dtop"><span class="crumb">${t('nav_home')}</span></div><div class="dbody">
+    <div class="appcard homehero">
+      <span class="jkicker">${t('tagline')}</span>
+      <h3>${t('home_hero_title')}</h3>
+      <p>${t('home_hero_p')}</p>
+      <div class="homeactions">
+        <button type="button" class="ghostbtn" data-rail="radar">${t('home_go_central')}</button>
+        <button type="button" class="ghostbtn" data-open-how>${t('how_link')}</button>
+      </div>
+    </div>
+    <div class="appcard goldedge">
+      <h3>${t('home_honesty_t')}</h3>
+      <p>${t('home_honesty_p')}</p>
+      <button type="button" class="ghostbtn" data-open-legal>${t('legal_link2')}</button>
+    </div>
+  </div>`;
+}
 function toolsPaintOut(){
   const out = $('aaToolOut');
   if (!out) return;
@@ -3248,6 +3346,7 @@ function renderList(){
   if (listTab === 'edu'){ renderEdu(); return; }
   if (listTab === 'tools'){ renderTools(); return; }
   if (listTab === 'cfg'){ renderCfg(); return; }
+  if (sport === 'home'){ renderHomeList(); return; }
   if (sport !== 'mlb'){
     if (listTab === 'pos'){ renderSportStandings(); return; }
     if (listTab === 'brain'){ renderBrain(); return; }
@@ -3671,6 +3770,7 @@ function marketComparator({ activeSport, blocks, away, home, awayPct, homePct, l
 }
 
 function renderDetail(){
+  if (sport === 'home'){ renderHomeDetail(); return; }
   if (sport !== 'mlb'){ renderOtherDetail(); return; }
   if (listTab === 'hist'){ renderHistDash(); return; }
   if (listTab === 'edu' || listTab === 'tools' || listTab === 'cfg'){ renderAppDetail(listTab); return; }
@@ -4294,7 +4394,7 @@ document.addEventListener('click', e => {
   const railBtn = e.target.closest('[data-rail]');
   if (railBtn){
     const v = railBtn.dataset.rail;
-    if (v === 'radar' || v === 'mlb'){
+    if (v === 'home' || v === 'radar' || v === 'mlb'){
       if (sport !== v) setSport(v);
     } else if (v === 'edu' || v === 'tools' || v === 'cfg'){
       if (sport !== 'mlb') setSport('mlb');
@@ -4342,13 +4442,13 @@ document.addEventListener('click', e => {
     renderList(); return;
   }
   if (e.target.closest('#dPrev')){
-    if (sport !== 'mlb') return;
+    if (sport !== 'mlb' && sport !== 'home') return;
     const base = viewDate || todayDate;
     if (base && base > '2026-07-01') loadDay(shiftDate(base, -1));
     return;
   }
   if (e.target.closest('#dNext')){
-    if (sport !== 'mlb') return;
+    if (sport !== 'mlb' && sport !== 'home') return;
     const base = viewDate || realToday();       // desde hoy también se puede ir al futuro
     const nx = shiftDate(base, 1);
     if (nx > maxFutureDate()) return;
@@ -4357,7 +4457,7 @@ document.addEventListener('click', e => {
   }
   if (e.target.closest('#dToday')){ backToToday(); return; }
   if (e.target.closest('#dlabel')){
-    if (sport !== 'mlb') return;
+    if (sport !== 'mlb' && sport !== 'home') return;
     const pk = $('dPick');
     pk.max = maxFutureDate();                    // hasta 2 semanas adelante
     pk.value = viewDate || realToday() || '';
@@ -4371,7 +4471,8 @@ document.addEventListener('click', e => {
     return;
   }
   const t = e.target.closest('[data-id]');
-  if (t) select(t.dataset.id, true);
+  // Desde Inicio, abrir un partido lleva al análisis MLB completo.
+  if (t){ if (sport === 'home') setSport('mlb'); select(t.dataset.id, true); }
 });
 $('q').addEventListener('input', e => { query = e.target.value.trim(); renderList(); });
 $('list').addEventListener('input', e => {
@@ -4393,6 +4494,7 @@ $('dPick').addEventListener('change', e => {
 /* ── datos ───────────────────────────────────────────────── */
 function renderAll(){
   if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); return; }
+  if (sport === 'home'){ renderTicker(); renderList(); renderDetail(); renderSide(); return; }
   if (sport !== 'mlb'){ renderList(); renderOtherDetail(); return; }
   renderTicker(); renderList(); renderDetail(); renderSide();
 }
@@ -4440,7 +4542,7 @@ async function loadToday(){
   }
 }
 /* ── multideporte (marcadores en vivo; predicciones cuando el modelo valide) ── */
-let sport = 'radar';
+let sport = 'home'; // Inicio es la entrada por defecto; Central AA queda a un toque
 let soccerLeague = 'eng.1';
 const SOCCER_LEAGUES = { 'eng.1': 'Premier', 'esp.1': 'LaLiga', 'ita.1': 'Serie A', 'ger.1': 'Bundesliga', 'fra.1': 'Ligue 1', 'uefa.champions': 'Champions', 'usa.1': 'MLS', 'mex.1': 'Liga MX' };
 const SPORT_LABEL = { nba: 'NBA', wnba: 'WNBA', nfl: 'NFL', ncaaf: 'College Football', nhl: 'NHL', ncaam: 'College Basketball', soccer: 'Soccer', tennis: 'Tenis', radar: 'Central AA' };
@@ -4452,7 +4554,7 @@ const sportModelDocs = new Map();        // docs públicos, siempre saneados por
 const standingsCache = new Map();        // 'nba' | 'soccer:<liga>' → doc de posiciones
 
 async function loadOther(){
-  if (sport === 'mlb' || sport === 'radar') return;
+  if (sport === 'mlb' || sport === 'radar' || sport === 'home') return;
   otherLoading = true;
   const loadSeq = ++otherLoadSeq;
   const mySport = sport, myLeague = soccerLeague;
@@ -4551,7 +4653,7 @@ async function loadSoccerPreds(){
 // El widget "modelo en entrenamiento" se oculta para soccer si ya hay predicciones.
 function updateTrainWidget(){
   const soccerLive = sport === 'soccer' && soccerPreds && soccerPreds.by_id && Object.keys(soccerPreds.by_id).length > 0;
-  $('wTrain').hidden = sport === 'mlb' || sport === 'radar' || soccerLive;
+  $('wTrain').hidden = sport === 'mlb' || sport === 'radar' || sport === 'home' || soccerLive;
 }
 // pred del partido g (o null); resuelve el lado favorecido para mostrar
 function predFor(g){
@@ -5975,7 +6077,8 @@ function renderLeagueChips(){
 }
 
 function syncRail(){
-  const map = sport === 'radar' ? 'radar'
+  const map = sport === 'home' ? 'home'
+    : sport === 'radar' ? 'radar'
     : listTab === 'favs' ? 'favs'
     : listTab === 'pos' ? 'pos'
     : listTab === 'hist' ? 'hist'
@@ -5994,28 +6097,29 @@ function setSport(sp2){
   document.querySelectorAll('.sp[data-sport]').forEach(b => b.classList.toggle('on', b.dataset.sport === sport));
   document.querySelectorAll('.ltab').forEach(c => c.classList.toggle('on', c.dataset.lt === 'all'));
   document.querySelectorAll('.pill[data-f]').forEach(c => { c.classList.toggle('on', c.dataset.f === 'all'); c.classList.toggle('neutral', c.dataset.f === 'all'); });
-  const isMlb = sport === 'mlb', isRadar = sport === 'radar';
+  const isMlb = sport === 'mlb', isRadar = sport === 'radar', isHome = sport === 'home';
   $('pills').style.display = isRadar ? 'none' : '';
   document.querySelector('.ltop').style.display = isRadar ? 'none' : '';
   document.querySelector('.ltop-sep').style.display = isRadar ? 'none' : '';
   for (const tab of document.querySelectorAll('.ltab')){
-    if (tab.dataset.lt === 'favs' || tab.dataset.lt === 'hist') tab.style.display = isMlb ? '' : 'none';
+    if (isHome) tab.style.display = 'none'; // Inicio: matchday puro, sin pestañas de lista
+    else if (tab.dataset.lt === 'favs' || tab.dataset.lt === 'hist') tab.style.display = isMlb ? '' : 'none';
     else tab.style.display = '';
   }
-  const datebox = document.querySelector('.datebox'); if (datebox) datebox.style.display = isMlb ? '' : 'none';
-  $('dToday').style.display = isMlb ? '' : 'none';
-  document.querySelectorAll('.wmlb').forEach(w => w.style.display = sport === 'mlb' ? '' : 'none');
-  $('wRecord').style.display = sport === 'mlb' ? '' : 'none';
+  const datebox = document.querySelector('.datebox'); if (datebox) datebox.style.display = (isMlb || isHome) ? '' : 'none';
+  $('dToday').style.display = (isMlb || isHome) ? '' : 'none';
+  document.querySelectorAll('.wmlb').forEach(w => w.style.display = (isMlb || isHome) ? '' : 'none');
+  $('wRecord').style.display = (isMlb || isHome) ? '' : 'none';
   updateTrainWidget();
-  $('ticker').hidden = sport !== 'mlb' || !$('tk').children.length;
+  $('ticker').hidden = (sport !== 'mlb' && sport !== 'home') || !$('tk').children.length;
   syncRail();
-  document.querySelector('.lghead .ttl').textContent = sport === 'mlb' ? 'MLB' : sportLabel(sport);
-  document.querySelector('.lghead .sub').textContent = sport === 'mlb' ? t('season')
+  document.querySelector('.lghead .ttl').textContent = (sport === 'mlb' || sport === 'home') ? 'MLB' : sportLabel(sport);
+  document.querySelector('.lghead .sub').textContent = (sport === 'mlb' || sport === 'home') ? t('season')
     : sport === 'radar' ? t('radar_sub')
     : sport === 'soccer' ? (SOCCER_LEAGUES[soccerLeague] || '') : t('live_via_espn');
   // el logo de la liga acompaña al deporte (antes se quedaba pegado el de MLB)
   const lgi = $('lgicon');
-  const LEAGUE_ICON = { mlb: 'mlb', nba: 'nba', wnba: 'wnba', nfl: 'nfl', nhl: 'nhl' };
+  const LEAGUE_ICON = { home: 'mlb', mlb: 'mlb', nba: 'nba', wnba: 'wnba', nfl: 'nfl', nhl: 'nhl' };
   if (LEAGUE_ICON[sport]){
     lgi.style.display = ''; lgi.style.visibility = '';
     lgi.src = `https://a.espncdn.com/i/teamlogos/leagues/500/${LEAGUE_ICON[sport]}.png`;
@@ -6029,7 +6133,7 @@ function setSport(sp2){
     if (wrap && activeSport === wrap.firstElementChild) wrap.scrollLeft = 0;
     else activeSport.scrollIntoView({ block: 'nearest', inline: 'center' });
   }
-  if (sport === 'mlb') renderAll();
+  if (sport === 'mlb' || sport === 'home') renderAll();
   else if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); loadRadar(); loadAlerts(); }
   else { renderOtherList(); renderOtherDetail(); loadOther(); }
 }
@@ -6213,21 +6317,21 @@ if ('serviceWorker' in navigator) addEventListener('load', () => navigator.servi
   const _wp = (qp.get('w') || '').match(/0x[0-9a-fA-F]{40}/);
   const gid = qp.get('g'), tab = qp.get('tab'), scid = qp.get('sc');
   if (_wp){ try { setSport('radar'); loadWalletSearch(_wp[0]); } catch (e) {} }
-  else if (['mlb', 'soccer', 'nba', 'wnba', 'tennis', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(tab)){ try { setSport(tab); if (scid) pendingOther = scid; } catch (e) {} }
+  else if (['home', 'mlb', 'soccer', 'nba', 'wnba', 'tennis', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(tab)){ try { setSport(tab); if (scid) pendingOther = scid; } catch (e) {} }
   else if (/^radar\./i.test(location.hostname) || tab === 'radar'){ try { setSport('radar'); } catch (e) {} }
   else if (gid){ try { setSport('mlb'); pendingGame = gid; } catch (e) {} } // se aplica cuando cargan los eventos
-  else { try { setSport('radar'); } catch (e) {} }
+  else { try { setSport('home'); } catch (e) {} }
 }
 loadToday(); loadLive(); loadInjuries(); loadMe();
-setInterval(() => { if (sport === 'mlb') loadToday(); }, 5 * 60 * 1000);
-setInterval(() => { sport === 'mlb' ? loadLive() : sport === 'radar' ? loadAlerts() : loadOther(); }, 45 * 1000);
+setInterval(() => { if (sport === 'mlb' || sport === 'home') loadToday(); }, 5 * 60 * 1000);
+setInterval(() => { (sport === 'mlb' || sport === 'home') ? loadLive() : sport === 'radar' ? loadAlerts() : loadOther(); }, 45 * 1000);
 setInterval(loadInjuries, 30 * 60 * 1000);
 // Safari/iOS pausa timers cuando la app queda en segundo plano. Al volver —o
 // al recuperar conexión— refrescamos de inmediato en vez de esperar el próximo
 // intervalo, manteniendo resultados y marcadores actuales.
 const refreshActiveSport = () => {
   if (document.hidden) return;
-  if (sport === 'mlb'){ loadToday(); loadLive(); }
+  if (sport === 'mlb' || sport === 'home'){ loadToday(); loadLive(); }
   else if (sport === 'radar'){ loadRadar(); loadAlerts(); }
   else loadOther();
 };

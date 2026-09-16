@@ -613,9 +613,14 @@ try {
     assert.doesNotMatch(wnbaBrainEn, /Cerebro|Histórico|muestra|cerrado|entrenamiento/i, `${viewport.name}: Spanish leaked into WNBA Brain EN`);
     await assertNoOverflow(page, `${viewport.name}-wnba-en`);
     await page.goto(`${base}/?central-default-regression=${viewport.name}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForFunction(() => /AA Play Central/i.test(document.querySelector('#list')?.textContent || ''));
-    assert.equal(await page.locator('.sp.on').getAttribute('data-sport'), 'radar', `${viewport.name}: Central no abrió por defecto`);
+    // Fase 2: Inicio es la entrada por defecto; Central queda a un toque y sigue
+    // siendo el primer chip de deportes.
+    await page.locator('.homecentral').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('.aa-railbtn.on').getAttribute('data-rail'), 'home', `${viewport.name}: Inicio no abrió por defecto`);
     assert.equal(await page.locator('.spwrap .sp').first().getAttribute('data-sport'), 'radar', `${viewport.name}: Central no es primera`);
+    await page.locator('.sp[data-sport="radar"]').click();
+    await page.waitForFunction(() => /AA Play Central/i.test(document.querySelector('#list')?.textContent || ''));
+    assert.equal(await page.locator('.sp.on').getAttribute('data-sport'), 'radar', `${viewport.name}: Central no abrió desde el chip`);
     const radarEn = await page.locator('#list').textContent();
     assert.match(radarEn, /AA Play Central/i, `${viewport.name}: missing intelligence central EN`);
     assert.match(radarEn, /never fill a quota/i, `${viewport.name}: missing honest empty state EN`);
