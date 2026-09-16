@@ -495,8 +495,6 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
   transition:color .15s;scroll-snap-align:start;letter-spacing:.01em;white-space:nowrap}
 .dtab:hover{color:var(--text)}
 .dtab.on{color:var(--sky);border-bottom-color:var(--sky);text-shadow:0 0 18px rgba(var(--sky-rgb),.35)}
-.dtab.locked{opacity:.78}
-.dtab.locked small{display:block;font-size:8.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);line-height:1;margin-top:2px}
 .dbody{padding:16px 20px 20px}
 @media(max-width:520px){
   .pgrid,.formgrid{grid-template-columns:1fr}
@@ -4105,13 +4103,6 @@ function renderDetail(){
     ${snap.lineups ? `<div class="secttl">${t('d_lineup')}</div>
     <div class="formgrid">${lineupSide('away', ev.away.code)}${lineupSide('home', ev.home.code)}</div>` : `<div class="wempty">${t('lineup_pending')}</div>`}`;
 
-  const lockedMarketTab = (kind) => {
-    const block = measuredMarketBlock(mlbMarketBlocks[kind], kind);
-    return `<div class="secttl">${t(kind === 'players' ? 'market_players' : kind === 'combos' ? 'market_combos' : 'market_total')}</div>
-      ${gatePanel(block, kind, 'mlb')}
-      <p class="propnote">${t('d_gate_tab_note')}</p>`;
-  };
-
   const o = ev.odds || {};
   const mkt = snap.market;
   const tot = snap.total;
@@ -4245,14 +4236,11 @@ function renderDetail(){
       ${ev.snapshot ? `<button class="dtab ${dtab === 'equipos' ? 'on' : ''}" data-dt="equipos">${t('d_teams')}</button>` : ''}
       ${ev.snapshot ? `<button class="dtab ${dtab === 'pitchers' ? 'on' : ''}" data-dt="pitchers">${t('tab_pitchers')}</button>` : ''}
       ${ev.snapshot ? `<button class="dtab ${dtab === 'bateadores' ? 'on' : ''}" data-dt="bateadores">${t('tab_hitters')}</button>` : ''}
-      ${ev.snapshot ? `<button class="dtab locked ${dtab === 'total' ? 'on' : ''}" data-dt="total">${t('market_total')}<small>${t('market_gate_closed')}</small></button>` : ''}
-      ${ev.snapshot ? `<button class="dtab locked ${dtab === 'players' ? 'on' : ''}" data-dt="players">${t('market_players')}<small>${t('market_gate_closed')}</small></button>` : ''}
-      ${ev.snapshot ? `<button class="dtab locked ${dtab === 'combos' ? 'on' : ''}" data-dt="combos">${t('market_combos')}<small>${t('market_gate_closed')}</small></button>` : ''}
       ${p.prob != null && !p.invalidated ? `<button class="dtab ${dtab === 'sim' ? 'on' : ''}" data-dt="sim">${t('tab_sim')}</button>` : ''}
       <button class="dtab ${dtab === 'mercado' ? 'on' : ''}" data-dt="mercado">${t('d_market')}</button>
     </div>
     <div class="dbody">
-      ${dtab === 'analisis' ? analisis : dtab === 'equipos' ? equipos : dtab === 'pitchers' ? pitchersBlk : dtab === 'bateadores' ? bateadoresBlk : dtab === 'total' ? lockedMarketTab('total') : dtab === 'players' ? lockedMarketTab('players') : dtab === 'combos' ? lockedMarketTab('combos') : dtab === 'sim' ? simulacion : mercado}
+      ${dtab === 'analisis' ? analisis : dtab === 'equipos' ? equipos : dtab === 'pitchers' ? pitchersBlk : dtab === 'bateadores' ? bateadoresBlk : dtab === 'sim' ? simulacion : mercado}
       <p class="dnote">${t('d_note')}</p>
     </div>`;
   // índices para el stagger del contenido
@@ -4663,30 +4651,39 @@ function predFor(g){
   return { ...p, side: homePick ? 'home' : 'away', pct: p.prob != null ? Math.round(p.prob * 100) : null };
 }
 const SC_TIER_LBL = { t55: '≥55%', t60: '≥60%', t65: '≥65%', t70: '≥70%', open: '—' };
-// Tarjeta de PREDICCIÓN AA de soccer: número calibrado + caja de honestidad
-// (evidencia del backtest de 16k partidos + récord EN VIVO real + nota ≈mercado).
-function soccerPredCard(g){
-  const pr = predFor(g); if (!pr || pr.pct == null) return '';
+/* Soccer: la tarjeta pública de ganador se integra en la superficie de mercados
+   (selector Ganador/Total/Jugadores/Combos) — el bloque honesto de validación
+   (backtest + récord en vivo) viaja como supplemental de Ganador. Los otros tres
+   mercados quedan cerrados sin muestra porque la API no publica su progreso. */
+function soccerHonestyHtml(){
   const s = soccerPreds || {};
-  const homePct = pr.side === 'home' ? pr.pct : 100 - pr.pct;
-  const awayPct = 100 - homePct;
   const bt = (s.backtest || []).filter(b => b.tier !== 'open')
     .map(b => `<span class="scbt"><b class="num">${SC_TIER_LBL[b.tier] || b.tier}</b> <span class="num">${b.hit}%</span></span>`).join('');
   const rec = s.record || {};
   const recTxt = rec.n ? `<b class="num ${rec.wr != null && rec.wr < 0.5 ? 'lo' : ''}">${rec.w}-${rec.l}</b>${rec.wr != null ? ` · <span class="num">${Math.round(rec.wr * 100)}%</span>` : ''}` : t('sc_rec_none');
-  return `<div class="scpred">
-      <div class="scph"><span class="q">${t('sc_title')}</span><span class="eng">${t('sc_eng')}</span></div>
-      <div class="probhead num"><span>${esc(tNick(g.away.code))} ${awayPct}%</span><span>${homePct}% ${esc(tNick(g.home.code))}</span></div>
-      <div class="probtrack"><span class="aw" style="width:${awayPct}%"></span><span class="hm" style="width:${homePct}%"></span></div>
-      <div class="ww-pick"><span class="bigpick">${t('sc_win')} ${esc(tNick(pr.pick))}</span><span class="bigprob num">${pr.pct}%</span>${pr.tier && pr.tier !== 'open' ? `<span class="confpill">${SC_TIER_LBL[pr.tier]}</span>` : ''}</div>
-    </div>
-    <div class="scho glass-in">
+  return `<div class="scho glass-in">
       <div class="schh">🔬 ${t('sc_val_title')}</div>
       <div class="schsub">${t('sc_val_sub').replace('{n}', (s.n_test || 16059).toLocaleString(LOCALE()))}</div>
       ${bt ? `<div class="scbts">${bt}</div>` : ''}
       <div class="schrec"><span class="l">${t('sc_live')} <span class="scsince">(${t('sc_since')} ${esc(s.since || '')})</span></span>${recTxt}</div>
       <div class="schnote">${t('sc_market')}</div>
     </div>`;
+}
+function soccerMarketCard(g){
+  const pr = predFor(g); if (!pr || pr.pct == null) return '';
+  const homePct = pr.side === 'home' ? pr.pct : Math.round((100 - pr.pct) * 10) / 10;
+  const awayPct = Math.round((100 - homePct) * 10) / 10;
+  const closed = (kind) => ({ state: 'closed', gate: { passed: false, approved: false, public: false, reason: `${kind}_forward_validation_pending` } });
+  return marketComparator({
+    activeSport: 'soccer',
+    blocks: {
+      winner: { state: 'public', gate: { passed: true, approved: true, public: true, reason: 'passed' } },
+      total: closed('total'), players: closed('players'), combos: closed('combos'),
+    },
+    away: g.away, home: g.home, awayPct, homePct, logo: oLogo,
+    source: 'aa', pick: pr.pick, risk: null,
+    supplemental: (pr.tier && pr.tier !== 'open' ? `<span class="confpill">${SC_TIER_LBL[pr.tier]}</span>` : '') + soccerHonestyHtml(),
+  });
 }
 
 async function loadStandings(){
@@ -6016,7 +6013,7 @@ function renderOtherDetail(){
       </div>
     </div>
     <div class="dbody">
-      ${sport === 'soccer' ? soccerPredCard(g) : ''}
+      ${sport === 'soccer' ? soccerMarketCard(g) : ''}
       ${usMarketCard}
       ${['nfl', 'ncaaf'].includes(sport) ? externalPredictorHtml(S, g) : ''}
       ${factualReasonsHtml(g, S)}

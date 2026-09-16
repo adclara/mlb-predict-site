@@ -351,6 +351,12 @@ try {
     await page.locator('.mrow[data-id="g1"]').click();
     await page.locator('#dcard .dhero').waitFor({ state: 'visible' });
     await snap('mlb-detail');
+
+    // 4b) Gate cerrado diseñado: pestaña Total del comparador de mercados MLB.
+    await page.locator('#dcard .market-tab[data-market-kind="total"]').click();
+    await page.waitForFunction(() => /sigue en validación|under validation/i.test(document.querySelector('#dcard .market-panel')?.textContent || ''));
+    await snap('mlb-gate-total');
+    await page.locator('#dcard .market-tab[data-market-kind="winner"]').click();
     await closeMobileDetail();
 
     // 5) Filtro "En vivo" (el overlay de /v1/mlb/live marca g3 en vivo).
@@ -369,10 +375,22 @@ try {
     await page.locator('.mrow[data-oid="wnba-1"]').waitFor({ state: 'visible' });
     await snap('wnba-list');
 
+    // 7b) Detalle WNBA: superficie de mercados con gates cerrados y progreso medido.
+    await page.locator('.mrow[data-oid="wnba-1"]').click();
+    await page.locator('#dcard .market-first').waitFor({ state: 'visible' });
+    await snap('wnba-detail');
+    await closeMobileDetail();
+
     // 8) Soccer (única liga no-MLB con predicción pública AA).
     await page.locator('.sp[data-sport="soccer"]').click();
     await page.locator('.mrow[data-oid="soc-1"]').waitFor({ state: 'visible' });
     await snap('soccer-list');
+
+    // 8b) Detalle soccer: Ganador público AA dentro del selector de mercados.
+    await page.locator('.mrow[data-oid="soc-1"]').click();
+    await page.locator('#dcard .market-first').waitFor({ state: 'visible' });
+    await snap('soccer-detail');
+    await closeMobileDetail();
 
     report.viewports[vp.name] = { errors, overflow };
     if (errors.length) {

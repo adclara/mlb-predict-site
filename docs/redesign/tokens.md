@@ -141,6 +141,16 @@ componentes) quedan literales a propósito.
 `--glass`, `--panel`, `--hair`, `--dim`, `--sky`). Si una fase futura necesita
 un valor nuevo, se añade aquí primero.
 
+## Añadidos en Fase 3 (tarjeta de partido y mercados)
+
+**Ningún token nuevo.** La superficie de mercados (`.market-first`,
+`.market-tab`, `.prob-viz`, `.market-callout`, `.gate-card`) ya existía y usa la
+capa AA_TOKENS_V2. Fase 3 consolidó el detalle MLB (fuera las pestañas
+redundantes Total/Jugadores/Combos: esos gates viven en el selector del
+comparador) y llevó la misma superficie a soccer (Ganador público AA + tres
+gates cerrados sin muestra, porque la API no publica su progreso). CSS: se
+eliminan las reglas muertas `.dtab.locked`; no se añadió ninguna.
+
 ## Verificación
 
 `tests/redesign_baseline_capture.mjs` tras la migración: **0 errores de consola,
