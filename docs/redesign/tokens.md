@@ -159,6 +159,23 @@ las tablas de posiciones ganan scroll interno con `.tblscroll`
 (`--faint`). CSS añadido: `.tblscroll` y `.secttl .sub3` — ambos solo con tokens
 existentes.
 
+## Añadidos en Fase 5 (pulido y assets)
+
+**Ningún token nuevo en la app.** Cambios:
+- Share Function (`functions/share/[[path]].js`): su fallback HTML define una
+  mini-`:root` local con los mismos valores (página standalone, sin acceso a la
+  hoja de la app); paleta vieja `#0b0e14`/`#19DE9F` retirada.
+- `404.html` (nuevo, Cloudflare Pages): misma mini-paleta inline documentada
+  como copia de AA_TOKENS_V2.
+- `manifest.webmanifest`: `theme_color`/`background_color` `#080B12` →
+  `#060c15` (`--page`).
+- Poda CSS conservadora (0 usos verificados por grep en HTML+JS): `.glass`
+  (salía de regla agrupada con `.pane`), `.glass-inset`, `.dclose` (+hover),
+  `.whowin`, `.ww-head` (+`.q`/` .eng`), `.pstat` (+`.pl`/`.pbar`/`b`),
+  `.sprow`. Unificado `.sub3` en `.secttl .sub3, .secttl2 .sub3` (ambas con
+  uso vivo: grupos de Central y bundles). Conservados a propósito: `fat-*`
+  (clase dinámica `'fat-' + nivel`) y todo el CSS del Radar legacy (Fase 6).
+
 ## Verificación
 
 `tests/redesign_baseline_capture.mjs` tras la migración: **0 errores de consola,

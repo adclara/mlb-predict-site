@@ -29,9 +29,18 @@ function page({ title, desc, redirect }) {
 <meta name="twitter:image" content="${esc(OG_IMG)}">
 <link rel="canonical" href="${r}">
 <meta http-equiv="refresh" content="0; url=${r}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;1,700&family=Manrope:wght@400;700&display=swap" rel="stylesheet">
+<style>:root{--page:#060c15;--text:#f2f5fc;--dim:#a0b0c6;--sky:#4da8ff;--hair:#21354c;--grad:linear-gradient(100deg,#94d3ff,#1c87e9 55%,#32dfb4)}
+body{background:var(--page);color:var(--text);font-family:Manrope,system-ui,-apple-system,sans-serif;text-align:center;padding:56px 24px;line-height:1.5}
+.wm{font-family:"Barlow Condensed",Manrope,sans-serif;font-size:26px;font-weight:700;font-style:italic;letter-spacing:.04em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+p{max-width:46ch;margin:14px auto;color:var(--dim)}
+a{color:var(--sky);font-weight:700;text-decoration:none;border:1px solid var(--hair);border-radius:10px;padding:10px 16px;display:inline-block;margin-top:10px}</style>
 <script>location.replace(${JSON.stringify(redirect)})</script>
-</head><body style="background:#0b0e14;color:#e7edf5;font-family:system-ui,sans-serif;text-align:center;padding:40px">
-<p>${t}</p><p><a href="${r}" style="color:#19DE9F">Abrir AA Sports →</a></p>
+</head><body>
+<div class="wm">AA SPORTS</div>
+<p>${t}</p><p><a href="${r}">Abrir AA Sports →</a></p>
 </body></html>`;
 }
 
@@ -66,7 +75,7 @@ export async function buildCard(kind, id) {
   if (kind === 'radar' && /^0x[0-9a-fA-F]{40}$/.test(id || '')) {
     return { title: 'Radar AA — perfil de wallet', desc: 'Observatorio de wallets de Polymarket: qué hacen, cuándo y cómo. Descriptivo, no recomendación.', redirect: `${SITE}/?w=${encodeURIComponent(id)}` };
   }
-  return { title: 'AA Sports — Los datos deciden', desc: 'Predicciones deportivas con IA, marcadores en vivo y el Radar de Polymarket. Datos honestos y medidos.', redirect: `${SITE}/` };
+  return { title: 'AA Sports — Los datos deciden', desc: 'Predicciones deportivas con IA, marcadores en vivo y métricas honestas multideporte. Datos medidos, nada inventado.', redirect: `${SITE}/` };
 }
 
 export async function onRequestGet(context) {
