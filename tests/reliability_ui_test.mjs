@@ -62,7 +62,11 @@ try {
       if(path.endsWith('/intelligence/today'))return json(route,{state:'paused',candidates:[],bundles:[]});
       return json(route,{});
     });
-    await page.route(/^https:\/\/(a\.espncdn\.com|midfield\.mlbstatic\.com|fonts\.googleapis\.com|fonts\.gstatic\.com|static\.cloudflareinsights\.com)\//,r=>r.fulfill({status:200,body:'',contentType:'text/plain'}));
+    await page.route(/^https:\/\/(a\.espncdn\.com|midfield\.mlbstatic\.com|fonts\.googleapis\.com|fonts\.gstatic\.com|static\.cloudflareinsights\.com)\//,r=>{
+      const u=r.request().url();
+      const contentType=u.includes('fonts.googleapis')?'text/css':u.includes('fonts.gstatic')?'font/woff2':/(espncdn|mlbstatic)/.test(u)?'image/png':'text/plain';
+      return r.fulfill({status:200,body:'',contentType});
+    });
     try {
       await page.goto(`http://127.0.0.1:${server.address().port}/?sport=mlb`,{waitUntil:'domcontentloaded'});
       await page.locator('.sp[data-sport="mlb"]').click();

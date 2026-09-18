@@ -1,3 +1,17 @@
+# Design QA — AA Sports (cierre Fase 6)
+
+**Direction:** Matchday Studio on a Monitor surface. Professional, fresh, not loud.
+
+**Before (Fases 0–5 shipped):** Studio tokens + leftover neon aliases (honey/coral/mint/steel/cyan) + `saturate(140%)` glass + sky/mint body aurora. Honest, but visually busy.
+
+**After (Fase 6):** same composition (shell, market-first card, Central AA). Quieter glass, quieter home CTA, unified aliases, WP curves via CSS classes, wallet-radar CSS/JS gone. Honesty box and legal copy unchanged.
+
+**Slop audit (post-change):** 1/10 — Inter-not-used (Manrope/Barlow chosen). No feature-tile grid, no indigo default, no monument stats, no center-stack hero. Surface = Monitor.
+
+**Not in this PR:** poke-deploy. Merge first; deploy is a separate poke.
+
+---
+
 **Comparison Target**
 
 - Source visual truth: `/Users/adrianclara/.codex/generated_images/019f84e0-2d27-7511-9722-cb9ea33ecb4b/exec-fd47b091-5cc0-438f-9810-7ce90029dce0.png`

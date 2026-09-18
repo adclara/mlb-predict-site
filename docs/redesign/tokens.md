@@ -176,6 +176,29 @@ existentes.
   uso vivo: grupos de Central y bundles). Conservados a propósito: `fat-*`
   (clase dinámica `'fat-' + nivel`) y todo el CSS del Radar legacy (Fase 6).
 
+## Añadidos en Fase 6 (limpieza + silencio visual)
+
+Cierre del rediseño. Cambio visible deliberado: **menos saturación**, misma
+dirección Studio.
+
+| Token / superficie | Antes | Ahora | Por qué |
+|---|---|---|---|
+| `--glass` | `saturate(140%)` | `saturate(108%)` | el vidrio ya no “chilla” |
+| `--grad` | `#94d3ff → #32dfb4` | `#8ec4e8 → #3cbfa8` | marca sky→volt, menos neon |
+| body glow | sky 16%/11% + mint/honey | sky 7%/5% + volt 4% | fondo Monitor, no aurora |
+| `.homecentral` | sky 16% + volt 8% | sky 7% + volt 3% | CTA de Central sin mancha |
+| `--hair` / `--line-active` | `#21354c` / `#1d4471` | `#1a2d42` / `#1a3d64` | hairlines más quietos |
+| honey/coral/mint/steel/tang/rose/lime/cyan | neones legacy | alias de amber/red/volt/sky | una sola paleta |
+| `--royal` | `#3b82f6` | `#6b8caf` | market_fact distinto de AA, sin tercer neon |
+| `--orange` (visitante) | `#ff7a3d` | `#e8895a` | sigue siendo “away”, menos flúor |
+| `--hero-glow-*` | alpha ~25% | ~13% | detalle sin bloom |
+
+Poda: CSS muerto del Radar de wallets (~1.1k líneas) + helpers SVG
+(`svgEquity`, `svgDonut`, `CAT_HUE`, `legacyUsPredCard`). Las curvas WP/unidades
+viven en clases CSS (`.wppath`, `.uzero`, …). `sw.js` → `aa-shell-v3`.
+
+Spec formal: `docs/redesign/DESIGN.md`.
+
 ## Verificación
 
 `tests/redesign_baseline_capture.mjs` tras la migración: **0 errores de consola,

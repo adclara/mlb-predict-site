@@ -3,7 +3,7 @@
 //  · navegación (HTML): red primero (así un deploy trae JS nuevo), shell offline de respaldo.
 //  · estáticos del mismo origen (iconos, vendor, css): caché primero.
 //  · API (/v1/* en el Worker, otro origen) y terceros: red directa, sin caché.
-const V = 'aa-shell-v2';
+const V = 'aa-shell-v3'; // bump tras el rediseño (Fases 0–5): renueva el shell offline en clientes viejos
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/assets/icon-192.png', '/assets/icon-512.png', '/assets/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {

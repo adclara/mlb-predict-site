@@ -56,10 +56,10 @@ const executablePath = [process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, '/opt/p
 const browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : {}) });
 try {
   for (const viewport of [{ n: 'desktop', width: 1280, height: 900 }, { n: '390', width: 390, height: 844 }, { n: '360', width: 360, height: 800 }]) {
-    const context = await browser.newContext({ viewport, serviceWorkers: 'block' }); const page = await context.newPage(); const errors = [];
+    const context = await browser.newContext({ viewport, serviceWorkers: 'block', locale: 'es-ES' }); const page = await context.newPage(); const errors = [];
     page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
     await page.route('**/v1/**', (route) => new URL(route.request().url()).pathname === '/v1/intelligence/today' ? json(route, intelligence) : json(route, {}));
-    await page.route('https://fonts.googleapis.com/**', (route) => route.fulfill({ status: 200, body: '' })); await page.route('https://fonts.gstatic.com/**', (route) => route.fulfill({ status: 204, body: '' }));
+    await page.route('https://fonts.googleapis.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/css', body: '' })); await page.route('https://fonts.gstatic.com/**', (route) => route.fulfill({ status: 200, contentType: 'font/woff2', body: '' }));
     await page.goto(base, { waitUntil: 'domcontentloaded' });
     // Fase 2: la entrada por defecto es Inicio; Central sigue siendo el primer chip
     // y queda a un toque.
