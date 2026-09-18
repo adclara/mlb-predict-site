@@ -201,6 +201,9 @@ Spec formal: `docs/redesign/DESIGN.md`.
 
 ## Verificación
 
+Fase 6 en producción (2026-09-18): deploy.yml run 35387559277 — `aasport.net`
+sirve la versión nueva; `prod_diag` **PASS 37 · FAIL 0 · WARN 0**.
+
 `tests/redesign_baseline_capture.mjs` tras la migración: **0 errores de consola,
 sin overflow horizontal** en desktop 1440×900, 390×844 y 360×800 (24 capturas).
 Comparación visual contra las capturas de Fase 0 (`/tmp/baseline-fase0`):
