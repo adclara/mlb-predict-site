@@ -407,6 +407,20 @@ try {
     await snap('soccer-detail');
     await closeMobileDetail();
 
+    // 9) Estado vacío de Central AA: sin jugadas elegibles no se rellena cuota.
+    //    La route registrada al final tiene prioridad sobre el mock general.
+    await page.route('**/v1/intelligence/today', (route) => json(route, { ...INTELLIGENCE, slate: [], market_bundles: [] }));
+    await page.goto(`${base}/?tab=radar&baseline-empty=${vp.name}`, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => /No hay jugadas públicas elegibles|no eligible public plays/i.test(document.querySelector('#list')?.textContent || ''));
+    await snap('central-empty');
+
+    // 10) Skeleton de Inicio: /v1/mlb/today colgado a propósito (se aborta al
+    //     cerrar el contexto; el ruido net:: queda filtrado en collectErrors).
+    await page.route('**/v1/mlb/today', () => {});
+    await page.goto(`${base}/?baseline-skel=${vp.name}`, { waitUntil: 'domcontentloaded' });
+    await page.locator('#list .skel').first().waitFor({ state: 'visible' });
+    await snap('inicio-skeleton');
+
     report.viewports[vp.name] = { errors, overflow };
     if (errors.length) {
       failures += errors.length;

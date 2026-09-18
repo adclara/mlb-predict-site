@@ -229,13 +229,12 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 /* ═════════ LAYOUT ═════════ */
 .layout{max-width:1380px;margin:0 auto;padding:16px 20px 80px;display:grid;grid-template-columns:400px minmax(0,1fr) 308px;gap:16px;align-items:start}
 /* ═════ GLASS ENGINE 2.0 — clases reutilizables ═════ */
-.glass,.pane{
+.pane{
   background:linear-gradient(145deg,var(--card-hi),var(--card-lo) 85%);
   backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);
   border:1px solid var(--hair);border-radius:var(--r-13);
   box-shadow:var(--shadow);
 }
-.glass-inset{background:var(--inner);border:1px solid var(--hair);border-radius:var(--r-12)}
 
 /* ═════════ LEFT: LIST ═════════ */
 .listpane{overflow:hidden}
@@ -445,8 +444,6 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .dtop .crumb .sep{margin:0 6px;opacity:.5}
 .sharebtn{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--r-9);background:var(--inner);border:1px solid var(--hair);color:var(--dim);cursor:pointer;flex:none;transition:color .15s,border-color .15s}
 .sharebtn:hover{color:var(--volt);border-color:var(--volt)}
-.dclose{margin-left:auto;width:30px;height:30px;display:none;place-items:center;border-radius:var(--r-9);color:var(--dim)}
-.dclose:hover{background:var(--panel-2)}
 .dhero{padding:20px 22px 18px;text-align:center;position:relative;isolation:isolate;overflow:hidden;min-height:220px;
   background:
     radial-gradient(ellipse at 8% 90%, var(--hero-glow-a), transparent 55%),
@@ -502,10 +499,6 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
   .pstats4{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 
-.whowin{background:var(--inner);border:1px solid var(--hair);border-radius:var(--r-14);padding:16px 18px;margin-bottom:14px}
-.ww-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
-.ww-head .q{font-size:15.5px;font-weight:800}
-.ww-head .eng{font-size:11px;color:var(--faint)}
 .probhead{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:7px}
 .probtrack{height:9px;border-radius:var(--r-6);background:var(--panel-2);overflow:hidden;display:flex}
 .probtrack .aw{background:var(--sky);height:100%}
@@ -593,11 +586,6 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .pcn{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pcr{font-size:11px;color:var(--faint)}
 .handpill{font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:var(--r-5);background:var(--panel-2);color:var(--dim);flex-shrink:0}
-.pstat{display:grid;grid-template-columns:34px 1fr 32px;align-items:center;gap:7px;padding:2.5px 0}
-.pstat .pl{font-size:10px;color:var(--faint);font-weight:800}
-.pstat .pbar{height:6px;border-radius:var(--r-4);background:var(--panel-2);overflow:hidden}
-.pstat .pbar i{display:block;height:100%;background:var(--sky);border-radius:var(--r-4)}
-.pstat b{font-size:12.5px;text-align:right}
 .pfat{font-size:11.5px;color:var(--dim);margin-top:5px}
 .f5card .probhead{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:7px}
 .f5card .nrfi{margin-top:9px;font-size:13px;color:var(--dim)}
@@ -649,7 +637,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .confpill{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border:1px solid var(--hair-2);padding:3px 10px;border-radius:var(--r-pill)}
 
 .secttl{font-family:var(--font-display);font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:16px 0 9px}
-.secttl .sub3{color:var(--faint);font-weight:600;letter-spacing:0;text-transform:none;font-size:11px}
+.secttl .sub3, .secttl2 .sub3{color:var(--faint);font-weight:600;letter-spacing:0;text-transform:none;font-size:11px}
 .secttl:first-child{margin-top:0}
 .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
 .mcard{background:var(--inner);border:1px solid var(--hair);border-radius:var(--r-11);padding:9px 12px}
@@ -882,7 +870,6 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .stile .v{font-size:16px;font-weight:800;color:var(--volt)}
 .stile .l{font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-top:3px}
 .secttl2{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;background:none;border:0;color:var(--amber);font:inherit;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:14px 14px 6px;border-bottom:1px solid var(--hair)}
-.secttl2 .sub3{color:var(--faint);font-weight:600;letter-spacing:0;text-transform:none;font-size:11px}
 .secttl2.tgl{cursor:pointer}
 .secttl2 .caret{margin-left:auto;color:var(--faint)}
 .expbtn{display:block;width:100%;background:none;border:0;border-bottom:1px solid var(--hair);color:var(--sky);font:inherit;font-size:12px;font-weight:700;padding:9px 14px;text-align:center;cursor:pointer}
@@ -1232,7 +1219,6 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .pstat4 span{display:block;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-top:2px}
 .photocap{display:block;font-size:9.5px;color:var(--faint);margin-top:3px;letter-spacing:.02em}
 .pcard{background:linear-gradient(145deg,var(--card-hi),var(--card-lo) 85%);border:1px solid var(--hair);border-radius:var(--r-13);padding:13px 14px}
-.sprow{display:flex;gap:11px;align-items:center}
 
 /* razones (por qué esta jugada) */
 .whylist{list-style:none;display:flex;flex-direction:column;gap:7px}
