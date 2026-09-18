@@ -68,12 +68,17 @@ const MLB_EVENTS = [
   mlbEvent('g2', { code: 'NYY', name: 'New York Yankees' }, { code: 'BOS', name: 'Boston Red Sox' }, `${today}T23:10:00Z`, 61, ['gema']),
   mlbEvent('g3', { code: 'LAD', name: 'Los Angeles Dodgers' }, { code: 'SF', name: 'San Francisco Giants' }, `${today}T01:15:00Z`, 54, []),
 ];
+// El juego en vivo lleva historial de win probability para la curva del detalle.
+MLB_EVENTS[2].snapshot.wp = [
+  { wp: 0.5 }, { wp: 0.52, half: 'Top', inn: 1 }, { wp: 0.48, half: 'Bot', inn: 1 },
+  { wp: 0.55, half: 'Top', inn: 3 }, { wp: 0.6, half: 'Bot', inn: 4 }, { wp: 0.58, half: 'Bot', inn: 5 },
+];
 
 const MLB_LIVE = [{
   espn_id: 'g3-live', date: today, start: `${today}T01:15:00Z`, status: 'live',
   status_detail: 'Bot 5th',
   away: { code: 'LAD', score: 3, rec: null }, home: { code: 'SF', score: 2, rec: null },
-  period: 5, situation: null,
+  period: 5, situation: null, win_prob_home: 0.42,
 }];
 
 const MLB_STANDINGS = {
@@ -313,6 +318,10 @@ try {
 
     const snap = async (name) => {
       await page.waitForTimeout(350); // asienta imágenes/animaciones de entrada
+      // Artefacto conocido: en desktop, clickar una fila hace scroll de página y
+      // el detalle salía parcialmente de cuadro. Se normaliza el scroll antes de
+      // capturar (en móvil el detalle es overlay fixed, no afecta).
+      if (!mobile) await page.evaluate(() => window.scrollTo(0, 0));
       const file = join(OUT, `${name}-${vp.name}.png`);
       await page.screenshot({ path: file, fullPage: false });
       overflow[name] = await measureOverflow(page);
@@ -363,6 +372,12 @@ try {
     await page.locator('.pill[data-f="live"]').click();
     await page.locator('.mrow[data-id="g3"]').waitFor({ state: 'visible' });
     await snap('mlb-live');
+
+    // 5b) Detalle en vivo: marcador + WP en vivo mandan (curva + comparador ESPN).
+    await page.locator('.mrow[data-id="g3"]').click();
+    await page.waitForFunction(() => /ESPN/.test(document.querySelector('#dcard')?.textContent || ''));
+    await snap('mlb-live-detail');
+    await closeMobileDetail();
     await page.locator('.pill[data-f="all"]').click();
 
     // 6) Posiciones MLB.
