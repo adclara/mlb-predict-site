@@ -151,6 +151,14 @@ comparador) y llevó la misma superficie a soccer (Ganador público AA + tres
 gates cerrados sin muestra, porque la API no publica su progreso). CSS: se
 eliminan las reglas muertas `.dtab.locked`; no se añadió ninguna.
 
+## Añadidos en Fase 4 (live, standings y Central AA)
+
+**Ningún token nuevo.** Live reusa el comparador de mercados y la curva WP;
+las tablas de posiciones ganan scroll interno con `.tblscroll`
+(`--scroll` para la barra); la Central AA agrupa por scope con `.secttl .sub3`
+(`--faint`). CSS añadido: `.tblscroll` y `.secttl .sub3` — ambos solo con tokens
+existentes.
+
 ## Verificación
 
 `tests/redesign_baseline_capture.mjs` tras la migración: **0 errores de consola,
