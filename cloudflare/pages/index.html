@@ -2272,6 +2272,7 @@ document.addEventListener('click', (e) => {
 });
 let selectedId = null, filter = 'all', listTab = 'all', query = '', dtab = 'analisis';
 let pendingGame = null, pendingOther = null;   // deep-links de links compartidos
+let _aaFromPop = false, _aaBooting = true;     // History API: no re-pushear en popstate/boot
 let firstLoad = true, lastAnimKey = null;
 let favs = new Set(JSON.parse(localStorage.getItem('aa_favs') || '[]'));
 const $ = id => document.getElementById(id);
@@ -3849,6 +3850,83 @@ function renderSide(){
 }
 
 /* ── interacción ─────────────────────────────────────────── */
+const AA_SPORTS = ['home','radar','mlb','soccer','nba','wnba','tennis','nfl','ncaaf','nhl','ncaam'];
+function aaReadRoute(){
+  const qp = new URLSearchParams(location.search);
+  const raw = qp.get('s') || qp.get('tab') || '';
+  return {
+    s: AA_SPORTS.includes(raw) ? raw : '',
+    g: qp.get('g') || '',
+    sc: qp.get('sc') || '',
+    lt: qp.get('lt') || '',
+    w: ((qp.get('w') || '').match(/0x[0-9a-fA-F]{40}/) || [''])[0],
+  };
+}
+function aaBuildSearch(){
+  const qp = new URLSearchParams();
+  const s = sport || 'home';
+  qp.set('s', s);
+  if ((s === 'mlb' || s === 'home') && selectedId) qp.set('g', String(selectedId));
+  else if (s === 'radar' && typeof radarSel !== 'undefined' && radarSel) qp.set('g', String(radarSel));
+  else if (s !== 'home' && s !== 'mlb' && s !== 'radar' && typeof otherSel !== 'undefined' && otherSel) qp.set('sc', String(otherSel));
+  if (listTab && listTab !== 'all') qp.set('lt', listTab);
+  return '?' + qp.toString();
+}
+function aaWriteRoute(mode){
+  if (_aaFromPop || _aaBooting) return;
+  const url = location.pathname + aaBuildSearch();
+  const cur = location.pathname + (location.search || '');
+  if (url === cur) return;
+  const st = { aa: 1 };
+  if (mode === 'replace') history.replaceState(st, '', url);
+  else history.pushState(st, '', url);
+}
+function aaCloseDetail(){
+  const el = $('detail');
+  if (el) el.classList.remove('open');
+  document.body.style.overflow = '';
+}
+function aaApplyRoute(r){
+  _aaFromPop = true;
+  try {
+    const s = r.s || 'home';
+    if (s !== sport) setSport(s);
+    if (r.lt && r.lt !== listTab){
+      listTab = r.lt;
+      if (typeof setListChrome === 'function') setListChrome();
+      renderList(); renderDetail();
+    }
+    if (r.g && (s === 'mlb' || s === 'home')){
+      pendingGame = r.g;
+      if (typeof events !== 'undefined' && events.some(e => String(e.event_id) === String(r.g))) select(r.g, true);
+    } else if (r.sc){
+      pendingOther = r.sc;
+      otherSel = r.sc;
+      if (typeof renderOtherDetail === 'function') renderOtherDetail();
+      if (window.matchMedia('(max-width:900px)').matches){
+        $('detail').classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+    } else if (s === 'radar' && r.g){
+      radarSel = r.g;
+      if (typeof renderRadarDetail === 'function') renderRadarDetail();
+      if (window.matchMedia('(max-width:900px)').matches){
+        $('detail').classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+    } else {
+      if (s === 'mlb' || s === 'home') selectedId = null;
+      if (s !== 'mlb' && s !== 'home' && s !== 'radar') otherSel = null;
+      if (s === 'radar') radarSel = null;
+      aaCloseDetail();
+      renderList();
+      if (s === 'mlb' || s === 'home') renderDetail();
+      else if (s === 'radar'){ renderRadarList(); renderRadarDetail(); }
+      else if (typeof renderOtherDetail === 'function') renderOtherDetail();
+    }
+  } finally { _aaFromPop = false; }
+}
+addEventListener('popstate', () => aaApplyRoute(aaReadRoute()));
 function select(id, openMobile){
   if (id !== selectedId){ dtab = 'analisis'; marketTab = 'winner'; }
   selectedId = id;
@@ -3857,6 +3935,7 @@ function select(id, openMobile){
     $('detail').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
+  aaWriteRoute('push');
 }
 document.addEventListener('click', e => {
   const sp3 = e.target.closest('.sp[data-sport]');
@@ -3874,6 +3953,7 @@ document.addEventListener('click', e => {
   if (rrow){
     radarSel = rrow.dataset.rw; renderRadarDetail();
     if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; }
+    aaWriteRoute('push');
     return;
   }
   const orow = e.target.closest('[data-oid]');
@@ -3881,6 +3961,7 @@ document.addEventListener('click', e => {
     if (String(otherSel) !== String(orow.dataset.oid)) marketTab = 'winner';
     otherSel = orow.dataset.oid; renderOtherDetail();
     if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; }
+    aaWriteRoute('push');
     return;
   }
   const star = e.target.closest('[data-star]');
@@ -3981,8 +4062,8 @@ document.addEventListener('click', e => {
   }
   if (e.target.closest('#lghead')){ $('lgroup').classList.toggle('closed'); return; }
   if (e.target.closest('#dback')){
-    $('detail').classList.remove('open');
-    document.body.style.overflow = '';
+    if (history.state && history.state.aa && /[?&](g|sc)=/.test(location.search)) history.back();
+    else aaCloseDetail();
     return;
   }
   const t = e.target.closest('[data-id]');
@@ -4956,6 +5037,7 @@ function setSport(sp2){
   if (sport === 'mlb' || sport === 'home') renderAll();
   else if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); loadRadar(); loadAlerts(); }
   else { renderOtherList(); renderOtherDetail(); loadOther(); }
+  aaWriteRoute('push');
 }
 
 /* ── navegación por fechas (historial navegable) ─────────────────────── */
@@ -5131,16 +5213,19 @@ applyI18n(); // pinta el idioma guardado antes de cargar datos
 // shell sigue siendo network-first; nunca se cachean respuestas deportivas.
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker
   .register('/sw.js', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {}));
-// Deep-links (links compartidos): ?w=<0x…> wallet · ?g=<id> juego MLB ·
-// ?tab=<sport> abre cualquier vertical · ?tab=soccer&sc=<id> partido de fútbol.
-{ const qp = new URLSearchParams(location.search);
-  const _wp = (qp.get('w') || '').match(/0x[0-9a-fA-F]{40}/);
-  const gid = qp.get('g'), tab = qp.get('tab'), scid = qp.get('sc');
-  if (_wp){ try { setSport('radar'); loadWalletSearch(_wp[0]); } catch (e) {} }
-  else if (['home', 'mlb', 'soccer', 'nba', 'wnba', 'tennis', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(tab)){ try { setSport(tab); if (scid) pendingOther = scid; } catch (e) {} }
-  else if (/^radar\./i.test(location.hostname) || tab === 'radar'){ try { setSport('radar'); } catch (e) {} }
-  else if (gid){ try { setSport('mlb'); pendingGame = gid; } catch (e) {} } // se aplica cuando cargan los eventos
+// Deep-links (links compartidos): ?s= / ?tab= deporte · ?g=<id> MLB ·
+// ?tab=soccer&sc=<id> partido de fútbol · ?w=<0x…> wallet pausado.
+{ const r = aaReadRoute();
+  const qp = new URLSearchParams(location.search);
+  const _wp = r.w || (qp.get('w') || '').match(/0x[0-9a-fA-F]{40}/);
+  const gid = r.g, tab = r.s, scid = r.sc;
+  if (_wp){ try { setSport('radar'); loadWalletSearch(typeof _wp === 'string' ? _wp : _wp[0]); } catch (e) {} }
+  else if (AA_SPORTS.includes(tab)){ try { setSport(tab); if (scid) pendingOther = scid; } catch (e) {} }
+  else if (/^radar\./i.test(location.hostname)){ try { setSport('radar'); } catch (e) {} }
+  else if (gid){ try { setSport('mlb'); pendingGame = gid; } catch (e) {} }
   else { try { setSport('home'); } catch (e) {} }
+  history.replaceState({ aa: 1 }, '', location.pathname + aaBuildSearch());
+  _aaBooting = false;
 }
 loadToday(); loadLive(); loadInjuries(); loadMe();
 setInterval(() => { if (sport === 'mlb' || sport === 'home') loadToday(); }, 5 * 60 * 1000);
