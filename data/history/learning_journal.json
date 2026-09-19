@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-09-18T13:46:53.797Z",
+  "updated_at": "2026-09-19T13:22:01.811Z",
   "cohort_version": "causal_ledger_v2",
-  "n_graded": 2024,
-  "n_total": 2310,
+  "n_graded": 2036,
+  "n_total": 2325,
   "first_date": "2026-03-25",
-  "last_date": "2026-09-17",
+  "last_date": "2026-09-18",
   "formula_version": "v2",
   "cal": {
     "gap": 10.8,
@@ -14,8 +14,8 @@
     "curve": [
       {
         "conf": 52.5,
-        "emp": 49.1,
-        "n": 222
+        "emp": 49.3,
+        "n": 223
       },
       {
         "conf": 57.6,
@@ -24,23 +24,23 @@
       },
       {
         "conf": 62.5,
-        "emp": 50.9,
-        "n": 424
-      },
-      {
-        "conf": 67.4,
-        "emp": 52,
-        "n": 500
-      },
-      {
-        "conf": 72.2,
-        "emp": 58,
+        "emp": 50.7,
         "n": 426
       },
       {
+        "conf": 67.4,
+        "emp": 51.9,
+        "n": 505
+      },
+      {
+        "conf": 72.2,
+        "emp": 58.2,
+        "n": 428
+      },
+      {
         "conf": 77.1,
-        "emp": 64.9,
-        "n": 134
+        "emp": 65.4,
+        "n": 136
       },
       {
         "conf": 81.9,
@@ -69,43 +69,48 @@
     "market_acc": 57.1,
     "verdict": "mercado mejor",
     "auditable": true,
-    "n": 692,
+    "n": 704,
     "min_n": 40
   },
   "lock_gate": {
     "rule": "market_agree5_starter_v1",
     "passes": false,
     "cut": "2026-07-31",
-    "n": 77,
-    "wins": 50,
+    "n": 79,
+    "wins": 52,
     "losses": 27,
-    "rate": 64.9
+    "rate": 65.8
   },
   "signals": [
     {
       "id": "agree5",
       "label": "5+ factores de acuerdo con el pick",
       "label_en": "5+ factors agree with the pick",
-      "edge_pp": 7.3,
+      "edge_pp": 7.5,
       "verdict": "robusto",
-      "fav_rate": 59.7
+      "fav_rate": 60
     }
   ],
   "state_es": [
-    "Ya llevo 2024 predicciones medidas (desde 2026-03-25). Todo lo que aprendo sale de mis propios aciertos y errores.",
+    "Ya llevo 2036 predicciones medidas (desde 2026-03-25). Todo lo que aprendo sale de mis propios aciertos y errores.",
     "Sé que soy algo sobre-confiado: cuando digo ~65% en promedio, ocurre ~54.4% (hueco de 10.8 pts). Por eso el número que muestro ya viene calibrado hacia abajo.",
-    "Estas hipótesis pasaron el filtro histórico: 5+ factores de acuerdo con el pick (+7.3 pts). Son diferencias medidas en el replay y siguen en validación forward; todavía no prueban una ventaja futura.",
+    "Estas hipótesis pasaron el filtro histórico: 5+ factores de acuerdo con el pick (+7.5 pts). Son diferencias medidas en el replay y siguen en validación forward; todavía no prueban una ventaja futura.",
     "En la cohorte de aperturas auditables, el acierto medido de la apertura es 57.1% y el del modelo 55.5%; no afirmo ventaja sobre el mercado.",
-    "De mi último error (BOS @ TEX 4-3): me fié de momento reciente y bateo y no funcionó. Lo peso en la próxima re-calibración."
+    "De mi último error (WSH @ STL 9-1): me fié de pitcheo y calendario y descanso y no funcionó. Lo peso en la próxima re-calibración."
   ],
   "state_en": [
-    "I've now measured 2024 predictions (since 2026-03-25). Everything I learn comes from my own hits and misses.",
+    "I've now measured 2036 predictions (since 2026-03-25). Everything I learn comes from my own hits and misses.",
     "I know I run a bit overconfident: when I say ~65% on average, it happens ~54.4% (a 10.8-pt gap). That's why the number I show is already calibrated downward.",
-    "These hypotheses passed the historical screen: 5+ factors agree with the pick (+7.3 pts). They are measured replay differences and remain under forward validation; they do not yet prove a future edge.",
+    "These hypotheses passed the historical screen: 5+ factors agree with the pick (+7.5 pts). They are measured replay differences and remain under forward validation; they do not yet prove a future edge.",
     "In the auditable-opening cohort, measured opener accuracy is 57.1% versus 55.5% for the model; I do not claim an edge over the market.",
-    "From my latest miss (BOS @ TEX 4-3): I leaned on recent form and offense and it didn't pan out. I weigh that into the next re-calibration."
+    "From my latest miss (WSH @ STL 9-1): I leaned on pitching and schedule and rest and it didn't pan out. I weigh that into the next re-calibration."
   ],
   "log": [
+    {
+      "date": "2026-09-18",
+      "es": "Sumé 12 predicciones medidas nuevas.",
+      "en": "Added 12 newly measured predictions."
+    },
     {
       "date": "2026-09-17",
       "es": "Sumé 8 predicciones medidas nuevas.",
@@ -200,11 +205,6 @@
       "date": "2026-08-30",
       "es": "Sumé 14 predicciones medidas nuevas.",
       "en": "Added 14 newly measured predictions."
-    },
-    {
-      "date": "2026-08-29",
-      "es": "Sumé 13 predicciones medidas nuevas.",
-      "en": "Added 13 newly measured predictions."
     }
   ],
   "history": [
@@ -535,6 +535,15 @@
     {
       "date": "2026-09-17",
       "n": 2024,
+      "gap": 10.8,
+      "ece": 10.8,
+      "model_acc": 55.5,
+      "market_acc": 57.1,
+      "cohort_version": "causal_ledger_v2"
+    },
+    {
+      "date": "2026-09-18",
+      "n": 2036,
       "gap": 10.8,
       "ece": 10.8,
       "model_acc": 55.5,
