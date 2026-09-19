@@ -625,7 +625,7 @@ try {
     assert.equal(await page.locator('.aa-railbtn.on').getAttribute('data-rail'), 'home', `${viewport.name}: Inicio no abrió por defecto`);
     assert.equal(await page.locator('.spwrap .sp').first().getAttribute('data-sport'), 'radar', `${viewport.name}: Central no es primera`);
     await page.locator('.sp[data-sport="radar"]').click();
-    await page.waitForFunction(() => /AA Play Central/i.test(document.querySelector('#list')?.textContent || ''));
+    await page.waitForFunction(() => /AA Play Central/i.test(document.querySelector('#list')?.textContent || '') && !radarLoading);
     assert.equal(await page.locator('.sp.on').getAttribute('data-sport'), 'radar', `${viewport.name}: Central no abrió desde el chip`);
     const radarEn = await page.locator('#list').textContent();
     assert.match(radarEn, /AA Play Central/i, `${viewport.name}: missing intelligence central EN`);

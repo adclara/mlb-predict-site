@@ -43,7 +43,7 @@ jobs:
           NODE_PATH: /tmp/aa-browser/node_modules
         run: |
           failed=0
-          for script in mlb_live_ui_test qa_shadow_ui_test intelligence_ui_test; do
+          for script in mlb_live_ui_test history_router_ui_test qa_shadow_ui_test intelligence_ui_test; do
             if ! timeout 240 node "tests/$script.mjs" > "reliability-results/$script.log" 2>&1; then failed=1; fi
             cat "reliability-results/$script.log"
           done

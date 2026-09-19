@@ -2453,47 +2453,59 @@ function renderHistList(){
 // 🧠 Cerebro AA: MLB conserva su diario + simulación completa; los demás
 // deportes consumen un snapshot agregado y medido. La lógica/pesos nunca llegan
 // al navegador y un gate cerrado nunca se convierte aquí en una predicción.
-let learningDoc = null, simDoc = null, learningLoading = false, learningLoadedAt = 0;
-const sportLearningDocs = new Map(), sportLearningLoading = new Set(), sportLearningAt = new Map();
+let learningDoc = null, simDoc = null, learningLoading = false, learningLoadedAt = 0, learningPromise = null;
+const sportLearningDocs = new Map(), sportLearningLoading = new Set(), sportLearningAt = new Map(), sportLearningPromises = new Map();
 const sportProducerHealth = new Map();
 async function loadLearning(){
   const target = sport;
   const maxAge = 5 * 60 * 1000;
   if (target === 'mlb'){
-    if (learningDoc && Date.now() - learningLoadedAt < maxAge){ if (listTab === 'brain') renderBrain(); return; }
-    if (learningLoading) return;
+    if (learningDoc && Date.now() - learningLoadedAt < maxAge){ if (listTab === 'brain') renderBrain(); return learningDoc; }
+    if (learningPromise) return learningPromise;
     learningLoading = true;
-    const [lr, sr] = await Promise.allSettled([
-      fetch(API + '/v1/mlb/learning').then(r => { if (!r.ok) throw new Error('learning'); return r.json(); }),
-      fetch(API + '/v1/mlb/simulation').then(r => { if (!r.ok) throw new Error('simulation'); return r.json(); }),
-    ]);
-    learningDoc = lr.status === 'fulfilled' ? lr.value : { note: 'err' };
-    simDoc = sr.status === 'fulfilled' ? sr.value : null;
-    learningLoadedAt = Date.now(); learningLoading = false;
-    if (sport === target && listTab === 'brain') renderBrain();
-    return;
+    learningPromise = (async () => {
+      const [lr, sr] = await Promise.allSettled([
+        fetch(API + '/v1/mlb/learning').then(r => { if (!r.ok) throw new Error('learning'); return r.json(); }),
+        fetch(API + '/v1/mlb/simulation').then(r => { if (!r.ok) throw new Error('simulation'); return r.json(); }),
+      ]);
+      learningDoc = lr.status === 'fulfilled' ? lr.value : { note: 'err' };
+      simDoc = sr.status === 'fulfilled' ? sr.value : null;
+      learningLoadedAt = Date.now();
+      learningLoading = false;
+      learningPromise = null;
+      if (sport === target && listTab === 'brain') renderBrain();
+      return learningDoc;
+    })();
+    return learningPromise;
   }
   const cachedAt = sportLearningAt.get(target) || 0;
-  if (sportLearningDocs.has(target) && Date.now() - cachedAt < maxAge){ if (listTab === 'brain') renderBrain(); return; }
-  if (sportLearningLoading.has(target)) return;
+  if (sportLearningDocs.has(target) && Date.now() - cachedAt < maxAge){ if (listTab === 'brain') renderBrain(); return sportLearningDocs.get(target); }
+  if (sportLearningPromises.has(target)) return sportLearningPromises.get(target);
   sportLearningLoading.add(target);
-  try{
-    const qaTarget = qaMode && ['wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(target);
-    const r = await fetch(`${API}${qaTarget ? '/v1/qa/' : '/v1/'}${encodeURIComponent(target)}/learning`, qaTarget ? { credentials: 'include' } : undefined);
-    if (!r.ok) throw new Error('sport learning');
-    sportLearningDocs.set(target, await r.json());
-  }catch(err){ sportLearningDocs.set(target, { note: 'err' }); }
-  if (['nba', 'wnba'].includes(target)) {
-    try {
-      const response = await fetch(`${API}/v1/${target}/pipeline-health`, { signal: AbortSignal.timeout(10000) });
-      if (!response.ok) throw new Error('producer status');
-      const health = await response.json();
-      sportProducerHealth.set(target, health.schema === 'aa-basketball-producer-health-v1' ? health : { state: 'producer_unknown' });
-    } catch { sportProducerHealth.set(target, { state: 'unavailable' }); }
-  }
-  sportLearningAt.set(target, Date.now()); sportLearningLoading.delete(target);
-  if (sport === target && listTab === 'brain') renderBrain();
-  else if (sport === target && ['wnba', 'nfl'].includes(target)){ renderOtherList(); renderOtherDetail(); }
+  const pending = (async () => {
+    try{
+      const qaTarget = qaMode && ['wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(target);
+      const r = await fetch(`${API}${qaTarget ? '/v1/qa/' : '/v1/'}${encodeURIComponent(target)}/learning`, qaTarget ? { credentials: 'include' } : undefined);
+      if (!r.ok) throw new Error('sport learning');
+      sportLearningDocs.set(target, await r.json());
+    }catch(err){ sportLearningDocs.set(target, { note: 'err' }); }
+    if (['nba', 'wnba'].includes(target)) {
+      try {
+        const response = await fetch(`${API}/v1/${target}/pipeline-health`, { signal: AbortSignal.timeout(10000) });
+        if (!response.ok) throw new Error('producer status');
+        const health = await response.json();
+        sportProducerHealth.set(target, health.schema === 'aa-basketball-producer-health-v1' ? health : { state: 'producer_unknown' });
+      } catch { sportProducerHealth.set(target, { state: 'unavailable' }); }
+    }
+    sportLearningAt.set(target, Date.now());
+    sportLearningLoading.delete(target);
+    sportLearningPromises.delete(target);
+    if (sport === target && listTab === 'brain') renderBrain();
+    else if (sport === target && ['wnba', 'nfl'].includes(target)){ renderOtherList(); renderOtherDetail(); }
+    return sportLearningDocs.get(target);
+  })();
+  sportLearningPromises.set(target, pending);
+  return pending;
 }
 // 🔬 Tarjeta de validación out-of-sample (walk-forward sobre todo el histórico).
 function simCard(){
@@ -3851,95 +3863,299 @@ function renderSide(){
 
 /* ── interacción ─────────────────────────────────────────── */
 const AA_SPORTS = ['home','radar','mlb','soccer','nba','wnba','tennis','nfl','ncaaf','nhl','ncaam'];
-function aaReadRoute(){
-  const qp = new URLSearchParams(location.search);
-  const raw = qp.get('s') || qp.get('tab') || '';
+const AA_LIST_TABS = ['all','favs','pos','hist','brain','edu','tools','cfg'];
+const AA_DETAIL_TABS = ['analisis','equipos','pitchers','bateadores','sim','mercado'];
+const AA_MARKETS = ['winner','total','players','combos'];
+const aaRouteId = value => {
+  const text = typeof value === 'string' ? value : '';
+  return /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(text) ? text : '';
+};
+const aaRouteDate = value => {
+  const text = typeof value === 'string' ? value : '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return '';
+  const date = new Date(text + 'T12:00:00Z');
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === text ? text : '';
+};
+function aaNormalizeRoute(input = {}){
+  const route = {
+    s: AA_SPORTS.includes(input.s) ? input.s : '',
+    g: aaRouteId(input.g),
+    sc: aaRouteId(input.sc),
+    date: aaRouteDate(input.date),
+    lt: AA_LIST_TABS.includes(input.lt) && input.lt !== 'all' ? input.lt : '',
+    dt: AA_DETAIL_TABS.includes(input.dt) && input.dt !== 'analisis' ? input.dt : '',
+    m: AA_MARKETS.includes(input.m) && input.m !== 'winner' ? input.m : '',
+    p: aaRouteId(input.p),
+    team: aaRouteId(input.team),
+    w: /^0x[0-9a-fA-F]{40}$/.test(input.w || '') ? input.w : '',
+  };
+  if (route.p) route.team = '';
+  return route;
+}
+function aaReadRoute(search){
+  const qp = new URLSearchParams(typeof search === 'string' ? search : '');
+  const s = qp.get('s');
+  const tab = qp.get('tab');
+  return aaCompatibleRoute({
+    s: AA_SPORTS.includes(s) ? s : tab,
+    g: qp.get('g'), sc: qp.get('sc'), date: qp.get('date'), lt: qp.get('lt'),
+    dt: qp.get('dt'), m: qp.get('m'), p: qp.get('p'), team: qp.get('team'), w: qp.get('w'),
+  });
+}
+function aaBuildSearch(input){
+  const route = aaCompatibleRoute(input);
+  const qp = new URLSearchParams();
+  for (const key of ['s','g','sc','date','lt','dt','m','p','team','w']) if (route[key]) qp.set(key, route[key]);
+  const search = qp.toString();
+  return search ? '?' + search : '';
+}
+function aaCompatibleRoute(input){
+  const route = aaNormalizeRoute(input);
+  if (!route.s) route.s = route.w ? 'radar' : route.g ? 'mlb' : 'home';
+  if (route.s === 'home'){
+    route.g = route.sc = route.date = route.lt = route.dt = route.m = route.p = route.team = route.w = '';
+  } else if (route.s === 'mlb'){
+    route.sc = route.w = '';
+    if (!route.g) route.dt = route.m = route.p = route.team = '';
+  } else if (route.s === 'radar'){
+    route.sc = route.date = route.lt = route.dt = route.m = route.p = route.team = '';
+  } else {
+    route.g = route.date = route.dt = route.w = '';
+    if (!route.sc) route.m = route.p = route.team = '';
+  }
+  return route;
+}
+const aaIsObjectRoute = route => !!(route.g || route.sc || route.p || route.team);
+function aaListRoute(input){
+  const route = aaCompatibleRoute(input);
+  route.g = route.sc = route.dt = route.m = route.p = route.team = '';
+  return route;
+}
+function aaCurrentRoute(){
+  const s = sport || 'home';
+  return aaCompatibleRoute({
+    s,
+    g: s === 'mlb' ? selectedId : s === 'radar' && typeof radarSel !== 'undefined' ? radarSel : '',
+    sc: !['home','mlb','radar'].includes(s) && typeof otherSel !== 'undefined' ? otherSel : '',
+    date: typeof viewDate !== 'undefined' ? viewDate : '',
+    lt: listTab !== 'all' ? listTab : '',
+    dt: selectedId && dtab !== 'analisis' ? dtab : '',
+    m: ((selectedId || otherSel) && marketTab !== 'winner') ? marketTab : '',
+  });
+}
+let aaHistorySeq = 0;
+const aaHistoryKey = kind => `${kind}:${Date.now().toString(36)}:${(++aaHistorySeq).toString(36)}`;
+const aaRouteUrl = route => location.pathname + aaBuildSearch(route);
+function aaListState(route, existing = null, focusKey = ''){
+  const normalized = aaListRoute(route);
   return {
-    s: AA_SPORTS.includes(raw) ? raw : '',
-    g: qp.get('g') || '',
-    sc: qp.get('sc') || '',
-    lt: qp.get('lt') || '',
-    w: ((qp.get('w') || '').match(/0x[0-9a-fA-F]{40}/) || [''])[0],
+    aa: 1, kind: 'list',
+    key: existing?.aa && existing.kind === 'list' && existing.key ? existing.key : aaHistoryKey('list'),
+    route: normalized,
+    scrollY: Math.max(0, Math.round(window.scrollY || 0)),
+    focusKey: focusKey || existing?.focusKey || '',
+    filter, query, listTab: normalized.lt || 'all', viewDate: normalized.date || null,
   };
 }
-function aaBuildSearch(){
-  const qp = new URLSearchParams();
-  const s = sport || 'home';
-  qp.set('s', s);
-  if ((s === 'mlb' || s === 'home') && selectedId) qp.set('g', String(selectedId));
-  else if (s === 'radar' && typeof radarSel !== 'undefined' && radarSel) qp.set('g', String(radarSel));
-  else if (s !== 'home' && s !== 'mlb' && s !== 'radar' && typeof otherSel !== 'undefined' && otherSel) qp.set('sc', String(otherSel));
-  if (listTab && listTab !== 'all') qp.set('lt', listTab);
-  return '?' + qp.toString();
+function aaObjectState(route, parentKey, existing = null){
+  return {
+    aa: 1, kind: 'object',
+    key: existing?.aa && existing.kind === 'object' && existing.key ? existing.key : aaHistoryKey('object'),
+    parentKey: parentKey || existing?.parentKey || '', route: aaCompatibleRoute(route),
+  };
 }
-function aaWriteRoute(mode){
+function aaWriteRoute(mode, input = aaCurrentRoute()){
   if (_aaFromPop || _aaBooting) return;
-  const url = location.pathname + aaBuildSearch();
-  const cur = location.pathname + (location.search || '');
-  if (url === cur) return;
-  const st = { aa: 1 };
-  if (mode === 'replace') history.replaceState(st, '', url);
-  else history.pushState(st, '', url);
+  const route = aaCompatibleRoute(input);
+  const current = history.state;
+  const state = aaIsObjectRoute(route)
+    ? aaObjectState(route, current?.parentKey, mode === 'replace' ? current : null)
+    : aaListState(route, mode === 'replace' ? current : null);
+  const url = aaRouteUrl(route);
+  if (mode === 'replace') history.replaceState(state, '', url);
+  else if (url !== location.pathname + location.search) history.pushState(state, '', url);
 }
 function aaCloseDetail(){
   const el = $('detail');
   if (el) el.classList.remove('open');
   document.body.style.overflow = '';
 }
-function aaApplyRoute(r){
+function aaRestoreListState(state){
+  if (!state || state.kind !== 'list') return;
+  filter = ['all','live','pre','final'].includes(state.filter) ? state.filter : 'all';
+  query = typeof state.query === 'string' ? state.query : '';
+  const input = $('q'); if (input) input.value = query;
+  document.querySelectorAll('.pill[data-f]').forEach(node => {
+    node.classList.toggle('on', node.dataset.f === filter);
+    node.classList.toggle('neutral', node.dataset.f === filter && filter !== 'live');
+  });
+  if (sport === 'radar') renderRadarList(); else renderList();
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const focusKey = String(state.focusKey || '');
+    const separator = focusKey.indexOf(':');
+    const kind = separator < 0 ? '' : focusKey.slice(0, separator);
+    const value = separator < 0 ? '' : focusKey.slice(separator + 1);
+    const attr = kind === 'oid' ? 'oid' : kind === 'rw' ? 'rw' : 'id';
+    const row = [...document.querySelectorAll(`[data-${attr}]`)].find(node => node.dataset[attr] === value);
+    if (row){ row.focus({ preventScroll: true }); }
+    else {
+      const fallback = $('lghead');
+      if (fallback){ fallback.tabIndex = -1; fallback.focus({ preventScroll: true }); }
+    }
+    window.scrollTo(0, Number(state.scrollY) || 0);
+  }));
+}
+function aaFocusObject(){
+  requestAnimationFrame(() => {
+    const detail = $('detail');
+    if (detail) detail.scrollTop = 0;
+    const target = $('dcard');
+    if (target){ target.tabIndex = -1; target.focus({ preventScroll: true }); }
+    window.scrollTo(0, 0);
+  });
+}
+async function aaLoadListTab(route){
+  if (route.lt === 'hist' && route.s === 'mlb') await loadHistory();
+  else if (route.lt === 'pos') await loadStandings();
+  else if (route.lt === 'brain') await loadLearning();
+}
+let aaApplySeq = 0;
+async function aaApplyRoute(input, state = null, waitForListData = false){
+  const route = aaCompatibleRoute(input);
+  const applySeq = ++aaApplySeq;
+  const isCurrentApply = () => applySeq === aaApplySeq;
   _aaFromPop = true;
   try {
-    const s = r.s || 'home';
-    if (s !== sport) setSport(s);
-    if (r.lt && r.lt !== listTab){
-      listTab = r.lt;
-      if (typeof setListChrome === 'function') setListChrome();
-      renderList(); renderDetail();
+    const s = route.s;
+    pendingGame = s === 'mlb' && route.g ? route.g : null;
+    pendingOther = !['home','mlb','radar'].includes(s) && route.sc ? route.sc : null;
+    const homeNeedsToday = s === 'home' && !!viewDate;
+    if (homeNeedsToday){
+      viewDate = null;
+      viewFuture = false;
+      document.body.classList.remove('viewingpast', 'viewingfuture');
+      $('dToday').hidden = true;
     }
-    if (r.g && (s === 'mlb' || s === 'home')){
-      pendingGame = r.g;
-      if (typeof events !== 'undefined' && events.some(e => String(e.event_id) === String(r.g))) select(r.g, true);
-    } else if (r.sc){
-      pendingOther = r.sc;
-      otherSel = r.sc;
-      if (typeof renderOtherDetail === 'function') renderOtherDetail();
+    const sportLoad = s !== sport ? setSport(s) : null;
+    listTab = route.lt || 'all';
+    dtab = route.dt || 'analisis';
+    marketTab = route.m || 'winner';
+    if (state?.kind === 'list'){
+      filter = ['all','live','pre','final'].includes(state.filter) ? state.filter : 'all';
+      query = typeof state.query === 'string' ? state.query : '';
+    }
+    if (s === 'mlb'){
+      selectedId = route.g && events.some(event => String(event.event_id) === String(route.g)) ? route.g : null;
+      if (route.date && route.date !== viewDate){
+        const loaded = await loadDay(route.date);
+        if (!isCurrentApply() || !loaded || aaBuildSearch(aaReadRoute(location.search)) !== aaBuildSearch(route)) return;
+      }
+      else if (!route.date && viewDate){
+        await backToToday();
+        if (!isCurrentApply()) return;
+      }
+    } else if (s === 'home'){
+      selectedId = null;
+      if (homeNeedsToday){
+        await loadToday();
+        if (!isCurrentApply()) return;
+      }
+    }
+    if (s === 'radar') radarSel = route.g || null;
+    else if (!['home','mlb'].includes(s)){
+      otherSel = route.sc && otherGames.some(game => String(game.espn_id) === String(route.sc)) ? route.sc : null;
+    }
+    if (waitForListData && sportLoad && typeof sportLoad.then === 'function'){
+      await sportLoad;
+      if (!isCurrentApply()) return;
+    }
+    await aaLoadListTab(route);
+    if (!isCurrentApply()) return;
+    if (typeof setListChrome === 'function') setListChrome();
+    renderAll();
+    if (aaIsObjectRoute(route)){
       if (window.matchMedia('(max-width:900px)').matches){
         $('detail').classList.add('open');
         document.body.style.overflow = 'hidden';
       }
-    } else if (s === 'radar' && r.g){
-      radarSel = r.g;
-      if (typeof renderRadarDetail === 'function') renderRadarDetail();
-      if (window.matchMedia('(max-width:900px)').matches){
-        $('detail').classList.add('open');
-        document.body.style.overflow = 'hidden';
-      }
-    } else {
-      if (s === 'mlb' || s === 'home') selectedId = null;
-      if (s !== 'mlb' && s !== 'home' && s !== 'radar') otherSel = null;
-      if (s === 'radar') radarSel = null;
-      aaCloseDetail();
-      renderList();
-      if (s === 'mlb' || s === 'home') renderDetail();
-      else if (s === 'radar'){ renderRadarList(); renderRadarDetail(); }
-      else if (typeof renderOtherDetail === 'function') renderOtherDetail();
+      aaFocusObject();
     }
-  } finally { _aaFromPop = false; }
-}
-addEventListener('popstate', () => aaApplyRoute(aaReadRoute()));
-function select(id, openMobile){
-  if (id !== selectedId){ dtab = 'analisis'; marketTab = 'winner'; }
-  selectedId = id;
-  renderList(); renderDetail();
-  if (openMobile && window.matchMedia('(max-width:900px)').matches){
-    $('detail').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    else { aaCloseDetail(); aaRestoreListState(state); }
+  } finally {
+    if (applySeq === aaApplySeq) _aaFromPop = false;
   }
-  aaWriteRoute('push');
+}
+function navigateToObject(input, focusKey = ''){
+  const route = aaCompatibleRoute(input);
+  if (!aaIsObjectRoute(route)) return;
+  const currentState = history.state;
+  const currentRoute = currentState?.aa && currentState.route
+    ? aaCompatibleRoute(currentState.route) : aaReadRoute(location.search);
+  if (currentState?.kind === 'object'
+      && aaBuildSearch(currentRoute) === aaBuildSearch(route)
+      && location.pathname + location.search === aaRouteUrl(route)) return;
+  const nested = currentState?.aa && currentState.kind === 'object' && (route.p || route.team);
+  if (currentState?.aa && currentState.kind === 'object' && !nested){
+    const objectState = aaObjectState(route, currentState.parentKey, currentState);
+    history.replaceState(objectState, '', aaRouteUrl(route));
+    aaApplyRoute(route, objectState);
+    return;
+  }
+  const parentRoute = nested ? aaCompatibleRoute(currentState.route)
+    : currentState?.aa && currentState.kind === 'list' ? aaListRoute(currentState.route)
+    : aaListRoute(aaReadRoute(location.search));
+  const parentState = nested ? aaObjectState(parentRoute, currentState.parentKey, currentState)
+    : aaListState(parentRoute, currentState, focusKey);
+  history.replaceState(parentState, '', aaRouteUrl(parentRoute));
+  const objectState = aaObjectState(route, parentState.key);
+  aaApplyRoute(route, objectState);
+  history.pushState(objectState, '', aaRouteUrl(route));
+}
+addEventListener('popstate', async event => {
+  const state = event.state;
+  const route = state?.aa && state.route ? state.route : aaReadRoute(location.search);
+  await aaApplyRoute(route, state, true);
+});
+function select(id){
+  const current = aaListRoute(aaCurrentRoute());
+  navigateToObject({ ...current, s: 'mlb', g: String(id) }, `id:${id}`);
+}
+function aaBeginListTransition(input, mode = 'push'){
+  if (_aaFromPop || _aaBooting) return null;
+  const route = aaListRoute(input);
+  const current = history.state;
+  if (mode !== 'replace' && current?.aa && current.kind === 'list'){
+    const outgoingRoute = aaListRoute(current.route || aaReadRoute(location.search));
+    history.replaceState(aaListState(outgoingRoute, current), '', aaRouteUrl(outgoingRoute));
+  }
+  const destination = {
+    ...aaListState(route), scrollY: 0, focusKey: '', filter: 'all', query: '',
+  };
+  filter = 'all';
+  query = '';
+  listTab = route.lt || 'all';
+  const inputNode = $('q');
+  if (inputNode) inputNode.value = '';
+  window.scrollTo(0, 0);
+  if (mode === 'replace') history.replaceState(destination, '', aaRouteUrl(route));
+  else history.pushState(destination, '', aaRouteUrl(route));
+  return destination;
+}
+function aaNavigateList(input, mode = 'push'){
+  const route = aaListRoute(input);
+  const current = history.state;
+  const currentRoute = current?.aa && current.kind === 'list'
+    ? aaListRoute(current.route || aaReadRoute(location.search)) : null;
+  if (currentRoute
+      && aaBuildSearch(currentRoute) === aaBuildSearch(route)
+      && location.pathname + location.search === aaRouteUrl(route)) return;
+  const destination = aaBeginListTransition(route, mode);
+  if (!destination) return;
+  aaApplyRoute(route, destination);
 }
 document.addEventListener('click', e => {
   const sp3 = e.target.closest('.sp[data-sport]');
-  if (sp3){ if (sp3.dataset.sport !== sport) setSport(sp3.dataset.sport); return; }
+  if (sp3){ if (sp3.dataset.sport !== sport) aaNavigateList({ s: sp3.dataset.sport }); return; }
   const shb = e.target.closest('[data-share]');
   if (shb){ e.preventDefault(); e.stopPropagation(); shareGame(shb.dataset.share, shb.dataset.shid); return; }
   const lg2 = e.target.closest('[data-lg]');
@@ -3951,17 +4167,12 @@ document.addEventListener('click', e => {
   if (rl){ e.preventDefault(); $('legaldlg').showModal(); return; }
   const rrow = e.target.closest('[data-rw]');
   if (rrow){
-    radarSel = rrow.dataset.rw; renderRadarDetail();
-    if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; }
-    aaWriteRoute('push');
+    navigateToObject({ s: 'radar', g: rrow.dataset.rw }, `rw:${rrow.dataset.rw}`);
     return;
   }
   const orow = e.target.closest('[data-oid]');
   if (orow){
-    if (String(otherSel) !== String(orow.dataset.oid)) marketTab = 'winner';
-    otherSel = orow.dataset.oid; renderOtherDetail();
-    if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; }
-    aaWriteRoute('push');
+    navigateToObject({ ...aaListRoute(aaCurrentRoute()), sc: orow.dataset.oid }, `oid:${orow.dataset.oid}`);
     return;
   }
   const star = e.target.closest('[data-star]');
@@ -3978,9 +4189,9 @@ document.addEventListener('click', e => {
     return;
   }
   const dt = e.target.closest('.dtab');
-  if (dt){ dtab = dt.dataset.dt; renderDetail(); return; }
+  if (dt){ dtab = dt.dataset.dt; renderDetail(); aaWriteRoute('replace'); return; }
   const market = e.target.closest('[data-market-kind]');
-  if (market){ marketTab = market.dataset.marketKind || 'winner'; sport === 'mlb' ? renderDetail() : renderOtherDetail(); return; }
+  if (market){ marketTab = market.dataset.marketKind || 'winner'; sport === 'mlb' ? renderDetail() : renderOtherDetail(); aaWriteRoute('replace'); return; }
   const sl = e.target.closest('[data-set-lang]');
   if (sl){ setLang(sl.dataset.setLang); return; }
   if (e.target.closest('[data-open-how]')){ $('howdlg').showModal(); return; }
@@ -3991,23 +4202,17 @@ document.addEventListener('click', e => {
   if (railBtn){
     const v = railBtn.dataset.rail;
     if (v === 'home' || v === 'radar' || v === 'mlb'){
-      if (sport !== v) setSport(v);
+      if (sport !== v) aaNavigateList({ s: v });
     } else if (v === 'edu' || v === 'tools' || v === 'cfg'){
-      if (sport !== 'mlb') setSport('mlb');
-      listTab = v;
-      setListChrome();
-      renderList(); renderDetail();
+      aaNavigateList({ s: 'mlb', lt: v });
     } else {
-      if (sport !== 'mlb') setSport('mlb');
       const tabKey = v === 'analisis' ? 'all' : v;
       const tab = document.querySelector('.ltab[data-lt="'+tabKey+'"]');
       if (tab){
-        listTab = tab.dataset.lt;
-        setListChrome();
+        aaNavigateList({ s: 'mlb', lt: tab.dataset.lt === 'all' ? '' : tab.dataset.lt });
         if (listTab === 'hist') loadHistory();
         if (listTab === 'pos') loadStandings();
         if (listTab === 'brain') loadLearning();
-        renderList(); renderDetail();
       }
       if (v === 'analisis'){
         const first = document.querySelector('.mrow[data-id]');
@@ -4019,12 +4224,10 @@ document.addEventListener('click', e => {
   }
   const lt = e.target.closest('.ltab');
   if (lt){
-    listTab = lt.dataset.lt;
-    setListChrome();
+    aaNavigateList({ ...aaListRoute(aaCurrentRoute()), lt: lt.dataset.lt === 'all' ? '' : lt.dataset.lt });
     if (listTab === 'hist') loadHistory();
     if (listTab === 'pos') loadStandings();
     if (listTab === 'brain') loadLearning();
-    renderList(); renderDetail();
     syncRail();
     return;
   }
@@ -4062,13 +4265,17 @@ document.addEventListener('click', e => {
   }
   if (e.target.closest('#lghead')){ $('lgroup').classList.toggle('closed'); return; }
   if (e.target.closest('#dback')){
-    if (history.state && history.state.aa && /[?&](g|sc)=/.test(location.search)) history.back();
-    else aaCloseDetail();
+    if (history.state?.aa && history.state.kind === 'object' && history.state.parentKey) history.back();
+    else {
+      const route = aaListRoute(aaReadRoute(location.search));
+      aaApplyRoute(route);
+      history.replaceState(aaListState(route), '', aaRouteUrl(route));
+    }
     return;
   }
   const t = e.target.closest('[data-id]');
   // Desde Inicio, abrir un partido lleva al análisis MLB completo.
-  if (t){ if (sport === 'home') setSport('mlb'); select(t.dataset.id, true); }
+  if (t) select(t.dataset.id);
 });
 $('q').addEventListener('input', e => { query = e.target.value.trim(); renderList(); });
 $('list').addEventListener('input', e => {
@@ -4102,11 +4309,24 @@ function etTodayClient(){
   catch (e) { return new Date().toISOString().slice(0, 10); }
 }
 
+let mlbLoadSeq = 0;
+function mlbLoadIsCurrent(seq, date){
+  const route = aaReadRoute(location.search);
+  const targetDate = date || '';
+  return seq === mlbLoadSeq
+    && (sport === 'mlb' || sport === 'home')
+    && (viewDate || '') === targetDate
+    && (route.s === 'mlb' || route.s === 'home')
+    && (route.date || '') === targetDate;
+}
 async function loadToday(){
   if (viewDate) return; // estamos viendo un día archivado
+  const loadSeq = ++mlbLoadSeq;
   try{
     const r = await fetch(API + '/v1/mlb/today');
+    if (!mlbLoadIsCurrent(loadSeq, null)) return;
     const d = await r.json();
+    if (!mlbLoadIsCurrent(loadSeq, null)) return;
     events = d.events || [];
     todayRecord = d.record || null;
     runIndicatorMeta = d.run_indicator_meta || null;
@@ -4122,18 +4342,22 @@ async function loadToday(){
     if (d.date) $('dlabel').textContent = humanDate(d.date, !docStale);
     lastRec = (d.record && d.record.wins != null) ? d.record : null; // cache para re-render al cambiar idioma
     renderRecord();
-    if (firstLoad && events.length){
+    if (firstLoad){
       firstLoad = false;
       killBootAnim();
       setTimeout(() => $('listpane').classList.remove('boot'), 1400);
-      // link compartido ?g=<id> tiene prioridad; si no, la mejor jugada del día
+      // Una lista nunca elige un partido. Un id explícito solo abre si existe.
       const shared = pendingGame && events.find(e => String(e.event_id) === String(pendingGame));
       pendingGame = null;
-      const pick = shared || events.find(e => e.badges?.includes('gema')) || events.find(e => e.badges?.includes('fijo')) || events[0];
-      selectedId = pick.event_id;
+      selectedId = shared ? shared.event_id : null;
+    } else if (pendingGame){
+      const shared = events.find(e => String(e.event_id) === String(pendingGame));
+      selectedId = shared ? shared.event_id : null;
+      pendingGame = null;
     }
     renderAll();
   }catch(err){
+    if (!mlbLoadIsCurrent(loadSeq, null)) return;
     $('list').innerHTML = `<div class="lempty">${t('load_err_retry')}</div>`;
   }
 }
@@ -4148,25 +4372,30 @@ let otherGames = [], otherSel = null, otherLoading = false, otherLoadSeq = 0;
 let otherRecent = false;                 // true = mostrando últimos resultados (no hay juegos hoy)
 const sportModelDocs = new Map();        // docs públicos, siempre saneados por el Worker
 const standingsCache = new Map();        // 'nba' | 'soccer:<liga>' → doc de posiciones
+const standingsPromises = new Map();
 
 async function loadOther(){
   if (sport === 'mlb' || sport === 'radar' || sport === 'home') return;
   otherLoading = true;
   const loadSeq = ++otherLoadSeq;
   const mySport = sport, myLeague = soccerLeague;
+  const isCurrent = () => loadSeq === otherLoadSeq && mySport === sport && myLeague === soccerLeague;
   try{
-    const q = sport === 'soccer' ? `?league=${encodeURIComponent(soccerLeague)}` : '';
-    const r = await fetch(`${API}/v1/${sport}/live${q}`);
+    const q = mySport === 'soccer' ? `?league=${encodeURIComponent(myLeague)}` : '';
+    const r = await fetch(`${API}/v1/${mySport}/live${q}`);
+    if (!isCurrent()) return;
     const d = await r.json();
-    if (loadSeq !== otherLoadSeq || mySport !== sport || myLeague !== soccerLeague) return;
+    if (!isCurrent()) return;
     otherGames = d.games || [];
-    if (['wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)){
+    if (['wnba', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(mySport)){
       try{
         const qaTarget = qaMode;
-        const mr = await fetch(`${API}${qaTarget ? '/v1/qa/' : '/v1/'}${sport}/today`, qaTarget ? { credentials: 'include' } : undefined);
+        const mr = await fetch(`${API}${qaTarget ? '/v1/qa/' : '/v1/'}${mySport}/today`, qaTarget ? { credentials: 'include' } : undefined);
+        if (!isCurrent()) return;
         if (!mr.ok) throw new Error(`model today ${mr.status}`);
         const md = await mr.json();
-        sportModelDocs.set(sport, md);
+        if (!isCurrent()) return;
+        sportModelDocs.set(mySport, md);
         const byId = new Map((md.events || []).map(e => [String(e.espn_id || e.event_id || e.id), e]));
         if (otherGames.length) otherGames = otherGames.map(g => {
           const model = byId.get(String(g.espn_id));
@@ -4178,26 +4407,29 @@ async function loadOther(){
           } : { ...g, markets: md.markets || null };
         });
         else if (qaTarget) otherGames = (md.events || []).map(g => ({ ...g, espn_id: g.espn_id || g.event_id || g.id }));
-      }catch(e){ sportModelDocs.delete(sport); }
+      }catch(e){ if (!isCurrent()) return; sportModelDocs.delete(mySport); }
     }
     otherRecent = false;
     // sin juegos hoy → últimos resultados (aunque sean de la temporada pasada)
     if (!otherGames.length){
       const r2 = await fetch(`${API}/v1/${mySport}/recent${q}`);
+      if (!isCurrent()) return;
       const d2 = await r2.json();
-      if (loadSeq === otherLoadSeq && mySport === sport && myLeague === soccerLeague){
-        otherGames = (d2.games || []).map(g => ({ ...g, _recent: true }));
-        otherRecent = otherGames.length > 0;
-      }
+      if (!isCurrent()) return;
+      otherGames = (d2.games || []).map(g => ({ ...g, _recent: true }));
+      otherRecent = otherGames.length > 0;
     }
-  }catch(err){ if (loadSeq === otherLoadSeq){ otherGames = []; otherRecent = false; } }
-  if (loadSeq !== otherLoadSeq || mySport !== sport || myLeague !== soccerLeague) return;
+  }catch(err){ if (isCurrent()){ otherGames = []; otherRecent = false; } }
+  if (!isCurrent()) return;
   otherLoading = false;
   // link compartido ?sc=<id>: selecciona ese partido si está en la lista
   if (pendingOther){ const hit = otherGames.find(x => String(x.espn_id) === String(pendingOther)); if (hit){ otherSel = hit.espn_id; } pendingOther = null; }
   loadStandings();
   if (['wnba', 'nfl'].includes(sport) || (qaMode && ['ncaaf', 'nhl', 'ncaam'].includes(sport))) loadLearning();
-  if (sport === 'soccer') await loadSoccerPreds();
+  if (mySport === 'soccer'){
+    await loadSoccerPreds(isCurrent);
+    if (!isCurrent()) return;
+  }
   if (sport !== 'mlb') renderAll();
 }
 
@@ -4237,14 +4469,28 @@ function top2Banner(){
 
 // ⚽ Predicciones AA de soccer (KV soccer:today): número calibrado por partido +
 // récord en vivo + evidencia del backtest. Se une a los juegos por espn_id.
-let soccerPreds = null, soccerPredsLoading = false;
-async function loadSoccerPreds(){
-  if (soccerPreds || soccerPredsLoading) { if (soccerPreds && sport === 'soccer'){ renderList(); renderOtherDetail(); } return; }
+let soccerPreds = null, soccerPredsLoading = false, soccerPredsQueued = false;
+async function loadSoccerPreds(isCurrent = () => sport === 'soccer'){
+  if (soccerPreds) { if (isCurrent()){ renderList(); renderOtherDetail(); } return; }
+  if (soccerPredsLoading){ soccerPredsQueued = true; return; }
   soccerPredsLoading = true;
-  try { const r = await fetch(`${API}/v1/soccer/today`); soccerPreds = await r.json(); }
-  catch (e) { soccerPreds = { by_id: {} }; }
-  soccerPredsLoading = false;
-  if (sport === 'soccer'){ renderList(); renderOtherDetail(); updateTrainWidget(); }
+  try {
+    const r = await fetch(`${API}/v1/soccer/today`);
+    if (!isCurrent()) return;
+    const next = await r.json();
+    if (!isCurrent()) return;
+    soccerPreds = next;
+  } catch (e) {
+    if (!isCurrent()) return;
+    soccerPreds = { by_id: {} };
+  } finally {
+    soccerPredsLoading = false;
+    if (soccerPredsQueued){
+      soccerPredsQueued = false;
+      if (sport === 'soccer' && !soccerPreds) loadSoccerPreds();
+    }
+  }
+  if (isCurrent()){ renderList(); renderOtherDetail(); updateTrainWidget(); }
 }
 // El widget "modelo en entrenamiento" se oculta para soccer si ya hay predicciones.
 function updateTrainWidget(){
@@ -4294,21 +4540,31 @@ function soccerMarketCard(g){
   });
 }
 
-async function loadStandings(){
-  if (!['nba', 'wnba', 'soccer', 'tennis', 'mlb', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(sport)) return;
-  const key = sport === 'soccer' ? `soccer:${soccerLeague}` : sport;
-  if (standingsCache.has(key)) return;
-  try{
-    const q = sport === 'soccer' ? `?league=${encodeURIComponent(soccerLeague)}` : '';
-    const path = sport === 'tennis' ? 'tennis/rankings' : `${sport}/standings`;
-    const r = await fetch(`${API}/v1/${path}${q}`);
-    const d = await r.json();
-    if (d && d.sections && d.sections.length){
-      standingsCache.set(key, d);
-      if (listTab === 'pos') renderList();
-      if (sport !== 'mlb') renderOtherDetail();
-    }
-  }catch(err){ /* sin tabla no pasa nada */ }
+function loadStandings(){
+  const target = sport;
+  const targetLeague = soccerLeague;
+  if (!['nba', 'wnba', 'soccer', 'tennis', 'mlb', 'nfl', 'ncaaf', 'nhl', 'ncaam'].includes(target)) return Promise.resolve(null);
+  const cacheKey = target === 'soccer' ? `soccer:${targetLeague}` : target;
+  if (standingsCache.has(cacheKey)) return Promise.resolve(standingsCache.get(cacheKey));
+  if (standingsPromises.has(cacheKey)) return standingsPromises.get(cacheKey);
+  const pending = (async () => {
+    try{
+      const q = target === 'soccer' ? `?league=${encodeURIComponent(targetLeague)}` : '';
+      const path = target === 'tennis' ? 'tennis/rankings' : `${target}/standings`;
+      const r = await fetch(`${API}/v1/${path}${q}`);
+      const d = await r.json();
+      if (d && d.sections && d.sections.length){
+        standingsCache.set(cacheKey, d);
+        const targetStillActive = sport === target && (target !== 'soccer' || soccerLeague === targetLeague);
+        if (targetStillActive && listTab === 'pos') renderList();
+        if (targetStillActive && target !== 'mlb') renderOtherDetail();
+      }
+      return standingsCache.get(cacheKey) || null;
+    }catch(err){ return null; }
+    finally { standingsPromises.delete(cacheKey); }
+  })();
+  standingsPromises.set(cacheKey, pending);
+  return pending;
 }
 
 // Detalle de partido (alineaciones/box score/estadísticas) — proxy del summary
@@ -4523,7 +4779,8 @@ function centralListHtml(){
 }
 function centralDetailHtml(){
   const doc = radarDoc || {}, slate = doc.slate || [];
-  const item = slate.find((row) => row.id === radarSel) || slate[0];
+  const explicit = aaReadRoute(location.search).g;
+  const item = (radarSel && slate.find((row) => row.id === radarSel)) || (!explicit ? slate[0] : null);
   if (!item) return `<div class="dempty">${radarLoading ? t('intel_loading') : t('intel_empty')}</div>`;
   const anomalies = (item.consensus?.anomalies || []).map((a) => ({
     provider_divergence: t('intel_divergence'), market_move_30m: t('intel_move'), book_disagreement: t('intel_book_dis'), possible_informed_pattern: t('intel_possible'),
@@ -4798,7 +5055,9 @@ function renderOtherList(){
 }
 
 function renderOtherDetail(){
-  const g = otherGames.find(x => x.espn_id === otherSel) || otherGames.find(x => x.status === 'live') || otherGames[0];
+  const explicit = aaReadRoute(location.search).sc;
+  const selected = otherSel && otherGames.find(x => String(x.espn_id) === String(otherSel));
+  const g = selected || (!explicit ? otherGames.find(x => x.status === 'live') || otherGames[0] : null);
   const dc = $('dcard');
   const animKey = 'other|' + sport + '|' + (g ? g.espn_id : 'none');
   dc.classList.toggle('enter', animKey !== lastAnimKey);
@@ -4993,8 +5252,10 @@ function syncRail(){
   if (foot) foot.innerHTML = t('rail_live').replace(' · ', '<br>');
 }
 function setSport(sp2){
+  if (sp2 !== sport && !['mlb', 'home'].includes(sp2)) mlbLiveSeq += 1;
   sport = sp2;
-  listTab = 'all'; filter = 'all'; otherSel = null; otherGames = []; marketTab = 'winner';
+  listTab = 'all'; filter = 'all'; selectedId = null; otherSel = null; radarSel = null;
+  otherGames = []; dtab = 'analisis'; marketTab = 'winner';
   document.querySelectorAll('.sp[data-sport]').forEach(b => b.classList.toggle('on', b.dataset.sport === sport));
   document.querySelectorAll('.ltab').forEach(c => c.classList.toggle('on', c.dataset.lt === 'all'));
   document.querySelectorAll('.pill[data-f]').forEach(c => { c.classList.toggle('on', c.dataset.f === 'all'); c.classList.toggle('neutral', c.dataset.f === 'all'); });
@@ -5034,10 +5295,14 @@ function setSport(sp2){
     if (wrap && activeSport === wrap.firstElementChild) wrap.scrollLeft = 0;
     else activeSport.scrollIntoView({ block: 'nearest', inline: 'center' });
   }
-  if (sport === 'mlb' || sport === 'home') renderAll();
-  else if (sport === 'radar'){ renderRadarList(); renderRadarDetail(); loadRadar(); loadAlerts(); }
-  else { renderOtherList(); renderOtherDetail(); loadOther(); }
-  aaWriteRoute('push');
+  if (sport === 'mlb' || sport === 'home'){ renderAll(); return null; }
+  if (sport === 'radar'){
+    renderRadarList(); renderRadarDetail();
+    const loading = loadRadar(); loadAlerts();
+    return loading;
+  }
+  renderOtherList(); renderOtherDetail();
+  return loadOther();
 }
 
 /* ── navegación por fechas (historial navegable) ─────────────────────── */
@@ -5054,7 +5319,12 @@ function shiftDate(d, delta){
   return t.toISOString().slice(0, 10);
 }
 async function loadDay(date){
+  const route = aaListRoute({ ...aaCurrentRoute(), s: 'mlb', date });
+  aaBeginListTransition(route);
+  if (sport === 'home') setSport('mlb');
+  mlbLiveSeq += 1;
   viewDate = date;
+  const loadSeq = ++mlbLoadSeq;
   viewFuture = isFutureDate(date);
   document.body.classList.toggle('viewingpast', !viewFuture);
   document.body.classList.toggle('viewingfuture', viewFuture);
@@ -5063,43 +5333,65 @@ async function loadDay(date){
   $('dNext').disabled = date >= maxFutureDate();
   $('ticker').hidden = true;
   $('list').innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+
   try{
     // futuro → calendario de enfrentamientos (StatsAPI, sin predicción aún);
     // pasado/hoy → doc archivado con predicciones y resultados.
     const r = await fetch(`${API}/v1/mlb/${viewFuture ? 'schedule' : 'day'}/${date}`);
+    if (!mlbLoadIsCurrent(loadSeq, date)) return false;
     const d = await r.json();
+    if (!mlbLoadIsCurrent(loadSeq, date)) return false;
     events = d.events || [];
     liveByKey = new Map(); // sin live en días no-hoy
-    selectedId = events.length ? events[0].event_id : null;
+    const shared = pendingGame && events.find(event => String(event.event_id) === String(pendingGame));
+    selectedId = shared ? shared.event_id : null;
+    pendingGame = null;
     renderList(); renderDetail(); renderSide();
+    return true;
   }catch(err){
+    if (!mlbLoadIsCurrent(loadSeq, date)) return false;
     $('list').innerHTML = `<div class="lempty">${t('load_err_date')}</div>`;
+    return false;
   }
 }
-function backToToday(){
+async function backToToday(){
+  const route = aaListRoute({ ...aaCurrentRoute(), s: 'mlb', date: '' });
+  aaBeginListTransition(route);
+  if (sport === 'home') setSport('mlb');
   viewDate = null; viewFuture = false;
   document.body.classList.remove('viewingpast', 'viewingfuture');
   $('dToday').hidden = true;
   $('dNext').disabled = realToday() >= maxFutureDate();
   $('dlabel').textContent = todayDate || t('today');
+  selectedId = null;
+
   firstLoad = true; lastLiveSig = '[]';
-  loadToday(); loadLive();
+  const todayLoad = loadToday();
+  loadLive();
+  await todayLoad;
 }
 
-let histData = null, histLoading = false;
-async function loadHistory(){
-  if (histData || histLoading) return;
+let histData = null, histLoading = false, histPromise = null;
+function loadHistory(){
+  if (histData) return Promise.resolve(histData);
+  if (histPromise) return histPromise;
   histLoading = true;
-  try{
-    const r = await fetch(API + '/v1/mlb/history?days=30');
-    const d = await r.json();
-    histData = d.predictions || [];
-  }catch(err){ histData = []; }
-  histLoading = false;
-  if (listTab === 'hist') renderAll();
+  histPromise = (async () => {
+    try{
+      const r = await fetch(API + '/v1/mlb/history?days=30');
+      const d = await r.json();
+      histData = d.predictions || [];
+    }catch(err){ histData = []; }
+    histLoading = false;
+    histPromise = null;
+    if (listTab === 'hist') renderAll();
+    return histData;
+  })();
+  return histPromise;
 }
 
 let lastLiveSig = '[]';
+let mlbLiveSeq = 0;
 let favSeen = null; // event_id → estado efectivo (bootstrap en el 1er sondeo: no avisa de lo ya en curso)
 // Aviso del navegador cuando un juego ⭐ favorito pasa a EN VIVO o FINAL (con la
 // pestaña abierta; pide permiso al marcar el primer favorito). Sin duplicar.
@@ -5123,9 +5415,20 @@ function notifyFavGames(){
 }
 async function loadLive(){
   if (viewDate) return; // sin live en días pasados
+  const liveSeq = ++mlbLiveSeq;
+  const isCurrent = () => {
+    const route = aaReadRoute(location.search);
+    return liveSeq === mlbLiveSeq
+      && !viewDate
+      && (sport === 'mlb' || sport === 'home')
+      && (route.s === 'mlb' || route.s === 'home')
+      && !route.date;
+  };
   try{
     const r = await fetch(API + '/v1/mlb/live');
+    if (!isCurrent()) return;
     const d = await r.json();
+    if (!isCurrent()) return;
     const sig = JSON.stringify(d.games || []);
     if (sig === lastLiveSig) return; // sin cambios: no re-renderizar (y no cortar animaciones)
     lastLiveSig = sig;
@@ -5213,18 +5516,34 @@ applyI18n(); // pinta el idioma guardado antes de cargar datos
 // shell sigue siendo network-first; nunca se cachean respuestas deportivas.
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker
   .register('/sw.js', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {}));
-// Deep-links (links compartidos): ?s= / ?tab= deporte · ?g=<id> MLB ·
-// ?tab=soccer&sc=<id> partido de fútbol · ?w=<0x…> wallet pausado.
-{ const r = aaReadRoute();
-  const qp = new URLSearchParams(location.search);
-  const _wp = r.w || (qp.get('w') || '').match(/0x[0-9a-fA-F]{40}/);
-  const gid = r.g, tab = r.s, scid = r.sc;
-  if (_wp){ try { setSport('radar'); loadWalletSearch(typeof _wp === 'string' ? _wp : _wp[0]); } catch (e) {} }
-  else if (AA_SPORTS.includes(tab)){ try { setSport(tab); if (scid) pendingOther = scid; } catch (e) {} }
-  else if (/^radar\./i.test(location.hostname)){ try { setSport('radar'); } catch (e) {} }
-  else if (gid){ try { setSport('mlb'); pendingGame = gid; } catch (e) {} }
-  else { try { setSport('home'); } catch (e) {} }
-  history.replaceState({ aa: 1 }, '', location.pathname + aaBuildSearch());
+// Deep-links: canonicaliza la ruta completa antes de tocar el estado de UI.
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+{
+  const parsed = aaReadRoute(location.search);
+  const bootParams = new URLSearchParams(location.search);
+  if (/^radar\./i.test(location.hostname) && !['s','tab','g','sc','w'].some(key => bootParams.has(key))) parsed.s = 'radar';
+  const route = aaCompatibleRoute(parsed);
+  const prior = history.state;
+  let state;
+  if (aaIsObjectRoute(route)){
+    const provesParent = prior?.aa === 1 && prior.kind === 'object' && prior.parentKey
+      && aaBuildSearch(aaCompatibleRoute(prior.route)) === aaBuildSearch(route);
+    if (provesParent){
+      state = aaObjectState(route, prior.parentKey, prior);
+      history.replaceState(state, '', aaRouteUrl(route));
+    } else {
+      const parent = aaListRoute(route);
+      const parentState = aaListState(parent);
+      history.replaceState(parentState, '', aaRouteUrl(parent));
+      state = aaObjectState(route, parentState.key);
+      history.pushState(state, '', aaRouteUrl(route));
+    }
+  } else {
+    state = aaListState(route, prior);
+    history.replaceState(state, '', aaRouteUrl(route));
+  }
+  aaApplyRoute(route, state);
+  if (route.w){ try { loadWalletSearch(route.w); } catch (e) {} }
   _aaBooting = false;
 }
 loadToday(); loadLive(); loadInjuries(); loadMe();

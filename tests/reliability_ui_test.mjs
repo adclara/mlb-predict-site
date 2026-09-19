@@ -75,6 +75,7 @@ try {
       await page.locator('#q').fill('AA_NO_SUCH_TEAM');
       await page.waitForFunction(()=>document.querySelectorAll('#list .mrow').length===0);
       await page.locator('#q').fill('');
+      await page.locator('.mrow[data-id="reliability-1"]').waitFor();
       await page.locator('.mrow[data-id="reliability-1"]').click();
       assert.match(await page.locator('#dcard').innerText(),/insuficientes|evaluar/i);
       assert.doesNotMatch(await page.locator('#dcard').innerText(),/Ventaja moderada|Riesgo bajo/);
