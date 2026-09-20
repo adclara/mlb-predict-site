@@ -245,14 +245,19 @@ async function installApiMocks(page) {
 
 function collectErrors(page) {
   const errors = [];
-  const networkNoise = /ERR_TUNNEL_CONNECTION_FAILED|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED|Failed to load resource|net::/i;
+  const knownExternalNoise = /Failed to load resource|ERR_TUNNEL_CONNECTION_FAILED|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED|Load request cancelled|NS_BINDING_ABORTED|Cross-Origin Request Blocked|blocked by CORS policy|CORS request did not succeed/i;
+  const isFirstParty = (url) => {
+    try { return new URL(url || page.url()).origin === new URL(base).origin; }
+    catch { return true; }
+  };
+  const shouldCollect = (url, message) => isFirstParty(url) || !knownExternalNoise.test(message);
   page.on('console', (msg) => {
-    if (msg.type() === 'error' && !networkNoise.test(msg.text())) errors.push(`console: ${msg.text()}`);
+    if (msg.type() === 'error' && shouldCollect(msg.location().url, msg.text())) errors.push(`console: ${msg.text()}`);
   });
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
   page.on('requestfailed', (request) => {
     const message = request.failure()?.errorText || '';
-    if (!networkNoise.test(message)) errors.push(`requestfailed: ${request.url()} ${message}`);
+    if (shouldCollect(request.url(), message)) errors.push(`requestfailed: ${request.url()} ${message}`);
   });
   return errors;
 }

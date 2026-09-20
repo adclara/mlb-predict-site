@@ -7,7 +7,9 @@ import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+const playwright = require('playwright');
+const engine = process.env.AA_TEST_BROWSER || 'chromium';
+assert.ok(['chromium', 'firefox', 'webkit'].includes(engine));
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../cloudflare/pages');
 const MIME = {
@@ -256,14 +258,19 @@ async function installApiMocks(page, date, events, games) {
 
 function collectErrors(page) {
   const errors = [];
-  const networkNoise = /ERR_TUNNEL_CONNECTION_FAILED|Failed to load resource/i;
+  const knownExternalNoise = /Failed to load resource|ERR_TUNNEL_CONNECTION_FAILED|Load request cancelled|NS_BINDING_ABORTED|Cross-Origin Request Blocked|blocked by CORS policy|CORS request did not succeed/i;
+  const isFirstParty = (url) => {
+    try { return new URL(url || page.url()).origin === new URL(base).origin; }
+    catch { return true; }
+  };
+  const shouldCollect = (url, message) => isFirstParty(url) || !knownExternalNoise.test(message);
   page.on('console', (msg) => {
-    if (msg.type() === 'error' && !networkNoise.test(msg.text())) errors.push(`console: ${msg.text()}`);
+    if (msg.type() === 'error' && shouldCollect(msg.location().url, msg.text())) errors.push(`console: ${msg.text()}`);
   });
   page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
   page.on('requestfailed', (request) => {
     const message = request.failure()?.errorText || '';
-    if (!networkNoise.test(message)) errors.push(`requestfailed: ${request.url()} ${message}`);
+    if (shouldCollect(request.url(), message)) errors.push(`requestfailed: ${request.url()} ${message}`);
   });
   return errors;
 }
@@ -322,7 +329,7 @@ const candidates = [
 const executablePath = candidates.find(existsSync);
 if (executablePath) launch.executablePath = executablePath;
 
-const browser = await chromium.launch(launch);
+const browser = await playwright[engine].launch(engine === 'chromium' ? launch : { headless: true });
 const today = etToday();
 const yesterday = shiftDate(today, -1);
 
@@ -667,7 +674,7 @@ try {
   assert.deepEqual(errors, [], 'doubleheader-desktop: errores de consola/red de la app');
   await context.close();
 
-  console.log('✅ MLB live/date UI: desktop + 390 + 360, doble jornada, 0 errores, sin overflow');
+  console.log(`✅ MLB live/date UI (${engine}): desktop + 390 + 360, doble jornada, 0 errores, sin overflow`);
 } finally {
   await browser.close();
   await new Promise(resolveClose => server.close(resolveClose));

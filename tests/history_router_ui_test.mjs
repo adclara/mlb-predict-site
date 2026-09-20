@@ -7,7 +7,9 @@ import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+const playwright = require('playwright');
+const engine = process.env.AA_TEST_BROWSER || 'chromium';
+assert.ok(['chromium', 'firefox', 'webkit'].includes(engine));
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../cloudflare/pages');
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -67,14 +69,27 @@ const executablePath = [
   '/opt/pw-browsers/chromium/chrome-linux/chrome',
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
 ].filter(Boolean).find(existsSync);
-const browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : {}) });
+const browser = await playwright[engine].launch({ headless: true, ...(engine === 'chromium' && executablePath ? { executablePath } : {}) });
+
+const knownExternalNoise = /Failed to load resource|ERR_TUNNEL_CONNECTION_FAILED|Load request cancelled|NS_BINDING_ABORTED|Cross-Origin Request Blocked|blocked by CORS policy|CORS request did not succeed|access control checks/i;
+const knownExternalHostText = /aa-sports-api\.opsmira9\.workers\.dev|fonts\.googleapis\.com|fonts\.gstatic\.com|a\.espncdn\.com|img\.mlbstatic\.com|midfield\.mlbstatic\.com/i;
+const shouldCollectConsole = (page, message) => {
+  const locationUrl = message.location().url;
+  const text = message.text();
+  try {
+    const firstParty = locationUrl
+      ? new URL(locationUrl).origin === new URL(base).origin
+      : !knownExternalHostText.test(text);
+    return firstParty || !knownExternalNoise.test(text);
+  } catch { return true; }
+};
 
 async function mockPage(context) {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
-    if (message.type() === 'error' && !/Failed to load resource/.test(message.text())) errors.push(message.text());
+    if (message.type() === 'error' && shouldCollectConsole(page, message)) errors.push(message.text());
   });
   await page.route('**/v1/**', (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -102,7 +117,7 @@ async function delayedMlbPage(context, { todayDelay, dayDelay }) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
-    if (message.type() === 'error' && !/Failed to load resource/.test(message.text())) errors.push(message.text());
+    if (message.type() === 'error' && shouldCollectConsole(page, message)) errors.push(message.text());
   });
   await page.route('**/v1/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -134,7 +149,7 @@ const resetHistoryCounts = (page) => page.evaluate(() => {
   }
 });
 const historyCounts = (page) => page.evaluate(() => ({ push: window.__aaPushes, replace: window.__aaReplaces, length: history.length }));
-const waitForMlb = (page, id = 'g1') => page.locator(`.mrow[data-id="${id}"]`).waitFor();
+const waitForMlb = (page, id = 'g1') => page.locator(`.mrow[data-id="${id}"]`).waitFor({ state: 'attached' });
 const assertClean = (errors, label) => assert.deepEqual(errors, [], `${label}: console ${errors.join(' | ')}`);
 
 try {
@@ -206,7 +221,7 @@ try {
     assert.equal((await page.evaluate(() => history.state)).kind, 'list', `${viewport.name}: estado inicial no es lista`);
 
     await resetHistoryCounts(page);
-    await page.locator('.mrow[data-id="g1"]').click();
+    await page.locator('.mrow[data-id="g1"] [data-object-link]').click();
     await page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'g1');
     assert.equal((await historyCounts(page)).push, 1, `${viewport.name}: abrir MLB no hizo un push exacto`);
     const objectState = await page.evaluate(() => history.state);
@@ -233,11 +248,11 @@ try {
     const run = await mockPage(context);
     await run.page.goto(`${base}/?s=mlb`, { waitUntil: 'domcontentloaded' });
     await waitForMlb(run.page);
-    await run.page.locator('.mrow[data-id="g1"]').click();
+    await run.page.locator('.mrow[data-id="g1"] [data-object-link]').click();
     await run.page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'g1');
     await resetHistoryCounts(run.page);
     const before = await run.page.evaluate(() => ({ length: history.length, key: history.state.key, url: location.href }));
-    await run.page.locator('.mrow[data-id="g1"]').click();
+    await run.page.evaluate(() => navigateToObject({ ...history.state.route }));
     await run.page.waitForTimeout(50);
     const after = await run.page.evaluate(() => ({ length: history.length, key: history.state.key, url: location.href }));
     assert.deepEqual(after, before, 'click duplicado cambió la entrada activa');
@@ -251,11 +266,11 @@ try {
     const run = await mockPage(context);
     await run.page.goto(`${base}/?s=mlb`, { waitUntil: 'domcontentloaded' });
     await waitForMlb(run.page);
-    await run.page.locator('.mrow[data-id="g1"]').click();
+    await run.page.locator('.mrow[data-id="g1"] [data-object-link]').click();
     await run.page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'g1');
     const first = await run.page.evaluate(() => ({ length: history.length, parentKey: history.state.parentKey }));
     await resetHistoryCounts(run.page);
-    await run.page.locator('.mrow[data-id="g2"]').click();
+    await run.page.evaluate(() => navigateToObject({ ...history.state.route, g: 'g2' }));
     await run.page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'g2');
     const second = await run.page.evaluate(() => ({ length: history.length, parentKey: history.state.parentKey, kind: history.state.kind }));
     assert.equal(second.kind, 'object');
@@ -281,6 +296,11 @@ try {
     const after = await run.page.evaluate(() => ({ length: history.length, key: history.state.key, url: location.href }));
     assert.deepEqual(after, before, 'pestaña activa canónica cambió la entrada de lista');
     assert.deepEqual(await historyCounts(run.page).then(({ push, replace }) => ({ push, replace })), { push: 0, replace: 0 }, 'pestaña activa canónica escribió History API');
+    await run.page.locator('.aa-rail [data-rail="mlb"]').click();
+    await run.page.waitForTimeout(50);
+    const afterActiveRail = await run.page.evaluate(() => ({ length: history.length, key: history.state.key, url: location.href }));
+    assert.deepEqual(afterActiveRail, before, 'Partidos activo cambió la entrada canónica de lista');
+    assert.deepEqual(await historyCounts(run.page).then(({ push, replace }) => ({ push, replace })), { push: 0, replace: 0 }, 'Partidos activo escribió History API');
     assertClean(run.errors, 'active canonical list');
     await context.close();
   }
@@ -290,7 +310,7 @@ try {
     const run = await mockPage(context);
     await run.page.goto(`${base}/?s=nba`, { waitUntil: 'domcontentloaded' });
     await run.page.locator('.mrow[data-oid="n:colon"]').waitFor();
-    await run.page.locator('.mrow[data-oid="n:colon"]').click();
+    await run.page.locator('.mrow[data-oid="n:colon"] [data-object-link]').click();
     await run.page.waitForFunction(() => new URLSearchParams(location.search).get('sc') === 'n:colon');
     await run.page.goBack();
     await run.page.waitForFunction(() => !new URLSearchParams(location.search).get('sc'));
@@ -451,20 +471,16 @@ try {
     const run = await mockPage(context);
     await run.page.goto(`${base}/?s=mlb`, { waitUntil: 'domcontentloaded' });
     await waitForMlb(run.page, 'g2');
-    await run.page.locator('.mrow[data-id="g1"]').click();
-    await run.page.waitForFunction(() => document.querySelector('#detail').classList.contains('open'));
-    const seeded = await run.page.locator('#detail').evaluate(element => {
-      element.scrollTop = Math.min(320, element.scrollHeight - element.clientHeight);
-      return element.scrollTop;
-    });
-    assert.ok(seeded > 0, 'fixture de detalle no produjo scroll interno');
+    await run.page.locator('.mrow[data-id="g1"] [data-object-link]').click();
+    await run.page.waitForFunction(() => document.body.classList.contains('aa-page'));
+
     await run.page.locator('#dback').evaluate(button => button.click());
     await run.page.waitForFunction(() => !new URLSearchParams(location.search).get('g'));
-    await run.page.locator('.mrow[data-id="g2"]').click();
+    await run.page.locator('.mrow[data-id="g2"] [data-object-link]').click();
     await run.page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'g2');
-    await run.page.waitForTimeout(50);
+    await run.page.waitForFunction(() => scrollY === 0 && document.querySelector('#detail').scrollTop === 0);
     const position = await run.page.evaluate(() => ({ detail: document.querySelector('#detail').scrollTop, document: scrollY }));
-    assert.deepEqual(position, { detail: 0, document: 0 }, 'entrada de objeto no reinició ambos scrolls');
+    assert.deepEqual(position, { detail: 0, document: 0 }, 'entrada de objeto no reinició el scroll de documento');
     assertClean(run.errors, 'detail scroll reset');
     await context.close();
   }
@@ -475,7 +491,7 @@ try {
   await waitForMlb(behavior.page);
   assert.equal(await behavior.page.locator('.mrow.sel').count(), 0, 'Inicio autoseleccionó juego');
   await resetHistoryCounts(behavior.page);
-  await behavior.page.locator('.mrow[data-id="g1"]').click();
+  await behavior.page.locator('.mrow[data-id="g1"] [data-object-link]').click();
   await behavior.page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'g1');
   assert.deepEqual(await historyCounts(behavior.page).then(({ push }) => push), 1, 'Inicio debe abrir con un push');
   assert.equal(await routeValue(behavior.page, 's'), 'mlb', 'Inicio no abrió el objeto en MLB');
@@ -488,7 +504,7 @@ try {
   await behavior.page.locator('.pill[data-f="pre"]').click();
   await behavior.page.locator('#q').fill('CLE');
   await behavior.page.evaluate(() => window.scrollTo(0, Math.min(420, document.documentElement.scrollHeight - innerHeight)));
-  await behavior.page.locator('.mrow[data-id="g5"]').click();
+  await behavior.page.locator('.mrow[data-id="g5"] [data-object-link]').click();
   await behavior.page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'g5');
   await behavior.page.goBack();
   await behavior.page.waitForFunction(() => !new URLSearchParams(location.search).get('g'));
@@ -500,7 +516,7 @@ try {
   assert.equal(restored.active, 'g5');
   assert.ok(Math.abs(restored.y - restored.state.scrollY) <= 2, `scroll no restaurado: ${restored.y} vs ${restored.state.scrollY}`);
 
-  await behavior.page.locator('.mrow[data-id="g1"]').click();
+  await behavior.page.locator('.mrow[data-id="g1"] [data-object-link]').click();
   await behavior.page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'g1');
   await resetHistoryCounts(behavior.page);
   const lengthBeforeTabs = (await historyCounts(behavior.page)).length;
@@ -549,7 +565,7 @@ try {
   await behavior.page.locator('.mrow[data-oid="n1"]').waitFor();
   assert.equal(await routeValue(behavior.page, 'sc'), null, 'lista NBA autoseleccionó partido');
   await resetHistoryCounts(behavior.page);
-  await behavior.page.locator('.mrow[data-oid="n1"]').click();
+  await behavior.page.locator('.mrow[data-oid="n1"] [data-object-link]').click();
   await behavior.page.waitForFunction(() => new URLSearchParams(location.search).get('sc') === 'n1');
   assert.equal((await historyCounts(behavior.page)).push, 1, 'NBA debe abrir con un push');
   assert.equal((await behavior.page.evaluate(() => history.state)).kind, 'object');
@@ -558,9 +574,9 @@ try {
   await behavior.page.waitForFunction(() => document.activeElement?.dataset?.oid === 'n1');
 
   await behavior.page.goto(`${base}/?s=radar`, { waitUntil: 'domcontentloaded' });
-  await behavior.page.locator('[data-rw="r1"]').waitFor();
+  await behavior.page.locator('.intelrow[data-rw="r1"] [data-object-link]').waitFor();
   await resetHistoryCounts(behavior.page);
-  await behavior.page.locator('[data-rw="r1"]').click();
+  await behavior.page.locator('.intelrow[data-rw="r1"] [data-object-link]').click();
   await behavior.page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'r1');
   assert.equal((await historyCounts(behavior.page)).push, 1, 'Central debe abrir con un push');
   assert.equal((await behavior.page.evaluate(() => history.state)).kind, 'object');
@@ -1040,7 +1056,7 @@ try {
       return json(route, {});
     });
     await page.goto(`${base}/?s=mlb&lt=hist`, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(180);
+    await page.waitForFunction(() => histData?.[0]?.marker === 'direct-hist');
     const state = await page.evaluate(() => ({ listTab, marker: histData?.[0]?.marker || null }));
     assert.equal(historyRequests, 1, 'deep link lt=hist no disparó historial');
     assert.equal(state.listTab, 'hist');
@@ -1064,7 +1080,7 @@ try {
       return json(route, {});
     });
     await page.goto(`${base}/?s=mlb&lt=pos`, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(180);
+    await page.waitForFunction(() => standingsCache.get('mlb')?.marker === 'direct-pos');
     const state = await page.evaluate(() => ({ listTab, marker: standingsCache.get('mlb')?.marker || null }));
     assert.equal(standingsRequests, 1, 'deep link lt=pos no disparó posiciones');
     assert.equal(state.listTab, 'pos');
@@ -1094,7 +1110,7 @@ try {
       return json(route, {});
     });
     await page.goto(`${base}/?s=mlb&lt=brain`, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(200);
+    await page.waitForFunction(() => learningDoc?.marker === 'direct-brain' && simDoc?.marker === 'direct-sim');
     const state = await page.evaluate(() => ({ listTab, learning: learningDoc?.marker || null, simulation: simDoc?.marker || null }));
     assert.equal(learningRequests, 1, 'deep link lt=brain no disparó learning');
     assert.equal(simulationRequests, 1, 'deep link lt=brain no disparó simulation');
@@ -1251,17 +1267,100 @@ try {
     const directState = await run.page.evaluate(() => history.state);
     assert.equal(directState.kind, 'object', `${search}: deep link no creó objeto`);
     assert.ok(directState.parentKey, `${search}: deep link sin padre interno`);
-    const beforeReload = await run.page.evaluate(() => history.length);
-    await run.page.reload({ waitUntil: 'domcontentloaded' });
+    const beforeReload = await run.page.evaluate(() => ({ length: history.length, state: history.state }));
+    await Promise.all([
+      run.page.waitForEvent('domcontentloaded'),
+      run.page.evaluate(() => { location.reload(); }),
+    ]);
     await waitForMlb(run.page);
     await run.page.waitForFunction(() => document.querySelector('.mrow[data-id="g1"]')?.classList.contains('sel'));
-    assert.equal(await run.page.evaluate(() => history.length), beforeReload, `${search}: reload duplicó padre`);
-    await run.page.goBack();
+    const afterReload = await run.page.evaluate(() => ({ length: history.length, state: history.state }));
+    assert.equal(afterReload.state.key, beforeReload.state.key, `${search}: reload reemplazó objeto`);
+    assert.equal(afterReload.state.parentKey, beforeReload.state.parentKey, `${search}: reload reemplazó padre`);
+    assert.ok(afterReload.length <= beforeReload.length + (engine === 'firefox' ? 1 : 0), `${search}: reload duplicó entradas de app`);
+    await run.page.evaluate(() => history.back());
     await run.page.waitForFunction(() => !new URLSearchParams(location.search).get('g'));
     assert.equal((await run.page.evaluate(() => history.state)).kind, 'list', `${search}: primer Back no fue lista AA`);
-    await run.page.goForward();
+    await run.page.evaluate(() => history.forward());
     await run.page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'g1');
     assertClean(run.errors, `deep ${search}`);
+    await context.close();
+  }
+
+  {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block', locale: 'es-ES' });
+    const run = await mockPage(context);
+    await run.page.addInitScript(() => {
+      const push = history.pushState.bind(history);
+      history.pushState = (...args) => {
+        sessionStorage.setItem('aa_test_reload_pushes', String(Number(sessionStorage.getItem('aa_test_reload_pushes') || 0) + 1));
+        return push(...args);
+      };
+    });
+    await run.page.goto(`${base}/?s=mlb`, { waitUntil: 'domcontentloaded' });
+    await waitForMlb(run.page);
+    await run.page.locator('.mrow[data-id="g1"] [data-object-link]').click();
+    await run.page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'g1');
+    await run.page.goBack();
+    await run.page.waitForFunction(() => !new URLSearchParams(location.search).has('g'));
+    await run.page.goForward();
+    await run.page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'g1'
+      && history.state?.kind === 'object');
+    const beforeReload = await run.page.evaluate(() => ({
+      length: history.length, key: history.state.key, parentKey: history.state.parentKey,
+    }));
+    await run.page.evaluate(() => {
+      sessionStorage.setItem('aa_test_reload_pushes', '0');
+      history.replaceState(null, '', location.href);
+    });
+    await Promise.all([
+      run.page.waitForEvent('domcontentloaded'),
+      run.page.evaluate(() => { location.reload(); }),
+    ]);
+    await waitForMlb(run.page);
+    await run.page.waitForFunction(() => document.querySelector('.mrow[data-id="g1"]')?.classList.contains('sel'));
+    const afterReload = await run.page.evaluate(() => ({
+      length: history.length,
+      key: history.state?.key,
+      parentKey: history.state?.parentKey,
+      pushes: Number(sessionStorage.getItem('aa_test_reload_pushes') || 0),
+    }));
+    assert.equal(afterReload.key, beforeReload.key, 'Forward object reload replaced the object key');
+    assert.equal(afterReload.parentKey, beforeReload.parentKey, 'Forward object reload replaced the parent key');
+    assert.equal(afterReload.pushes, 0, 'Forward object reload added an app history entry');
+    assert.ok(afterReload.length <= beforeReload.length + (engine === 'firefox' ? 1 : 0),
+      'Forward object reload grew browser history beyond reload behavior');
+    assertClean(run.errors, 'Forward object null-state reload');
+    await context.close();
+  }
+
+  {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block', locale: 'es-ES' });
+    const run = await mockPage(context);
+    await run.page.route('https://outside.test/**', route => route.fulfill({
+      status: 200, contentType: 'text/html', body: '<!doctype html><title>Outside AA</title><p>outside</p>',
+    }));
+    const objectUrl = `${base}/?s=mlb&g=g1`;
+    await run.page.goto(objectUrl, { waitUntil: 'domcontentloaded' });
+    await waitForMlb(run.page);
+    const firstVisit = await run.page.evaluate(() => ({ key: history.state.key, parentKey: history.state.parentKey }));
+    await run.page.goto('https://outside.test/away', { waitUntil: 'domcontentloaded' });
+    await run.page.goto(objectUrl, { waitUntil: 'domcontentloaded' });
+    await waitForMlb(run.page);
+    const revisit = await run.page.evaluate(() => ({
+      key: history.state.key,
+      parentKey: history.state.parentKey,
+      navigationType: performance.getEntriesByType('navigation')[0]?.type,
+    }));
+    assert.equal(revisit.navigationType, 'navigate', 'external revisit fixture was not a fresh navigation');
+    assert.notEqual(revisit.key, firstVisit.key, 'external revisit reused the prior object state as if it were a reload');
+    assert.notEqual(revisit.parentKey, firstVisit.parentKey, 'external revisit reused the prior synthetic parent');
+    await run.page.locator('#dback').click();
+    await run.page.waitForFunction(expectedOrigin => location.origin === expectedOrigin
+      && location.search === '?s=mlb' && history.state?.kind === 'list', base);
+    assert.equal(await run.page.evaluate(() => history.state.key), revisit.parentKey,
+      'external revisit Back did not land on its new internal parent first');
+    assertClean(run.errors, 'external object revisit');
     await context.close();
   }
 
@@ -1281,13 +1380,13 @@ try {
   const invalidOtherContext = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block', locale: 'es-ES' });
   const invalidOther = await mockPage(invalidOtherContext);
   await invalidOther.page.goto(`${base}/?s=nba&sc=missing`, { waitUntil: 'domcontentloaded' });
-  await invalidOther.page.locator('.mrow[data-oid="n1"]').waitFor();
+  await invalidOther.page.locator('.mrow[data-oid="n1"]').waitFor({ state: 'attached' });
   assert.equal(await invalidOther.page.evaluate(() => otherSel), null, 'sc inválido seleccionó estado interno');
   assert.equal((await invalidOther.page.locator('#dcard').textContent()).includes('Boston'), false, 'sc inválido mostró el primer partido');
   assertClean(invalidOther.errors, 'invalid other id');
   await invalidOtherContext.close();
 
-  console.log('✅ history router: parser + history state + Back/Forward + 1440/390/360');
+  console.log(`✅ history router (${engine}): parser + history state + Back/Forward + 1440/390/360`);
 } finally {
   await browser.close();
   await new Promise((ok) => server.close(ok));

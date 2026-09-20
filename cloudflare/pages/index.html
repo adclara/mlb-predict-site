@@ -285,10 +285,15 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .lggroup.closed .rows{display:none}
 
 .mrow{
-  display:grid;grid-template-columns:50px 1fr auto 34px;gap:0 10px;align-items:center;
-  width:100%;text-align:left;padding:9px 10px 9px 14px;border-top:1px solid var(--hair);
+  display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:0;align-items:center;
+  width:100%;text-align:left;padding:0;border-top:1px solid var(--hair);
   transition:background .12s;position:relative;
 }
+.mrowlink{
+  display:grid;grid-template-columns:50px minmax(0,1fr) auto;gap:0 10px;align-items:center;
+  min-width:0;min-height:58px;padding:9px 4px 9px 14px;color:inherit;text-decoration:none;
+}
+.mrow.no-fav .mrowlink{grid-column:1/-1;padding-right:14px}
 .mrow:hover{background:var(--panel-2)}
 .mrow.sel{background:var(--panel-2)}
 .mrow.sel::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--sky)}
@@ -323,7 +328,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .ms.win{color:var(--text)} .ms.lv{color:var(--red)}
 .ms.marketpct{font-size:13px;line-height:17px;color:var(--sky)}
 .marketpct-source{font-size:8px;line-height:1;font-weight:850;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
-.mstar{width:34px;height:34px;display:grid;place-items:center;border-radius:var(--r-9);color:var(--faint);transition:color .15s,background .15s}
+.mstar{width:44px;height:44px;display:grid;place-items:center;border-radius:var(--r-9);color:var(--faint);transition:color .15s,background .15s}
 .mstar:hover{background:var(--inner);color:var(--amber)}
 .mstar.faved{color:var(--amber)}
 .mtags{grid-column:2/4;display:flex;gap:5px;margin-top:6px}
@@ -720,7 +725,8 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .intelhero{margin:12px;padding:16px;border:1px solid var(--hair);border-radius:var(--r-16);background:linear-gradient(160deg,var(--card-hi),var(--card-lo) 82%)}
 .intelhero h2{margin:0 0 5px;font-family:var(--font-display);font-size:22px;letter-spacing:.02em}
 .intelhero p{margin:0;color:var(--dim);font-size:12px;line-height:1.5}
-.intelrow{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;width:calc(100% - 16px);margin:7px 8px;padding:12px;border:1px solid var(--hair);border-radius:var(--r-14);background:var(--card);color:var(--text);text-align:left}
+.intelrow{display:block;width:calc(100% - 16px);margin:7px 8px;padding:0;border:1px solid var(--hair);border-radius:var(--r-14);background:var(--card);color:var(--text);text-align:left}
+.intelrowlink{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:44px;padding:12px;color:inherit;text-decoration:none}
 .intelrow:hover,.intelrow.on{border-color:rgba(var(--sky-rgb),.42);background:rgba(var(--sky-rgb),.06)}
 .intelrank{font-weight:900;color:var(--volt)}.intelteams{display:block;font-weight:800}.intelmeta{display:block;margin-top:3px;color:var(--dim);font-size:11px}.intelprob{font-weight:900;font-size:18px}
 .intelchips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.intelchip{padding:5px 8px;border:1px solid var(--hair);border-radius:var(--r-pill);color:var(--dim);font-size:11px}.intelchip.good{color:var(--volt);border-color:rgba(var(--mint-rgb),.35)}.intelchip.bad{color:var(--amber);border-color:rgba(var(--tang-rgb),.4)}
@@ -729,7 +735,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .intelscope{display:inline-flex;align-items:center;padding:3px 7px;border-radius:var(--r-pill);border:1px solid rgba(var(--mint-rgb),.4);color:var(--volt);font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.intelscope.market{border-color:rgba(var(--royal-rgb),.5);color:var(--sky)}
 .intelevidence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:10px 0}.intelevidence>div{padding:10px;border:1px solid var(--hair);border-radius:var(--r-12);background:rgba(var(--white-rgb),.018)}.intelevidence small{display:block;color:var(--dim);font-size:10px}.intelevidence b{display:block;margin-top:4px;font-size:13px}
 .intelform{display:flex;gap:4px;margin-top:6px}.intelform i{display:grid;place-items:center;width:21px;height:21px;border-radius:var(--r-6);background:rgba(var(--rose-rgb),.13);color:var(--red);font-style:normal;font-size:9px;font-weight:900}.intelform i.w{background:rgba(var(--mint-rgb),.13);color:var(--volt)}
-.bundlewrap{margin:14px 8px}.bundlecard{margin:7px 0;padding:11px;border:1px solid rgba(var(--royal-rgb),.28);border-radius:var(--r-13);background:rgba(var(--royal-rgb),.045)}.bundlehead{display:flex;justify-content:space-between;gap:8px;margin-bottom:7px;font-size:11px;color:var(--sky);font-weight:900}.bundleleg{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--hair);font-size:11px}.bundleleg:first-of-type{border-top:0}.bundleleg span{color:var(--dim)}.bundlenote{color:var(--dim);font-size:10px;line-height:1.45;margin-top:7px}
+.bundlewrap{margin:14px 8px}.bundlecard{margin:7px 0;padding:11px;border:1px solid rgba(var(--royal-rgb),.28);border-radius:var(--r-13);background:rgba(var(--royal-rgb),.045)}.bundlehead{display:flex;justify-content:space-between;gap:8px;margin-bottom:7px;font-size:11px;color:var(--sky);font-weight:900}.bundleleg{border-top:1px solid var(--hair);font-size:11px}.bundleleg:first-of-type{border-top:0}.bundleleg a{display:flex;justify-content:space-between;gap:8px;min-height:44px;padding:5px 0;align-items:center;color:inherit;text-decoration:none}.bundleleg span{color:var(--dim)}.bundlenote{color:var(--dim);font-size:10px;line-height:1.45;margin-top:7px}
 @media(max-width:520px){.intelevidence{grid-template-columns:1fr}.bundlewrap{margin:12px 0}}
 /* La caja de honestidad en #dcard (columna media) es invisible en móvil, donde el
    detalle es un overlay. En móvil la mostramos en #list (siempre visible). */
@@ -1215,9 +1221,42 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
   .aa-bottomnav button.on{color:var(--sky);box-shadow:inset 0 2px 0 var(--sky)}
   footer{margin-bottom:58px}
 }
+/* AA_MATCH_PAGE_SHELL_B1 — la ruta, no el viewport, posee la superficie. */
+body.aa-list .layout{
+  display:grid;grid-template-columns:minmax(0,1fr);max-width:1040px;
+}
+body.aa-list #detail,body.aa-list .colside{display:none!important}
+body.aa-list #listpane{display:block;min-width:0}
+body.aa-page .layout{
+  display:grid;grid-template-columns:minmax(0,1fr);max-width:1220px;
+}
+body.aa-page #listpane,body.aa-page .colside{display:none!important}
+body.aa-page .detail{
+  display:block;position:static;inset:auto;width:100%;max-height:none;
+  overflow:visible;overscroll-behavior:auto;padding:0;border-radius:var(--r-16);
+}
+body.aa-page .dback{display:inline-flex;min-height:44px;padding:10px 8px}
+body.aa-page .evbox{max-height:none;overflow-y:visible}
+.aa-page-endnav{display:none}
+@media (max-width:900px){
+  body.aa-page .layout{padding:12px 12px 24px}
+  body.aa-page .detail{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  body.aa-page .aa-bottomnav{display:none}
+  body.aa-page footer{margin-bottom:0}
+  body.aa-page .aa-page-endnav{
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;
+    margin-top:14px;padding-top:14px;border-top:1px solid var(--hair);position:static;
+  }
+  .aa-page-endnav button{
+    min-width:0;min-height:44px;padding:7px 3px;border:1px solid var(--hair);
+    border-radius:var(--r-8);color:var(--dim);font-size:10px;font-weight:700;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  }
+  .aa-page-endnav .pnicon{font-size:16px;line-height:1}
+}
 </style>
 </head>
-<body>
+<body class="aa-list">
 
 <aside class="aa-rail" id="aaRail" aria-label="Navegación principal">
   <a class="aa-raillogo" href="#" aria-label="AA Sports — inicio" data-i18n-aria="aria_home">
@@ -1378,6 +1417,12 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
     <div class="pane dpane" id="dcard">
       <div class="dempty" data-i18n="detail_empty">Elige un partido para ver el análisis completo del algoritmo AA.</div>
     </div>
+    <nav class="aa-page-endnav" aria-label="Navegación de fin de página" data-i18n-aria="aria_nav_bottom">
+      <button type="button" data-rail="home"><span class="pnicon" aria-hidden="true">⌂</span><span data-i18n="nav_home">Inicio</span></button>
+      <button type="button" data-rail="mlb"><span class="pnicon" aria-hidden="true">▣</span><span data-i18n="matches">Partidos</span></button>
+      <button type="button" data-rail="hist"><span class="pnicon" aria-hidden="true">↺</span><span data-i18n="tab_hist">Historial</span></button>
+      <button type="button" data-rail="cfg"><span class="pnicon" aria-hidden="true">⚙</span><span data-i18n="rail_cfg">Config</span></button>
+    </nav>
   </section>
 
   <!-- ═══ WIDGETS ═══ -->
@@ -2397,24 +2442,27 @@ function rowHtml(ev, idx){
   const pendingLine = ev.pending && !p.pick ? `<span class="mmeta pending">⏳ ${pendingPredictionLabel()}</span>` : '';
   const invalidLine = p.invalidated ? `<span class="mmeta invalid">⚠️ ${t('pred_invalid_list')}</span>` : '';
 
-  return `<button class="mrow ${ev.event_id === selectedId ? 'sel' : ''}" data-id="${esc(ev.event_id)}" style="--i:${idx ?? 0}">
-    <span class="mtime num">${timeCol}</span>
-    <span class="mteams">
-      <span class="mt ${aWin || (!done && pickA) ? 'win' : ''}">${logoImg(ev.away.code)}<span class="nm">${esc(tNick(ev.away.code))}</span>${pickA && sidePct('away') != null ? chip(sidePct('away'), liveWpHome != null) : ''}</span>
-      <span class="mt ${hWin || (!done && pickH) ? 'win' : ''}">${logoImg(ev.home.code)}<span class="nm">${esc(tNick(ev.home.code))}</span>${pickH && sidePct('home') != null ? chip(sidePct('home'), liveWpHome != null) : ''}</span>
-      ${spLine}
-      ${pendingLine}
-      ${invalidLine}
-    </span>
-    <span class="mscore num">
-      <span class="ms ${st === 'live' ? 'lv' : aWin ? 'win' : ''}">${scored ? as2 : ''}</span>
-      <span class="ms ${st === 'live' ? 'lv' : hWin ? 'win' : ''}">${scored ? hs : ''}</span>
-    </span>
-    <span class="mstar ${favs.has(ev.event_id) ? 'faved' : ''}" data-star="${esc(ev.event_id)}" role="button" aria-label="Favorito">
+  const objectRoute = aaCompatibleRoute({ ...aaListRoute(aaCurrentRoute()), s: 'mlb', g: String(ev.event_id) });
+  return `<div class="mrow ${ev.event_id === selectedId ? 'sel' : ''}" data-id="${esc(ev.event_id)}" style="--i:${idx ?? 0}">
+    <a class="mrowlink" data-object-link data-id="${esc(ev.event_id)}" href="${esc(aaRouteUrl(objectRoute))}">
+      <span class="mtime num">${timeCol}</span>
+      <span class="mteams">
+        <span class="mt ${aWin || (!done && pickA) ? 'win' : ''}">${logoImg(ev.away.code)}<span class="nm">${esc(tNick(ev.away.code))}</span>${pickA && sidePct('away') != null ? chip(sidePct('away'), liveWpHome != null) : ''}</span>
+        <span class="mt ${hWin || (!done && pickH) ? 'win' : ''}">${logoImg(ev.home.code)}<span class="nm">${esc(tNick(ev.home.code))}</span>${pickH && sidePct('home') != null ? chip(sidePct('home'), liveWpHome != null) : ''}</span>
+        ${spLine}
+        ${pendingLine}
+        ${invalidLine}
+      </span>
+      <span class="mscore num">
+        <span class="ms ${st === 'live' ? 'lv' : aWin ? 'win' : ''}">${scored ? as2 : ''}</span>
+        <span class="ms ${st === 'live' ? 'lv' : hWin ? 'win' : ''}">${scored ? hs : ''}</span>
+      </span>
+      ${tags ? `<span class="mtags">${tags}</span>` : ''}
+    </a>
+    <button type="button" class="mstar ${favs.has(ev.event_id) ? 'faved' : ''}" data-star="${esc(ev.event_id)}" aria-label="Favorito">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="${favs.has(ev.event_id) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3 2.7 5.8 6.3.8-4.6 4.3 1.2 6.2L12 17l-5.6 3.1 1.2-6.2L3 9.6l6.3-.8z"/></svg>
-    </span>
-    ${tags ? `<span class="mtags">${tags}</span>` : ''}
-  </button>`;
+    </button>
+  </div>`;
 }
 function renderHistList(){
   const histHead = pageHead(t('hist_title'), t('hist_sub'), `<button type="button" class="ghostbtn" data-hist-csv>${t('hist_csv')}</button>`);
@@ -3925,10 +3973,10 @@ function aaCompatibleRoute(input){
   }
   return route;
 }
-const aaIsObjectRoute = route => !!(route.g || route.sc || route.p || route.team);
+const aaIsObjectRoute = route => !!(route.g || route.sc || route.p || route.team || route.w);
 function aaListRoute(input){
   const route = aaCompatibleRoute(input);
-  route.g = route.sc = route.dt = route.m = route.p = route.team = '';
+  route.g = route.sc = route.dt = route.m = route.p = route.team = route.w = '';
   return route;
 }
 function aaCurrentRoute(){
@@ -3964,6 +4012,20 @@ function aaObjectState(route, parentKey, existing = null){
     parentKey: parentKey || existing?.parentKey || '', route: aaCompatibleRoute(route),
   };
 }
+const AA_RELOAD_OBJECT_KEY = 'aa_reload_object_v1';
+function aaRememberObjectState(state){
+  if (!state?.aa || state.kind !== 'object' || !state.parentKey) return;
+  try { sessionStorage.setItem(AA_RELOAD_OBJECT_KEY, JSON.stringify({ search: aaBuildSearch(state.route), state })); } catch (e) {}
+}
+function aaReloadObjectState(route){
+  try {
+    const navigation = performance.getEntriesByType('navigation')[0];
+    if (navigation?.type !== 'reload') return null;
+    const saved = JSON.parse(sessionStorage.getItem(AA_RELOAD_OBJECT_KEY) || 'null');
+    if (!saved?.state?.parentKey || saved.search !== aaBuildSearch(route)) return null;
+    return aaObjectState(route, saved.state.parentKey, saved.state);
+  } catch (e) { return null; }
+}
 function aaWriteRoute(mode, input = aaCurrentRoute()){
   if (_aaFromPop || _aaBooting) return;
   const route = aaCompatibleRoute(input);
@@ -3974,11 +4036,13 @@ function aaWriteRoute(mode, input = aaCurrentRoute()){
   const url = aaRouteUrl(route);
   if (mode === 'replace') history.replaceState(state, '', url);
   else if (url !== location.pathname + location.search) history.pushState(state, '', url);
+  aaRememberObjectState(state);
 }
-function aaCloseDetail(){
-  const el = $('detail');
-  if (el) el.classList.remove('open');
-  document.body.style.overflow = '';
+function aaSetRouteShell(route){
+  const page = aaIsObjectRoute(aaCompatibleRoute(route));
+  document.body.classList.toggle('aa-page', page);
+  document.body.classList.toggle('aa-list', !page);
+  if (!page){ try { sessionStorage.removeItem(AA_RELOAD_OBJECT_KEY); } catch (e) {} }
 }
 function aaRestoreListState(state){
   if (!state || state.kind !== 'list') return;
@@ -3990,15 +4054,21 @@ function aaRestoreListState(state){
     node.classList.toggle('neutral', node.dataset.f === filter && filter !== 'live');
   });
   if (sport === 'radar') renderRadarList(); else renderList();
+  const restoreKey = state.key;
+  const restoreSeq = aaApplySeq;
   requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (restoreSeq !== aaApplySeq || (restoreKey && history.state?.key !== restoreKey)) return;
     const focusKey = String(state.focusKey || '');
     const separator = focusKey.indexOf(':');
     const kind = separator < 0 ? '' : focusKey.slice(0, separator);
     const value = separator < 0 ? '' : focusKey.slice(separator + 1);
     const attr = kind === 'oid' ? 'oid' : kind === 'rw' ? 'rw' : 'id';
-    const row = [...document.querySelectorAll(`[data-${attr}]`)].find(node => node.dataset[attr] === value);
-    if (row){ row.focus({ preventScroll: true }); }
-    else {
+    const rowSelector = kind === 'rw' ? '.intelrow[data-rw],.bundleleg[data-rw]' : `.mrow[data-${attr}]`;
+    const exactLink = [...document.querySelectorAll('[data-focus-key]')].find(node => node.dataset.focusKey === focusKey);
+    const row = !exactLink && [...document.querySelectorAll(rowSelector)].find(node => node.dataset[attr] === value);
+    const rowLink = exactLink || (row && (row.matches('[data-object-link]') ? row : row.querySelector('[data-object-link]')));
+    if (rowLink){ rowLink.focus({ preventScroll: true }); }
+    else if (!focusKey || !otherLoading) {
       const fallback = $('lghead');
       if (fallback){ fallback.tabIndex = -1; fallback.focus({ preventScroll: true }); }
     }
@@ -4006,13 +4076,13 @@ function aaRestoreListState(state){
   }));
 }
 function aaFocusObject(){
-  requestAnimationFrame(() => {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
     const detail = $('detail');
     if (detail) detail.scrollTop = 0;
     const target = $('dcard');
     if (target){ target.tabIndex = -1; target.focus({ preventScroll: true }); }
     window.scrollTo(0, 0);
-  });
+  }));
 }
 async function aaLoadListTab(route){
   if (route.lt === 'hist' && route.s === 'mlb') await loadHistory();
@@ -4022,6 +4092,7 @@ async function aaLoadListTab(route){
 let aaApplySeq = 0;
 async function aaApplyRoute(input, state = null, waitForListData = false){
   const route = aaCompatibleRoute(input);
+  aaSetRouteShell(route);
   const applySeq = ++aaApplySeq;
   const isCurrentApply = () => applySeq === aaApplySeq;
   _aaFromPop = true;
@@ -4073,14 +4144,8 @@ async function aaApplyRoute(input, state = null, waitForListData = false){
     if (!isCurrentApply()) return;
     if (typeof setListChrome === 'function') setListChrome();
     renderAll();
-    if (aaIsObjectRoute(route)){
-      if (window.matchMedia('(max-width:900px)').matches){
-        $('detail').classList.add('open');
-        document.body.style.overflow = 'hidden';
-      }
-      aaFocusObject();
-    }
-    else { aaCloseDetail(); aaRestoreListState(state); }
+    if (aaIsObjectRoute(route)) aaFocusObject();
+    else aaRestoreListState(state);
   } finally {
     if (applySeq === aaApplySeq) _aaFromPop = false;
   }
@@ -4098,6 +4163,7 @@ function navigateToObject(input, focusKey = ''){
   if (currentState?.aa && currentState.kind === 'object' && !nested){
     const objectState = aaObjectState(route, currentState.parentKey, currentState);
     history.replaceState(objectState, '', aaRouteUrl(route));
+    aaRememberObjectState(objectState);
     aaApplyRoute(route, objectState);
     return;
   }
@@ -4110,10 +4176,12 @@ function navigateToObject(input, focusKey = ''){
   const objectState = aaObjectState(route, parentState.key);
   aaApplyRoute(route, objectState);
   history.pushState(objectState, '', aaRouteUrl(route));
+  aaRememberObjectState(objectState);
 }
 addEventListener('popstate', async event => {
   const state = event.state;
   const route = state?.aa && state.route ? state.route : aaReadRoute(location.search);
+  aaRememberObjectState(state);
   await aaApplyRoute(route, state, true);
 });
 function select(id){
@@ -4163,18 +4231,24 @@ document.addEventListener('click', e => {
     document.querySelector('.lghead .sub').textContent = SOCCER_LEAGUES[soccerLeague] || '';
     renderList(); loadOther(); return; }
   if (e.target.closest('a[data-ext]')) return; // links externos (perfil Polymarket): navegación normal
+  const objectLink = e.target.closest('a[data-object-link]');
+  if (objectLink){
+    // Un enlace real conserva copiar URL, menú contextual y abrir en pestaña nueva.
+    // Solo el clic primario sin modificadores se integra con el router de la app.
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    if (objectLink.dataset.rw){
+      navigateToObject({ s: 'radar', g: objectLink.dataset.rw }, objectLink.dataset.focusKey || `rw:${objectLink.dataset.rw}`);
+    } else if (objectLink.dataset.oid){
+      navigateToObject({ ...aaListRoute(aaCurrentRoute()), sc: objectLink.dataset.oid }, `oid:${objectLink.dataset.oid}`);
+    } else if (objectLink.dataset.id){
+      select(objectLink.dataset.id);
+    }
+    return;
+  }
   const rl = e.target.closest('#radarlegal');
   if (rl){ e.preventDefault(); $('legaldlg').showModal(); return; }
-  const rrow = e.target.closest('[data-rw]');
-  if (rrow){
-    navigateToObject({ s: 'radar', g: rrow.dataset.rw }, `rw:${rrow.dataset.rw}`);
-    return;
-  }
-  const orow = e.target.closest('[data-oid]');
-  if (orow){
-    navigateToObject({ ...aaListRoute(aaCurrentRoute()), sc: orow.dataset.oid }, `oid:${orow.dataset.oid}`);
-    return;
-  }
+
   const star = e.target.closest('[data-star]');
   if (star){
     e.stopPropagation();
@@ -4202,7 +4276,7 @@ document.addEventListener('click', e => {
   if (railBtn){
     const v = railBtn.dataset.rail;
     if (v === 'home' || v === 'radar' || v === 'mlb'){
-      if (sport !== v) aaNavigateList({ s: v });
+      aaNavigateList({ s: v });
     } else if (v === 'edu' || v === 'tools' || v === 'cfg'){
       aaNavigateList({ s: 'mlb', lt: v });
     } else {
@@ -4273,7 +4347,7 @@ document.addEventListener('click', e => {
     }
     return;
   }
-  const t = e.target.closest('[data-id]');
+  const t = e.target.closest('button[data-id], [data-id][role="button"]');
   // Desde Inicio, abrir un partido lleva al análisis MLB completo.
   if (t) select(t.dataset.id);
 });
@@ -4606,11 +4680,10 @@ async function shareGame(kind, id){
   try { if (navigator.share){ await navigator.share({ title: 'AA Sports', text: t('share_txt'), url }); return; } } catch (e) { return; }
   try { await navigator.clipboard.writeText(url); polyToast(t('r_copied')); } catch (e) { polyToast(url); }
 }
-const openRadarOverlay = () => { if (window.matchMedia('(max-width:900px)').matches){ $('detail').classList.add('open'); document.body.style.overflow = 'hidden'; } };
 // Deep-link legacy ?w=<wallet>: el Radar está pausado — muestra el estado
 // pausado en el detalle en vez de consultar /v1/poly/wallet.
 async function loadWalletSearch(){
-  renderRadarDetail(); openRadarOverlay();
+  renderRadarDetail();
 }
 // Pide permiso de notificaciones del navegador (al marcar el primer favorito).
 function ensureNotifyPerm(){
@@ -4749,8 +4822,8 @@ const intelForm = (rows) => rows?.length ? `<span class="intelform">${rows.slice
 function intelBundles(doc){
   const bundles = doc?.market_bundles || [];
   return `<div class="bundlewrap"><div class="secttl2">${t('intel_bundles_title')} <span class="sub3">${t('intel_bundles_sub')}</span></div>
-    ${bundles.length ? bundles.map((bundle, index) => `<div class="bundlecard"><div class="bundlehead"><span>#${index + 1}</span><span>${bundle.legs.length} ${t('intel_legs')}</span></div>
-      ${bundle.legs.map((leg) => `<div class="bundleleg" data-rw="${esc(leg.id)}" role="button"><b>${esc(String(leg.sport || '').toUpperCase())} · ${esc(leg.pick)}</b><span class="num">${intelPct(leg.prob)} · ${leg.source === 'market_fact' ? t('intel_scope_market') : t('intel_scope_aa')}</span></div>`).join('')}
+    ${bundles.length ? bundles.map((bundle, bundleIndex) => `<div class="bundlecard"><div class="bundlehead"><span>#${bundleIndex + 1}</span><span>${bundle.legs.length} ${t('intel_legs')}</span></div>
+      ${bundle.legs.map((leg, legIndex) => `<div class="bundleleg" data-rw="${esc(leg.id)}"><a data-object-link data-rw="${esc(leg.id)}" data-focus-key="${esc(`rw:bundle:${bundleIndex}:${legIndex}:${leg.id}`)}" href="${esc(aaRouteUrl({ s: 'radar', g: leg.id }))}"><b>${esc(String(leg.sport || '').toUpperCase())} · ${esc(leg.pick)}</b><span class="num">${intelPct(leg.prob)} · ${leg.source === 'market_fact' ? t('intel_scope_market') : t('intel_scope_aa')}</span></a></div>`).join('')}
       <div class="bundlenote">${t('intel_bundle_note')}</div></div>`).join('') : `<div class="lempty2">${t('intel_no_bundles')}</div>`}</div>`;
 }
 function centralListHtml(){
@@ -4766,10 +4839,12 @@ function centralListHtml(){
   // Fase 4: separación visual explícita — predicción AA validada (gate público)
   // vs favorito factual de mercado (hecho, jamás predicción AA). El número de
   // ranking conserva el orden que publica el servidor; no reordenamos datos.
-  const row = (item, i) => `<button class="intelrow ${radarSel === item.id ? 'on' : ''}" data-rw="${esc(item.id)}">
-    <span class="intelrank num">#${i + 1}</span><span><span class="intelteams">${esc(item.pick)} · ${esc(item.away?.code || '')} @ ${esc(item.home?.code || '')}</span>
-    <span class="intelmeta">${esc(String(item.sport || '').toUpperCase())} · <i class="intelscope ${intelScope(item)}">${t(intelScope(item) === 'market' ? 'intel_scope_market' : 'intel_scope_aa')}</i> · ${esc(intelStateText(item.consensus?.state))}</span></span>
-    <span class="intelprob num">${intelPct(intelProb(item))}</span></button>`;
+  const row = (item, i) => `<div class="intelrow ${radarSel === item.id ? 'on' : ''}" data-rw="${esc(item.id)}">
+    <a class="intelrowlink" data-object-link data-rw="${esc(item.id)}" data-focus-key="${esc(`rw:main:${item.id}`)}" href="${esc(aaRouteUrl({ s: 'radar', g: item.id }))}">
+      <span class="intelrank num">#${i + 1}</span><span><span class="intelteams">${esc(item.pick)} · ${esc(item.away?.code || '')} @ ${esc(item.home?.code || '')}</span>
+      <span class="intelmeta">${esc(String(item.sport || '').toUpperCase())} · <i class="intelscope ${intelScope(item)}">${t(intelScope(item) === 'market' ? 'intel_scope_market' : 'intel_scope_aa')}</i> · ${esc(intelStateText(item.consensus?.state))}</span></span>
+      <span class="intelprob num">${intelPct(intelProb(item))}</span>
+    </a></div>`;
   const aaRows = [], marketRows = [];
   slate.forEach((item, i) => (intelScope(item) === 'market' ? marketRows : aaRows).push(row(item, i)));
   const groupHead = (key, subKey) => `<div class="secttl">${t(key)} <span class="sub3">${t(subKey)}</span></div>`;
@@ -5038,19 +5113,22 @@ function renderOtherList(){
       const marketLine = !scored && !pr && FACTUAL_MARKET_SPORTS.has(sport) && !marketPct && Number.isFinite(rawSpread)
         ? { team: rawSpread <= 0 ? g.home.code : g.away.code, spread: -Math.abs(rawSpread) } : null;
       const displayPct = (value) => Number(value).toFixed(Number(value) % 1 ? 1 : 0) + '%';
-      return `<button class="mrow" data-oid="${esc(g.espn_id)}" style="--i:${i}">
-        <span class="mtime num">${timeLabel}</span>
-        <span class="mteams">
-          <span class="mt ${g.away.winner ? 'win' : ''}">${oLogo(g.away)}<span class="nm">${esc(oName(g.away))}</span>${rankChip(g.away)}${setsA}</span>
-          <span class="mt ${g.home.winner ? 'win' : ''}">${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}</span>${rankChip(g.home)}${setsH}</span>
-          ${aachip ? `<span class="other-pick-line">${aachip}</span>` : ''}
-        </span>
-        <span class="mscore num">
-          <span class="ms ${marketPct || marketLine ? 'marketpct' : ''} ${g.status === 'live' ? 'lv' : ''}">${scored ? g.away.score : marketPct ? displayPct(marketPct.away) : marketLine ? `${esc(marketLine.team)} ${marketLine.spread}` : ''}</span>
-          <span class="ms ${marketPct ? 'marketpct' : ''} ${g.status === 'live' ? 'lv' : ''}">${scored ? g.home.score : marketPct ? displayPct(marketPct.home) : ''}</span>
-          ${marketPct || marketLine ? `<span class="marketpct-source">${marketPct ? marketSourceLabel : t('market_line_short')}</span>` : ''}
-        </span>
-      </button>`;
+      const objectRoute = aaCompatibleRoute({ ...aaListRoute(aaCurrentRoute()), sc: String(g.espn_id) });
+      return `<div class="mrow no-fav" data-oid="${esc(g.espn_id)}" style="--i:${i}">
+        <a class="mrowlink" data-object-link data-oid="${esc(g.espn_id)}" href="${esc(aaRouteUrl(objectRoute))}">
+          <span class="mtime num">${timeLabel}</span>
+          <span class="mteams">
+            <span class="mt ${g.away.winner ? 'win' : ''}">${oLogo(g.away)}<span class="nm">${esc(oName(g.away))}</span>${rankChip(g.away)}${setsA}</span>
+            <span class="mt ${g.home.winner ? 'win' : ''}">${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}</span>${rankChip(g.home)}${setsH}</span>
+            ${aachip ? `<span class="other-pick-line">${aachip}</span>` : ''}
+          </span>
+          <span class="mscore num">
+            <span class="ms ${marketPct || marketLine ? 'marketpct' : ''} ${g.status === 'live' ? 'lv' : ''}">${scored ? g.away.score : marketPct ? displayPct(marketPct.away) : marketLine ? `${esc(marketLine.team)} ${marketLine.spread}` : ''}</span>
+            <span class="ms ${marketPct ? 'marketpct' : ''} ${g.status === 'live' ? 'lv' : ''}">${scored ? g.home.score : marketPct ? displayPct(marketPct.home) : ''}</span>
+            ${marketPct || marketLine ? `<span class="marketpct-source">${marketPct ? marketSourceLabel : t('market_line_short')}</span>` : ''}
+          </span>
+        </a>
+      </div>`;
     }).join('') : banner + `<div class="lempty">${t('o_no_events').replace('{s}', esc(sportLabel(sport)))}</div>`;
 }
 
@@ -5516,9 +5594,11 @@ applyI18n(); // pinta el idioma guardado antes de cargar datos
 // shell sigue siendo network-first; nunca se cachean respuestas deportivas.
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker
   .register('/sw.js', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {}));
-// Deep-links: canonicaliza la ruta completa antes de tocar el estado de UI.
+// Deep-links: canonicaliza la ruta antes de tocar la UI. Firefox puede exponer
+// history.state=null durante una recarga; solo Navigation Timing tipo reload
+// puede reutilizar el objeto guardado y su padre sin insertar otra entrada.
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-{
+function aaBoot(){
   const parsed = aaReadRoute(location.search);
   const bootParams = new URLSearchParams(location.search);
   if (/^radar\./i.test(location.hostname) && !['s','tab','g','sc','w'].some(key => bootParams.has(key))) parsed.s = 'radar';
@@ -5528,8 +5608,12 @@ if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   if (aaIsObjectRoute(route)){
     const provesParent = prior?.aa === 1 && prior.kind === 'object' && prior.parentKey
       && aaBuildSearch(aaCompatibleRoute(prior.route)) === aaBuildSearch(route);
+    const reloadState = !provesParent ? aaReloadObjectState(route) : null;
     if (provesParent){
       state = aaObjectState(route, prior.parentKey, prior);
+      history.replaceState(state, '', aaRouteUrl(route));
+    } else if (reloadState){
+      state = reloadState;
       history.replaceState(state, '', aaRouteUrl(route));
     } else {
       const parent = aaListRoute(route);
@@ -5538,6 +5622,7 @@ if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
       state = aaObjectState(route, parentState.key);
       history.pushState(state, '', aaRouteUrl(route));
     }
+    aaRememberObjectState(state);
   } else {
     state = aaListState(route, prior);
     history.replaceState(state, '', aaRouteUrl(route));
@@ -5545,8 +5630,10 @@ if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   aaApplyRoute(route, state);
   if (route.w){ try { loadWalletSearch(route.w); } catch (e) {} }
   _aaBooting = false;
+  loadToday(); loadLive(); loadInjuries(); loadMe();
 }
-loadToday(); loadLive(); loadInjuries(); loadMe();
+aaSetRouteShell(aaReadRoute(location.search));
+aaBoot();
 setInterval(() => { if (sport === 'mlb' || sport === 'home') loadToday(); }, 5 * 60 * 1000);
 setInterval(() => { (sport === 'mlb' || sport === 'home') ? loadLive() : sport === 'radar' ? loadAlerts() : loadOther(); }, 45 * 1000);
 setInterval(loadInjuries, 30 * 60 * 1000);
