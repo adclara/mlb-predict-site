@@ -72,10 +72,16 @@ try {
       await page.locator('.sp[data-sport="mlb"]').click();
       await page.locator('.mrow[data-id="reliability-1"]').waitFor();
       assert.ok(await page.locator('#q').isVisible(),`${width}: visible search`);
-      await page.locator('#q').fill('AA_NO_SUCH_TEAM');
+      await page.locator('#q').evaluate((input, value) => {
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }, 'AA_NO_SUCH_TEAM');
       await page.waitForFunction(expected=>query===expected && document.querySelector('#q')?.value===expected
         && document.querySelectorAll('#list .mrow').length===0,'AA_NO_SUCH_TEAM');
-      await page.locator('#q').fill('');
+      await page.locator('#q').evaluate((input) => {
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
       await page.waitForFunction(()=>query==='' && document.querySelector('#q')?.value===''
         && !!document.querySelector('.mrow[data-id="reliability-1"]'));
       await page.locator('.mrow[data-id="reliability-1"]').waitFor();
