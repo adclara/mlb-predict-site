@@ -3548,6 +3548,30 @@ function tennisSetline(g){
 let marketTab = 'winner';
 const MARKET_KEYS = ['winner', 'total', 'players', 'combos'];
 
+function closedMarketEvidence(markets){
+  const source = markets && typeof markets === 'object' ? markets : {};
+  return Object.fromEntries(MARKET_KEYS.flatMap((kind) => {
+    const block = source[kind];
+    if (!block || typeof block !== 'object') return [];
+    const rawGate = block.gate && typeof block.gate === 'object' ? block.gate : {};
+    const rawSample = block.sample && typeof block.sample === 'object' ? block.sample : {};
+    const sample = {};
+    for (const key of ['n','graded','dates','min_forward','min_n','min_dates']){
+      const rawValue = rawSample[key];
+      if (rawValue == null || typeof rawValue === 'boolean' || (typeof rawValue === 'string' && !rawValue.trim())) continue;
+      const value = Number(rawValue);
+      if (Number.isFinite(value) && value >= 0) sample[key] = value;
+    }
+    const reason = typeof rawGate.reason === 'string' && /^[a-z0-9_]{1,80}$/i.test(rawGate.reason)
+      ? rawGate.reason : `${kind}_forward_validation_pending`;
+    return [[kind, {
+      state: 'closed',
+      gate: { state: 'closed', passed: false, approved: false, public: false, reason },
+      sample: Object.keys(sample).length ? sample : null,
+    }]];
+  }));
+}
+
 function measuredMarketBlock(block, kind, fallbackSample, fallbackGate){
   const b = block && typeof block === 'object' ? block : {};
   const gate = b.gate && typeof b.gate === 'object' ? b.gate : (fallbackGate || {});
@@ -4856,11 +4880,12 @@ async function loadOther(){
       const documentAllowed = myQa || publicationAuthorityAllows(modelDoc, true, false);
       const mergeModel = game => {
         const model = byId.get(String(game.espn_id || game.event_id || game.id));
-        const markets = documentAllowed ? (model?.markets || modelDoc.markets || null) : null;
+        const rawMarkets = model?.markets || modelDoc.markets || null;
+        const markets = documentAllowed ? rawMarkets : closedMarketEvidence(rawMarkets);
         const winner = markets?.winner;
         const prediction = myQa ? (model?.prediction || null) : documentAllowed ? gatedPrediction(model?.prediction, winner, modelDoc, model) : null;
         return model ? { ...game, market: game.market?.home_prob != null ? game.market : (model.market || game.market || null), prediction, markets }
-          : { ...game, markets: documentAllowed ? (modelDoc.markets || null) : null };
+          : { ...game, markets: documentAllowed ? (modelDoc.markets || null) : closedMarketEvidence(modelDoc.markets) };
       };
       preparedGames = rawGames.length ? rawGames.map(mergeModel)
         : myQa ? (modelDoc.events || []).map(game => mergeModel({ ...game, espn_id: game.espn_id || game.event_id || game.id })) : [];

@@ -84,7 +84,8 @@ async function installMocks(page) {
     if (path === '/v1/wnba/today') return json(route, phase === 'closed'
       ? {
         sport: 'wnba', date, updated_at: newUpdatedAt, metadata: { publication: { state: 'closed' } }, events: [], top2: [],
-        markets: { winner: { state: 'public', gate: publicGate, pick: 'SECRET_US_MARKET', prob: .99 } },
+        markets: { winner: { state: 'public', gate: publicGate, pick: 'SECRET_US_MARKET', prob: .99,
+          sample: { n: 4, dates: 2, min_forward: 200 } } },
       }
       : phase === 'old' ? modelDoc('NY', .61, oldUpdatedAt) : modelDoc('MIN', .64, newUpdatedAt));
     if (path === '/v1/wnba/learning') return json(route, learningDoc(phase === 'old' ? oldUpdatedAt : newUpdatedAt));
@@ -184,6 +185,9 @@ try {
       inheritedPublication: predictionIsPublic({ state: 'public', gate: greenGate, prob: .6, publication: { metadata: { status: 'closed' } } }),
       depthOverflow: predictionIsPublic({ state: 'public', gate: greenGate, prob: .6, publication: tooDeep }),
       measuredOuterState: measuredMarketBlock({ state: 'public', status: 'closed', private: true, gate: greenGate }, 'winner').state,
+      closedEvidence: closedMarketEvidence({ winner: { state: 'public', gate: greenGate,
+        pick: 'SECRET_EVIDENCE', prob: .99, items: [{ pick: 'SECRET_ITEM' }],
+        sample: { n: null, dates: false, min_forward: '', graded: 4 } } }).winner,
       deepOuter: gatedPrediction({ pick: 'SECRET_DEEP_OUTER', prob: .9 }, { state: 'public', gate: greenGate, publication: { state: 'closed' } }),
       privateItemsMarkup: publicMarketItems({ ...publicBlock, items: [{ state: 'private', pick: 'SECRET_PRIVATE_ITEM', prob: .98 }] }),
       deepItemsMarkup: publicMarketItems({ ...publicBlock, items: [{ publication: { state: 'private' }, pick: 'SECRET_DEEP_ITEM', prob: .9 }] }),
@@ -206,6 +210,10 @@ try {
   assert.equal(nestedGateResult.inheritedPublication, false, 'publication metadata lost its sensitive context');
   assert.equal(nestedGateResult.depthOverflow, false, 'publication traversal failed open after its depth limit');
   assert.equal(nestedGateResult.measuredOuterState, 'closed', 'measured market ignored contradictory outer state');
+  assert.deepEqual(nestedGateResult.closedEvidence, {
+    state: 'closed', gate: { state: 'closed', passed: false, approved: false, public: false, reason: 'winner_forward_validation_pending' },
+    sample: { graded: 4 },
+  }, 'closed market evidence retained private values or converted missing counts to zero');
   assert.equal(nestedGateResult.deepOuter, null, 'deep outer publication state was ignored');
   assert.doesNotMatch(nestedGateResult.privateItemsMarkup, /SECRET_PRIVATE_ITEM/, 'private market item rendered inside a public block');
   assert.doesNotMatch(nestedGateResult.deepItemsMarkup, /SECRET_DEEP_ITEM/, 'deep private market item rendered inside a public block');
@@ -229,7 +237,9 @@ try {
     otherSel = 'wnba-1';
     renderOtherDetail();
   });
-  assert.doesNotMatch(await page.locator('#dcard').textContent(), /SECRET_US_MARKET|99%/, 'closed US document leaked fallback markets in the integrated detail render');
+  const closedUsDetail = await page.locator('#dcard').textContent();
+  assert.doesNotMatch(closedUsDetail, /SECRET_US_MARKET|99%/, 'closed US document leaked fallback markets in the integrated detail render');
+  assert.match(closedUsDetail, /4\s*\/\s*200/, 'closed US document lost safe, non-authorizing sample evidence');
   phase = 'old';
   await page.evaluate(() => setSport('mlb'));
 
