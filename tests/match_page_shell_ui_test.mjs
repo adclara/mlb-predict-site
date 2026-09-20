@@ -244,6 +244,9 @@ try {
 
     const objectRun = await openMockedPage(context, `${base}/?s=mlb&g=g1`);
     await objectRun.page.locator('#dcard .dhero').waitFor({ state: 'visible' });
+    await objectRun.page.evaluate(() => new Promise(resolve => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    }));
     const objectShell = await objectRun.page.evaluate(() => {
       const css = selector => getComputedStyle(document.querySelector(selector));
       const layout = css('.layout'), detail = css('#detail'), back = document.querySelector('#dback');
