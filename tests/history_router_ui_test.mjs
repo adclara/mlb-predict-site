@@ -1014,12 +1014,19 @@ try {
     });
     await page.goto(`${base}/?s=mlb`, { waitUntil: 'domcontentloaded' });
     await waitForMlb(page);
+    // Let the initial route-owned WebKit scroll reassertion settle before this
+    // fixture simulates a later user scroll and creates a second history entry.
+    await page.waitForTimeout(120);
     await page.evaluate(() => {
-      const spacer = document.createElement('div');
-      spacer.style.height = '800px';
-      document.body.appendChild(spacer);
+      // A fixed document floor is deterministic across browser layout engines;
+      // an empty spacer can collapse differently while the list rerenders.
+      document.body.style.minHeight = '1600px';
       document.documentElement.style.scrollBehavior = 'auto';
-      window.scrollTo(0, 220);
+    });
+    await page.waitForFunction(() => document.documentElement.scrollHeight - innerHeight >= 220);
+    await page.evaluate(() => window.scrollTo(0, 220));
+    await page.waitForFunction(() => Math.abs(scrollY - 220) <= 2);
+    await page.evaluate(() => {
       history.replaceState({ ...history.state, scrollY: 220, focusKey: 'id:g1' }, '', location.href);
     });
     await page.locator('#dPrev').evaluate(button => button.click());
@@ -1039,7 +1046,17 @@ try {
     releaseToday();
     await page.locator('.mrow[data-id="g1"]').waitFor();
     await page.evaluate(() => new Promise(resolveFrame => requestAnimationFrame(() => requestAnimationFrame(resolveFrame))));
-    await page.waitForFunction(() => Math.abs(scrollY - 220) <= 2);
+    try {
+      await page.waitForFunction(() => Math.abs(scrollY - 220) <= 2, null, { timeout: 5000 });
+    } catch (error) {
+      const diagnostic = await page.evaluate(() => ({
+        active: document.activeElement?.dataset?.id || document.activeElement?.id || '',
+        y: scrollY,
+        maxY: Math.max(0, document.documentElement.scrollHeight - innerHeight),
+        state: history.state,
+      }));
+      throw new Error(`hoy renderizado no alcanzó el scroll restaurado: ${JSON.stringify(diagnostic)}`, { cause: error });
+    }
     const restoredToday = await page.evaluate(() => ({ active: document.activeElement?.dataset?.id || document.activeElement?.id || '', y: scrollY, state: history.state }));
     assert.equal(restoredToday.active, 'g1', 'hoy renderizado no restauró foco');
     assert.ok(Math.abs(restoredToday.y - 220) <= 2, `hoy renderizado restauró ${JSON.stringify(restoredToday)}, esperaba scroll 220`);
