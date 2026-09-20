@@ -44,7 +44,7 @@ try {
     // Each browser context has independent mock state. Never carry the prior
     // viewport's final 'unavailable' response into a fresh navigation.
     let healthState='idle_no_games';
-    const context=await browser.newContext({viewport:{width,height:900},locale:'es-ES',timezoneId:'America/New_York',serviceWorkers:'block'});
+    const context=await browser.newContext({viewport:{width,height:900},locale:'es-ES',timezoneId:'America/New_York',serviceWorkers:'block',reducedMotion:'reduce'});
     const page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
@@ -73,8 +73,11 @@ try {
       await page.locator('.mrow[data-id="reliability-1"]').waitFor();
       assert.ok(await page.locator('#q').isVisible(),`${width}: visible search`);
       await page.locator('#q').fill('AA_NO_SUCH_TEAM');
-      await page.waitForFunction(()=>document.querySelectorAll('#list .mrow').length===0);
+      await page.waitForFunction(expected=>query===expected && document.querySelector('#q')?.value===expected
+        && document.querySelectorAll('#list .mrow').length===0,'AA_NO_SUCH_TEAM');
       await page.locator('#q').fill('');
+      await page.waitForFunction(()=>query==='' && document.querySelector('#q')?.value===''
+        && !!document.querySelector('.mrow[data-id="reliability-1"]'));
       await page.locator('.mrow[data-id="reliability-1"]').waitFor();
       await page.locator('.mrow[data-id="reliability-1"]').click();
       assert.match(await page.locator('#dcard').innerText(),/insuficientes|evaluar/i);
