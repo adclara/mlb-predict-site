@@ -52,7 +52,7 @@ try {
     await page.route('**/v1/**',route=>{
       const path=new URL(route.request().url()).pathname;
       if(path==='/v1/me')return json(route,{enabled:false,user:null});
-      if(path==='/v1/mlb/today')return json(route,{sport:'mlb',date,events:[sample],record:null});
+      if(path==='/v1/mlb/today')return json(route,{sport:'mlb',date,events:[sample],record:null,publication:{state:'published'}});
       if(path==='/v1/mlb/live')return json(route,{sport:'mlb',date,games:[]});
       if(/\/(nba|wnba)\/learning$/.test(path))return json(route,{sport:path.split('/')[2],updated_at:new Date().toISOString(),historical:{n:100,brier:.24},forward:{n:0},gate:{public:false,passed:false,approved:false},learning_es:['Solo validación.'],learning_en:['Validation only.']});
       if(/\/(nba|wnba)\/pipeline-health$/.test(path))return json(route,{schema:'aa-basketball-producer-health-v1',sport:path.split('/')[2],state:healthState,last_success_at:date+'T18:00:00Z',prediction_updated_at:'2026-08-01T12:00:00Z'});
@@ -72,9 +72,15 @@ try {
       await page.locator('.sp[data-sport="mlb"]').click();
       await page.locator('.mrow[data-id="reliability-1"]').waitFor();
       assert.ok(await page.locator('#q').isVisible(),`${width}: visible search`);
-      await page.locator('#q').fill('AA_NO_SUCH_TEAM');
+      await page.locator('#q').evaluate((input)=>{
+        input.value='AA_NO_SUCH_TEAM';
+        input.dispatchEvent(new Event('input',{bubbles:true}));
+      });
       await page.waitForFunction(()=>document.querySelectorAll('#list .mrow').length===0);
-      await page.locator('#q').fill('');
+      await page.locator('#q').evaluate((input)=>{
+        input.value='';
+        input.dispatchEvent(new Event('input',{bubbles:true}));
+      });
       await page.locator('.mrow[data-id="reliability-1"]').waitFor();
       await page.locator('.mrow[data-id="reliability-1"]').click();
       assert.match(await page.locator('#dcard').innerText(),/insuficientes|evaluar/i);

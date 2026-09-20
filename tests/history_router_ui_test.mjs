@@ -42,11 +42,17 @@ const nbaGame = {
   home: { code: 'BOS', name: 'Boston', short_name: 'Boston', score: null },
 };
 const radarItem = {
-  id: 'r1', sport: 'mlb', pick: 'CLE', start: `${today}T23:00:00Z`, selection_scope: 'aa_model',
+  id: 'r1', sport: 'mlb', pick: 'CLE', start: `${today}T23:00:00Z`, selection_scope: 'aa_public',
   away: { code: 'MIN', name: 'Minnesota Twins' }, home: { code: 'CLE', name: 'Cleveland Guardians' },
-  probability: { value: 0.57 }, consensus: { state: 'agree', anomalies: [] }, reasons: [], context: {},
+  probability: { value: 0.57 }, aa: { prob: 0.57, public_gate: true }, consensus: { state: 'agree', anomalies: [] }, reasons: [], context: {},
 };
-const json = (route, body) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+const json = (route, body) => {
+  const path = new URL(route.request().url()).pathname;
+  const payload = path === '/v1/mlb/today' && body && !body.publication
+    ? { ...body, publication: { state: (body.events || []).some(event => event?.prediction?.pick) ? 'published' : 'waiting' } }
+    : body;
+  return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) });
+};
 
 const server = createServer(async (req, res) => {
   try {

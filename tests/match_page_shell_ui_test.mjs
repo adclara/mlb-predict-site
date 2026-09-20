@@ -71,7 +71,7 @@ const json = (route, body) => route.fulfill({ status: 200, contentType: 'applica
 async function installMocks(page) {
   await page.route('**/v1/**', (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === '/v1/mlb/today') return json(route, { sport: 'mlb', date: today, events: todayEvents, record: null });
+    if (path === '/v1/mlb/today') return json(route, { sport: 'mlb', date: today, events: todayEvents, record: null, publication: { state: 'published' } });
     if (path === '/v1/mlb/live') return json(route, { sport: 'mlb', date: today, games: [] });
     if (path === `/v1/mlb/day/${archiveDate}` || path === `/v1/mlb/schedule/${archiveDate}`) {
       return json(route, { sport: 'mlb', date: archiveDate, events: archiveEvents, record: null });

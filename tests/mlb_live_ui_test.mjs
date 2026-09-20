@@ -90,6 +90,7 @@ async function installApiMocks(page, date, events, games) {
     if (path === '/v1/mlb/today') {
       return json(route, {
         sport: 'mlb', date, record: null,
+        publication: { state: events.some(event => event?.prediction?.pick) ? 'published' : 'waiting' },
         run_indicator_meta: { status: 'observation', verified: false, gate_passes: false, record: { wins: 2, losses: 0, pushes: 0, sample_n: 2 } },
         events,
       });

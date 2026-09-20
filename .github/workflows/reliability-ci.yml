@@ -56,7 +56,7 @@ jobs:
         run: |
           failed=0
           for browser in chromium firefox webkit; do
-            for script in history_router_ui_test match_page_shell_ui_test; do
+            for script in history_router_ui_test match_page_shell_ui_test match_hierarchy_security_ui_test; do
               if ! AA_TEST_BROWSER="$browser" timeout 240 node "tests/$script.mjs" > "reliability-results/$script-$browser.log" 2>&1; then failed=1; fi
               cat "reliability-results/$script-$browser.log"
             done
