@@ -104,7 +104,7 @@ Radii live on `--r-*` (2–20px + pill). Circles stay `50%`. Do not inflate radi
 ## Components
 
 - **Schedule row:** time / game / probable participants / factual status-data / AA prediction / info. Desktop is horizontal; compact screens stack content without changing semantic order.
-- **Market tabs:** one surface, AA blue for the public market, muted + sample progress for closed gates.
+- **Market selector:** one subordinate surface inside Summary. Winner may expose audited market/price/EV data without repeating the exact AA percentage; closed markets expose their gate reason and measured sample progress.
 - **Probability bars:** shared baseline, 50% reference, away orange / home volt.
 - **Central AA:** `data-sport="radar"` in the nav. AA picks vs market_fact groups, never mixed as one claim.
 - **Canonical AA reading:** the only exact model probability in an Inspect page. Scope, source, updated time, status and limitation remain adjacent.

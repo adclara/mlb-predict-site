@@ -21,6 +21,7 @@ The implementation preserves the selected concept's hierarchy: narrow rail, comp
 - Exactly one element uses `[data-canonical-probability]`.
 - Scope, source, updated time, status and limitation are adjacent to the canonical reading.
 - Markets live inside Summary/Resumen instead of becoming a fourth primary tab.
+- The market selector is functional: Winner exposes the auditable price/EV comparison without repeating the canonical AA percentage; closed markets expose their measured gate explanation and sample state.
 - Left/Right/Home/End keyboard navigation, focus state and ARIA tab semantics were exercised.
 - Browser inspection found no horizontal document overflow and no application console errors or warnings.
 
@@ -57,6 +58,7 @@ The implementation preserves the selected concept's hierarchy: narrow rail, comp
 - Back restores focus to the originating schedule row.
 - Both `prefers-reduced-motion: reduce` and the in-app setting set effective animation and transition duration to `0ms`; the app preference persists across reload.
 - `motion_views_ui_test.mjs` passes in Chromium, Firefox and WebKit, including the 360px Inspect surface.
+- The complete 9-suite product matrix passes in Chromium, Firefox and WebKit; the unit suite passes 271/271.
 
 ## Findings resolved
 
@@ -71,6 +73,8 @@ The implementation preserves the selected concept's hierarchy: narrow rail, comp
 | P1 | App reduced-motion setting persisted but did not disable CSS motion | The state now reaches `body.aa-reduce-motion`, cancels running animations and resolves durations to 0ms. |
 | P2 | Detail animation selectors targeted a class absent from the real container | The canonical detail container now owns `.dcard`, so the verified vertical transition actually runs. |
 | P2 | WebKit image-caption assertion raced a successful load | The test now waits for the real visible caption state before asserting. |
+| P1 | Moving markets into Summary left their buttons without the audited value/gate panel | Winner now renders its source-backed price/EV table; Total, Players and Combos render fail-closed gate evidence. |
+| P1 | The legacy value table repeated the canonical AA percentage | The table now references the canonical source and shows market/price/EV only; the exact AA probability appears once. |
 
 ## Remaining human gate
 
