@@ -287,7 +287,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .lggroup.closed .rows{display:none}
 
 .mrow{
-  display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:0;align-items:center;
+  display:grid;grid-template-columns:minmax(0,1fr) 45px;gap:0;align-items:center;
   width:100%;text-align:left;padding:0;border-top:1px solid var(--hair);
   transition:background .12s;position:relative;
 }
@@ -330,7 +330,7 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .ms.win{color:var(--text)} .ms.lv{color:var(--red)}
 .ms.marketpct{font-size:13px;line-height:17px;color:var(--sky)}
 .marketpct-source{font-size:8px;line-height:1;font-weight:850;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
-.mstar{width:44px;height:44px;display:grid;place-items:center;border-radius:var(--r-9);color:var(--faint);transition:color .15s,background .15s}
+.mstar{width:45px;height:45px;display:grid;place-items:center;border-radius:var(--r-9);color:var(--faint);transition:color .15s,background .15s}
 .mstar:hover{background:var(--inner);color:var(--amber)}
 .mstar.faved{color:var(--amber)}
 .mtags{grid-column:2/4;display:flex;gap:5px;margin-top:6px}
@@ -972,6 +972,32 @@ nav.sports{border-bottom:1px solid var(--hair);background:var(--page);position:r
 .pstat4 b{display:block;font-size:16px;font-weight:800;font-family:var(--font-display);color:var(--text)}
 .pstat4 span{display:block;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-top:2px}
 .photocap{display:block;font-size:9.5px;color:var(--faint);margin-top:3px;letter-spacing:.02em}
+.photocap[hidden]{display:none}
+.player-link,.team-link{color:inherit;text-decoration:none;border-radius:var(--r-6)}
+.pchd>.player-link{display:flex;align-items:center;gap:9px;min-width:0}
+.player-link:focus-visible,.team-link:focus-visible{outline:2px solid var(--sky);outline-offset:3px}
+.player-link .pcn,.player-link .hitname,.player-link .luname,.team-link .nm{text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px;transition:text-decoration-color 180ms ease,color 180ms ease}
+.player-link:hover .pcn,.player-link:hover .hitname,.player-link:hover .luname,.team-link:hover .nm{color:var(--sky);text-decoration-color:currentColor}
+.object-profile{max-width:980px;margin:0 auto;padding:0 0 28px}
+.object-profile-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center;padding:24px 0;border-block:1px solid var(--hair)}
+.object-profile-head .hs,.object-profile-head .hsfall{width:112px;height:112px;border-radius:var(--r-12);font-size:28px}
+.object-profile-head .team-crest{width:92px;height:92px;object-fit:contain}
+.object-profile-kicker{display:block;color:var(--sky);font:800 11px/1.3 var(--font-ui);letter-spacing:.1em;text-transform:uppercase}
+.object-profile h1{margin:4px 0 6px;font:800 clamp(30px,4vw,48px)/.98 var(--font-display);letter-spacing:.015em}
+.object-profile-sub{color:var(--dim);font-size:13px;line-height:1.55}
+.object-profile-context{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--hair)}
+.object-profile-context>div{padding:14px 16px;border-left:1px solid var(--hair)}
+.object-profile-context>div:first-child{border-left:0}
+.object-profile-context small{display:block;color:var(--faint);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.object-profile-context b{display:block;margin-top:4px;font-size:13px;overflow-wrap:anywhere}
+.object-profile-section{padding:22px 0;border-bottom:1px solid var(--hair)}
+.object-profile-section h2{margin:0 0 12px;font:750 20px/1.1 var(--font-display)}
+.available-people{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:var(--hair);border:1px solid var(--hair)}
+.available-person{display:flex;gap:11px;align-items:center;min-height:78px;padding:12px;background:#08111d}
+.available-person .hs,.available-person .hsfall{width:48px;height:48px;border-radius:50%;font-size:13px}
+.available-person b,.available-person small{display:block}.available-person small{margin-top:3px;color:var(--dim)}
+.object-not-found{max-width:720px;margin:40px auto;padding:28px 0;border-block:1px solid var(--hair)}
+.object-not-found h1{font:800 34px/1 var(--font-display);margin-bottom:10px}.object-not-found p{color:var(--dim);line-height:1.6}
 .pcard{background:linear-gradient(145deg,var(--card-hi),var(--card-lo) 85%);border:1px solid var(--hair);border-radius:var(--r-13);padding:13px 14px}
 
 /* razones (por qué esta jugada) */
@@ -1338,7 +1364,7 @@ nav.sports{background:#08111d}
 .mpred small{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--sky)}
 .mpred b{font:700 16px/1.15 var(--font-display);color:var(--text);white-space:nowrap}
 .mpred.muted small,.mpred.muted b{color:var(--faint)}
-.mstar{width:44px;height:44px;margin:auto;border-radius:var(--r-4)}
+.mstar{width:45px;height:45px;margin:auto;border-radius:var(--r-4)}
 .mstar:hover{background:rgba(var(--amber-rgb),.08)}
 .skel{height:82px}
 
@@ -1352,7 +1378,9 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
 .dwhen{margin-bottom:14px;border:0;border-radius:0;background:transparent;padding:0;color:var(--faint);font-size:11px}
 .dgrid{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:24px}
 .dteam{display:grid;grid-template-columns:52px minmax(0,1fr);grid-template-rows:auto auto;column-gap:12px;align-items:center;text-align:left;padding:0}
+.dteam>.team-link{display:grid;grid-template-columns:52px minmax(0,1fr);grid-template-rows:auto;column-gap:12px;align-items:center;grid-column:1/-1}
 .dteam:last-child{grid-template-columns:minmax(0,1fr) 52px;text-align:right}
+.dteam:last-child>.team-link{grid-template-columns:minmax(0,1fr) 52px}
 .dteam:last-child img,.dteam:last-child .tfall{grid-column:2;grid-row:1/3}
 .dteam:last-child .nm,.dteam:last-child .rc{grid-column:1}
 .dteam img,.dteam .tfall{width:48px;height:48px;grid-row:1/3}
@@ -1383,6 +1411,8 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
 .summary-markets>h3{font:700 18px/1.2 var(--font-display);padding:16px 0 10px}
 .market-status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--hair)}
 .market-status{min-height:72px;padding:11px 12px;border-left:1px solid var(--hair)}
+.market-status{text-align:left;width:100%;border-radius:0;background:#08111d}
+.market-status[aria-pressed="true"]{box-shadow:inset 0 -2px 0 var(--sky);background:rgba(var(--sky-rgb),.07)}
 .market-status:first-child{border-left:0}
 .market-status small{display:block;color:var(--faint);font-size:8px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
 .market-status b{display:block;margin-top:6px;font-size:11px;color:var(--dim)}
@@ -1415,7 +1445,7 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
   .schedule-kpis>div{min-width:55px;padding:7px 8px}.schedule-kpis dt{font-size:7px}.schedule-kpis dd{font-size:18px}
   .schedule-head{display:none}
   .lghead{padding-inline:2px}
-  .mrow{grid-template-columns:minmax(0,1fr) 44px;min-height:72px}
+  .mrow{grid-template-columns:minmax(0,1fr) 45px;min-height:72px}
   .mrowlink{grid-template-columns:62px minmax(0,1fr) 92px;min-height:72px}
   .mpitchers,.mstate{display:none}
   .mtime{padding:0 6px;font-size:12px}
@@ -1427,18 +1457,20 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
   .mpred b{font-size:14px}.mpred small{font-size:7px}
   body.aa-page .layout{padding:12px 12px 24px}
   .dhero{padding:16px 14px;min-height:160px}
-  .dgrid{gap:8px}.dteam{display:flex;flex-direction:column;text-align:center;gap:5px}.dteam:last-child{display:flex;text-align:center}
+  .dgrid{gap:8px}.dteam{display:flex;flex-direction:column;text-align:center;gap:5px}.dteam:last-child{display:flex;text-align:center}.dteam>.team-link,.dteam:last-child>.team-link{display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px}
   .dteam img,.dteam .tfall{width:40px;height:40px}.dteam .nm{font-size:14px}.dmid{min-width:105px}.dscore{font-size:34px}
   .dtabs{position:sticky;top:56px;z-index:5}.dtab{flex:1;padding-inline:8px}
   .aa-reading{grid-template-columns:1fr;gap:14px;padding:17px 15px}.aa-reading-value{text-align:left}.aa-reading-value strong{font-size:46px}
   .aa-facts{grid-template-columns:1fr 1fr}.aa-fact{border-top:1px solid var(--hair)}.aa-fact:nth-child(1),.aa-fact:nth-child(2){border-top:0}.aa-fact:nth-child(odd){border-left:0}
   .market-status-grid{grid-template-columns:1fr 1fr}.market-status:nth-child(3){border-left:0;border-top:1px solid var(--hair)}.market-status:nth-child(4){border-top:1px solid var(--hair)}
+  .object-profile-head{grid-template-columns:auto minmax(0,1fr);gap:14px;padding:18px 0}.object-profile-head .hs,.object-profile-head .hsfall{width:82px;height:82px}.object-profile-head .team-crest{width:72px;height:72px}.object-profile-context{grid-template-columns:1fr 1fr}.object-profile-context>div:nth-child(odd){border-left:0}.object-profile-context>div:nth-child(n+3){border-top:1px solid var(--hair)}
 }
 @media (max-width:520px){
   .schedule-titlebar{display:block}.schedule-kpis{margin-top:14px;width:100%}.schedule-kpis>div{flex:1}
   .ltop{flex-wrap:wrap}.datebox{order:-1;width:100%;justify-content:space-between;margin-left:0}.datebox .today{flex:1}
   .mrowlink{grid-template-columns:54px minmax(0,1fr)}.mpred{display:none}
   .dtab{font-size:11px}.aa-facts{grid-template-columns:1fr}.aa-fact,.aa-fact:nth-child(2){border-left:0;border-top:1px solid var(--hair)}.aa-fact:first-child{border-top:0}
+  .object-profile-head{grid-template-columns:1fr;text-align:center}.object-profile-head .hs,.object-profile-head .hsfall,.object-profile-head .team-crest{margin-inline:auto}.object-profile-context{grid-template-columns:1fr}.object-profile-context>div{border-left:0;border-top:1px solid var(--hair)}.object-profile-context>div:first-child{border-top:0}
 }
 </style>
 </head>
@@ -1796,6 +1828,11 @@ const T = {
     meta_scope: 'Alcance', meta_source: 'Fuente', meta_time: 'Actualizado', meta_status: 'Estado', meta_limit: 'Límite',
     meta_scope_public: 'Predicción AA pública', meta_scope_factual: 'Solo datos del partido', meta_limit_body: 'Informativo · no garantiza resultados',
     markets_in_summary: 'Mercados dentro del resumen', market_public_short: 'Público y medido', market_closed_short: 'Cerrado por validación',
+    player_page_kicker: 'Ficha de participante', team_page_kicker: 'Ficha de equipo', official_photo: 'Foto oficial',
+    player_role: 'Rol', player_team: 'Equipo', player_status: 'Estado', player_stats_event: 'Datos disponibles en este partido',
+    team_players_event: 'Jugadores disponibles en este partido', team_match_context: 'Contexto del partido', team_season_context: 'Contexto de temporada disponible',
+    object_not_found: 'Objeto no encontrado', object_not_found_body: 'Este participante o equipo no forma parte de los datos públicos del partido cargado.',
+    back_to_match: 'Volver al partido', next_current_match: 'Partido actual o próximo', data_source_event: 'Feed público del partido',
     radar_sub: 'Central de jugadas · inteligencia multifuente', live_via_espn: 'En vivo · vía ESPN', sports_swipe_hint: 'Desliza a izquierda o derecha para explorar deportes',
     intel_nav: 'Central AA', intel_title: 'Central de Jugadas AA', intel_sub: 'Selecciones pregame >60% en las próximas 36h: AA validado o probabilidad real del mercado.',
     intel_loading: 'Cargando inteligencia de mercados…', intel_empty: 'No hay jugadas públicas elegibles ahora mismo. No rellenamos una cuota.',
@@ -2011,6 +2048,11 @@ const T = {
     meta_scope: 'Scope', meta_source: 'Source', meta_time: 'Updated', meta_status: 'Status', meta_limit: 'Limit',
     meta_scope_public: 'Public AA prediction', meta_scope_factual: 'Game facts only', meta_limit_body: 'Informational · results are not guaranteed',
     markets_in_summary: 'Markets inside the summary', market_public_short: 'Public and measured', market_closed_short: 'Closed for validation',
+    player_page_kicker: 'Participant profile', team_page_kicker: 'Team profile', official_photo: 'Official photo',
+    player_role: 'Role', player_team: 'Team', player_status: 'Status', player_stats_event: 'Data available in this game',
+    team_players_event: 'Players available in this game', team_match_context: 'Game context', team_season_context: 'Available season context',
+    object_not_found: 'Object not found', object_not_found_body: 'This participant or team is not part of the loaded game\'s public data.',
+    back_to_match: 'Back to game', next_current_match: 'Current or next game', data_source_event: 'Public game feed',
     radar_sub: 'Play central · multi-source intelligence', live_via_espn: 'Live · via ESPN', sports_swipe_hint: 'Swipe left or right to explore sports',
     intel_nav: 'AA Central', intel_title: 'AA Play Central', intel_sub: 'Pregame selections above 60% over the next 36h: gated AA or measured market probability.',
     intel_loading: 'Loading market intelligence…', intel_empty: 'There are no eligible public plays right now. We never fill a quota.',
@@ -2488,9 +2530,42 @@ function safeImageUrl(value){
   }catch(e){ return null; }
 }
 const safeMlbPersonId = value => Number.isSafeInteger(Number(value)) && Number(value) > 0 ? String(Number(value)) : null;
+const AA_FACE_HOSTS = Object.freeze({
+  mlb: ['img.mlbstatic.com', 'midfield.mlbstatic.com'], nba: ['cdn.nba.com'],
+  nfl: ['a.espncdn.com'], tennis: ['a.espncdn.com'], wnba: ['a.espncdn.com'],
+  nhl: ['a.espncdn.com'], ncaaf: ['a.espncdn.com'], ncaam: ['a.espncdn.com'], soccer: ['a.espncdn.com'],
+});
+const aaInitials = name => String(name || '?').trim().split(/\s+/).filter(Boolean).map(word => word[0]).slice(0, 2).join('').toUpperCase() || '?';
+function aaFaceAssetUrl({ sport, id, href, size = 'row' }){
+  const key = String(sport || '').toLowerCase();
+  const allowed = AA_FACE_HOSTS[key];
+  if (!allowed) return null;
+  if (typeof href === 'string' && href){
+    try{
+      const url = new URL(href);
+      if (url.protocol === 'https:' && allowed.includes(url.hostname.toLowerCase())) return url.href;
+    }catch(e){}
+  }
+  const personId = /^\d{1,18}$/.test(String(id || '')) && Number(id) > 0 ? String(Number(id)) : null;
+  if (!personId) return null;
+  if (key === 'mlb') return `https://midfield.mlbstatic.com/v1/people/${personId}/spots/${size === 'hero' ? 240 : 120}`;
+  if (key === 'nba') return `https://cdn.nba.com/headshots/nba/latest/260x190/${personId}.png`;
+  const espnSport = { nfl: 'nfl', tennis: 'tennis', wnba: 'wnba', nhl: 'nhl', ncaaf: 'college-football', ncaam: 'mens-college-basketball', soccer: 'soccer' }[key];
+  return espnSport ? `https://a.espncdn.com/i/headshots/${espnSport}/players/full/${personId}.png` : null;
+}
+function aaFace({ sport, id, name, href, size = 'row', priority = false, className = '', alt = '', captionId = '' }){
+  const initials = aaInitials(name), src = aaFaceAssetUrl({ sport, id, href, size });
+  const baseClass = size === 'lineup' ? 'luhs' : size === 'live' ? 'lvhs' : 'hs';
+  const fallbackClass = size === 'lineup' ? 'hsfall' : size === 'live' ? 'lvhsfall' : 'hsfall';
+  const fallbackStyle = size === 'lineup' ? 'width:24px;height:24px;font-size:9px' : '';
+  if (!src) return `<span class="${fallbackClass} ${esc(className)}"${fallbackStyle ? ` style="${fallbackStyle}"` : ''}>${esc(initials)}</span>`;
+  return `<img class="${baseClass} ${esc(className)}" src="${esc(src)}" alt="${esc(alt)}" width="${size === 'hero' ? 112 : size === 'lineup' ? 24 : 48}" height="${size === 'hero' ? 112 : size === 'lineup' ? 24 : 48}" decoding="async" loading="${priority ? 'eager' : 'lazy'}"${priority ? ' fetchpriority="high"' : ''} referrerpolicy="no-referrer" data-aa-img-fallback="${esc(initials)}" data-aa-fallback-class="${fallbackClass}"${fallbackStyle ? ` data-aa-fallback-style="${fallbackStyle}"` : ''}${captionId ? ` data-aa-caption-id="${esc(captionId)}"` : ''}>`;
+}
 document.addEventListener('error', event => {
   const image = event.target;
   if (!(image instanceof HTMLImageElement)) return;
+  const caption = image.dataset.aaCaptionId ? document.getElementById(image.dataset.aaCaptionId) : null;
+  if (caption) caption.hidden = true;
   if (image.hasAttribute('data-aa-hide-on-error')){
     if (image.dataset.aaHideOnError === 'visibility') image.style.visibility = 'hidden';
     else image.remove();
@@ -2502,6 +2577,12 @@ document.addEventListener('error', event => {
   if (image.dataset.aaFallbackStyle) fallback.style.cssText = image.dataset.aaFallbackStyle;
   fallback.textContent = image.dataset.aaImgFallback || '';
   image.replaceWith(fallback);
+}, true);
+document.addEventListener('load', event => {
+  const image = event.target;
+  if (!(image instanceof HTMLImageElement) || !image.dataset.aaCaptionId || !image.naturalWidth) return;
+  const caption = document.getElementById(image.dataset.aaCaptionId);
+  if (caption) caption.hidden = false;
 }, true);
 const key = (a, h) => canon(a) + '@' + canon(h);
 function logoImg(code){
@@ -2516,10 +2597,23 @@ function siloFace(id, name, side){
   return `<img class="dhero-portrait ${side === 'home' ? 'home' : 'away'}" alt="${alt}" src="https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_80/v1/people/${personId}/headshot/silo/current" loading="lazy" data-aa-hide-on-error>`;
 }
 function officialFace(id, name, cls){
-  const ini = (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
-  const personId = safeMlbPersonId(id);
-  if (!personId) return `<span class="hsfall">${esc(ini)}</span>`;
-  return `<img class="${cls === 'luhs' ? 'luhs' : 'hs'}" alt="${esc(name || '')}" src="https://img.mlbstatic.com/mlb-photos/image/upload/w_180,q_80/v1/people/${personId}/headshot/silo/current" loading="lazy" data-aa-img-fallback="${esc(ini)}" data-aa-fallback-class="hsfall">`;
+  return aaFace({ sport: 'mlb', id, name, size: cls === 'luhs' ? 'lineup' : 'row', className: cls && cls !== 'luhs' ? cls.replace(/^hs\s*/, '') : '', alt: name || '' });
+}
+function aaNestedObjectRoute(kind, id){
+  const route = aaCompatibleRoute(aaReadRoute(location.search));
+  if (kind === 'player'){ route.p = String(id || ''); route.team = ''; }
+  else { route.team = String(id || ''); route.p = ''; }
+  return aaCompatibleRoute(route);
+}
+function aaPlayerLink(content, id, label, className = 'player-link'){
+  if (!id) return content;
+  const route = aaNestedObjectRoute('player', id);
+  return `<a class="${className}" data-player-link="${esc(String(id))}" href="${esc(aaRouteUrl(route))}" aria-label="${esc(label || '')}">${content}</a>`;
+}
+function aaTeamLink(content, id, label, className = 'team-link'){
+  if (!id) return content;
+  const route = aaNestedObjectRoute('team', id);
+  return `<a class="${className}" data-team-link="${esc(String(id))}" href="${esc(aaRouteUrl(route))}" aria-label="${esc(label || '')}">${content}</a>`;
 }
 
 
@@ -3645,13 +3739,14 @@ function cmpRow(label, away, home, higherBetter = true, fmt = (x) => x){
 }
 function playerCard(pl, role){
   if (!pl) return `<div class="pcard"><div class="pcr">${esc(role)}</div><div class="pcn">${t('d_tbc')}</div></div>`;
-  const face = officialFace(pl.id, pl.name, 'hs sq');
+  const captionId = pl.id ? `cardFaceCaption-${String(pl.id).replace(/[^A-Za-z0-9_-]/g, '')}` : '';
+  const face = aaFace({ sport: 'mlb', id: pl.id, name: pl.name, size: 'row', className: 'sq', alt: '', captionId });
   const hand = pl.hand ? `<span class="handpill">${pl.hand === 'L' ? 'LHP' : 'RHP'}</span>` : '';
-  const cap = pl.id ? t('hero_photo_note') : t('d_tbc');
   const stat = (lb, val) => `<div class="pstat4"><b class="num">${val == null || val === '' ? '—' : esc(val)}</b><span>${esc(lb)}</span></div>`;
+  const identity = `${face}<div style="min-width:0"><div class="pcn">${esc(pl.name || t('d_tbc'))}${hand}</div>
+      <div class="pcr">${esc(role)}</div>${captionId ? `<span id="${captionId}" class="photocap" hidden>${t('official_photo')} · MLB</span>` : ''}</div>`;
   return `<div class="pcard">
-    <div class="pchd">${face}<div style="min-width:0"><div class="pcn">${esc(pl.name || t('d_tbc'))}${hand}</div>
-      <div class="pcr">${esc(role)}</div><span class="photocap">${esc(cap)}</span></div></div>
+    <div class="pchd">${pl.id ? aaPlayerLink(identity, pl.id, `${t('player_page_kicker')}: ${pl.name}`) : identity}</div>
     <div class="pstats4">${stat(t('d_starts_n'), pl.starts)}${stat('ERA', pl.era_recent)}${stat('FIP', pl.fip)}${stat('K/9', pl.k9)}</div>
     ${pl.fatigue ? `<div class="pfat">${t('d_fatigue')} <b class="fat-${esc(pl.fatigue)}">${esc(pl.fatigue)}</b></div>` : ''}
   </div>`;
@@ -3909,6 +4004,93 @@ function marketComparator({ activeSport, blocks, away, home, awayPct, homePct, l
   </section>`;
 }
 
+function aaMlbParticipants(ev){
+  const snap = ev?.snapshot || {}, rows = [], seen = new Set();
+  const add = (person, side, role) => {
+    if (!person || (!person.id && !person.name)) return;
+    const identity = person.id ? `id:${person.id}` : `name:${side}:${String(person.name).toLowerCase()}`;
+    if (seen.has(identity)) return;
+    seen.add(identity);
+    rows.push({ ...person, id: person.id ? String(person.id) : '', side, team: ev[side], role: role || person.pos || t('d_player') });
+  };
+  add(snap.pitchers?.away, 'away', t('d_starts_for') + tNick(ev.away.code));
+  add(snap.pitchers?.home, 'home', t('d_starts_for') + tNick(ev.home.code));
+  for (const side of ['away','home']){
+    for (const person of (snap.lineups?.[side] || [])) add(person, side, person.pos || t('d_lineup'));
+    for (const person of (snap.hitters?.[side] || [])) add(person, side, person.pos || t('d_hitters'));
+  }
+  return rows;
+}
+function aaObjectNotFound(kind){
+  return `<article class="object-not-found" aria-labelledby="objectNotFoundTitle"><span class="object-profile-kicker">${kind === 'team' ? t('team_page_kicker') : t('player_page_kicker')}</span><h1 id="objectNotFoundTitle" tabindex="-1">${t('object_not_found')}</h1><p>${t('object_not_found_body')}</p></article>`;
+}
+function aaFocusNestedHeading(container){
+  requestAnimationFrame(() => {
+    const heading = container?.querySelector('h1');
+    if (heading) heading.focus({ preventScroll: true });
+  });
+}
+function aaStatTiles(person){
+  const candidates = [
+    ['ERA', person.era_recent ?? person.era], ['FIP', person.fip], ['K/9', person.k9], ['OPS', person.ops],
+    ['AVG', person.avg], ['HR', person.hr], ['PTS', person.pts], ['REB', person.reb], ['AST', person.ast],
+    [t('d_starts_n'), person.starts], [t('player_status'), person.status], [person.cat || t('o_player_data'), person.value],
+  ].filter(([, value]) => value != null && value !== '').slice(0, 6);
+  return candidates.length ? `<div class="available-people">${candidates.map(([label, value]) => `<div class="available-person"><div><small>${esc(label)}</small><b class="num">${esc(String(value))}</b></div></div>`).join('')}</div>` : `<p class="wempty">${t('no_data')}</p>`;
+}
+function renderMlbNestedObject(ev, route){
+  if (!route.p && !route.team) return false;
+  const dc = $('dcard'), people = aaMlbParticipants(ev), status = effStatus(ev);
+  if (route.p){
+    const person = people.find(item => item.id && item.id === String(route.p));
+    if (!person){ document.title = `${t('object_not_found')} · AA Sports`; dc.innerHTML = aaObjectNotFound('player'); aaFocusNestedHeading(dc); return true; }
+    document.title = `${person.name || t('d_player')} · AA Sports`;
+    const captionId = `faceCaption-${String(person.id).replace(/[^A-Za-z0-9_-]/g, '')}`;
+    const teamCode = person.team?.code || '', teamName = tNick(teamCode);
+    dc.innerHTML = `<article class="object-profile player-profile" data-object-kind="player" aria-labelledby="objectProfileTitle">
+      <div class="dtop"><span class="crumb">MLB<span class="sep">›</span><b>${esc(ev.matchup)}</b><span class="sep">›</span><b>${esc(person.name || '')}</b></span></div>
+      <header class="object-profile-head">
+        ${aaFace({ sport: 'mlb', id: person.id, name: person.name, size: 'hero', priority: true, alt: person.name || '', captionId })}
+        <div><span class="object-profile-kicker">${t('player_page_kicker')}</span><h1 id="objectProfileTitle" tabindex="-1">${esc(person.name || t('d_tbc'))}</h1><p class="object-profile-sub">${esc(person.role || t('d_player'))}</p><span id="${captionId}" class="photocap" hidden>${t('official_photo')} · MLB</span></div>
+      </header>
+      <div class="object-profile-context">
+        <div><small>${t('player_team')}</small><b>${aaTeamLink(esc(teamName), teamCode, `${t('team_page_kicker')}: ${teamName}`)}</b></div>
+        <div><small>${t('player_role')}</small><b>${esc(person.role || person.pos || t('d_player'))}</b></div>
+        <div><small>${t('player_status')}</small><b>${esc(person.status || (status === 'pre' ? t('f_pre') : status === 'live' ? t('f_live') : t('f_final')))}</b></div>
+      </div>
+      <section class="object-profile-section"><h2>${t('player_stats_event')}</h2>${aaStatTiles(person)}</section>
+      <section class="object-profile-section"><h2>${t('team_match_context')}</h2><p class="object-profile-sub">${esc(ev.matchup)} · ${esc(ev.start && String(ev.start).includes('T') ? new Date(ev.start).toLocaleString(LOCALE(), { dateStyle: 'medium', timeStyle: 'short' }) : (ev.start || ''))}</p></section>
+      <p class="dnote">${t('data_source_event')} · ${t('meta_limit_body')}</p>
+    </article>`;
+    aaFocusNestedHeading(dc);
+    return true;
+  }
+  const side = ['away','home'].find(key => canon(ev[key]?.code) === canon(route.team) || String(ev[key]?.id || '') === String(route.team));
+  if (!side){ document.title = `${t('object_not_found')} · AA Sports`; dc.innerHTML = aaObjectNotFound('team'); aaFocusNestedHeading(dc); return true; }
+  const team = ev[side], code = team.code || String(route.team), opponent = ev[side === 'away' ? 'home' : 'away'];
+  document.title = `${tNick(code)} · AA Sports`;
+  const roster = people.filter(person => person.side === side);
+  const standings = typeof stRow === 'function' ? stRow(code) : null;
+  const rosterHtml = roster.length ? roster.map(person => {
+    const face = aaFace({ sport: 'mlb', id: person.id, name: person.name, size: 'row', alt: '' });
+    const content = `<div class="available-person">${face}<span><b>${esc(person.name || t('d_tbc'))}</b><small>${esc(person.role || person.pos || t('d_player'))}</small></span></div>`;
+    return person.id ? aaPlayerLink(content, person.id, `${t('player_page_kicker')}: ${person.name}`) : content;
+  }).join('') : `<p class="wempty">${t('no_data')}</p>`;
+  dc.innerHTML = `<article class="object-profile team-profile" data-object-kind="team" aria-labelledby="objectProfileTitle">
+    <div class="dtop"><span class="crumb">MLB<span class="sep">›</span><b>${esc(ev.matchup)}</b><span class="sep">›</span><b>${esc(tNick(code))}</b></span></div>
+    <header class="object-profile-head">${logoImg(code).replace('<img ', '<img class="team-crest" ').replace('<span class="tfall"', '<span class="tfall team-crest"')}<div><span class="object-profile-kicker">${t('team_page_kicker')}</span><h1 id="objectProfileTitle" tabindex="-1">${esc(tNick(code))}</h1><p class="object-profile-sub">${esc(team.name || code)}</p></div></header>
+    <div class="object-profile-context">
+      <div><small>${t('next_current_match')}</small><b>${esc(side === 'away' ? '@ ' + tNick(opponent.code) : 'vs ' + tNick(opponent.code))}</b></div>
+      <div><small>${t('meta_status')}</small><b>${esc(status === 'pre' ? t('f_pre') : status === 'live' ? t('f_live') : t('f_final'))}</b></div>
+      <div><small>${t('team_season_context')}</small><b>${standings ? `${standings.w ?? '—'}-${standings.l ?? '—'} · ${standings.pct ?? '—'}` : t('no_data')}</b></div>
+    </div>
+    <section class="object-profile-section"><h2>${t('team_players_event')}</h2><div class="available-people">${rosterHtml}</div></section>
+    <p class="dnote">${t('data_source_event')} · ${t('meta_limit_body')}</p>
+  </article>`;
+  aaFocusNestedHeading(dc);
+  return true;
+}
+
 function renderDetail(){
   if (sport === 'home'){ renderHomeDetail(); return; }
   if (sport !== 'mlb'){ renderOtherDetail(); return; }
@@ -3916,6 +4098,9 @@ function renderDetail(){
   if (listTab === 'edu' || listTab === 'tools' || listTab === 'cfg'){ renderAppDetail(listTab); return; }
   const ev = events.find(e => e.event_id === selectedId);
   if (!ev){ $('dcard').innerHTML = `<div class="dempty">${t('detail_empty')}</div>`; return; }
+  const activeRoute = aaReadRoute(location.search);
+  if (renderMlbNestedObject(ev, activeRoute)) return;
+  document.title = `${ev.matchup} · AA Sports`;
   const detailTabMap = { equipos: 'participantes', pitchers: 'participantes', bateadores: 'participantes', sim: 'evidencia', mercado: 'evidencia' };
   dtab = detailTabMap[dtab] || (['analisis', 'participantes', 'evidencia'].includes(dtab) ? dtab : 'analisis');
   // Calienta las posiciones UNA vez (para el bullet de "stakes" de Las claves); al
@@ -4122,11 +4307,10 @@ function renderDetail(){
   const hitSide = (side, code) => {
     const hs = (snap.hitters && snap.hitters[side]) || [];
     const rows = hs.length ? hs.map(h => {
-      const ini = (h.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
       const opsValue = strictFiniteNumber(h.ops), hr = strictCount(h.hr), avg = strictFiniteNumber(h.avg);
       return `<div class="hitrow">
-        <span class="hsfall" style="width:26px;height:26px;font-size:10px">${esc(ini)}</span>
-        <span class="hitname">${esc(h.name)}</span>
+        ${aaFace({ sport: 'mlb', id: h.id, name: h.name, size: 'lineup', alt: '' })}
+        ${h.id ? aaPlayerLink(`<span class="hitname">${esc(h.name)}</span>`, h.id, `${t('player_page_kicker')}: ${h.name}`) : `<span class="hitname">${esc(h.name)}</span>`}
         <span class="hitst num">${opsValue != null ? `OPS <b>${opsValue}</b>` : ''}${hr != null ? ` · <b>${hr}</b> HR` : ''}${avg != null ? ` · ${avg}` : ''}</span>
       </div>`;
     }).join('') : `<span class="wempty">${t('no_data_yet')}</span>`;
@@ -4137,17 +4321,13 @@ function renderDetail(){
   const lineupSide = (side, code) => {
     const lu = (snap.lineups && snap.lineups[side]) || [];
     const rows = lu.length ? lu.map(h => {
-      const ini = (h.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
-      const personId = safeMlbPersonId(h.id);
-      const face = personId
-        ? `<img class="luhs" src="https://img.mlbstatic.com/mlb-photos/image/upload/w_120,q_80/v1/people/${personId}/headshot/silo/current" alt="" loading="lazy" data-aa-img-fallback="${esc(ini)}" data-aa-fallback-class="hsfall" data-aa-fallback-style="width:24px;height:24px;font-size:9px">`
-        : `<span class="hsfall" style="width:24px;height:24px;font-size:9px">${esc(ini)}</span>`;
+      const face = aaFace({ sport: 'mlb', id: h.id, name: h.name, size: 'lineup', alt: '' });
       const order = strictCount(h.order), opsValue = strictFiniteNumber(h.ops), hr = strictCount(h.hr), avg = strictFiniteNumber(h.avg);
       const stat = [opsValue != null ? `<b>${opsValue}</b>` : '', hr != null ? `<b>${hr}</b>HR` : '', avg != null ? avg : '']
         .filter(Boolean).join(' · ');
       return `<div class="lurow">
         <span class="luord num">${order ?? ''}</span>${face}
-        <span class="luname">${esc(h.name || '—')}${h.pos ? `<span class="lupos">${esc(h.pos)}</span>` : ''}</span>
+        ${h.id ? aaPlayerLink(`<span class="luname">${esc(h.name || '—')}${h.pos ? `<span class="lupos">${esc(h.pos)}</span>` : ''}</span>`, h.id, `${t('player_page_kicker')}: ${h.name}`) : `<span class="luname">${esc(h.name || '—')}${h.pos ? `<span class="lupos">${esc(h.pos)}</span>` : ''}</span>`}
         <span class="lust num">${stat}</span>
       </div>`;
     }).join('') : `<span class="wempty">${t('lineup_pending')}</span>`;
@@ -4356,7 +4536,7 @@ function renderDetail(){
   const marketStatusGrid = MARKET_KEYS.map(kind => {
     const block = mlbMarketBlocks[kind];
     const isPublic = block && block.state === 'public';
-    return `<div class="market-status ${isPublic ? 'public' : 'closed'}"><small>${t(marketLabels[kind])}</small><b>${isPublic ? t('market_public_short') : t('market_closed_short')}</b></div>`;
+    return `<button type="button" class="market-status ${isPublic ? 'public' : 'closed'}" data-market-kind="${kind}" aria-pressed="${marketTab === kind}"><small>${t(marketLabels[kind])}</small><b>${isPublic ? t('market_public_short') : t('market_closed_short')}</b></button>`;
   }).join('');
   const factualMarketRows = `${spreadRow}${moveRow}${booksRows}`;
   analisis += `<section class="summary-markets" aria-labelledby="summaryMarketsTitle">
@@ -4423,9 +4603,9 @@ function renderDetail(){
     <div class="dhero">
       <span class="dwhen num">${esc(ev.start && String(ev.start).includes('T') ? new Date(ev.start).toLocaleString(LOCALE(), { dateStyle: 'medium', timeStyle: 'short' }) : (ev.start || ''))}${ev.result ? `<span class="reschip ${ev.result === 'win' ? 'won' : 'lost'}">${ev.result === 'win' ? '✓ ' + t('pick_hit') : '✗ ' + t('pick_miss')}</span>` : ''}</span>
       <div class="dgrid">
-        <div class="dteam">${logoImg(ev.away.code)}<span class="nm">${esc(CITY[canon(ev.away.code)] || '')}<br>${esc(tNick(ev.away.code))}</span>${recA}</div>
+        <div class="dteam">${aaTeamLink(`${logoImg(ev.away.code)}<span class="nm">${esc(CITY[canon(ev.away.code)] || '')}<br>${esc(tNick(ev.away.code))}</span>`, ev.away.code, `${t('team_page_kicker')}: ${tNick(ev.away.code)}`)}${recA}</div>
         <div class="dmid">${mid}</div>
-        <div class="dteam">${logoImg(ev.home.code)}<span class="nm">${esc(CITY[canon(ev.home.code)] || '')}<br>${esc(tNick(ev.home.code))}</span>${recH}</div>
+        <div class="dteam">${aaTeamLink(`${logoImg(ev.home.code)}<span class="nm">${esc(CITY[canon(ev.home.code)] || '')}<br>${esc(tNick(ev.home.code))}</span>`, ev.home.code, `${t('team_page_kicker')}: ${tNick(ev.home.code)}`)}${recH}</div>
       </div>
     </div>
     <div class="dtabs" role="tablist" aria-label="${t('matches')}">
@@ -4466,7 +4646,7 @@ function renderSide(){
 /* ── interacción ─────────────────────────────────────────── */
 const AA_SPORTS = ['home','radar','mlb','soccer','nba','wnba','tennis','nfl','ncaaf','nhl','ncaam'];
 const AA_LIST_TABS = ['all','favs','pos','hist','brain','edu','tools','cfg'];
-const AA_DETAIL_TABS = ['analisis','equipos','pitchers','bateadores','sim','mercado'];
+const AA_DETAIL_TABS = ['analisis','participantes','evidencia','equipos','pitchers','bateadores','sim','mercado'];
 const AA_MARKETS = ['winner','total','players','combos'];
 const aaRouteId = value => {
   const text = typeof value === 'string' ? value : '';
@@ -4535,6 +4715,7 @@ function aaListRoute(input){
 }
 function aaCurrentRoute(){
   const s = sport || 'home';
+  const nested = aaReadRoute(location.search);
   return aaCompatibleRoute({
     s,
     g: s === 'mlb' ? selectedId : s === 'radar' && typeof radarSel !== 'undefined' ? radarSel : '',
@@ -4543,6 +4724,7 @@ function aaCurrentRoute(){
     lt: listTab !== 'all' ? listTab : '',
     dt: selectedId && dtab !== 'analisis' ? dtab : '',
     m: ((selectedId || otherSel) && marketTab !== 'winner') ? marketTab : '',
+    p: nested.p || '', team: nested.team || '',
   });
 }
 let aaHistorySeq = 0;
@@ -4626,14 +4808,21 @@ function aaRestoreListState(state){
       const fallback = $('lghead');
       if (fallback){ fallback.tabIndex = -1; fallback.focus({ preventScroll: true }); }
     }
-    window.scrollTo(0, Number(state.scrollY) || 0);
+    const restoreScroll = () => {
+      if (restoreSeq !== aaApplySeq || (restoreKey && history.state?.key !== restoreKey)) return;
+      window.scrollTo(0, Number(state.scrollY) || 0);
+    };
+    restoreScroll();
+    // WebKit may apply its native history position one task after popstate even
+    // with manual restoration. Reassert the route-owned position once settled.
+    setTimeout(restoreScroll, 80);
   }));
 }
 function aaFocusObject(){
   requestAnimationFrame(() => requestAnimationFrame(() => {
     const detail = $('detail');
     if (detail) detail.scrollTop = 0;
-    const target = $('dcard');
+    const target = document.querySelector('#dcard .object-profile h1,#dcard .object-not-found h1') || $('dcard');
     if (target){ target.tabIndex = -1; target.focus({ preventScroll: true }); }
     window.scrollTo(0, 0);
   }));
@@ -4785,6 +4974,16 @@ document.addEventListener('click', e => {
     document.querySelector('.lghead .sub').textContent = SOCCER_LEAGUES[soccerLeague] || '';
     renderList(); loadOther(); return; }
   if (e.target.closest('a[data-ext]')) return; // links externos (perfil Polymarket): navegación normal
+  const nestedObjectLink = e.target.closest('a[data-player-link],a[data-team-link]');
+  if (nestedObjectLink){
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    const route = aaCompatibleRoute(aaReadRoute(location.search));
+    if (nestedObjectLink.dataset.playerLink){ route.p = nestedObjectLink.dataset.playerLink; route.team = ''; }
+    else { route.team = nestedObjectLink.dataset.teamLink || ''; route.p = ''; }
+    navigateToObject(route);
+    return;
+  }
   const objectLink = e.target.closest('a[data-object-link]');
   if (objectLink){
     // Un enlace real conserva copiar URL, menú contextual y abrir en pestaña nueva.
@@ -5783,6 +5982,59 @@ function summaryInjuriesHtml(summaryDoc){
   return `<div class="secttl">${t('o_injuries')}</div><div class="formgrid">${groups.map((group) => `<div class="formside"><div class="fh">${esc(group.code || '')}</div>${group.items.map((item) => `<div class="hitrow"><span class="hitname">${esc(item.name)}</span><span class="hitst">${esc(item.status || item.type || '—')}</span></div>`).join('')}</div>`).join('')}</div>`;
 }
 
+function aaOtherParticipants(game, summaryDoc){
+  const rows = [], seen = new Set();
+  const add = (person, side, role) => {
+    if (!person || (!person.id && !person.athlete_id && !person.name)) return;
+    const id = person.id || person.athlete_id || '';
+    const identity = id ? `id:${id}` : `name:${side}:${String(person.name).toLowerCase()}`;
+    if (seen.has(identity)) return;
+    seen.add(identity);
+    rows.push({ ...person, id: id ? String(id) : '', side, team: game[side], role: role || person.pos || t('d_player') });
+  };
+  for (const side of ['away','home']){
+    for (const person of (game[side]?.leaders || [])) add(person, side, person.cat || t('o_leaders'));
+    const lineup = summaryDoc?.lineups?.[side];
+    for (const person of [...(lineup?.starters || []), ...(lineup?.subs || [])]) add(person, side, person.pos || t('d_lineup'));
+    const playerDoc = summaryDoc?.players?.[side];
+    for (const person of (playerDoc?.list || [])) add(person, side, person.pos || t('o_box_score'));
+    for (const group of (playerDoc?.groups || [])) for (const person of (group.rows || [])) add(person, side, group.key || t('o_player_data'));
+  }
+  return rows;
+}
+function renderOtherNestedObject(game, summaryDoc, route){
+  if (!route.p && !route.team) return false;
+  const dc = $('dcard'), people = aaOtherParticipants(game, summaryDoc);
+  if (route.p){
+    const person = people.find(item => item.id && item.id === String(route.p));
+    if (!person){ document.title = `${t('object_not_found')} · AA Sports`; dc.innerHTML = aaObjectNotFound('player'); aaFocusNestedHeading(dc); return true; }
+    document.title = `${person.name || t('d_player')} · AA Sports`;
+    const captionId = `faceCaption-${String(person.id).replace(/[^A-Za-z0-9_-]/g, '')}`;
+    const teamId = person.team?.id || person.team?.code || '';
+    dc.innerHTML = `<article class="object-profile player-profile" data-object-kind="player" aria-labelledby="objectProfileTitle">
+      <div class="dtop"><span class="crumb">${esc(sportLabel(sport))}<span class="sep">›</span><b>${esc(oName(person.team || {}))}</b><span class="sep">›</span><b>${esc(person.name || '')}</b></span></div>
+      <header class="object-profile-head">${aaFace({ sport, id: person.id, href: person.headshot, name: person.name, size: 'hero', priority: true, alt: person.name || '', captionId })}<div><span class="object-profile-kicker">${t('player_page_kicker')}</span><h1 id="objectProfileTitle" tabindex="-1">${esc(person.name || t('d_tbc'))}</h1><p class="object-profile-sub">${esc(person.role || person.pos || t('d_player'))}</p><span id="${captionId}" class="photocap" hidden>${t('official_photo')} · ${esc(sportLabel(sport))}</span></div></header>
+      <div class="object-profile-context"><div><small>${t('player_team')}</small><b>${aaTeamLink(esc(oName(person.team || {})), teamId, `${t('team_page_kicker')}: ${oName(person.team || {})}`)}</b></div><div><small>${t('player_role')}</small><b>${esc(person.role || person.pos || t('d_player'))}</b></div><div><small>${t('meta_source')}</small><b>${t('data_source_event')}</b></div></div>
+      <section class="object-profile-section"><h2>${t('player_stats_event')}</h2>${aaStatTiles(person)}</section><p class="dnote">${t('meta_limit_body')}</p>
+    </article>`;
+    aaFocusNestedHeading(dc);
+    return true;
+  }
+  const side = ['away','home'].find(key => canon(game[key]?.code) === canon(route.team) || String(game[key]?.id || '') === String(route.team));
+  if (!side){ document.title = `${t('object_not_found')} · AA Sports`; dc.innerHTML = aaObjectNotFound('team'); aaFocusNestedHeading(dc); return true; }
+  const team = game[side], opponent = game[side === 'away' ? 'home' : 'away'], teamId = team.id || team.code || route.team;
+  document.title = `${oName(team)} · AA Sports`;
+  const roster = people.filter(person => person.side === side);
+  const rosterHtml = roster.length ? roster.map(person => {
+    const content = `<div class="available-person">${aaFace({ sport, id: person.id, href: person.headshot, name: person.name, size: 'row', alt: '' })}<span><b>${esc(person.name || t('d_tbc'))}</b><small>${esc(person.role || person.pos || t('d_player'))}</small></span></div>`;
+    return person.id ? aaPlayerLink(content, person.id, `${t('player_page_kicker')}: ${person.name}`) : content;
+  }).join('') : `<p class="wempty">${t('no_data')}</p>`;
+  const standing = typeof stRow === 'function' ? stRow(team.code) : null;
+  dc.innerHTML = `<article class="object-profile team-profile" data-object-kind="team" aria-labelledby="objectProfileTitle"><div class="dtop"><span class="crumb">${esc(sportLabel(sport))}<span class="sep">›</span><b>${esc(oName(team))}</b></span></div><header class="object-profile-head">${oLogo(team).replace('<img ', '<img class="team-crest" ').replace('<span class="tfall"', '<span class="tfall team-crest"')}<div><span class="object-profile-kicker">${t('team_page_kicker')}</span><h1 id="objectProfileTitle" tabindex="-1">${esc(oName(team))}</h1><p class="object-profile-sub">${esc(team.code || String(teamId))}</p></div></header><div class="object-profile-context"><div><small>${t('next_current_match')}</small><b>${esc(side === 'away' ? '@ ' + oName(opponent) : 'vs ' + oName(opponent))}</b></div><div><small>${t('meta_status')}</small><b>${esc(game.status_detail || game.status || '—')}</b></div><div><small>${t('team_season_context')}</small><b>${standing ? `${standing.w ?? '—'}-${standing.l ?? '—'} · ${standing.pct ?? '—'}` : t('no_data')}</b></div></div><section class="object-profile-section"><h2>${t('team_players_event')}</h2><div class="available-people">${rosterHtml}</div></section><p class="dnote">${t('data_source_event')} · ${t('meta_limit_body')}</p></article>`;
+  aaFocusNestedHeading(dc);
+  return true;
+}
+
 function renderOtherList(){
   const n = { all: otherGames.length, live: 0, pre: 0, final: 0 };
   for (const g of otherGames) n[g.status] = (n[g.status] || 0) + 1;
@@ -5863,6 +6115,9 @@ function renderOtherDetail(){
   const cachedSummary = summarySupported ? summaryCache.get(summaryKey(g)) : null;
   const summaryEntry = cachedSummary?.snapshotId === currentSummarySnapshotId() ? cachedSummary : null;
   const S = summaryEntry && summaryEntry.doc;
+  const activeRoute = aaReadRoute(location.search);
+  if (renderOtherNestedObject(g, S, activeRoute)) return;
+  document.title = `${oName(g.away)} @ ${oName(g.home)} · AA Sports`;
   const scored = g.home.score != null && g.status !== 'pre';
   const usPr = usPredFor(g);
   const brain = sportLearningDocs.get(sport) || {};
@@ -5959,12 +6214,12 @@ function renderOtherDetail(){
     <div class="dhero">
       <span class="dwhen num">${g.start ? esc(new Date(g.start).toLocaleString(LOCALE(), {dateStyle: 'medium', timeStyle: 'short'})) : ''}</span>
       <div class="dgrid">
-        <div class="dteam">${oLogo(g.away)}<span class="nm">${esc(oName(g.away))}${rankChip(g.away)}</span>${g.away.rec ? `<span class="rc num">${esc(g.away.rec)}</span>` : ''}${sport === 'tennis' && tennisSetsText(g.away.sets) ? `<span class="rc num">sets: ${tennisSetsText(g.away.sets)}</span>` : ''}</div>
+        <div class="dteam">${aaTeamLink(`${oLogo(g.away)}<span class="nm">${esc(oName(g.away))}${rankChip(g.away)}</span>`, g.away.id || g.away.code, `${t('team_page_kicker')}: ${oName(g.away)}`)}${g.away.rec ? `<span class="rc num">${esc(g.away.rec)}</span>` : ''}${sport === 'tennis' && tennisSetsText(g.away.sets) ? `<span class="rc num">sets: ${tennisSetsText(g.away.sets)}</span>` : ''}</div>
         <div class="dmid">${scored
           ? `<div class="dscore num">${esc(g.away.score)}<span class="sep">–</span>${esc(g.home.score)}</div>
              <div class="dst ${g.status === 'final' ? 'done' : ''}">${g.status === 'live' ? '<span class="ldot"></span> ' : ''}${esc(g.status_detail || '')}</div>`
           : `<div class="dscore num" style="font-size:24px;color:var(--dim);font-weight:700">${g.start ? esc(new Date(g.start).toLocaleTimeString(LOCALE(), {hour: '2-digit', minute: '2-digit'})) : t('o_today')}</div><div class="dsub">${esc(g.status_detail || t('o_toplay'))}</div>`}</div>
-        <div class="dteam">${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}${rankChip(g.home)}</span>${g.home.rec ? `<span class="rc num">${esc(g.home.rec)}</span>` : ''}${sport === 'tennis' && tennisSetsText(g.home.sets) ? `<span class="rc num">sets: ${tennisSetsText(g.home.sets)}</span>` : ''}</div>
+        <div class="dteam">${aaTeamLink(`${oLogo(g.home)}<span class="nm">${esc(oName(g.home))}${rankChip(g.home)}</span>`, g.home.id || g.home.code, `${t('team_page_kicker')}: ${oName(g.home)}`)}${g.home.rec ? `<span class="rc num">${esc(g.home.rec)}</span>` : ''}${sport === 'tennis' && tennisSetsText(g.home.sets) ? `<span class="rc num">sets: ${tennisSetsText(g.home.sets)}</span>` : ''}</div>
       </div>
     </div>
     <div class="dbody">
@@ -5993,14 +6248,10 @@ function renderOtherDetail(){
       <div class="formgrid">
         ${['away', 'home'].map(s => `<div class="formside">
           <div class="fh">${oLogo(g[s])}${esc(oName(g[s]))}</div>
-          ${(g[s].leaders || []).map(L => {
-            const ini = (L.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
-            const headshot = safeImageUrl(L.headshot);
-            const face = headshot
-              ? `<img class="lvhs" src="${esc(headshot)}" alt="" loading="lazy" data-aa-img-fallback="${esc(ini)}" data-aa-fallback-class="lvhsfall">`
-              : `<span class="lvhsfall">${esc(ini)}</span>`;
+        ${(g[s].leaders || []).map(L => {
+            const face = aaFace({ sport, id: L.id || L.athlete_id, href: L.headshot, name: L.name, size: 'live', alt: '' });
             return `<div class="hitrow">${face}
-              <span class="hitname">${esc(L.name)}</span>
+              ${(L.id || L.athlete_id) ? aaPlayerLink(`<span class="hitname">${esc(L.name)}</span>`, L.id || L.athlete_id, `${t('player_page_kicker')}: ${L.name}`) : `<span class="hitname">${esc(L.name)}</span>`}
               <span class="hitst num"><b>${esc(String(L.value ?? '—'))}</b> ${esc(L.cat || '')}</span>
             </div>`;
           }).join('') || `<span class="wempty">${t('no_data')}</span>`}

@@ -222,7 +222,7 @@ try {
       };
     });
     assert.deepEqual(listShell, {
-      list: true, page: false, layoutDisplay: 'grid', columns: 1, maxWidth: '1040px',
+      list: true, page: false, layoutDisplay: 'grid', columns: 1, maxWidth: 'none',
       detail: 'none', side: 'none', listPane: 'block',
     }, `${viewport.name}: list shell`);
     if (viewport.width <= 900) {
@@ -277,7 +277,7 @@ try {
     assert.equal(objectShell.open, false, `${viewport.name}: object uses legacy .open overlay`);
     assert.equal(objectShell.layoutDisplay, 'grid', `${viewport.name}: object layout is not grid`);
     assert.equal(objectShell.columns, 1, `${viewport.name}: object layout is not one column`);
-    assert.equal(objectShell.maxWidth, '1220px', `${viewport.name}: object max width`);
+    assert.equal(objectShell.maxWidth, '1180px', `${viewport.name}: object max width`);
     assert.equal(objectShell.listPane, 'none', `${viewport.name}: object list pane visible`);
     assert.equal(objectShell.side, 'none', `${viewport.name}: object side column visible`);
     assert.equal(objectShell.detail.display, 'block', `${viewport.name}: object detail hidden`);

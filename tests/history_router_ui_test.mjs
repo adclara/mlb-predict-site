@@ -528,8 +528,8 @@ try {
   const lengthBeforeTabs = (await historyCounts(behavior.page)).length;
   await behavior.page.locator('[data-market-kind="total"]').click();
   await behavior.page.waitForFunction(() => new URLSearchParams(location.search).get('m') === 'total');
-  await behavior.page.locator('.dtab[data-dt="pitchers"]').click();
-  await behavior.page.waitForFunction(() => new URLSearchParams(location.search).get('dt') === 'pitchers');
+  await behavior.page.locator('.dtab[data-dt="participantes"]').click();
+  await behavior.page.waitForFunction(() => new URLSearchParams(location.search).get('dt') === 'participantes');
   const tabCounts = await historyCounts(behavior.page);
   assert.equal(tabCounts.push, 0, 'dt/m añadieron historial');
   assert.ok(tabCounts.replace >= 2, 'dt/m no usaron replaceState');
@@ -539,7 +539,7 @@ try {
   await behavior.page.waitForFunction(() => new URLSearchParams(location.search).get('p') === 'p1');
   await behavior.page.goBack();
   await behavior.page.waitForFunction(() => new URLSearchParams(location.search).get('g') === 'g1' && !new URLSearchParams(location.search).get('p'));
-  assert.equal(await routeValue(behavior.page, 'dt'), 'pitchers', 'Back de jugador perdió vista del partido');
+  assert.equal(await routeValue(behavior.page, 'dt'), 'participantes', 'Back de jugador perdió vista del partido');
   assert.equal((await behavior.page.evaluate(() => history.state)).kind, 'object', 'Back de jugador no volvió al partido');
 
   await resetHistoryCounts(behavior.page);
@@ -1039,6 +1039,7 @@ try {
     releaseToday();
     await page.locator('.mrow[data-id="g1"]').waitFor();
     await page.evaluate(() => new Promise(resolveFrame => requestAnimationFrame(() => requestAnimationFrame(resolveFrame))));
+    await page.waitForFunction(() => Math.abs(scrollY - 220) <= 2);
     const restoredToday = await page.evaluate(() => ({ active: document.activeElement?.dataset?.id || document.activeElement?.id || '', y: scrollY, state: history.state }));
     assert.equal(restoredToday.active, 'g1', 'hoy renderizado no restauró foco');
     assert.ok(Math.abs(restoredToday.y - 220) <= 2, `hoy renderizado restauró ${JSON.stringify(restoredToday)}, esperaba scroll 220`);
