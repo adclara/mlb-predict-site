@@ -1,4 +1,4 @@
-# Design QA — B2 AA Sports Ops
+# Design QA — AA Sports Ops final technical pass
 
 ## Scope and evidence
 
@@ -33,6 +33,31 @@ The implementation preserves the selected concept's hierarchy: narrow rail, comp
 - At least three complete schedule rows remain visible at 1440 × 900.
 - Reduced motion resolves the redesigned route transitions to 0ms.
 
+## Participant and team objects
+
+- Official images are admitted only through per-sport HTTPS host allowlists and degrade to a monogram without a request loop.
+- A caption is exposed only after the official image actually loads; it disappears on error.
+- `p=` and `team=` open contextual object pages with canonical URLs, document titles, focusable headings and a Back action that restores the originating match tab.
+- Player and team object pages were inspected in the in-app Browser and exercised in Chromium, Firefox and WebKit at desktop and compact widths.
+
+## Density, contrast and bilingual copy
+
+- Critical schedule, evidence and object metadata is at least 12 CSS px; compact uppercase labels remain secondary to independently named values.
+- Primary controls expose at least a 44 × 44 CSS px target, including 320, 360, 390 and 720 CSS px viewports.
+- Token contrast is measured in-browser: text/dim/faint/on-sky meet 4.5:1 and sky component boundaries meet 3:1.
+- Jornada and Inspect use opaque operational surfaces with no `backdrop-filter` blur.
+- Visible navigation and headings use the bundled Material Symbols font; emoji and hand-drawn interface SVGs were removed from those roles.
+- ES/EN switching persists across reload and neither language introduces horizontal overflow.
+
+## Motion and continuity
+
+- Core page continuity is opacity plus `translateY(8px)` at 200ms; no route uses `translateX` or `rotateY`.
+- Toast centering is the only remaining `translateX`, and is not page motion.
+- Route changes write History immediately; motion does not delay navigation.
+- Back restores focus to the originating schedule row.
+- Both `prefers-reduced-motion: reduce` and the in-app setting set effective animation and transition duration to `0ms`; the app preference persists across reload.
+- `motion_views_ui_test.mjs` passes in Chromium, Firefox and WebKit, including the 360px Inspect surface.
+
 ## Findings resolved
 
 | Priority | Finding | Resolution |
@@ -42,6 +67,10 @@ The implementation preserves the selected concept's hierarchy: narrow rail, comp
 | P2 | Primary rail was visually crowded | Five primary destinations remain; the rest use the Más disclosure. |
 | P2 | Title/KPI/navigation order did not match the selected concept | Title and KPIs now precede sports navigation; the ticker is hidden on Jornada. |
 | P2 | Matchups and pitchers stacked vertically; prediction lacked team identity | Desktop rows now compare opponents and starters horizontally and include the predicted team's mark. |
+| P1 | Sports navigation compressed and overlapped at compact widths | Items are non-shrinking and the rail scrolls horizontally without overlap. |
+| P1 | App reduced-motion setting persisted but did not disable CSS motion | The state now reaches `body.aa-reduce-motion`, cancels running animations and resolves durations to 0ms. |
+| P2 | Detail animation selectors targeted a class absent from the real container | The canonical detail container now owns `.dcard`, so the verified vertical transition actually runs. |
+| P2 | WebKit image-caption assertion raced a successful load | The test now waits for the real visible caption state before asserting. |
 
 ## Remaining human gate
 

@@ -116,6 +116,8 @@ Radii live on `--r-*` (2–20px + pill). Circles stay `50%`. Do not inflate radi
 
 Page continuity uses opacity plus `translateY(4–8px)` for roughly 160–220ms. Do not use lateral drawer motion or `rotateY`. Both `prefers-reduced-motion: reduce` and the app reduced-motion state resolve effective duration to `0ms`.
 
+The production route contract is `fadeUp` at 200ms with an 8px vertical offset. History state changes immediately; animation never gates navigation. The in-app preference is represented by `body.aa-reduce-motion`, persists in local storage and cancels any animation already running when enabled.
+
 ## Do's and Don'ts
 
 - Do keep ES and EN in dictionary `T` for every new string.
