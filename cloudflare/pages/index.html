@@ -27,13 +27,14 @@
 <meta name="twitter:image" content="https://aasport.net/assets/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2394d3ff'/%3E%3Cstop offset='.55' stop-color='%234da8ff'/%3E%3Cstop offset='1' stop-color='%2332dfb4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23060c15'/%3E%3Cg transform='skewX(-9)' fill='url(%23g)'%3E%3Cpath d='M22 46 L32 18 L38 18 L28 46 Z'/%3E%3Cpath d='M36 46 L46 18 L52 18 L28 46 Z' fill-opacity='0'/%3E%3Cpath d='M36 46 L46 18 L52 18 L42 46 Z'/%3E%3C/g%3E%3C/svg%3E">
 <style>
+@font-face{font-family:"Material Symbols Rounded";font-style:normal;font-weight:400;font-display:block;src:url("/assets/material-symbols-rounded.woff2") format("woff2")}
 /* ═════════ TOKENS ═════════ */
 :root{
   /* AA_STUDIO_TOKENS_V1 — paleta Matchday Studio; mismos nombres de variable */
   /* AA_TOKENS_V3 (Fase 6) — unifica legacy a Studio y baja saturación.
      Superficie Monitor: el partido manda. Un acento (sky); volt/amber/red semánticos.
      Postura: densidad y silencio visual (menos glow, menos candy), no clonar otra marca. */
-  --rail:184px;
+  --rail:216px;
   /* fondos y superficies */
   --page:#060c15; --page-rgb:6,12,21;
   --panel:#0b1624e6; --panel-2:#101f30; --inner:#101f30d9;
@@ -116,6 +117,7 @@ body::before{
 }
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 img{max-width:100%;display:block}
+.msr{font-family:"Material Symbols Rounded";font-weight:400;font-style:normal;font-size:20px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;-webkit-font-feature-settings:"liga";font-feature-settings:"liga";-webkit-font-smoothing:antialiased}
 .num{font-variant-numeric:tabular-nums}
 ::selection{background:rgba(var(--sky-rgb),.35)}
 :focus-visible{outline:2px solid var(--sky);outline-offset:2px;border-radius:var(--r-6)}
@@ -1102,6 +1104,8 @@ footer{border-top:1px solid var(--hair);background:var(--page)}
 .aa-railbtn:hover{color:var(--text);background:rgba(var(--sky-rgb),.08)}
 .aa-railbtn.on{color:var(--rail-on-text);background:linear-gradient(105deg,var(--rail-on-hi),var(--rail-on-lo));border-color:var(--line-active);box-shadow:inset 3px 0 var(--sky)}
 .aa-rail .rlabel{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-more{display:flex;flex-direction:column;gap:3px;padding-top:3px}
+.rail-more[hidden]{display:none}
 .aa-rail .rail-foot{margin-top:auto;padding:10px 8px 0;font-size:10px;color:var(--faint);line-height:1.45;border-top:1px solid var(--hair)}
 @media (max-width:1180px){
   :root{--rail:78px}
@@ -1256,34 +1260,209 @@ body.aa-page .evbox{max-height:none;overflow-y:visible}
   }
   .aa-page-endnav .pnicon{font-size:16px;line-height:1}
 }
+
+/* AA_OPS_V4 — dirección elegida: agenda densa, operativa y sin card nesting. */
+body::before{display:none}
+header{background:rgba(var(--page-rgb),.98);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none}
+.hwrap{max-width:none;padding:8px 18px;min-height:56px}
+.search{max-width:420px;margin:0}
+.search input{height:38px;border-color:var(--hair);border-radius:var(--r-6);background:var(--page);font-size:13px}
+.langbtn,.record{border-radius:var(--r-6);background:transparent}
+nav.sports{background:#08111d}
+.spwrap{max-width:none;padding:0 18px}
+.sp{flex-direction:row;min-width:auto;gap:7px;padding:10px 14px 9px;font-size:12px}
+.sp>svg,.sp>.msr{width:18px;height:18px;font-size:18px}
+.sp .cnt{top:4px;right:5px}
+.sp .soon{margin-left:2px}
+.layout{max-width:none;padding:22px 24px 72px}
+.pane{background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border-radius:0;box-shadow:none}
+.listpane{border:0}
+
+.schedule-titlebar{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:26px 28px 22px;border-bottom:1px solid var(--hair)}
+.schedule-titlebar[hidden]{display:none}
+.schedule-eyebrow{display:block;color:var(--sky);font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px}
+.schedule-titlebar h1{font:800 38px/1 var(--font-display);letter-spacing:.015em}
+.schedule-titlebar p{color:var(--dim);font:600 18px/1.25 var(--font-display);margin-top:7px}
+.schedule-kpis{display:flex;gap:0;border:1px solid var(--hair)}
+.schedule-kpis>div{min-width:92px;padding:8px 14px;border-left:1px solid var(--hair)}
+.schedule-kpis>div:first-child{border-left:0}
+.schedule-kpis dt{color:var(--faint);font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.schedule-kpis dd{font:700 22px/1.15 var(--font-display);margin-top:3px}
+.schedule-kpis dd.live{color:var(--red)}
+.schedule-kpis dd.predicted{color:var(--volt)}
+
+.ltop{padding:10px 0 0;gap:2px;border-bottom:1px solid var(--hair)}
+.ltab{min-height:44px;padding:10px 13px;font-size:12px}
+.datebox{border-radius:var(--r-4);border-color:var(--hair);margin-bottom:8px}
+.datebox .arrow,.datebox .today{min-height:36px;border-radius:var(--r-3)}
+.ltop-sep{display:none}
+.pills{padding:10px 0;gap:6px;border-bottom:1px solid var(--hair)}
+.pill{min-height:36px;padding:6px 12px;border-radius:var(--r-4);background:transparent;font-size:11px}
+.pill.on,.pill.on.neutral{color:var(--text);background:rgba(var(--sky-rgb),.09);border-color:var(--line-active)}
+.lggroup{border-top:0}
+.lghead{min-height:48px;padding:10px 2px;border-bottom:1px solid var(--hair)}
+.lghead img{width:20px;height:20px}
+.lghead .ttl{font-size:13px}.lghead .sub{font-size:10px}
+
+.schedule-head{display:grid;grid-template-columns:78px minmax(210px,1.35fr) minmax(170px,.95fr) 130px minmax(145px,.75fr) 52px;align-items:center;min-height:34px;border-bottom:1px solid var(--hair);color:var(--faint);font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.schedule-head[hidden]{display:none}
+.schedule-head span{padding:0 10px}
+.schedule-head span:first-child{text-align:center}
+.schedule-head span:last-child{text-align:center}
+.mrow{grid-template-columns:minmax(0,1fr) 52px;border-top:0;border-bottom:1px solid var(--hair);min-height:82px}
+.mrowlink{grid-template-columns:78px minmax(270px,1.35fr) minmax(190px,.95fr) 130px minmax(165px,.75fr);min-height:82px;padding:0;color:inherit}
+.mrow:hover,.mrow.sel{background:rgba(var(--sky-rgb),.045);transform:none}
+.mrow.sel::before{top:0;bottom:0;border-radius:0}
+.mtime{padding:0 10px;font:700 13px/1.35 var(--font-display);letter-spacing:.02em}
+.mteams,.mpitchers,.mstate,.mpred{align-self:stretch;display:flex;flex-direction:column;justify-content:center;min-width:0;padding:9px 10px;border-left:1px solid rgba(var(--sky-rgb),.07)}
+.mteams{display:grid;grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);gap:8px;align-items:center}
+.mclub{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:9px;min-width:0}
+.mclub img,.mclub .tfall{width:32px;height:32px}
+.mclub .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700}
+.mclub .clubscore{font:800 15px/1 var(--font-display);color:var(--text)}
+.mversus{color:var(--faint);font:700 12px/1 var(--font-display);text-align:center}
+.mpitchers{display:grid;grid-template-columns:1fr 1fr;gap:0;color:var(--dim);font-size:11px}
+.mpitcher{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;min-width:0;padding-right:8px}
+.mpitcher+ .mpitcher{border-left:1px solid var(--hair);padding-left:9px;padding-right:0}
+.mpitcher b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);font-weight:650}
+.mpitcher small{color:var(--faint);white-space:nowrap;font-size:9px}
+.mstate{align-items:flex-start;gap:5px}
+.status-chip{display:inline-flex;align-items:center;gap:5px;min-height:22px;padding:2px 7px;border:1px solid var(--hair-2);border-radius:var(--r-3);font-size:9px;font-weight:850;letter-spacing:.07em;text-transform:uppercase;color:var(--dim)}
+.status-chip.live{color:var(--red);border-color:rgba(var(--red-rgb),.35)}
+.status-chip.pre{color:var(--amber);border-color:rgba(var(--amber-rgb),.3)}
+.status-chip.final{color:var(--faint)}
+.status-source{font-size:9px;color:var(--faint);line-height:1.35}
+.mpred{display:grid;grid-template-columns:32px minmax(0,1fr);gap:9px;align-items:center}
+.predlogo img,.predlogo .tfall{width:30px;height:30px}
+.predcopy{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0}
+.mpred small{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--sky)}
+.mpred b{font:700 16px/1.15 var(--font-display);color:var(--text);white-space:nowrap}
+.mpred.muted small,.mpred.muted b{color:var(--faint)}
+.mstar{width:44px;height:44px;margin:auto;border-radius:var(--r-4)}
+.mstar:hover{background:rgba(var(--amber-rgb),.08)}
+.skel{height:82px}
+
+body.aa-list .layout{max-width:none}
+body.aa-list .ticker{display:none!important}
+body.aa-page .layout{max-width:1180px;margin-inline:auto}
+body.aa-page .dpane{border:0;background:transparent}
+body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
+.sharebtn{width:44px;height:44px;border-radius:var(--r-4);background:transparent}
+.dhero{min-height:176px;padding:18px 24px;background:#08111d;border:1px solid var(--hair);text-align:left;overflow:visible}
+.dwhen{margin-bottom:14px;border:0;border-radius:0;background:transparent;padding:0;color:var(--faint);font-size:11px}
+.dgrid{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:24px}
+.dteam{display:grid;grid-template-columns:52px minmax(0,1fr);grid-template-rows:auto auto;column-gap:12px;align-items:center;text-align:left;padding:0}
+.dteam:last-child{grid-template-columns:minmax(0,1fr) 52px;text-align:right}
+.dteam:last-child img,.dteam:last-child .tfall{grid-column:2;grid-row:1/3}
+.dteam:last-child .nm,.dteam:last-child .rc{grid-column:1}
+.dteam img,.dteam .tfall{width:48px;height:48px;grid-row:1/3}
+.dteam .nm{font:700 18px/1.15 var(--font-display)}
+.dteam .rc{font-size:10px}
+.dmid{min-width:150px;padding:0}
+.dscore{font-size:42px}
+.dhero-portrait,.dhero-note{display:none}
+.dtabs{padding:0;border:1px solid var(--hair);border-top:0;background:#08111d;overflow:visible}
+.dtab{min-height:46px;padding:12px 18px;font-size:12px;text-shadow:none}
+.dbody{padding:22px 0 24px}
+
+.aa-reading{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center;padding:20px 22px;border:1px solid var(--line-active);border-left:3px solid var(--sky);background:rgba(var(--sky-rgb),.045)}
+.aa-reading-kicker{display:block;color:var(--sky);font-size:9px;font-weight:850;letter-spacing:.11em;text-transform:uppercase;margin-bottom:6px}
+.aa-reading h2{font:700 24px/1.08 var(--font-display);letter-spacing:.01em}
+.aa-reading p{max-width:62ch;margin-top:7px;color:var(--dim);font-size:11.5px;line-height:1.55}
+.aa-reading-value{text-align:right;min-width:130px}
+.aa-reading-value strong{display:block;font:800 54px/.9 var(--font-display);color:var(--volt);letter-spacing:-.02em}
+.aa-reading-value span{display:block;color:var(--faint);font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;margin-top:8px}
+.aa-reading.closed{border-left-color:var(--faint);border-color:var(--hair)}
+.aa-reading.closed .aa-reading-value strong{font-size:24px;color:var(--faint)}
+.aa-facts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1px solid var(--hair);border-top:0;margin-bottom:22px}
+.aa-fact{min-width:0;padding:9px 11px;border-left:1px solid var(--hair)}
+.aa-fact:first-child{border-left:0}
+.aa-fact small{display:block;color:var(--faint);font-size:8px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.aa-fact b{display:block;margin-top:3px;color:var(--dim);font-size:10px;font-weight:700;overflow-wrap:anywhere}
+.summary-markets{margin-top:22px;border-top:1px solid var(--hair)}
+.summary-markets>h3{font:700 18px/1.2 var(--font-display);padding:16px 0 10px}
+.market-status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--hair)}
+.market-status{min-height:72px;padding:11px 12px;border-left:1px solid var(--hair)}
+.market-status:first-child{border-left:0}
+.market-status small{display:block;color:var(--faint);font-size:8px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.market-status b{display:block;margin-top:6px;font-size:11px;color:var(--dim)}
+.market-status.public b{color:var(--volt)}
+.market-status.closed b{color:var(--faint)}
+.summary-market-detail{padding-top:12px}
+.summary-market-detail .secttl:first-child{margin-top:0}
+.dnote{border-top:1px solid var(--hair);padding-top:14px}
+.detail .secttl{margin-top:22px}
+.detail .market-first,.detail .verdict,.detail .pcard,.detail .formside,.detail .cmpbox,.detail .mcard,.detail .wpcard,.detail .gate-progress{border-radius:var(--r-4);box-shadow:none;background:#08111d}
+
+.boot .mrow{animation-duration:.2s;animation-delay:calc(var(--i,0)*18ms)}
+.boot .lghead,.boot .pills,.boot .ltop{animation-duration:.18s}
+.dcard.enter .dhero,.dcard.enter .dbody>*{animation-duration:.2s;animation-delay:calc(var(--j,0)*24ms)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0ms!important;animation-delay:0ms!important;transition-duration:0ms!important;scroll-behavior:auto!important}}
+
+@media (min-width:901px){.hwrap>.logo{display:none}}
+@media (max-width:1180px){
+  .schedule-head{grid-template-columns:70px minmax(210px,1fr) 120px minmax(130px,.7fr) 52px}
+  .schedule-head span:nth-child(3){display:none}
+  .mrowlink{grid-template-columns:70px minmax(240px,1fr) 120px minmax(150px,.7fr)}
+  .mpitchers{display:none}.mstate{border-left:1px solid rgba(var(--sky-rgb),.07)}
+}
+@media (max-width:900px){
+  .hwrap{padding:9px 12px}.hwrap>.logo{display:flex}.search{max-width:none}
+  .spwrap{padding:0 8px}.sp{padding-inline:11px}
+  .layout{padding:14px 12px 72px}
+  .schedule-titlebar{align-items:flex-start;padding:18px 12px 16px}
+  .schedule-titlebar h1{font-size:32px}.schedule-titlebar p{display:none}
+  .schedule-kpis>div{min-width:55px;padding:7px 8px}.schedule-kpis dt{font-size:7px}.schedule-kpis dd{font-size:18px}
+  .schedule-head{display:none}
+  .lghead{padding-inline:2px}
+  .mrow{grid-template-columns:minmax(0,1fr) 44px;min-height:72px}
+  .mrowlink{grid-template-columns:62px minmax(0,1fr) 92px;min-height:72px}
+  .mpitchers,.mstate{display:none}
+  .mtime{padding:0 6px;font-size:12px}
+  .mteams,.mpred{padding:8px;border-left:1px solid rgba(var(--sky-rgb),.07)}
+  .mteams{display:flex;flex-direction:column;align-items:stretch;gap:4px}.mversus{display:none}
+  .mclub{grid-template-columns:20px minmax(0,1fr) auto;gap:6px}.mclub .nm{font-size:11px}
+  .mclub img,.mclub .tfall{width:20px;height:20px}
+  .mpred{display:flex;flex-direction:column;align-items:flex-start;gap:3px}.predlogo{display:none}
+  .mpred b{font-size:14px}.mpred small{font-size:7px}
+  body.aa-page .layout{padding:12px 12px 24px}
+  .dhero{padding:16px 14px;min-height:160px}
+  .dgrid{gap:8px}.dteam{display:flex;flex-direction:column;text-align:center;gap:5px}.dteam:last-child{display:flex;text-align:center}
+  .dteam img,.dteam .tfall{width:40px;height:40px}.dteam .nm{font-size:14px}.dmid{min-width:105px}.dscore{font-size:34px}
+  .dtabs{position:sticky;top:56px;z-index:5}.dtab{flex:1;padding-inline:8px}
+  .aa-reading{grid-template-columns:1fr;gap:14px;padding:17px 15px}.aa-reading-value{text-align:left}.aa-reading-value strong{font-size:46px}
+  .aa-facts{grid-template-columns:1fr 1fr}.aa-fact{border-top:1px solid var(--hair)}.aa-fact:nth-child(1),.aa-fact:nth-child(2){border-top:0}.aa-fact:nth-child(odd){border-left:0}
+  .market-status-grid{grid-template-columns:1fr 1fr}.market-status:nth-child(3){border-left:0;border-top:1px solid var(--hair)}.market-status:nth-child(4){border-top:1px solid var(--hair)}
+}
+@media (max-width:520px){
+  .schedule-titlebar{display:block}.schedule-kpis{margin-top:14px;width:100%}.schedule-kpis>div{flex:1}
+  .ltop{flex-wrap:wrap}.datebox{order:-1;width:100%;justify-content:space-between;margin-left:0}.datebox .today{flex:1}
+  .mrowlink{grid-template-columns:54px minmax(0,1fr)}.mpred{display:none}
+  .dtab{font-size:11px}.aa-facts{grid-template-columns:1fr}.aa-fact,.aa-fact:nth-child(2){border-left:0;border-top:1px solid var(--hair)}.aa-fact:first-child{border-top:0}
+}
 </style>
 </head>
 <body class="aa-list">
 
 <aside class="aa-rail" id="aaRail" aria-label="Navegación principal">
   <a class="aa-raillogo" href="#" aria-label="AA Sports — inicio" data-i18n-aria="aria_home">
-    <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true">
-      <defs><linearGradient id="railg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#94d3ff"/><stop offset=".55" stop-color="#4da8ff"/><stop offset="1" stop-color="#32dfb4"/>
-      </linearGradient></defs>
-      <rect width="64" height="64" rx="15" fill="#0b1624"/>
-      <g transform="skewX(-9)" fill="url(#railg)">
-        <path d="M22 46 L32 18 L38 18 L28 46 Z"/><path d="M36 46 L46 18 L52 18 L42 46 Z"/>
-      </g>
-    </svg>
+    <img src="/assets/aa-mark-blue.png" width="28" height="28" alt="">
     <span><b>AA Sports</b></span>
   </a>
-  <button type="button" class="aa-railbtn on" data-rail="home"><span aria-hidden="true">⌂</span><span class="rlabel" data-i18n="nav_home">Inicio</span></button>
-  <button type="button" class="aa-railbtn" data-rail="radar"><span aria-hidden="true">◎</span><span class="rlabel" data-i18n="intel_nav">Central AA</span></button>
-  <button type="button" class="aa-railbtn" data-rail="mlb"><span aria-hidden="true">▣</span><span class="rlabel" data-i18n="matches">Partidos</span></button>
-  <button type="button" class="aa-railbtn" data-rail="favs"><span aria-hidden="true">★</span><span class="rlabel" data-i18n="tab_favs">Favoritos</span></button>
-  <button type="button" class="aa-railbtn" data-rail="analisis"><span aria-hidden="true">⌖</span><span class="rlabel" data-i18n="tab_analysis">Análisis</span></button>
-  <button type="button" class="aa-railbtn" data-rail="pos"><span aria-hidden="true">☰</span><span class="rlabel" data-i18n="tab_standings">Posiciones</span></button>
-  <button type="button" class="aa-railbtn" data-rail="hist"><span aria-hidden="true">↺</span><span class="rlabel" data-i18n="tab_hist">Historial</span></button>
-  <button type="button" class="aa-railbtn" data-rail="brain"><span aria-hidden="true">✦</span><span class="rlabel" data-i18n="tab_brain">Cerebro</span></button>
-  <button type="button" class="aa-railbtn" data-rail="edu"><span aria-hidden="true">⌘</span><span class="rlabel" data-i18n="rail_edu">Educación</span></button>
-  <button type="button" class="aa-railbtn" data-rail="tools"><span aria-hidden="true">⚒</span><span class="rlabel" data-i18n="rail_tools">Herramientas</span></button>
-  <button type="button" class="aa-railbtn" data-rail="cfg"><span aria-hidden="true">⚙</span><span class="rlabel" data-i18n="rail_cfg">Config</span></button>
+  <button type="button" class="aa-railbtn on" data-rail="home"><span class="msr" aria-hidden="true">home</span><span class="rlabel" data-i18n="nav_home">Inicio</span></button>
+  <button type="button" class="aa-railbtn" data-rail="mlb"><span class="msr" aria-hidden="true">calendar_month</span><span class="rlabel" data-i18n="matches">Partidos</span></button>
+  <button type="button" class="aa-railbtn" data-rail="radar"><span class="msr" aria-hidden="true">radar</span><span class="rlabel" data-i18n="intel_nav">Central AA</span></button>
+  <button type="button" class="aa-railbtn" data-rail="favs"><span class="msr" aria-hidden="true">star</span><span class="rlabel" data-i18n="tab_favs">Favoritos</span></button>
+  <button type="button" class="aa-railbtn" data-rail-more aria-expanded="false" aria-controls="railMore"><span class="msr" aria-hidden="true">more_horiz</span><span class="rlabel" data-i18n="rail_more">Más</span></button>
+  <div class="rail-more" id="railMore" hidden>
+    <button type="button" class="aa-railbtn" data-rail="analisis"><span class="msr" aria-hidden="true">query_stats</span><span class="rlabel" data-i18n="tab_analysis">Análisis</span></button>
+    <button type="button" class="aa-railbtn" data-rail="pos"><span class="msr" aria-hidden="true">leaderboard</span><span class="rlabel" data-i18n="tab_standings">Posiciones</span></button>
+    <button type="button" class="aa-railbtn" data-rail="hist"><span class="msr" aria-hidden="true">history</span><span class="rlabel" data-i18n="tab_hist">Historial</span></button>
+    <button type="button" class="aa-railbtn" data-rail="brain"><span class="msr" aria-hidden="true">neurology</span><span class="rlabel" data-i18n="tab_brain">Cerebro</span></button>
+    <button type="button" class="aa-railbtn" data-rail="edu"><span class="msr" aria-hidden="true">school</span><span class="rlabel" data-i18n="rail_edu">Educación</span></button>
+    <button type="button" class="aa-railbtn" data-rail="tools"><span class="msr" aria-hidden="true">calculate</span><span class="rlabel" data-i18n="rail_tools">Herramientas</span></button>
+    <button type="button" class="aa-railbtn" data-rail="cfg"><span class="msr" aria-hidden="true">settings</span><span class="rlabel" data-i18n="rail_cfg">Config</span></button>
+  </div>
   <div class="rail-foot">MLB publicado<br>otros en gate</div>
 </aside>
 
@@ -1294,15 +1473,7 @@ body.aa-page .evbox{max-height:none;overflow-y:visible}
 <header>
   <div class="hwrap">
     <a class="logo" href="#" aria-label="AA Sports — inicio" data-i18n-aria="aria_home">
-      <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true">
-        <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#94d3ff"/><stop offset=".55" stop-color="#4da8ff"/><stop offset="1" stop-color="#1c87e9"/>
-        </linearGradient></defs>
-        <rect width="64" height="64" rx="15" fill="#0b1624"/>
-        <g transform="skewX(-9)" fill="url(#lg)">
-          <path d="M22 46 L32 18 L38 18 L28 46 Z"/><path d="M36 46 L46 18 L52 18 L42 46 Z"/>
-        </g>
-      </svg>
+      <img src="/assets/aa-mark-blue.png" width="34" height="34" alt="">
       <span>
         <span class="wordmark"><span class="aa">AA</span> Sports</span>
         <span class="tagline" data-i18n="tagline">Los datos deciden</span>
@@ -1323,6 +1494,19 @@ body.aa-page .evbox{max-height:none;overflow-y:visible}
 <div class="refresh-banner" id="otherRefreshBanner" role="status" aria-live="polite" hidden></div>
 
 <div class="ticker" id="ticker" hidden><div class="tk" id="tk"></div></div>
+
+<section class="schedule-titlebar" hidden>
+  <div>
+    <h1 data-i18n="matches">Partidos</h1>
+    <p id="scheduleDateLabel">—</p>
+  </div>
+  <dl class="schedule-kpis" aria-label="Resumen de la jornada" data-i18n-aria="schedule_summary_aria">
+    <div><dt data-i18n="matches_today">Partidos hoy</dt><dd class="num" id="nAllKpi">—</dd></div>
+    <div><dt data-i18n="with_aa_prediction">Con predicción AA</dt><dd class="num predicted" id="nPredKpi">—</dd></div>
+    <div><dt data-i18n="f_live">En vivo</dt><dd class="num live" id="nLiveKpi">—</dd></div>
+    <div><dt data-i18n="f_final">Finales</dt><dd class="num" id="nFinalKpi">—</dd></div>
+  </dl>
+</section>
 
 <nav class="sports" aria-label="Deportes" data-i18n-aria="aria_sports">
   <div class="spwrap" aria-describedby="sportsSwipeHint">
@@ -1345,19 +1529,19 @@ body.aa-page .evbox{max-height:none;overflow-y:visible}
       WNBA <span class="soon">LIVE</span>
     </button>
     <button class="sp" data-sport="nfl">
-      <span aria-hidden="true" style="font-size:20px">🏈</span>
+      <span class="msr" aria-hidden="true">sports_football</span>
       NFL <span class="soon">LIVE</span>
     </button>
     <button class="sp" data-sport="ncaaf">
-      <span aria-hidden="true" style="font-size:20px">🏈</span>
+      <span class="msr" aria-hidden="true">sports_football</span>
       <span data-i18n="sport_ncaaf">Fútbol College</span> <span class="soon">LIVE</span>
     </button>
     <button class="sp" data-sport="nhl">
-      <span aria-hidden="true" style="font-size:20px">🏒</span>
+      <span class="msr" aria-hidden="true">sports_hockey</span>
       NHL <span class="soon">LIVE</span>
     </button>
     <button class="sp" data-sport="ncaam">
-      <span aria-hidden="true" style="font-size:20px">🏀</span>
+      <span class="msr" aria-hidden="true">sports_basketball</span>
       <span data-i18n="sport_ncaam">Basket College</span> <span class="soon">LIVE</span>
     </button>
     <button class="sp" data-sport="soccer">
@@ -1381,7 +1565,7 @@ body.aa-page .evbox{max-height:none;overflow-y:visible}
       <button class="ltab" data-lt="favs" data-i18n="tab_favs">Favoritos</button>
       <button class="ltab" data-lt="pos" data-i18n="tab_standings">Posiciones</button>
       <button class="ltab" data-lt="hist" data-i18n="tab_hist">Historial</button>
-      <button class="ltab" data-lt="brain" data-i18n="tab_brain">🧠 Cerebro</button>
+      <button class="ltab" data-lt="brain"><span class="msr" aria-hidden="true">neurology</span><span data-i18n="tab_brain">Cerebro</span></button>
       <div class="datebox">
         <button class="arrow" id="dPrev" aria-label="Día anterior" data-i18n-aria="aria_prevday"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
         <button class="today" id="dlabel" aria-label="Elegir fecha" data-i18n-aria="aria_pickdate" data-i18n="today">Hoy</button>
@@ -1405,6 +1589,11 @@ body.aa-page .evbox{max-height:none;overflow-y:visible}
         <span class="lc num" id="lgcount"></span>
         <span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 15l6-6 6 6"/></svg></span>
       </button>
+      <div class="schedule-head" aria-hidden="true">
+        <span data-i18n="table_time">Hora</span><span data-i18n="table_match">Partido</span>
+        <span data-i18n="table_pitchers">Abridores probables</span><span data-i18n="table_data">Estado / dato</span>
+        <span data-i18n="table_prediction">Predicción AA</span><span data-i18n="table_info">Info</span>
+      </div>
       <div class="rows" id="list">
         <div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div>
       </div>
@@ -1421,10 +1610,10 @@ body.aa-page .evbox{max-height:none;overflow-y:visible}
       <div class="dempty" data-i18n="detail_empty">Elige un partido para ver el análisis completo del algoritmo AA.</div>
     </div>
     <nav class="aa-page-endnav" aria-label="Navegación de fin de página" data-i18n-aria="aria_nav_bottom">
-      <button type="button" data-rail="home"><span class="pnicon" aria-hidden="true">⌂</span><span data-i18n="nav_home">Inicio</span></button>
-      <button type="button" data-rail="mlb"><span class="pnicon" aria-hidden="true">▣</span><span data-i18n="matches">Partidos</span></button>
-      <button type="button" data-rail="hist"><span class="pnicon" aria-hidden="true">↺</span><span data-i18n="tab_hist">Historial</span></button>
-      <button type="button" data-rail="cfg"><span class="pnicon" aria-hidden="true">⚙</span><span data-i18n="rail_cfg">Config</span></button>
+      <button type="button" data-rail="home"><span class="pnicon msr" aria-hidden="true">home</span><span data-i18n="nav_home">Inicio</span></button>
+      <button type="button" data-rail="mlb"><span class="pnicon msr" aria-hidden="true">calendar_month</span><span data-i18n="matches">Partidos</span></button>
+      <button type="button" data-rail="hist"><span class="pnicon msr" aria-hidden="true">history</span><span data-i18n="tab_hist">Historial</span></button>
+      <button type="button" data-rail="cfg"><span class="pnicon msr" aria-hidden="true">settings</span><span data-i18n="rail_cfg">Config</span></button>
     </nav>
   </section>
 
@@ -1599,6 +1788,14 @@ const T = {
     tab_all: 'Todos', tab_favs: 'Favoritos', tab_hist: 'Historial', today: 'Hoy',
     f_all: 'Todos', f_live: 'En vivo', f_final: 'Finales', f_pre: 'Por jugar',
     season: 'USA · Temporada 2026', matches: 'Partidos',
+    schedule_kicker: 'Agenda operativa', schedule_sub: 'Estado, datos y lectura AA en una sola vista.', schedule_summary_aria: 'Resumen de la jornada', matches_today: 'Partidos hoy', with_aa_prediction: 'Con predicción AA',
+    table_time: 'Hora', table_match: 'Partido', table_pitchers: 'Abridores probables', table_data: 'Estado / dato', table_prediction: 'Predicción AA', table_info: 'Info',
+    source_aa: 'AA calibrado', source_factual: 'Dato factual', data_verified: 'Datos verificados del partido', pred_unavailable: 'Sin lectura pública',
+    tab_participants: 'Participantes', tab_evidence: 'Evidencia', aa_reading_kicker: 'Lectura pública AA', aa_reading_closed: 'Gate cerrado',
+    aa_reading_closed_body: 'No existe una probabilidad AA pública para este partido. Mostramos solo hechos verificados.',
+    meta_scope: 'Alcance', meta_source: 'Fuente', meta_time: 'Actualizado', meta_status: 'Estado', meta_limit: 'Límite',
+    meta_scope_public: 'Predicción AA pública', meta_scope_factual: 'Solo datos del partido', meta_limit_body: 'Informativo · no garantiza resultados',
+    markets_in_summary: 'Mercados dentro del resumen', market_public_short: 'Público y medido', market_closed_short: 'Cerrado por validación',
     radar_sub: 'Central de jugadas · inteligencia multifuente', live_via_espn: 'En vivo · vía ESPN', sports_swipe_hint: 'Desliza a izquierda o derecha para explorar deportes',
     intel_nav: 'Central AA', intel_title: 'Central de Jugadas AA', intel_sub: 'Selecciones pregame >60% en las próximas 36h: AA validado o probabilidad real del mercado.',
     intel_loading: 'Cargando inteligencia de mercados…', intel_empty: 'No hay jugadas públicas elegibles ahora mismo. No rellenamos una cuota.',
@@ -1659,7 +1856,7 @@ const T = {
     runind_note: 'En observación · no es una jugada verificada ni recomendación.',
     bol_risk: 'riesgo', risk_bajo: 'bajo', risk_medio: 'medio', risk_alto: 'alto', risk_desconocido: 'datos insuficientes', risk_unknown_help: 'No hay datos suficientes para evaluar este índice. No es una probabilidad de perder.',
     props_title: '🎯 Props a seguir', props_hr: 'Jonrones (más poder)', props_k: 'Ponches (K/9 del abridor)', props_note: 'Datos que informan estas props — no es una predicción AA.',
-    tab_brain: '🧠 Cerebro', brain_title: 'Cerebro AA — qué aprende con el tiempo',
+    tab_brain: 'Cerebro', brain_title: 'Cerebro AA — qué aprende con el tiempo',
     brain_sub: 'El modelo se re-ajusta cada día con sus propios aciertos y errores. Esto es lo que ha aprendido — medido, no inventado. El algoritmo sigue siendo privado.',
     brain_measured: 'Predicciones medidas', brain_since: 'desde', brain_cal: 'Calibración (hueco)', brain_cal_sub: 'lo que digo vs lo que ocurre', brain_acc: 'Acierto AA', brain_mkt: 'mercado',
     brain_learning: 'Qué estoy aprendiendo', brain_signals: '📶 Señales que aprendí que sí predicen',
@@ -1715,7 +1912,7 @@ const T = {
     hd_note: 'Historial completo tal como quedó guardado en el momento del pick — no se reescribe. Transparencia primero: los datos no garantizan resultados.',
     d_tbc: 'Por confirmar', d_fatigue: 'Fatiga', d_player: 'Jugador', d_subs: 'Suplentes', d_atbat: 'Al bate', d_pitching: 'Lanza', d_even: 'parejo', d_favors: 'favorece', d_streak: 'racha', d_starts_for: 'Abre por ',
     d_sim_note: '{n} simulaciones Monte Carlo derivadas de la probabilidad publicada del modelo AA ({p}% local) y {t} carreras proyectadas. Ilustran cómo se reparte el resultado — no cambian la predicción.',
-    mk_title: '🔑 Las claves del partido',
+    mk_title: 'Las claves del partido',
     mk_streak_w: '{n} victorias seguidas', mk_streak_hist: '(racha histórica)', mk_streak_l: '{n} derrotas seguidas',
     mk_form: 'ganó {w} de sus últimos {n}', mk_close2: 'apenas ganó los últimos 2 (por 1-2 carreras)',
     mk_bats_hot: 'bateo caliente: {r} c/j últimos 5 (vs {s} temp.)', mk_bats_cold: 'bateo frío: {r} c/j últimos 5 (vs {s} temp.)',
@@ -1736,7 +1933,7 @@ const T = {
     d_pitch_how_sample: 'ERA reciente y FIP describen el corte publicado, no una carrera completa.',
     d_pitch_how_lineup: 'Alineación pendiente: un cambio de abridor invalida el contexto. El productor debe confirmarlo.',
     d_pitch_how_pre: 'Antes del partido: estas cifras son pregame. No se reescriben con el resultado.',
-    rail_edu: 'Educación', rail_tools: 'Herramientas', rail_cfg: 'Config',
+    rail_edu: 'Educación', rail_tools: 'Herramientas', rail_cfg: 'Config', rail_more: 'Más',
     nav_home: 'Inicio', aria_nav_bottom: 'Navegación inferior',
     home_title: 'Hoy en AA Sports', home_sub: 'La jornada del día de un vistazo: estado de cada partido, el destacado y la entrada a la Central.',
     home_central_k: 'Multifuente', home_central_sub: 'Picks AA validados y favoritos factuales de mercado en una sola vista.',
@@ -1806,6 +2003,14 @@ const T = {
     tab_all: 'All', tab_favs: 'Favorites', tab_hist: 'History', today: 'Today',
     f_all: 'All', f_live: 'Live', f_final: 'Final', f_pre: 'Upcoming',
     season: 'USA · 2026 Season', matches: 'Games',
+    schedule_kicker: 'Operations board', schedule_sub: 'Status, data, and the AA read in one view.', schedule_summary_aria: 'Game-day summary', matches_today: 'Games today', with_aa_prediction: 'With AA prediction',
+    table_time: 'Time', table_match: 'Game', table_pitchers: 'Probable starters', table_data: 'Status / data', table_prediction: 'AA prediction', table_info: 'Info',
+    source_aa: 'Calibrated AA', source_factual: 'Factual data', data_verified: 'Verified game data', pred_unavailable: 'No public read',
+    tab_participants: 'Participants', tab_evidence: 'Evidence', aa_reading_kicker: 'Public AA read', aa_reading_closed: 'Gate closed',
+    aa_reading_closed_body: 'There is no public AA probability for this game. Only verified facts are shown.',
+    meta_scope: 'Scope', meta_source: 'Source', meta_time: 'Updated', meta_status: 'Status', meta_limit: 'Limit',
+    meta_scope_public: 'Public AA prediction', meta_scope_factual: 'Game facts only', meta_limit_body: 'Informational · results are not guaranteed',
+    markets_in_summary: 'Markets inside the summary', market_public_short: 'Public and measured', market_closed_short: 'Closed for validation',
     radar_sub: 'Play central · multi-source intelligence', live_via_espn: 'Live · via ESPN', sports_swipe_hint: 'Swipe left or right to explore sports',
     intel_nav: 'AA Central', intel_title: 'AA Play Central', intel_sub: 'Pregame selections above 60% over the next 36h: gated AA or measured market probability.',
     intel_loading: 'Loading market intelligence…', intel_empty: 'There are no eligible public plays right now. We never fill a quota.',
@@ -1868,7 +2073,7 @@ const T = {
     runind_note: 'Under observation · not a verified play or recommendation.',
     bol_risk: 'risk', risk_bajo: 'low', risk_medio: 'medium', risk_alto: 'high', risk_desconocido: 'insufficient data', risk_unknown_help: 'There is not enough data to evaluate this index. It is not a probability of losing.',
     props_title: '🎯 Props to watch', props_hr: 'Home runs (most power)', props_k: 'Strikeouts (starter K/9)', props_note: 'Data that informs these props — not an AA prediction.',
-    tab_brain: '🧠 Brain', brain_title: 'AA Brain — what it learns over time',
+    tab_brain: 'Brain', brain_title: 'AA Brain — what it learns over time',
     brain_sub: 'The model re-tunes itself every day from its own hits and misses. This is what it has learned — measured, not made up. The algorithm stays private.',
     brain_measured: 'Measured predictions', brain_since: 'since', brain_cal: 'Calibration (gap)', brain_cal_sub: 'what I say vs what happens', brain_acc: 'AA accuracy', brain_mkt: 'market',
     brain_learning: "What I'm learning", brain_signals: '📶 Signals I learned truly predict',
@@ -1924,7 +2129,7 @@ const T = {
     hd_note: 'Full history saved exactly as it stood at pick time — never rewritten. Transparency first: data does not guarantee results.',
     d_tbc: 'TBD', d_fatigue: 'Fatigue', d_player: 'Player', d_subs: 'Subs', d_atbat: 'At bat', d_pitching: 'Pitching', d_even: 'even', d_favors: 'favors', d_streak: 'streak', d_starts_for: 'Starts for ',
     d_sim_note: '{n} Monte Carlo simulations from the probability published by the AA model ({p}% home) and {t} projected runs. They show how the outcome spreads out — they do not change the prediction.',
-    mk_title: '🔑 Keys to the game',
+    mk_title: 'Keys to the game',
     mk_streak_w: '{n} wins in a row', mk_streak_hist: '(historic run)', mk_streak_l: '{n} losses in a row',
     mk_form: 'won {w} of its last {n}', mk_close2: 'barely won the last 2 (by 1-2 runs)',
     mk_bats_hot: 'hot bats: {r} r/g last 5 (vs {s} season)', mk_bats_cold: 'cold bats: {r} r/g last 5 (vs {s} season)',
@@ -1945,7 +2150,7 @@ const T = {
     d_pitch_how_sample: 'Recent ERA and FIP describe the published cut, not a full career.',
     d_pitch_how_lineup: 'Pending lineup: a starter change invalidates the context. The producer must confirm it.',
     d_pitch_how_pre: 'Pregame figures. They are not rewritten with the result.',
-    rail_edu: 'Education', rail_tools: 'Tools', rail_cfg: 'Settings',
+    rail_edu: 'Education', rail_tools: 'Tools', rail_cfg: 'Settings', rail_more: 'More',
     nav_home: 'Home', aria_nav_bottom: 'Bottom navigation',
     home_title: 'Today at AA Sports', home_sub: 'The day’s slate at a glance: every game’s status, the featured matchup and the gate to Central.',
     home_central_k: 'Multi-source', home_central_sub: 'Gated AA picks and factual market favorites in one view.',
@@ -2634,53 +2839,46 @@ function rowHtml(ev, idx){
   const hs = lv ? lv.home.score : null, as2 = lv ? lv.away.score : null;
   const scored = lv && hs != null && st !== 'pre';
   const done = st === 'final' && scored;
-  const aWin = done && as2 > hs, hWin = done && hs > as2;
-
   let timeCol;
-  if (st === 'live') timeCol = `<span class="lv">${esc(shortDetail(lv) || 'LIVE')}</span>`;
-  else if (st === 'final') timeCol = 'Final';
-  else if (lv && /postpon/i.test(lv.status_detail || '')) timeCol = `<span class="pp">${t('postponed')}</span>`;
-  else if (viewDate && ev.start && String(ev.start).includes('T')) timeCol = new Date(ev.start).toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' });
-  else timeCol = 'Hoy';
+  if (st === 'live') timeCol = esc(shortDetail(lv) || t('f_live'));
+  else if (st === 'final') timeCol = t('f_final');
+  else if (lv && /postpon/i.test(lv.status_detail || '')) timeCol = t('postponed');
+  else if (ev.start && String(ev.start).includes('T')) timeCol = new Date(ev.start).toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' });
+  else timeCol = t('today');
 
   const validPick = p.pick;
-  const pickA = validPick && canon(p.pick) === canon(ev.away.code);
-  const pickH = validPick && canon(p.pick) === canon(ev.home.code);
-  const res = ev.result === 'win' ? 'won' : ev.result === 'loss' ? 'lost' : '';
-  // EN VIVO: el % del pick es la prob de ESPN que se mueve con el marcador; si el
-  // juego se volteó en contra, se atenúa (no un badge dorado sobre un juego perdido).
   const liveWpHome = (st === 'live' && lv && typeof lv.win_prob_home === 'number') ? lv.win_prob_home : null;
-  const sidePct = (side) => { const wp = liveWpHome == null ? null : (side === 'home' ? liveWpHome : 1 - liveWpHome); return wp != null ? Math.round(wp * 100) : predictionProbabilityPercent(p); };
-  const chip = (pct, live) => `<span class="aapick num ${res} ${live ? 'liveaa' : ''}">${live ? '' : 'AA '}${pct}%${live ? ' ' + t('live_chip') : ''}${res === 'won' ? ' ✓' : res === 'lost' ? ' ✗' : ''}</span>`;
-  const pickSideWp = liveWpHome == null ? null : (pickH ? liveWpHome : pickA ? 1 - liveWpHome : null);
-  const rowMuted = pickSideWp != null && pickSideWp < 0.4;
-
-  const tags = validPick ? (ev.badges || []).map(b => `<span class="tag ${esc(b)} ${rowMuted ? 'muted' : ''}">${b === 'gema' ? t('tag_gem') : esc(confLabel(b))}</span>`).join('') : '';
-
-  // duelo de abridores en la fila (solo pre-juego): se ve el pitcheo de un vistazo
+  const pickHome = validPick && canon(p.pick) === canon(ev.home.code);
+  const pickPct = validPick
+    ? (liveWpHome == null ? predictionProbabilityPercent(p) : Math.round((pickHome ? liveWpHome : 1 - liveWpHome) * 100))
+    : null;
   const sp2 = ev.snapshot && ev.snapshot.pitchers;
-  const ln = n => n ? esc(n.split(' ').slice(-1)[0]) : '?';
-  const spLine = (st === 'pre' && sp2 && (sp2.away?.name || sp2.home?.name))
-    ? `<span class="mmeta">⚾ ${ln(sp2.away?.name)} <span class="vs">vs</span> ${ln(sp2.home?.name)}</span>` : '';
-  const pendingLine = ev.pending && !p.pick ? `<span class="mmeta pending">⏳ ${pendingPredictionLabel()}</span>` : '';
-  const invalidLine = rawPrediction.invalidated ? `<span class="mmeta invalid">⚠️ ${t('pred_invalid_list')}</span>` : '';
+  const pitcher = (side) => {
+    const value = sp2 && sp2[side];
+    const name = value?.name ? esc(value.name) : '—';
+    const meta = value?.era != null ? `ERA ${esc(value.era)}` : (value?.hand ? esc(value.hand) : '');
+    return `<span class="mpitcher"><b>${name}</b><small class="num">${meta}</small></span>`;
+  };
+  const statusLabel = st === 'live' ? t('f_live') : st === 'final' ? t('f_final') : t('f_pre');
+  const sourceLine = rawPrediction.invalidated ? t('pred_invalid_list')
+    : ev.pending && !validPick ? pendingPredictionLabel()
+    : st === 'live' ? t('live_via_espn') : sp2 ? t('data_verified') : t('source_factual');
+  const predictionCell = validPick && pickPct != null && !rawPrediction.invalidated
+    ? `<span class="mpred"><span class="predlogo">${logoImg(p.pick)}</span><span class="predcopy"><small>${t('source_aa')}</small><b class="num">${esc(tNick(p.pick))} ${esc(pickPct)}%</b></span></span>`
+    : `<span class="mpred muted"><span class="predcopy"><small>${t('aa_reading_closed')}</small><b>${t('pred_unavailable')}</b></span></span>`;
 
   const objectRoute = aaCompatibleRoute({ ...aaListRoute(aaCurrentRoute()), s: 'mlb', g: String(ev.event_id) });
   return `<div class="mrow ${ev.event_id === selectedId ? 'sel' : ''}" data-id="${esc(ev.event_id)}" style="--i:${idx ?? 0}">
     <a class="mrowlink" data-object-link data-id="${esc(ev.event_id)}" href="${esc(aaRouteUrl(objectRoute))}">
       <span class="mtime num">${timeCol}</span>
       <span class="mteams">
-        <span class="mt ${aWin || (!done && pickA) ? 'win' : ''}">${logoImg(ev.away.code)}<span class="nm">${esc(tNick(ev.away.code))}</span>${pickA && sidePct('away') != null ? chip(sidePct('away'), liveWpHome != null) : ''}</span>
-        <span class="mt ${hWin || (!done && pickH) ? 'win' : ''}">${logoImg(ev.home.code)}<span class="nm">${esc(tNick(ev.home.code))}</span>${pickH && sidePct('home') != null ? chip(sidePct('home'), liveWpHome != null) : ''}</span>
-        ${spLine}
-        ${pendingLine}
-        ${invalidLine}
+        <span class="mclub">${logoImg(ev.away.code)}<span class="nm">${esc(tNick(ev.away.code))}</span><span class="clubscore num">${scored ? esc(as2) : ''}</span></span>
+        <span class="mversus" aria-hidden="true">@</span>
+        <span class="mclub">${logoImg(ev.home.code)}<span class="nm">${esc(tNick(ev.home.code))}</span><span class="clubscore num">${scored ? esc(hs) : ''}</span></span>
       </span>
-      <span class="mscore num">
-        <span class="ms ${st === 'live' ? 'lv' : aWin ? 'win' : ''}">${scored ? esc(as2) : ''}</span>
-        <span class="ms ${st === 'live' ? 'lv' : hWin ? 'win' : ''}">${scored ? esc(hs) : ''}</span>
-      </span>
-      ${tags ? `<span class="mtags">${tags}</span>` : ''}
+      <span class="mpitchers">${pitcher('away')}${pitcher('home')}</span>
+      <span class="mstate"><span class="status-chip ${esc(st)}">${esc(statusLabel)}</span><span class="status-source">${esc(sourceLine)}</span></span>
+      ${predictionCell}
     </a>
     <button type="button" class="mstar ${favs.has(ev.event_id) ? 'faved' : ''}" data-star="${esc(ev.event_id)}" aria-label="Favorito">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="${favs.has(ev.event_id) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3 2.7 5.8 6.3.8-4.6 4.3 1.2 6.2L12 17l-5.6 3.1 1.2-6.2L3 9.6l6.3-.8z"/></svg>
@@ -3236,6 +3434,16 @@ function exportLocalCfg(){
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'AA_Sports_Datos_locales.json'; a.click();
 }
 function renderList(){
+  const operationalSchedule = sport === 'mlb' && (listTab === 'all' || listTab === 'favs');
+  const scheduleTitle = document.querySelector('.schedule-titlebar');
+  const scheduleHead = document.querySelector('.schedule-head');
+  if (scheduleTitle) scheduleTitle.hidden = !operationalSchedule;
+  if (scheduleHead) scheduleHead.hidden = !operationalSchedule;
+  if (operationalSchedule && $('scheduleDateLabel')) {
+    const scheduleDate = viewDate || todayDate || etTodayClient();
+    const longDate = new Date(`${scheduleDate}T12:00:00`).toLocaleDateString(LOCALE(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    $('scheduleDateLabel').textContent = `${!viewDate && !docStale ? t('today') + ', ' : ''}${longDate}`;
+  }
   if (listTab === 'edu'){ renderEdu(); return; }
   if (listTab === 'tools'){ renderTools(); return; }
   if (listTab === 'cfg'){ renderCfg(); return; }
@@ -3253,6 +3461,10 @@ function renderList(){
   $('nLive').textContent = n.live || '';
   $('nPre').textContent = n.pre || '';
   $('nFinal').textContent = n.final || '';
+  $('nAllKpi').textContent = n.all;
+  $('nLiveKpi').textContent = n.live;
+  $('nPredKpi').textContent = events.filter(event => !!publicPrediction(event)).length;
+  $('nFinalKpi').textContent = n.final;
   $('lgcount').innerHTML = n.live ? `<b>${n.live}</b>/${n.all}` : (n.all || '');
   const rows = visibleRows();
   const canFlip = window.gsap && window.Flip && !reduceMotion && !firstLoad
@@ -3264,10 +3476,8 @@ function renderList(){
     ? `<div class="recentnote">${t('future_note')}</div>`
     : (!viewDate && docStale && listTab !== 'favs' && events.length)
     ? `<div class="recentnote">${t('mlb_recentnote')}</div>` : '';
-  // Señales relativas y boleto verificado: solo en la vista por defecto de HOY.
-  const dailyCards = (!viewDate && !docStale && listTab === 'all' && filter === 'all' && events.length)
-    ? jornadaHtml() + topSignalsHtml() + runIndicatorsHtml() + boletoHtml() : '';
-  $('list').innerHTML = rows.length ? dailyCards + mlbBanner + rows.map((ev, i) => rowHtml(ev, i)).join('')
+  // La agenda no duplica un partido como destacado: cada evento aparece una vez.
+  $('list').innerHTML = rows.length ? mlbBanner + rows.map((ev, i) => rowHtml(ev, i)).join('')
     : `<div class="lempty">${listTab === 'favs' ? t('mlb_fav_hint') : t('mlb_no_filter')}</div>`;
   if (flipState){
     window.Flip.from(flipState, {
@@ -3706,6 +3916,8 @@ function renderDetail(){
   if (listTab === 'edu' || listTab === 'tools' || listTab === 'cfg'){ renderAppDetail(listTab); return; }
   const ev = events.find(e => e.event_id === selectedId);
   if (!ev){ $('dcard').innerHTML = `<div class="dempty">${t('detail_empty')}</div>`; return; }
+  const detailTabMap = { equipos: 'participantes', pitchers: 'participantes', bateadores: 'participantes', sim: 'evidencia', mercado: 'evidencia' };
+  dtab = detailTabMap[dtab] || (['analisis', 'participantes', 'evidencia'].includes(dtab) ? dtab : 'analisis');
   // Calienta las posiciones UNA vez (para el bullet de "stakes" de Las claves); al
   // resolver, re-renderiza si sigue el mismo juego. El flag evita cualquier bucle.
   if (!standingsCache.has('mlb') && !window._stdWarmed){ window._stdWarmed = true; loadStandings().then(() => { if (sport === 'mlb' && selectedId === ev.event_id) renderDetail(); }).catch(() => {}); }
@@ -3757,11 +3969,8 @@ function renderDetail(){
   } else {
     const startTime = ev.start && String(ev.start).includes('T')
       ? new Date(ev.start).toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' }) : null;
-    mid = (p.prob != null && p.pick)
-      ? `${aaGauge(Math.round(p.prob * 1000) / 10, tNick(p.pick))}
-         <div class="dsub" style="margin-top:6px">${startTime ? t('first_pitch') + ' ' + startTime : t('to_play_today')}</div>`
-      : `<div class="dscore num" style="font-size:22px;color:var(--dim);font-weight:700">${startTime || t('o_today')}</div>
-         <div class="dsub">${ev.pending ? pendingPredictionLabel() : rawPrediction.invalidated ? t('pred_invalid_list') : t('o_toplay')}</div>`;
+    mid = `<div class="dscore num" style="font-size:28px;color:var(--text);font-weight:700">${startTime || t('o_today')}</div>
+      <div class="dsub">${ev.pending ? pendingPredictionLabel() : rawPrediction.invalidated ? t('pred_invalid_list') : t('o_toplay')}</div>`;
   }
   const recA = lv && lv.away.rec ? `<span class="rc num">${esc(lv.away.rec)}</span>` : '';
   const recH = lv && lv.home.rec ? `<span class="rc num">${esc(lv.home.rec)}</span>` : '';
@@ -3780,7 +3989,28 @@ function renderDetail(){
   const metricValue = m => m.kind === 'risk' ? t('risk_' + risk.level) : m.kind === 'edge' ? String(m.value).replace(/%$/, ' pp') : m.value;
 
   const snap = p.pick ? (ev.snapshot || {}) : {};
-  const invalidNotice = rawPrediction.invalidated ? `<div class="pred-invalid-notice" role="alert"><span class="ic">⚠</span><span>${t('pred_invalid_detail')}</span></div>` : '';
+  const invalidNotice = rawPrediction.invalidated ? `<div class="pred-invalid-notice" role="alert"><span class="ic msr" aria-hidden="true">warning</span><span>${t('pred_invalid_detail')}</span></div>` : '';
+  const canonicalPct = p.pick && !rawPrediction.invalidated ? predictionProbabilityPercent(p) : null;
+  const statusLabel = st === 'live' ? t('f_live') : st === 'final' ? t('f_final') : t('f_pre');
+  const updatedLabel = mlbUpdatedAt
+    ? new Date(mlbUpdatedAt).toLocaleString(LOCALE(), { dateStyle: 'medium', timeStyle: 'short' })
+    : (todayDate || t('no_data'));
+  const aaReading = canonicalPct != null ? `<section class="aa-reading" aria-labelledby="aaReadingTitle">
+      <div><span class="aa-reading-kicker">${t('aa_reading_kicker')}</span>
+        <h2 id="aaReadingTitle">${t('d_wins_lbl')}${esc(tNick(p.pick))}</h2>
+        <p>${snap.verdict_es ? esc(publicVerdictView(snap, lang, t('d_note'))) : t('d_note')}</p></div>
+      <div class="aa-reading-value"><strong class="num" data-canonical-probability>${esc(canonicalPct)}%</strong><span>${t('metric_prob_cal')}</span></div>
+    </section>` : `<section class="aa-reading closed" aria-labelledby="aaReadingTitle">
+      <div><span class="aa-reading-kicker">${t('aa_reading_closed')}</span><h2 id="aaReadingTitle">${t('pred_unavailable')}</h2><p>${t('aa_reading_closed_body')}</p></div>
+      <div class="aa-reading-value"><strong>${t('aa_reading_closed')}</strong></div>
+    </section>`;
+  const aaFacts = `<div class="aa-facts" aria-label="${t('aa_reading_kicker')}">
+    <div class="aa-fact"><small>${t('meta_scope')}</small><b>${canonicalPct != null ? t('meta_scope_public') : t('meta_scope_factual')}</b></div>
+    <div class="aa-fact"><small>${t('meta_source')}</small><b>${canonicalPct != null ? esc(p.probability_source || 'prob_v2') : t('source_factual')}</b></div>
+    <div class="aa-fact"><small>${t('meta_time')}</small><b class="num">${esc(updatedLabel)}</b></div>
+    <div class="aa-fact"><small>${t('meta_status')}</small><b>${esc(statusLabel)}</b></div>
+    <div class="aa-fact"><small>${t('meta_limit')}</small><b>${t('meta_limit_body')}</b></div>
+  </div>`;
 
   const verdictBox = p.pick && snap.verdict_es ? `
     <div class="verdict">
@@ -3843,15 +4073,14 @@ function renderDetail(){
       ? `<span class="confpill">${t('d_confidence')} ${esc(confLabel(p.confidence))}</span>${tags}` : tags,
   });
 
-  // En vivo mandan marcador y WP: el comparador (WP ESPN) y la curva van primero;
-  // el veredicto pregame baja a contexto. Fuera de live el orden no cambia.
-  const liveFirst = st === 'live';
-  const analisis = `
+  // Resumen: una sola lectura AA canónica; el mercado queda subordinado aquí.
+  let analisis = `
     ${invalidNotice}
-    ${viewFuture ? `<div class="verdict"><span class="ic">📅</span><p><span class="vt">${t('upcoming')}</span>${t('future_detail')}</p></div>` : ''}
-    ${liveFirst ? `${mlbMarketComparator}${wpChart}${verdictBox}` : `${verdictBox}${mlbMarketComparator}${wpChart}`}
-    ${p.pick && ev.metrics?.length ? `<div class="secttl">${t('d_metrics')}</div>
-      <div class="mgrid">${ev.metrics.map(m => `<div class="mcard"><div class="lb">${esc(metricLabel(m))}</div><div class="vl num ${metricCls(m)}">${esc(metricValue(m))}</div></div>`).join('')}</div>` : ''}
+    ${viewFuture ? `<div class="verdict"><span class="ic msr" aria-hidden="true">event_upcoming</span><p><span class="vt">${t('upcoming')}</span>${t('future_detail')}</p></div>` : ''}
+    ${aaReading}${aaFacts}
+    ${st === 'live' ? wpChart : ''}
+    ${p.pick && ev.metrics?.some(m => m.key !== 'metric_prob_cal') ? `<div class="secttl">${t('d_metrics')}</div>
+      <div class="mgrid">${ev.metrics.filter(m => m.key !== 'metric_prob_cal').map(m => `<div class="mcard"><div class="lb">${esc(metricLabel(m))}</div><div class="vl num ${metricCls(m)}">${esc(metricValue(m))}</div></div>`).join('')}</div>` : ''}
     ${keysBlock(ev, lv)}
     ${p.pick ? (whyList || (ev.summary_es ? `<div class="secttl">${t('d_based')}</div><div class="summary">${esc(ev.summary_es)}</div>` : '')) : ''}
     ${risk.level === 'desconocido' ? `<div class="bnote">${t('risk_unknown_help')}</div>` : ''}
@@ -4123,9 +4352,22 @@ function renderDetail(){
     ${moveRow ? `<div class="secttl" style="margin-top:16px">${t('d_market')}</div>` + moveRow : ''}
     ${booksRows}`;
 
+  const marketLabels = { winner: 'market_winner', total: 'market_total', players: 'market_players', combos: 'market_combos' };
+  const marketStatusGrid = MARKET_KEYS.map(kind => {
+    const block = mlbMarketBlocks[kind];
+    const isPublic = block && block.state === 'public';
+    return `<div class="market-status ${isPublic ? 'public' : 'closed'}"><small>${t(marketLabels[kind])}</small><b>${isPublic ? t('market_public_short') : t('market_closed_short')}</b></div>`;
+  }).join('');
+  const factualMarketRows = `${spreadRow}${moveRow}${booksRows}`;
+  analisis += `<section class="summary-markets" aria-labelledby="summaryMarketsTitle">
+    <h3 id="summaryMarketsTitle">${t('markets_in_summary')}</h3>
+    <div class="market-status-grid">${marketStatusGrid}</div>
+    ${factualMarketRows ? `<div class="summary-market-detail">${factualMarketRows}</div>` : ''}
+  </section>`;
+
   /* ── pestaña Simulación: 10,000 juegos Monte Carlo ── */
   let simulacion = `<div class="wempty">${t('no_sim')}</div>`;
-  const sim = dtab === 'sim' ? simOf(ev) : null;
+  const sim = dtab === 'evidencia' ? simOf(ev) : null;
   if (sim){
     const pct = (n) => Math.round(n / sim.N * 1000) / 10;
     const hwPct = pct(sim.hw), awPct = Math.round((100 - hwPct) * 10) / 10;
@@ -4169,34 +4411,30 @@ function renderDetail(){
 
   const dc = $('dcard');
   const animKey = selectedId + '|' + dtab;
+  const participantes = equipos;
+  const evidencia = simulacion;
   dc.classList.toggle('enter', animKey !== lastAnimKey);
   lastAnimKey = animKey;
   dc.innerHTML = `
     <div class="dtop">
       <span class="crumb">USA<span class="sep">›</span><b>MLB</b><span class="sep">›</span><b>${esc(ev.matchup)}</b></span>
-      <button class="sharebtn" data-share="mlb" data-shid="${esc(ev.event_id)}" title="${t('share')}" aria-label="${t('share')}">${SHARE_SVG}</button>
+      <button class="sharebtn" data-share="mlb" data-shid="${esc(ev.event_id)}" title="${t('share')}" aria-label="${t('share')}"><span class="msr" aria-hidden="true">share</span></button>
     </div>
     <div class="dhero">
-      ${siloFace(ev.snapshot && ev.snapshot.pitchers && ev.snapshot.pitchers.away && ev.snapshot.pitchers.away.id, ev.snapshot && ev.snapshot.pitchers && ev.snapshot.pitchers.away && ev.snapshot.pitchers.away.name, 'left')}
-      ${siloFace(ev.snapshot && ev.snapshot.pitchers && ev.snapshot.pitchers.home && ev.snapshot.pitchers.home.id, ev.snapshot && ev.snapshot.pitchers && ev.snapshot.pitchers.home && ev.snapshot.pitchers.home.name, 'right')}
       <span class="dwhen num">${esc(ev.start && String(ev.start).includes('T') ? new Date(ev.start).toLocaleString(LOCALE(), { dateStyle: 'medium', timeStyle: 'short' }) : (ev.start || ''))}${ev.result ? `<span class="reschip ${ev.result === 'win' ? 'won' : 'lost'}">${ev.result === 'win' ? '✓ ' + t('pick_hit') : '✗ ' + t('pick_miss')}</span>` : ''}</span>
       <div class="dgrid">
         <div class="dteam">${logoImg(ev.away.code)}<span class="nm">${esc(CITY[canon(ev.away.code)] || '')}<br>${esc(tNick(ev.away.code))}</span>${recA}</div>
         <div class="dmid">${mid}</div>
         <div class="dteam">${logoImg(ev.home.code)}<span class="nm">${esc(CITY[canon(ev.home.code)] || '')}<br>${esc(tNick(ev.home.code))}</span>${recH}</div>
       </div>
-      ${(ev.snapshot && ev.snapshot.pitchers && ((ev.snapshot.pitchers.away && ev.snapshot.pitchers.away.id) || (ev.snapshot.pitchers.home && ev.snapshot.pitchers.home.id))) ? `<p class="dhero-note">${t('hero_photo_note')}</p>` : ''}
     </div>
-    <div class="dtabs">
-      <button class="dtab ${dtab === 'analisis' ? 'on' : ''}" data-dt="analisis">${t('tab_summary')}</button>
-      ${ev.snapshot ? `<button class="dtab ${dtab === 'equipos' ? 'on' : ''}" data-dt="equipos">${t('d_teams')}</button>` : ''}
-      ${ev.snapshot ? `<button class="dtab ${dtab === 'pitchers' ? 'on' : ''}" data-dt="pitchers">${t('tab_pitchers')}</button>` : ''}
-      ${ev.snapshot ? `<button class="dtab ${dtab === 'bateadores' ? 'on' : ''}" data-dt="bateadores">${t('tab_hitters')}</button>` : ''}
-      ${p.prob != null && !p.invalidated ? `<button class="dtab ${dtab === 'sim' ? 'on' : ''}" data-dt="sim">${t('tab_sim')}</button>` : ''}
-      <button class="dtab ${dtab === 'mercado' ? 'on' : ''}" data-dt="mercado">${t('d_market')}</button>
+    <div class="dtabs" role="tablist" aria-label="${t('matches')}">
+      <button id="detailTabSummary" class="dtab ${dtab === 'analisis' ? 'on' : ''}" data-dt="analisis" role="tab" aria-selected="${dtab === 'analisis'}" aria-controls="detailTabPanel">${t('tab_summary')}</button>
+      <button id="detailTabParticipants" class="dtab ${dtab === 'participantes' ? 'on' : ''}" data-dt="participantes" role="tab" aria-selected="${dtab === 'participantes'}" aria-controls="detailTabPanel">${t('tab_participants')}</button>
+      <button id="detailTabEvidence" class="dtab ${dtab === 'evidencia' ? 'on' : ''}" data-dt="evidencia" role="tab" aria-selected="${dtab === 'evidencia'}" aria-controls="detailTabPanel">${t('tab_evidence')}</button>
     </div>
-    <div class="dbody">
-      ${dtab === 'analisis' ? analisis : dtab === 'equipos' ? equipos : dtab === 'pitchers' ? pitchersBlk : dtab === 'bateadores' ? bateadoresBlk : dtab === 'sim' ? simulacion : mercado}
+    <div class="dbody" id="detailTabPanel" role="tabpanel" aria-labelledby="${dtab === 'analisis' ? 'detailTabSummary' : dtab === 'participantes' ? 'detailTabParticipants' : 'detailTabEvidence'}">
+      ${dtab === 'analisis' ? analisis : dtab === 'participantes' ? participantes : evidencia}
       <p class="dnote">${t('d_note')}</p>
     </div>`;
   // índices para el stagger del contenido
@@ -4588,8 +4826,18 @@ document.addEventListener('click', e => {
   if (e.target.closest('[data-open-legal]')){ $('legaldlg').showModal(); return; }
   if (e.target.closest('[data-hist-csv]')){ exportHistCsv(); return; }
   if (e.target.closest('[data-cfg-export]')){ exportLocalCfg(); return; }
+  const railMoreButton = e.target.closest('[data-rail-more]');
+  if (railMoreButton){
+    const panel = $('railMore');
+    panel.hidden = !panel.hidden;
+    railMoreButton.setAttribute('aria-expanded', String(!panel.hidden));
+    return;
+  }
   const railBtn = e.target.closest('[data-rail]');
   if (railBtn){
+    const railMore = $('railMore');
+    const railMoreToggle = document.querySelector('[data-rail-more]');
+    if (railMore){ railMore.hidden = true; railMoreToggle?.setAttribute('aria-expanded', 'false'); }
     const v = railBtn.dataset.rail;
     if (v === 'home' || v === 'radar' || v === 'mlb'){
       aaNavigateList({ s: v });
@@ -4667,6 +4915,19 @@ document.addEventListener('click', e => {
   // Desde Inicio, abrir un partido lleva al análisis MLB completo.
   if (t) select(t.dataset.id);
 });
+document.addEventListener('keydown', e => {
+  const tab = e.target.closest('.dtabs [role="tab"]');
+  if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+  const tabs = [...tab.parentElement.querySelectorAll('[role="tab"]')];
+  const current = tabs.indexOf(tab);
+  const nextIndex = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1
+    : (current + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+  e.preventDefault();
+  dtab = tabs[nextIndex].dataset.dt;
+  renderDetail();
+  aaWriteRoute('replace');
+  requestAnimationFrame(() => document.querySelector(`.dtabs [data-dt="${dtab}"]`)?.focus());
+});
 $('q').addEventListener('input', e => { query = e.target.value.trim(); renderList(); });
 $('list').addEventListener('input', e => {
   if (e.target.id === 'aaToolPrice'){ toolPrice = e.target.value; toolsPaintOut(); }
@@ -4700,6 +4961,7 @@ function etTodayClient(){
 }
 
 let mlbLoadSeq = 0;
+let mlbUpdatedAt = null;
 function mlbLoadIsCurrent(seq, date){
   const route = aaReadRoute(location.search);
   const targetDate = date || '';
@@ -4721,6 +4983,7 @@ async function loadToday(){
     todayRecord = d.record || null;
     runIndicatorMeta = d.run_indicator_meta || null;
     mlbPublication = d.publication || null;
+    mlbUpdatedAt = d.updated_at || d.generated_at || null;
     todayDate = d.date || todayDate;
     // Fecha REAL (reloj, horario del Este) vs la fecha del doc: si el doc es de
     // un día pasado (p. ej. no hay juegos hoy — receso del Juego de Estrellas o
@@ -5145,40 +5408,40 @@ function matchKeys(ev, lv){
     const out = [];
     const stk = ctx['streak_' + side];
     if (stk != null && Math.abs(stk) >= 3){
-      if (stk > 0) out.push(`🔥 ${t('mk_streak_w').replace('{n}', stk)}${stk >= 10 ? ' ' + t('mk_streak_hist') : ''}`);
-      else out.push(`❄️ ${t('mk_streak_l').replace('{n}', -stk)}`);
+      if (stk > 0) out.push(`${t('mk_streak_w').replace('{n}', stk)}${stk >= 10 ? ' ' + t('mk_streak_hist') : ''}`);
+      else out.push(t('mk_streak_l').replace('{n}', -stk));
     }
     const g = forms[side] || [];
     if (g.length){
       const last = g.slice(-Math.min(5, g.length)), w = last.filter(x => x.w).length;
-      out.push(`📅 ${t('mk_form').replace('{w}', w).replace('{n}', last.length)}`);
+      out.push(t('mk_form').replace('{w}', w).replace('{n}', last.length));
       const l2 = g.slice(-2);
       if (l2.length === 2 && l2.every(x => x.w) && l2.every(x => { const d = margin(x.score); return d != null && d >= 1 && d <= 2; }))
-        out.push(`😅 ${t('mk_close2')}`);
+        out.push(t('mk_close2'));
     }
     const b = bats[side];
     if (b && b.label && b.l5_rpg != null){
-      if (b.label === 'hot') out.push(`📈 ${t('mk_bats_hot').replace('{r}', b.l5_rpg).replace('{s}', b.season_rpg != null ? b.season_rpg : '—')}`);
-      else if (b.label === 'cold') out.push(`📉 ${t('mk_bats_cold').replace('{r}', b.l5_rpg).replace('{s}', b.season_rpg != null ? b.season_rpg : '—')}`);
+      if (b.label === 'hot') out.push(t('mk_bats_hot').replace('{r}', b.l5_rpg).replace('{s}', b.season_rpg != null ? b.season_rpg : '—'));
+      else if (b.label === 'cold') out.push(t('mk_bats_cold').replace('{r}', b.l5_rpg).replace('{s}', b.season_rpg != null ? b.season_rpg : '—'));
     }
     const fld = fielding[side];
     if (fld && fld.g === 10 && Number.isFinite(fld.err_l10) && Number.isFinite(fld.epg) && fld.epg >= 0.8)
-      out.push(`🧤 ${t('mk_field').replace('{n}', fld.err_l10)}`);
+      out.push(t('mk_field').replace('{n}', fld.err_l10));
     const pp = pit[side];
-    if (pp && pp.name && strictFiniteNumber(pp.fip) != null) out.push(`⚾ ${pp.name} · FIP ${pp.fip}${strictFiniteNumber(pp.era_recent) != null ? ` · ERA ${pp.era_recent}` : ''}`);
-    const rec = lv && lv[side] && lv[side].rec; if (rec) out.push(`📋 ${rec}`);
+    if (pp && pp.name && strictFiniteNumber(pp.fip) != null) out.push(`${pp.name} · FIP ${pp.fip}${strictFiniteNumber(pp.era_recent) != null ? ` · ERA ${pp.era_recent}` : ''}`);
+    const rec = lv && lv[side] && lv[side].rec; if (rec) out.push(rec);
     const sr = stdRowMLB(code);
-    if (sr && sr.gb != null) out.push(`🏆 ${t('mk_stakes').replace('{r}', sr.rank != null ? sr.rank : '—').replace('{gb}', String(sr.gb))}`);
+    if (sr && sr.gb != null) out.push(t('mk_stakes').replace('{r}', sr.rank != null ? sr.rank : '—').replace('{gb}', String(sr.gb)));
     return out;
   };
   const away = sideKeys('away', ev.away.code), home = sideKeys('home', ev.home.code);
   const context = [];
   const fa = pit.away && pit.away.fip, fh = pit.home && pit.home.fip;
   if (fa != null && fh != null && Math.abs(fa - fh) >= 0.2)
-    context.push(`🎯 ${t('mk_pitch_edge').replace('{t}', nick(fa < fh ? ev.away.code : ev.home.code))}`);
+    context.push(t('mk_pitch_edge').replace('{t}', nick(fa < fh ? ev.away.code : ev.home.code)));
   if (ctx.rest_home != null && ctx.rest_away != null && ctx.rest_home !== ctx.rest_away){
     const homeMore = ctx.rest_home > ctx.rest_away;
-    context.push(`😴 ${t('mk_rest').replace('{t}', nick(homeMore ? ev.home.code : ev.away.code)).replace('{d}', homeMore ? ctx.rest_home : ctx.rest_away).replace('{o}', homeMore ? ctx.rest_away : ctx.rest_home)}`);
+    context.push(t('mk_rest').replace('{t}', nick(homeMore ? ev.home.code : ev.away.code)).replace('{d}', homeMore ? ctx.rest_home : ctx.rest_away).replace('{o}', homeMore ? ctx.rest_away : ctx.rest_home));
   }
   if (ctx.series && ctx.series.game && ctx.series.len){
     const sg = Number(ctx.series.game), sl = Number(ctx.series.len);
@@ -5186,11 +5449,11 @@ function matchKeys(ev, lv){
     const known = Number.isInteger(hw) && Number.isInteger(aw) && hw >= 0 && aw >= 0 && hw + aw === sg - 1;
     if (known && sg === sl && sg > 1 && ((hw === 0) !== (aw === 0))){
       const swept = hw === 0 ? ev.home.code : ev.away.code;
-      context.push(`⚠️ ${t('mk_sweep').replace('{t}', nick(swept))}`);
+      context.push(t('mk_sweep').replace('{t}', nick(swept)));
     } else if (known) {
-      context.push(`⚔️ ${t('mk_series_rec').replace('{g}', sg).replace('{n}', sl).replace('{hW}', hw).replace('{aW}', aw)}`);
+      context.push(t('mk_series_rec').replace('{g}', sg).replace('{n}', sl).replace('{hW}', hw).replace('{aW}', aw));
     } else {
-      context.push(`⚔️ ${t('mk_series').replace('{g}', ctx.series.game).replace('{n}', ctx.series.len)}`);
+      context.push(t('mk_series').replace('{g}', ctx.series.game).replace('{n}', ctx.series.len));
     }
   }
   return { away, home, context };
@@ -5873,6 +6136,7 @@ async function loadDay(date){
     if (!mlbLoadIsCurrent(loadSeq, date)) return false;
     const d = await r.json();
     if (!mlbLoadIsCurrent(loadSeq, date)) return false;
+    mlbUpdatedAt = d.updated_at || d.generated_at || null;
     events = withMlbPredictionContracts(d.events, 'mlb_public_archive', d);
     liveByKey = new Map(); // sin live en días no-hoy
     const shared = pendingGame && events.find(event => String(event.event_id) === String(pendingGame));

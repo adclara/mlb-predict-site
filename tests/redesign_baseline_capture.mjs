@@ -366,11 +366,11 @@ try {
     await page.locator('#dcard .dhero').waitFor({ state: 'visible' });
     await snap('mlb-detail');
 
-    // 4b) Gate cerrado diseñado: pestaña Total del comparador de mercados MLB.
-    await page.locator('#dcard .market-tab[data-market-kind="total"]').click();
-    await page.waitForFunction(() => /sigue en validación|under validation/i.test(document.querySelector('#dcard .market-panel')?.textContent || ''));
-    await snap('mlb-gate-total');
-    await page.locator('#dcard .market-tab[data-market-kind="winner"]').click();
+    // 4b) Los cuatro estados de mercado viven dentro de Resumen, no como pestaña primaria.
+    await page.locator('#dcard .summary-markets').waitFor({ state: 'visible' });
+    await snap('mlb-summary-markets');
+    await page.locator('#dcard .dtab[data-dt="participantes"]').click();
+    await snap('mlb-participants');
     await closeMobileDetail();
 
     // 5) Filtro "En vivo" (el overlay de /v1/mlb/live marca g3 en vivo).
@@ -378,9 +378,9 @@ try {
     await page.locator('.mrow[data-id="g3"]').waitFor({ state: 'visible' });
     await snap('mlb-live');
 
-    // 5b) Detalle en vivo: marcador + WP en vivo mandan (curva + comparador ESPN).
+    // 5b) Detalle en vivo: marcador + WP factual mandan; la lectura AA sigue canónica.
     await page.locator('.mrow[data-id="g3"]').click();
-    await page.waitForFunction(() => /ESPN/.test(document.querySelector('#dcard')?.textContent || ''));
+    await page.locator('#dcard [data-canonical-probability]').waitFor({ state: 'visible' });
     await snap('mlb-live-detail');
     await closeMobileDetail();
     await page.locator('.pill[data-f="all"]').click();

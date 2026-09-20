@@ -148,7 +148,7 @@ try {
   assert.equal(await page.locator('img[src="x"]').count(), 0, 'malicious prob_pct created an image');
   assert.equal(await page.evaluate(() => window.__xss), undefined, 'malicious prob_pct executed script');
   assert.equal(await page.locator('#tk').textContent().then((text) => /SECRET|99%/.test(text)), false, 'ticker leaked a private prediction');
-  assert.equal(await page.locator('.topsignals').textContent().then((text) => /SECRET|99%/.test(text)), false, 'Top signals leaked a private prediction');
+  assert.equal(await page.locator('.topsignals').allTextContents().then((items) => /SECRET|99%/.test(items.join(' '))), false, 'Top signals leaked a private prediction');
 
   const nestedGateResult = await page.evaluate(() => {
     const greenGate = { state: 'public', public: true, passed: true, approved: true };
