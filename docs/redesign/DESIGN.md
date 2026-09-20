@@ -81,6 +81,10 @@ Do not introduce indigo, purple, or extra neons. Do not restore `saturate(140%)`
 
 Manrope for UI. Barlow Condensed for wordmark, scores, percentages, section labels. Display type is condensed on purpose (sports ticker), not Inter-by-default.
 
+Critical operational copy never renders below 12 CSS px. Compact uppercase labels may reach 10px only when the adjacent value is independently named and remains at least 12px. Interactive controls expose a 44×44 CSS px target at every supported viewport, including 320px reflow and the 720 CSS px proxy for 200% zoom.
+
+Contrast is a token contract, not a per-component exception: `--text`, `--dim`, `--faint`, and `--on-sky` meet 4.5:1 against their intended backgrounds; `--sky` meets 3:1 against `--page` for focus rings and component boundaries.
+
 ## Layout
 
 The desktop shell is a 216px rail plus a compact top bar. The visible primary rail is intentionally limited to Inicio, Partidos, Central AA, Favoritos and Más; secondary destinations live under Más.
@@ -106,6 +110,7 @@ Radii live on `--r-*` (2–20px + pill). Circles stay `50%`. Do not inflate radi
 - **Canonical AA reading:** the only exact model probability in an Inspect page. Scope, source, updated time, status and limitation remain adjacent.
 - **Brand mark:** `cloudflare/pages/assets/aa-mark-blue.png`, with the 192/512/PWA variants derived from the same approved blue direction.
 - **Interface icons:** local Material Symbols Rounded font at `cloudflare/pages/assets/material-symbols-rounded.woff2`; do not use emoji or raw glyph names as visible navigation icons.
+- **Language:** ES and EN use the same geometry and persist through reload. Copy expansion must not create horizontal overflow at 320, 360, 390, 720, or desktop widths.
 
 ## Motion
 

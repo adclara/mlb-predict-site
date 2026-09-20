@@ -150,7 +150,7 @@ img{max-width:100%;display:block}
 .wpgstart{stop-color:rgba(var(--volt-rgb),.35)} .wpgend{stop-color:rgba(var(--volt-rgb),0)}
 .dcard.enter .fg{opacity:0;animation:popIn .35s ease-out forwards;animation-delay:calc(var(--k,0)*45ms)}
 .dcard.enter .dots i.on{transform-origin:center;animation:popIn .3s ease-out both;animation-delay:calc(var(--k,0)*50ms)}
-.mstar.faved svg{animation:starPop .3s cubic-bezier(.2,.7,.3,1)}
+.mstar.faved .msr{animation:starPop .3s cubic-bezier(.2,.7,.3,1)}
 .tkchip,.mrow,.wrow,.pill,.dtab,.ltab{transition:background .18s,border-color .18s,color .18s,transform .15s}
 .mrow:hover{transform:translateY(-1px)}
 .tkchip:hover{transform:translateY(-1px)}
@@ -175,7 +175,7 @@ header{
 .wordmark .aa{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .tagline{display:block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin-top:-2px;font-style:normal;font-weight:600}
 .search{flex:1;max-width:560px;position:relative;margin:0 auto}
-.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.45;pointer-events:none}
+.search>.msr{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:19px;pointer-events:none}
 .search input{
   width:100%;background:var(--panel);border:1px solid transparent;border-radius:var(--r-12);
   color:var(--text);font-size:14.5px;padding:10px 16px 10px 40px;transition:border-color .15s,background .15s;
@@ -1296,7 +1296,7 @@ header{background:rgba(var(--page-rgb),.98);backdrop-filter:none;-webkit-backdro
 .langbtn,.record{border-radius:var(--r-6);background:transparent}
 nav.sports{background:#08111d}
 .spwrap{max-width:none;padding:0 18px}
-.sp{flex-direction:row;min-width:auto;gap:7px;padding:10px 14px 9px;font-size:12px}
+.sp{flex:0 0 auto;flex-direction:row;min-width:auto;gap:7px;padding:10px 14px 9px;font-size:12px}
 .sp>svg,.sp>.msr{width:18px;height:18px;font-size:18px}
 .sp .cnt{top:4px;right:5px}
 .sp .soon{margin-left:2px}
@@ -1472,6 +1472,37 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
   .dtab{font-size:11px}.aa-facts{grid-template-columns:1fr}.aa-fact,.aa-fact:nth-child(2){border-left:0;border-top:1px solid var(--hair)}.aa-fact:first-child{border-top:0}
   .object-profile-head{grid-template-columns:1fr;text-align:center}.object-profile-head .hs,.object-profile-head .hsfall,.object-profile-head .team-crest{margin-inline:auto}.object-profile-context{grid-template-columns:1fr}.object-profile-context>div{border-left:0;border-top:1px solid var(--hair)}.object-profile-context>div:first-child{border-top:0}
 }
+
+/* AA_OPS_DENSITY — legibility and target-size contract for redesigned routes. */
+body.aa-list .pill,body.aa-list .ltab,body.aa-list .sp,
+body.aa-page .dtab,body.aa-page .market-status{min-height:44px}
+body.aa-list .datebox .arrow,body.aa-list .datebox .today,
+.aa-railbtn,.langbtn,.authbtn,.aa-bottomnav button,.howclose{min-width:44px;min-height:44px}
+.mstar.faved .msr{font-variation-settings:"FILL" 1}
+body.aa-list .mclub .nm{font-size:14px;line-height:1.25}
+body.aa-list .mpitchers{font-size:12px}
+body.aa-list .mpitcher b{font-size:13px}
+body.aa-list .mpitcher small,body.aa-list .status-source{font-size:12px;line-height:1.35}
+body.aa-list .status-chip{min-height:28px;font-size:11px}
+body.aa-list .mpred b{font-size:16px}
+body.aa-list .mpred small{font-size:11px}
+body.aa-page .dwhen,body.aa-page .aa-reading p,body.aa-page .dnote,
+body.aa-page .aa-fact b,body.aa-page .object-profile-sub,
+body.aa-page .object-profile-context b,body.aa-page .available-person small{font-size:12px}
+body.aa-page .aa-reading-kicker,body.aa-page .aa-reading-value span,
+body.aa-page .aa-fact small,body.aa-page .market-status small,
+body.aa-page .object-profile-kicker,body.aa-page .object-profile-context small{font-size:10px}
+body.aa-page .market-status b{font-size:12px}
+body.aa-page .propsub{display:flex;align-items:center;gap:6px}
+body.aa-page .propsub .msr,body.aa-page .lvduo .msr{font-size:17px}
+body.aa-page .model-evidence-head b{display:inline-flex;align-items:center;gap:5px}
+@media (max-width:900px){
+  body.aa-list .pill,body.aa-list .ltab,body.aa-list .sp,
+  body.aa-page .dtab,body.aa-page .market-status,body.aa-page .sharebtn,
+  body.aa-page .dback{min-width:44px;min-height:44px}
+  body.aa-list .mclub .nm{font-size:13px}
+  body.aa-list .mpred small{font-size:10px}
+}
 </style>
 </head>
 <body class="aa-list">
@@ -1512,7 +1543,7 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
       </span>
     </a>
     <div class="search">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9AA4B5" stroke-width="2.3" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span class="msr" aria-hidden="true">search</span>
       <input id="q" type="search" placeholder="Busca equipos, partidos…" data-i18n-ph="search_ph" aria-label="Buscar" data-i18n-aria="aria_search">
     </div>
     <span class="hspacer"></span>
@@ -1544,20 +1575,20 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
   <div class="spwrap" aria-describedby="sportsSwipeHint">
     <button class="sp on" data-sport="radar">
       <span class="cnt" id="cntRadar" hidden></span>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.6"/><path d="M12 12l5.2-5.2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/></svg>
+      <span class="msr" aria-hidden="true">radar</span>
       <span data-i18n="intel_nav">Central AA</span> <span class="soon">30M</span>
     </button>
     <button class="sp" data-sport="mlb">
       <span class="cnt" id="cntMLB" hidden></span>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M5.5 5.5c2 2.5 2 10.5 0 13M18.5 5.5c-2 2.5-2 10.5 0 13" stroke-linecap="round"/></svg>
+      <span class="msr" aria-hidden="true">sports_baseball</span>
       Baseball
     </button>
     <button class="sp" data-sport="nba">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 2.5 3 15.5 0 18M12 3c-3 2.5-3 15.5 0 18" stroke-linecap="round"/></svg>
+      <span class="msr" aria-hidden="true">sports_basketball</span>
       NBA <span class="soon">LIVE</span>
     </button>
     <button class="sp" data-sport="wnba">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 2.5 3 15.5 0 18M12 3c-3 2.5-3 15.5 0 18" stroke-linecap="round"/></svg>
+      <span class="msr" aria-hidden="true">sports_basketball</span>
       WNBA <span class="soon">LIVE</span>
     </button>
     <button class="sp" data-sport="nfl">
@@ -1577,15 +1608,15 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
       <span data-i18n="sport_ncaam">Basket College</span> <span class="soon">LIVE</span>
     </button>
     <button class="sp" data-sport="soccer">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="m12 7 4.75 3.45-1.8 5.6h-5.9l-1.8-5.6z"/><path d="M12 3v4M20.5 9.3l-3.75 1.15M17.2 20l-2.25-3.35M9.05 16.65 6.8 20M7.25 10.45 3.5 9.3" stroke-linecap="round"/></svg>
+      <span class="msr" aria-hidden="true">sports_soccer</span>
       Soccer <span class="soon">LIVE</span>
     </button>
     <button class="sp" data-sport="tennis">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M6 5a12 12 0 0 1 0 14M18 5a12 12 0 0 0 0 14" stroke-linecap="round"/></svg>
+      <span class="msr" aria-hidden="true">sports_tennis</span>
       <span data-i18n="sport_tennis">Tenis</span> <span class="soon">LIVE</span>
     </button>
   </div>
-  <div class="sports-hint" id="sportsSwipeHint" role="note"><span class="gesture" aria-hidden="true">↔</span><span data-i18n="sports_swipe_hint">Desliza a izquierda o derecha para explorar deportes</span></div>
+  <div class="sports-hint" id="sportsSwipeHint" role="note"><span class="gesture msr" aria-hidden="true">swap_horiz</span><span data-i18n="sports_swipe_hint">Desliza a izquierda o derecha para explorar deportes</span></div>
 </nav>
 
 <div class="layout">
@@ -1599,9 +1630,9 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
       <button class="ltab" data-lt="hist" data-i18n="tab_hist">Historial</button>
       <button class="ltab" data-lt="brain"><span class="msr" aria-hidden="true">neurology</span><span data-i18n="tab_brain">Cerebro</span></button>
       <div class="datebox">
-        <button class="arrow" id="dPrev" aria-label="Día anterior" data-i18n-aria="aria_prevday"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="arrow" id="dPrev" aria-label="Día anterior" data-i18n-aria="aria_prevday"><span class="msr" aria-hidden="true">chevron_left</span></button>
         <button class="today" id="dlabel" aria-label="Elegir fecha" data-i18n-aria="aria_pickdate" data-i18n="today">Hoy</button>
-        <button class="arrow" id="dNext" aria-label="Día siguiente" data-i18n-aria="aria_nextday"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></button>
+        <button class="arrow" id="dNext" aria-label="Día siguiente" data-i18n-aria="aria_nextday"><span class="msr" aria-hidden="true">chevron_right</span></button>
         <input type="date" id="dPick" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" min="2026-07-01" aria-hidden="true">
       </div>
       <button class="pill" id="dToday" hidden style="margin-left:6px" data-i18n="today">Hoy</button>
@@ -1619,7 +1650,7 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
         <img id="lgicon" src="https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png" alt="" data-aa-hide-on-error="visibility">
         <span><span class="ttl">MLB</span><br><span class="sub" data-i18n="season">USA · Temporada 2026</span></span>
         <span class="lc num" id="lgcount"></span>
-        <span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 15l6-6 6 6"/></svg></span>
+        <span class="chev msr" aria-hidden="true">expand_less</span>
       </button>
       <div class="schedule-head" aria-hidden="true">
         <span data-i18n="table_time">Hora</span><span data-i18n="table_match">Partido</span>
@@ -1635,7 +1666,7 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
   <!-- ═══ DETALLE ═══ -->
   <section class="detail" id="detail" aria-live="polite">
     <button class="dback" id="dback">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+      <span class="msr" aria-hidden="true">arrow_back</span>
       <span data-i18n="back_games">Partidos</span>
     </button>
     <div class="pane dpane" id="dcard">
@@ -1665,17 +1696,17 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
       </div>
     </div>
     <div class="widget" id="wTrain" hidden>
-      <h3 data-i18n="w_train">🧪 Modelo AA en entrenamiento</h3>
+      <h3 data-i18n="w_train">Modelo AA en entrenamiento</h3>
       <p class="legal" data-i18n-html="w_train_p">Ya te mostramos los marcadores en vivo de este deporte. Las <b>predicciones AA</b>
       llegarán cuando el modelo pase nuestra validación con datos históricos (walk-forward, intervalos
       de confianza). No publicamos números que no estén medidos.</p>
     </div>
     <div class="widget wmlb">
-      <h3 data-i18n="w_gems">💎 Gemas de hoy</h3>
+      <h3 data-i18n="w_gems">Gemas de hoy</h3>
       <div id="wGems" class="wempty">—</div>
     </div>
     <div class="widget wmlb">
-      <h3 data-i18n="w_locks">🔒 Fijos del día</h3>
+      <h3 data-i18n="w_locks">Selecciones del día</h3>
       <div id="wLocks" class="wempty">—</div>
     </div>
     <div class="widget">
@@ -1690,17 +1721,17 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
 
 <!-- Bottom-nav móvil (≤900px): mismas secciones que el rail, mismo handler data-rail -->
 <nav class="aa-bottomnav" aria-label="Navegación inferior" data-i18n-aria="aria_nav_bottom">
-  <button type="button" data-rail="home"><span class="bnicon" aria-hidden="true">⌂</span><span data-i18n="nav_home">Inicio</span></button>
-  <button type="button" data-rail="mlb"><span class="bnicon" aria-hidden="true">▣</span><span data-i18n="matches">Partidos</span></button>
-  <button type="button" data-rail="radar"><span class="bnicon" aria-hidden="true">◎</span><span data-i18n="intel_nav">Central AA</span></button>
-  <button type="button" data-rail="pos"><span class="bnicon" aria-hidden="true">☰</span><span data-i18n="tab_standings">Posiciones</span></button>
-  <button type="button" data-rail="cfg"><span class="bnicon" aria-hidden="true">⚙</span><span data-i18n="rail_cfg">Config</span></button>
+  <button type="button" data-rail="home"><span class="bnicon msr" aria-hidden="true">home</span><span data-i18n="nav_home">Inicio</span></button>
+  <button type="button" data-rail="mlb"><span class="bnicon msr" aria-hidden="true">calendar_month</span><span data-i18n="matches">Partidos</span></button>
+  <button type="button" data-rail="radar"><span class="bnicon msr" aria-hidden="true">radar</span><span data-i18n="intel_nav">Central AA</span></button>
+  <button type="button" data-rail="pos"><span class="bnicon msr" aria-hidden="true">leaderboard</span><span data-i18n="tab_standings">Posiciones</span></button>
+  <button type="button" data-rail="cfg"><span class="bnicon msr" aria-hidden="true">settings</span><span data-i18n="rail_cfg">Config</span></button>
 </nav>
 
 <!-- Metodología: la transparencia es la marca -->
 <dialog id="howdlg">
   <div class="howcard">
-    <button class="howclose" id="howclose" aria-label="Cerrar" data-i18n-aria="aria_close">✕</button>
+    <button class="howclose msr" id="howclose" aria-label="Cerrar" data-i18n-aria="aria_close">close</button>
     <div id="howbody" data-i18n-html="how_html"><h2>Cómo funciona AA Sports</h2>
     <div class="howsec"><b>1 · Un modelo privado, medido en público.</b> El algoritmo corre en
       servidores (nunca en tu navegador) y produce una probabilidad por juego. Todo lo que ves
@@ -1729,7 +1760,7 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
 <!-- Aviso legal / Términos de uso -->
 <dialog id="legaldlg">
   <div class="howcard">
-    <button class="howclose" id="legalclose" aria-label="Cerrar" data-i18n-aria="aria_close">✕</button>
+    <button class="howclose msr" id="legalclose" aria-label="Cerrar" data-i18n-aria="aria_close">close</button>
     <div id="legalbody" data-i18n-html="legal_html"><h2>Aviso legal y términos de uso</h2>
     <p class="hownote" style="padding-top:0;margin-bottom:6px">Última actualización: julio 2026. Al usar AA Sports aceptas este aviso.</p>
 
@@ -1854,14 +1885,14 @@ const T = {
     intel_bundles_title: 'Combinaciones multideporte', intel_bundles_sub: 'Piernas individuales >60% de deportes distintos', intel_bundle_note: 'Combinación informativa del mercado. No mostramos probabilidad conjunta ni ROI porque aún no están calibrados.', intel_no_bundles: 'No hay dos deportes elegibles para combinar ahora.',
     intel_wallets: 'Wallets calificadas', intel_support: 'apoyan el pick', intel_oppose: 'juegan en contra', intel_mixed: 'señal mixta',
     detail_empty: 'Elige un partido para ver el análisis completo del algoritmo AA.',
-    w_perf: 'Rendimiento del algoritmo', w_train: '🧪 Modelo AA en entrenamiento',
+    w_perf: 'Rendimiento del algoritmo', w_train: 'Modelo AA en entrenamiento',
     w_train_p: 'Ya te mostramos los marcadores en vivo de este deporte. Las <b>predicciones AA</b> llegarán cuando el modelo pase nuestra validación con datos históricos (walk-forward, intervalos de confianza). No publicamos números que no estén medidos.',
     sc_pickttl: 'Predicción AA · probabilidad calibrada', sc_title: '⚽ Predicción AA', sc_eng: 'Motor AA · privado', sc_win: 'Gana',
     sc_val_title: 'Validación', sc_val_sub: 'Modelo validado en {n} partidos (backtest walk-forward). Acierto real por nivel de confianza:',
     sc_live: 'Récord EN VIVO', sc_since: 'desde', sc_rec_none: 'aún sin resultados (arranca la temporada)',
     sc_market: 'El número es la probabilidad del mercado des-vigada, ya calibrada (predicho ≈ real en el backtest). AA no promete ganarle al cierre: da probabilidad honesta + contexto para que decidas. Juego responsable 18/21+.',
     sc_train_p: 'Marcadores en vivo activos. Las predicciones de {sport} se publicarán cuando el modelo pase la validación con datos históricos — el mismo estándar de honestidad de MLB. Sin números inventados.',
-    w_gems: '💎 Gemas de hoy', w_locks: '🔒 Fijos del día', w_resp: 'Juego responsable',
+    w_gems: 'Gemas de hoy', w_locks: 'Selecciones del día', w_resp: 'Juego responsable',
     w_resp_p: '<b>AA Sports informa, no facilita apuestas.</b> Te damos los datos y nuestra lectura; la decisión es tuya. 18/21+ según tu jurisdicción. Los datos no garantizan resultados.',
     how_link: '¿Cómo funciona el algoritmo AA? →', legal_link2: 'Aviso legal y términos de uso →',
     back_games: 'Partidos', sport_baseball: 'Baseball', sport_tennis: 'Tenis', sport_ncaaf: 'Fútbol College', sport_ncaam: 'Basket College',
@@ -1882,7 +1913,7 @@ const T = {
     notif_live: 'En vivo', notif_final: 'Final', notif_live_b: 'Empezó un juego que sigues ⭐', notif_final_b: 'Terminó un juego que sigues ⭐', r_search_go: 'Buscar', r_ws_bad: 'Dirección no válida. Pega una wallet 0x… o el link de un perfil de Polymarket.', r_ws_empty: 'Sin movimientos recientes.', r_ws_moves: 'movimientos', r_ws_vol: 'volumen', r_ws_recent: 'Movimientos recientes', r_ws_note: 'Consulta en vivo de la actividad reciente de esta wallet — datos crudos, sin nuestro filtro anti-trampa. Para el historial completo, abre su perfil en Polymarket ↗.', r_no_cat: 'Ninguna cuenta en esta categoría.', r_share: 'Compartir', r_share_txt: 'Mira esta wallet en el Radar AA', r_copied: 'Link copiado ✓', track_measuring: 'midiendo hace', track_days: 'días',
     // ── Radar rediseño premium (veredicto + riesgo real + historia del día) ── rh_study: 'el estudio midió que el pasado apenas predice el futuro', vd_hot: 'En racha caliente', vd_luck: 'Un golpe de suerte', vd_solid: 'Ganador consistente', vd_flat: 'Cuenta observada', vd_flag_clean: 'cartera en verde', tile_hits: 'Acierto', tile_open: 'Cartera abierta', tile_bags: 'Bolsas rojas', tile_score: 'score', tile_clean: 'limpio', tile_unreal: 's/realizar', tile_none_open: 'sin abrir', tile_of10: 'de 10', cw_sub: 'sus mejores jugadas del mes', rr_sub: 'lo que el récord de ganancias no te dice', rr_open_pos: 'posiciones abiertas', rr_paid: 'pagó', rr_today: 'hoy valen', rr_gaining: 'va ganando', rr_unreal: 'sin realizar', rr_bought: 'compró', rr_now: 'hoy', rr_dead: 'muerta', rr_failed_b: 'de', rr_failed_c: 'mercados ya resueltos', sty_less: 'Ocultar el detalle ↑', sd_sub: 'lo más interesante del Radar ahora mismo · toca para explorar', story_play: '🎯 Jugada del día', story_bag: '⚠️ Bolsa del día', story_bag_none: 'Ninguna cuenta top arrastra bolsas perdedoras hoy 👏', sd_board_sub: 'por balance real · toca una para ver su perfil', sd_where: '🗂 Dónde juegan los mejores',
     // ── Balance real (ganado en cerrados − perdido en abiertas = neto) + validación ── bal_sub: 'si cerrara todo hoy', bal_realized: 'ganado en mercados cerrados', bal_in: 'en', bal_bags: 'bolsas abiertas', bal_favor: 'a favor en abiertas', bal_gives2: 'de lo que ganó, en apuestas que aún no cierran.', bal_score_note: 'Por eso su score de informado baja.', bal_ate2: 'ganados y', bal_ate3: 'más: hoy está en rojo.', bal_clean: 'Sus posiciones abiertas no le restan al balance.', bal_gross: 'bruto',
-    // ── Carteras casi perfectas (récord de derrotas) ── pf_sub: '0–3 derrotas · récord del mes', pf_never: 'Sin perder', tr_cool: 'Enfriando', tile_floor: 'piso', tile_floor_t: 'Piso con 95% de confianza (cota de Wilson) — descuenta la muestra chica: 8-0 no vale como 40-8', conv_short: 'Convicción', conv_chip: 'Apuesta más fuerte justo cuando acierta (win rate por dinero > por jugada)', r_watching: 'vigilando {n} cuentas', r_every5: 'se revisa cada 5 min', r_checked: 'revisado hace {t}', cons_sub: '2+ vigiladas, mismo lado', cons_day: '🤝 Consenso del día', cons_agree: 'vigiladas coinciden', sig_strong: '🔥 Más fuertes', sig_likely: '📈 Más probables', sig_sub_likely: 'el mercado las ve probables (≥{p}%)', sig_market_t: 'Probabilidad que hoy pone el mercado (el precio). No es garantía.', sig_why: 'por qué', sig_strength: 'Fuerza de señal (dinero listo) — NO es probabilidad de ganar', sig_trend: 'Sigue tendencia', sig_mixed: 'Mixto', sig_r_early: 'entra antes', sig_r_led: 'entró barato', sig_r_cheap: 'compra barata', sig_r_record: 'récord sólido', sig_r_insider: 'perfil informado', sig_r_longshot: 'gana baratas', sig_r_conviction: 'sube en aciertos', sig_r_reactive: 'compra reactiva', sig_r_chase: 'paga caro', sig_r_late: 'entra tarde', sig_r_churn: 'voltea mucho',
+    // ── Carteras casi perfectas (récord de derrotas) ── pf_sub: '0–3 derrotas · récord del mes', pf_never: 'Sin perder', tr_cool: 'Enfriando', tile_floor: 'piso', tile_floor_t: 'Piso con 95% de confianza (cota de Wilson) — descuenta la muestra chica: 8-0 no vale como 40-8', conv_short: 'Convicción', conv_chip: 'Apuesta más fuerte justo cuando acierta (win rate por dinero > por jugada)', r_watching: 'vigilando {n} cuentas', r_every5: 'se revisa cada 5 min', r_checked: 'revisado hace {t}', cons_sub: '2+ vigiladas, mismo lado', cons_day: 'Consenso del día', cons_agree: 'vigiladas coinciden', sig_strong: 'Más fuertes', sig_likely: 'Más probables', sig_sub_likely: 'el mercado las ve probables (≥{p}%)', sig_market_t: 'Probabilidad que hoy pone el mercado (el precio). No es garantía.', sig_why: 'por qué', sig_strength: 'Fuerza de señal (dinero listo) — NO es probabilidad de ganar', sig_trend: 'Sigue tendencia', sig_mixed: 'Mixto', sig_r_early: 'entra antes', sig_r_led: 'entró barato', sig_r_cheap: 'compra barata', sig_r_record: 'récord sólido', sig_r_insider: 'perfil informado', sig_r_longshot: 'gana baratas', sig_r_conviction: 'sube en aciertos', sig_r_reactive: 'compra reactiva', sig_r_chase: 'paga caro', sig_r_late: 'entra tarde', sig_r_churn: 'voltea mucho',
     bol_title: 'Boleto del día', bol_win: 'Gana', bol_none: 'Hoy el algoritmo no marca ninguna jugada de máxima confianza. No inventamos un boleto cuando no hay valor claro.',
     bol_rec: 'Cómo le ha ido a estos niveles', bol_note: 'Resumen de las mejores selecciones AA de hoy · no es recomendación de apuesta · tú decides.',
     top_title: 'Top señales AA', top_sub: 'Las probabilidades calibradas más altas entre los juegos válidos de hoy.',
@@ -1922,7 +1953,7 @@ const T = {
     aria_home: 'AA Sports — inicio', aria_search: 'Buscar', aria_sports: 'Deportes', aria_prevday: 'Día anterior', aria_pickdate: 'Elegir fecha', aria_nextday: 'Día siguiente', aria_close: 'Cerrar',
     auth_login: 'Entrar', auth_account: 'Mi cuenta', auth_logout: 'Salir', auth_delete: 'Borrar mi cuenta', auth_note: 'Solo guardamos tu nombre, email y foto de Google, y tus favoritos. Borra tu cuenta cuando quieras — se elimina todo.', auth_del_confirm: '¿Borrar tu cuenta y tus favoritos sincronizados? Esto no se puede deshacer.',
     rec_title: 'Récord AA', rec_locks: 'Fijos', rec_gems: 'Gemas', rec_won: 'ganados', rec_lost: 'perdidos', rec_measured: 'picks medidos',
-    live_chip: 'vivo', tag_gem: '💎 Gema', hist_loading: 'Cargando historial…', hist_none: 'Aún no hay picks calificados en la base.', abbr_w: 'G', abbr_l: 'P', h_wins: 'Gana', h_over: 'Alta', h_under: 'Baja', h_won: 'GANÓ', h_lost: 'PERDIÓ',
+    live_chip: 'vivo', tag_gem: 'Gema', hist_loading: 'Cargando historial…', hist_none: 'Aún no hay picks calificados en la base.', abbr_w: 'G', abbr_l: 'P', h_wins: 'Gana', h_over: 'Alta', h_under: 'Baja', h_won: 'GANÓ', h_lost: 'PERDIÓ',
     conf_high: 'Alta', conf_medium: 'Media', conf_low: 'Baja', conf_gold: 'ORO', conf_silver: 'PLATA', conf_gem: 'Gema', conf_lock: 'Fijo',
     more_in_list: 'más en la lista.', mlb_recentnote: 'Sin juegos de MLB hoy · mostrando los últimos resultados', mlb_fav_hint: 'Marca partidos con ⭐ para verlos aquí.', mlb_no_filter: 'Sin partidos en este filtro.', load_err_retry: 'No pude cargar las predicciones. Reintentando…', load_err_date: 'No pude cargar esa fecha.',
     d_moment: 'Momento del juego', d_why: 'Por qué esta jugada', d_metrics: 'Métricas AA', d_based: 'En base a los datos', d_risk: 'Índice de riesgo', d_duel: 'Duelo de señales AA', d_h2h: 'Comparación cara a cara', d_f5: 'Primeras 5 entradas · NRFI', d_injuries: 'Bajas por lesión o suspensión', d_injury_note: '★ = jugador clave (buenas estadísticas esta temporada). Informativo: el modelo AA no se altera con esto sin re-validación.',
@@ -1932,7 +1963,7 @@ const T = {
     d_rpg5: 'carreras/juego últimos 5', d_season: 'temporada',
     lineup_na: 'Sin alineación.', lineup_none: 'Sin alineación publicada.', lineup_pending: 'Alineación aún no publicada.', no_box: 'Sin box score.', starter: 'Titular', winner: 'Ganador',
     first_pitch: 'Primer lanzamiento', to_play_today: 'Por jugar hoy', upcoming: 'Por jugar', won_l: 'ganó', lost_l: 'perdió',
-    no_recent_games: 'Sin juegos recientes medidos.', no_data_enough: 'Sin datos suficientes aún.', bats_hot: '🔥 Bates calientes', bats_cold: '❄️ Bates fríos', bats_normal: 'Bates normales', no_data_yet: 'Sin datos aún.', no_snapshot: 'Snapshot no disponible para este juego todavía.', no_sim: 'Simulación no disponible: este juego no tiene predicción publicada.',
+    no_recent_games: 'Sin juegos recientes medidos.', no_data_enough: 'Sin datos suficientes aún.', bats_hot: 'Bates calientes', bats_cold: 'Bates fríos', bats_normal: 'Bates normales', no_data_yet: 'Sin datos aún.', no_snapshot: 'Snapshot no disponible para este juego todavía.', no_sim: 'Simulación no disponible: este juego no tiene predicción publicada.',
     pick_hit: 'pick acertado', pick_miss: 'pick fallado', tab_analysis: 'Análisis AA', tab_summary: 'Resumen', tab_sim: 'Simulación', tab_pitchers: 'Pitchers', tab_hitters: 'Bateadores', postponed: 'Pospuesto',
     sim_ntimes: 'Simulamos este juego {n} veces', sim_top: 'Marcador más probable', sim_freq: 'Marcadores más frecuentes', sim_runs: 'Carreras totales por juego', sim_margin: '¿Por cuánto gana {t}?', sim_by1: 'Por 1 carrera', sim_by23: 'Por 2-3', sim_by4: 'Por 4+', sim_loses: 'Pierde', sim_of_sims: 'de las simulaciones',
     o_recentnote: 'Sin juegos hoy · mostrando los últimos resultados', o_no_events: 'Sin eventos ahora mismo en {s}.', o_loading: 'Cargando…', o_no_events2: 'Sin eventos por ahora. Vuelve más tarde.', o_refresh_stale_age: 'Actualización fallida · se conserva el último snapshot verificado de hace {n} min.', o_refresh_stale_time: 'Actualización fallida · se conserva el último snapshot verificado ({time}).', o_compare: 'Comparación', o_lineups: 'Alineaciones', o_match_stats: 'Estadísticas del partido', o_events: 'Eventos', o_team_stats: 'Estadísticas del equipo', o_today: 'HOY', o_toplay: 'Por jugar', o_recent_form: 'Racha reciente', o_prev_form: 'Últimos 5 · temporada anterior', o_leaders: 'Líderes del partido', o_player_data: 'Datos de jugadores', o_player_pending: 'La comparación de jugadores se completa con box scores verificados cuando existen. No la convertimos en probabilidad AA sin validación.', o_injuries: 'Bajas reportadas', o_venue: 'Sede', o_external_predictor: 'Predictor externo de ESPN', o_external_predictor_note: 'Contexto independiente de ESPN; no es una predicción AA ni abre el gate.', o_why_factual: 'Por qué los datos favorecen a este lado', o_reason_market: '{provider} asigna {p} a {team} después de quitar el margen.', o_reason_predictor: 'ESPN Matchup Predictor: {away} {ap} · {home} {hp}.', o_reason_recent: 'Últimos 5 de la temporada anterior: {away} {aw}-{al} · {home} {hw}-{hl}.', o_reason_line: 'Línea actual: {team} {spread} · total {total}.', o_note: 'Datos en vivo vía AA Sports API. Actualización automática cada 45s.', no_data: 'Sin datos.',
@@ -1945,7 +1976,7 @@ const T = {
     d_tie: 'Empate', d_nrfi: 'Sin carreras en la 1ª entrada (NRFI):', d_fip_diff: 'FIP abridores (dif)', d_park: 'Factor del parque', d_schedule: 'Horario', d_day: '☀️ Día', d_night: '🌙 Noche', d_series: 'Serie', d_series_game: 'Juego {g} de {n}',
     d_weather_fc: 'Clima (pronóstico)', d_weather: 'Clima', d_wind: 'Viento', d_precip: 'Prob. lluvia',
     d_team: 'Equipo', d_market: 'Mercado', d_market_lc: 'mercado', d_price: 'Precio', d_teams: 'Equipos', d_lines_by_book: 'Líneas por casa', d_books_disagree: 'las casas discrepan', d_total_runs: 'Total de carreras', d_aa_projects: 'AA proyecta', d_runs: 'carreras', d_open: 'apertura', d_current: 'actual', d_leans: 'inclina', d_value_badge: 'EV estimado positivo',
-    d_no_gems: 'Hoy no hay gemas. El algoritmo solo marca 💎 cuando el valor es real.', d_no_locks: 'Sin fijos publicados todavía.',
+    d_no_gems: 'Hoy no hay gemas. El algoritmo solo las marca cuando el valor es real.', d_no_locks: 'Sin selecciones publicadas todavía.',
     hd_note: 'Historial completo tal como quedó guardado en el momento del pick — no se reescribe. Transparencia primero: los datos no garantizan resultados.',
     d_tbc: 'Por confirmar', d_fatigue: 'Fatiga', d_player: 'Jugador', d_subs: 'Suplentes', d_atbat: 'Al bate', d_pitching: 'Lanza', d_even: 'parejo', d_favors: 'favorece', d_streak: 'racha', d_starts_for: 'Abre por ',
     d_sim_note: '{n} simulaciones Monte Carlo derivadas de la probabilidad publicada del modelo AA ({p}% local) y {t} carreras proyectadas. Ilustran cómo se reparte el resultado — no cambian la predicción.',
@@ -2074,14 +2105,14 @@ const T = {
     intel_bundles_title: 'Cross-sport combinations', intel_bundles_sub: 'Individual legs above 60% from different sports', intel_bundle_note: 'Informational market combination. No joint probability or ROI is shown because it is not calibrated yet.', intel_no_bundles: 'There are not two eligible sports to combine right now.',
     intel_wallets: 'Qualified wallets', intel_support: 'support the pick', intel_oppose: 'oppose the pick', intel_mixed: 'mixed signal',
     detail_empty: 'Pick a game to see the full AA algorithm analysis.',
-    w_perf: 'Algorithm performance', w_train: '🧪 AA model in training',
+    w_perf: 'Algorithm performance', w_train: 'AA model in training',
     w_train_p: 'We already show live scores for this sport. <b>AA predictions</b> arrive once the model passes our validation on historical data (walk-forward, confidence intervals). We don\'t publish numbers we haven\'t measured.',
     sc_pickttl: 'AA prediction · calibrated probability', sc_title: '⚽ AA prediction', sc_eng: 'AA engine · private', sc_win: 'Wins',
     sc_val_title: 'Validation', sc_val_sub: 'Model validated on {n} matches (walk-forward backtest). Real hit rate by confidence level:',
     sc_live: 'LIVE record', sc_since: 'since', sc_rec_none: 'no results yet (season starting)',
     sc_market: 'The number is the market probability de-vigged and calibrated (predicted ≈ actual in the backtest). AA does not promise to beat the closing line: it gives honest probability + context so you decide. Gamble responsibly 18/21+.',
     sc_train_p: 'Live scores active. {sport} predictions publish once the model passes validation on historical data — the same honesty standard as MLB. No made-up numbers.',
-    w_gems: '💎 Today\'s gems', w_locks: '🔒 Locks of the day', w_resp: 'Responsible gaming',
+    w_gems: 'Today\'s gems', w_locks: 'Daily selections', w_resp: 'Responsible gaming',
     w_resp_p: '<b>AA Sports informs, it does not facilitate betting.</b> We give you the data and our read; the decision is yours. 18/21+ per your jurisdiction. Data does not guarantee results.',
     how_link: 'How does the AA algorithm work? →', legal_link2: 'Legal notice & terms of use →',
     back_games: 'Games', sport_baseball: 'Baseball', sport_tennis: 'Tennis', sport_ncaaf: 'College Football', sport_ncaam: 'College Basketball',
@@ -2103,7 +2134,7 @@ const T = {
     // ── Radar premium redesign (verdict + real risk + story of the day) ── rh_study: 'our study measured that the past barely predicts the future', vd_hot: 'On a hot streak', vd_luck: 'A lucky hit', vd_solid: 'Consistent winner', vd_flat: 'Watched account', vd_flag_clean: 'book in the green', tile_hits: 'Hit rate', tile_open: 'Open book', tile_bags: 'Red bags', tile_score: 'score', tile_clean: 'clean', tile_unreal: 'unrealized', tile_none_open: 'none open', tile_of10: 'of 10', cw_sub: 'its best plays this month', rr_sub: "what the win record doesn't tell you", rr_open_pos: 'open positions', rr_paid: 'paid', rr_today: 'today worth', rr_gaining: 'up', rr_unreal: 'unrealized', rr_bought: 'bought', rr_now: 'now', rr_dead: 'dead', rr_failed_b: 'of', rr_failed_c: 'resolved markets',
     rr_clean: "It's not dragging any losing bags right now — its open book is in the green.", sty_less: 'Hide the detail ↑', sd_sub: 'the most interesting on the Radar right now · tap to explore', story_play: '🎯 Play of the day', story_bag: '⚠️ Bag of the day', story_bag_none: 'No top account is holding losing bags today 👏', sd_board_sub: 'by real balance · tap one to see its profile', sd_where: '🗂 Where the best ones play',
     // ── Real balance (won in settled − losing in open = net) + validation ── bal_sub: 'if it closed everything today', bal_realized: 'won in settled markets', bal_in: 'across', bal_bags: 'open bags', bal_favor: 'ahead on open', bal_gives2: 'of what it won, on bets not yet settled.', bal_score_note: 'That is why its insider score drops.', bal_ate2: 'it won plus', bal_ate3: 'more — in the red today.', bal_clean: 'Its open positions do not subtract from the balance.', bal_gross: 'gross',
-    // ── Near-perfect wallets (loss record) ── pf_sub: '0–3 losses · record this month', pf_never: 'Unbeaten', tr_cool: 'Cooling off', tile_floor: 'floor', tile_floor_t: 'Floor at 95% confidence (Wilson bound) — discounts small samples: 8-0 is not worth 40-8', conv_short: 'Conviction', conv_chip: 'Bets bigger exactly on its wins (dollar-weighted win rate > per-play)', r_watching: 'watching {n} accounts', r_every5: 'checked every 5 min', r_checked: 'last check {t} ago', cons_sub: '2+ watched, same side', cons_day: '🤝 Consensus of the day', cons_agree: 'watched agree', sig_strong: '🔥 Strongest', sig_likely: '📈 Most likely', sig_sub_likely: 'the market sees them likely (≥{p}%)', sig_market_t: 'The probability the market prices in today (the price). Not a guarantee.', sig_why: 'why', sig_strength: 'Signal strength (smart money) — NOT a win probability', sig_trend: 'Follows the trend', sig_mixed: 'Mixed',
+    // ── Near-perfect wallets (loss record) ── pf_sub: '0–3 losses · record this month', pf_never: 'Unbeaten', tr_cool: 'Cooling off', tile_floor: 'floor', tile_floor_t: 'Floor at 95% confidence (Wilson bound) — discounts small samples: 8-0 is not worth 40-8', conv_short: 'Conviction', conv_chip: 'Bets bigger exactly on its wins (dollar-weighted win rate > per-play)', r_watching: 'watching {n} accounts', r_every5: 'checked every 5 min', r_checked: 'last check {t} ago', cons_sub: '2+ watched, same side', cons_day: 'Consensus of the day', cons_agree: 'watched agree', sig_strong: 'Strongest', sig_likely: 'Most likely', sig_sub_likely: 'the market sees them likely (≥{p}%)', sig_market_t: 'The probability the market prices in today (the price). Not a guarantee.', sig_why: 'why', sig_strength: 'Signal strength (smart money) — NOT a win probability', sig_trend: 'Follows the trend', sig_mixed: 'Mixed',
     sig_none_likely: "No signals above the market's {p}% right now.", sig_r_early: 'enters early', sig_r_led: 'got in low', sig_r_cheap: 'cheap buy', sig_r_record: 'solid record', sig_r_insider: 'informed profile', sig_r_longshot: 'wins longshots', sig_r_conviction: 'sizes up on wins', sig_r_reactive: 'reactive buy', sig_r_chase: 'pays up', sig_r_late: 'enters late', sig_r_churn: 'churns',
     bol_title: 'Ticket of the day', bol_win: 'Take', bol_none: "Today the model flags no top-confidence play. We don't fake a ticket when there's no clear value.",
     bol_rec: 'How these tiers have done', bol_note: "A summary of today's best AA picks · not a betting recommendation · you decide.",
@@ -2144,7 +2175,7 @@ const T = {
     aria_home: 'AA Sports — home', aria_search: 'Search', aria_sports: 'Sports', aria_prevday: 'Previous day', aria_pickdate: 'Pick date', aria_nextday: 'Next day', aria_close: 'Close',
     auth_login: 'Sign in', auth_account: 'My account', auth_logout: 'Sign out', auth_delete: 'Delete my account', auth_note: 'We only store your name, email and Google photo, plus your favorites. Delete your account anytime — everything is removed.', auth_del_confirm: 'Delete your account and synced favorites? This cannot be undone.',
     rec_title: 'AA record', rec_locks: 'Locks', rec_gems: 'Gems', rec_won: 'won', rec_lost: 'lost', rec_measured: 'picks tracked',
-    live_chip: 'live', tag_gem: '💎 Gem', hist_loading: 'Loading history…', hist_none: 'No graded picks in the database yet.', abbr_w: 'W', abbr_l: 'L', h_wins: 'Wins', h_over: 'Over', h_under: 'Under', h_won: 'WON', h_lost: 'LOST',
+    live_chip: 'live', tag_gem: 'Gem', hist_loading: 'Loading history…', hist_none: 'No graded picks in the database yet.', abbr_w: 'W', abbr_l: 'L', h_wins: 'Wins', h_over: 'Over', h_under: 'Under', h_won: 'WON', h_lost: 'LOST',
     conf_high: 'High', conf_medium: 'Medium', conf_low: 'Low', conf_gold: 'GOLD', conf_silver: 'SILVER', conf_gem: 'Gem', conf_lock: 'Lock',
     more_in_list: 'more in the list.', mlb_recentnote: 'No MLB games today · showing the latest results', mlb_fav_hint: 'Star games with ⭐ to see them here.', mlb_no_filter: 'No games in this filter.', load_err_retry: 'Could not load predictions. Retrying…', load_err_date: 'Could not load that date.',
     d_moment: 'Game moment', d_why: 'Why this play', d_metrics: 'AA metrics', d_based: 'Based on the data', d_risk: 'Risk index', d_duel: 'AA signal duel', d_h2h: 'Head to head', d_f5: 'First 5 innings · NRFI', d_injuries: 'Injuries or suspensions', d_injury_note: '★ = key player (good stats this season). Informational: the AA model does not change from this without re-validation.',
@@ -2154,7 +2185,7 @@ const T = {
     d_rpg5: 'runs/game last 5', d_season: 'season',
     lineup_na: 'No lineup.', lineup_none: 'No lineup published.', lineup_pending: 'Lineup not published yet.', no_box: 'No box score.', starter: 'Starter', winner: 'Winner',
     first_pitch: 'First pitch', to_play_today: 'To be played today', upcoming: 'Upcoming', won_l: 'won', lost_l: 'lost',
-    no_recent_games: 'No recent games tracked.', no_data_enough: 'Not enough data yet.', bats_hot: '🔥 Hot bats', bats_cold: '❄️ Cold bats', bats_normal: 'Normal bats', no_data_yet: 'No data yet.', no_snapshot: 'Snapshot not available for this game yet.', no_sim: 'Simulation not available: this game has no published prediction.',
+    no_recent_games: 'No recent games tracked.', no_data_enough: 'Not enough data yet.', bats_hot: 'Hot bats', bats_cold: 'Cold bats', bats_normal: 'Normal bats', no_data_yet: 'No data yet.', no_snapshot: 'Snapshot not available for this game yet.', no_sim: 'Simulation not available: this game has no published prediction.',
     pick_hit: 'pick hit', pick_miss: 'pick missed', tab_analysis: 'AA analysis', tab_summary: 'Summary', tab_sim: 'Simulation', tab_pitchers: 'Pitchers', tab_hitters: 'Hitters', postponed: 'Postponed',
     sim_ntimes: 'We simulated this game {n} times', sim_top: 'Most likely score', sim_freq: 'Most frequent scores', sim_runs: 'Total runs per game', sim_margin: 'By how much does {t} win?', sim_by1: 'By 1 run', sim_by23: 'By 2-3', sim_by4: 'By 4+', sim_loses: 'Loses', sim_of_sims: 'of the simulations',
     o_recentnote: 'No games today · showing the latest results', o_no_events: 'No events right now in {s}.', o_loading: 'Loading…', o_no_events2: 'No events for now. Check back later.', o_refresh_stale_age: 'Refresh failed · keeping the last verified snapshot from {n} min ago.', o_refresh_stale_time: 'Refresh failed · keeping the last verified snapshot ({time}).', o_compare: 'Comparison', o_lineups: 'Lineups', o_match_stats: 'Match stats', o_events: 'Events', o_team_stats: 'Team stats', o_today: 'TODAY', o_toplay: 'Upcoming', o_recent_form: 'Recent form', o_prev_form: 'Last 5 · previous season', o_leaders: 'Match leaders', o_player_data: 'Player data', o_player_pending: 'Player comparison fills from verified box scores when available. We do not turn it into an AA probability without validation.', o_injuries: 'Reported injuries', o_venue: 'Venue', o_external_predictor: 'External ESPN predictor', o_external_predictor_note: 'Independent ESPN context; not an AA prediction and does not open the gate.', o_why_factual: 'Why the data favors this side', o_reason_market: '{provider} assigns {p} to {team} after removing vig.', o_reason_predictor: 'ESPN Matchup Predictor: {away} {ap} · {home} {hp}.', o_reason_recent: 'Previous-season last 5: {away} {aw}-{al} · {home} {hw}-{hl}.', o_reason_line: 'Current line: {team} {spread} · total {total}.', o_note: 'Live data via AA Sports API. Auto-refresh every 45s.', no_data: 'No data.',
@@ -2167,7 +2198,7 @@ const T = {
     d_tie: 'Tie', d_nrfi: 'No runs in the 1st inning (NRFI):', d_fip_diff: 'Starter FIP (diff)', d_park: 'Park factor', d_schedule: 'Schedule', d_day: '☀️ Day', d_night: '🌙 Night', d_series: 'Series', d_series_game: 'Game {g} of {n}',
     d_weather_fc: 'Weather (forecast)', d_weather: 'Weather', d_wind: 'Wind', d_precip: 'Rain chance',
     d_team: 'Team', d_market: 'Market', d_market_lc: 'market', d_price: 'Price', d_teams: 'Teams', d_lines_by_book: 'Lines by book', d_books_disagree: 'books disagree', d_total_runs: 'Total runs', d_aa_projects: 'AA projects', d_runs: 'runs', d_open: 'opening', d_current: 'current', d_leans: 'leans', d_value_badge: 'Positive estimated EV',
-    d_no_gems: 'No gems today. The algorithm only marks 💎 when the value is real.', d_no_locks: 'No locks published yet.',
+    d_no_gems: 'No gems today. The algorithm only marks them when the value is real.', d_no_locks: 'No selections published yet.',
     hd_note: 'Full history saved exactly as it stood at pick time — never rewritten. Transparency first: data does not guarantee results.',
     d_tbc: 'TBD', d_fatigue: 'Fatigue', d_player: 'Player', d_subs: 'Subs', d_atbat: 'At bat', d_pitching: 'Pitching', d_even: 'even', d_favors: 'favors', d_streak: 'streak', d_starts_for: 'Starts for ',
     d_sim_note: '{n} Monte Carlo simulations from the probability published by the AA model ({p}% home) and {t} projected runs. They show how the outcome spreads out — they do not change the prediction.',
@@ -2282,7 +2313,8 @@ const T = {
       <p class="hownote">AA Sports informs; it does not bet for you nor profit from your bets. The decision —and the responsibility— is yours.</p>`,
   },
 };
-const t = (k) => (T[lang] && T[lang][k]) != null ? T[lang][k] : (T.es[k] != null ? T.es[k] : k);
+const uiText = (value) => String(value ?? '').replace(/\p{Extended_Pictographic}\uFE0F?/gu, '').replace(/\s{2,}/g, ' ').trim();
+const t = (k) => uiText((T[lang] && T[lang][k]) != null ? T[lang][k] : (T.es[k] != null ? T.es[k] : k));
 // El contenido ES es la fuente en el DOM; guardamos el original y solo lo
 // sustituimos por EN cuando toca. Así no duplicamos el copy español.
 const _orig = new WeakMap();
@@ -2291,12 +2323,12 @@ function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el => {
     if (!_orig.has(el)) _orig.set(el, el.textContent);
     const k = el.getAttribute('data-i18n');
-    el.textContent = (lang === 'en' && T.en[k] != null) ? T.en[k] : _orig.get(el);
+    el.textContent = uiText((lang === 'en' && T.en[k] != null) ? T.en[k] : _orig.get(el));
   });
   document.querySelectorAll('[data-i18n-html]').forEach(el => {
     if (!_orig.has(el)) _orig.set(el, el.innerHTML);
     const k = el.getAttribute('data-i18n-html');
-    el.innerHTML = (lang === 'en' && T.en[k] != null) ? T.en[k] : _orig.get(el);
+    el.innerHTML = uiText((lang === 'en' && T.en[k] != null) ? T.en[k] : _orig.get(el));
   });
   document.querySelectorAll('[data-i18n-ph]').forEach(el => {
     if (!_orig.has(el)) _orig.set(el, el.getAttribute('placeholder') || '');
@@ -2683,7 +2715,7 @@ function injuryRows(sportKey, code){
   if (!list.length) return '<div class="wempty" style="padding:4px 0">Sin bajas reportadas.</div>';
   return list.slice(0, 7).map(p => `<div class="injrow ${p.crucial ? 'crit' : ''}">
     <span class="ipos">${esc(p.pos || '—')}</span>
-    <span class="inm">${p.crucial ? '<span class="istar">★</span> ' : ''}${esc(p.name)}</span>
+    <span class="inm">${p.crucial ? '<span class="istar msr" aria-hidden="true">star</span> ' : ''}${esc(p.name)}</span>
     <span class="ist">${esc(p.status || p.detail || '')}</span>
     ${p.stat_line ? `<span class="isl num">${esc(p.stat_line)}</span>` : ''}
   </div>`).join('') + (list.length > 7 ? `<div class="wempty" style="padding:4px 0">+${list.length - 7} ${t('more_in_list')}</div>` : '');
@@ -2775,7 +2807,7 @@ function renderAuth(){
   if (!authOn){ box.innerHTML = ''; return; }
   if (!me2){
     box.innerHTML = `<button class="authbtn" id="loginbtn">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></svg>
+      <span class="msr" aria-hidden="true">person</span>
       ${t('auth_login')}</button>`;
     $('loginbtn').onclick = () => { location.href = authHref(); };
     return;
@@ -2975,7 +3007,7 @@ function rowHtml(ev, idx){
       ${predictionCell}
     </a>
     <button type="button" class="mstar ${favs.has(ev.event_id) ? 'faved' : ''}" data-star="${esc(ev.event_id)}" aria-label="Favorito">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="${favs.has(ev.event_id) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3 2.7 5.8 6.3.8-4.6 4.3 1.2 6.2L12 17l-5.6 3.1 1.2-6.2L3 9.6l6.3-.8z"/></svg>
+      <span class="msr" aria-hidden="true">star</span>
     </button>
   </div>`;
 }
@@ -3004,7 +3036,7 @@ function renderHistList(){
         Number(r.public_gem) === 1 ? t('hist_cohort_gem') : null,
       ].filter(Boolean).map(label => `<span class="hcoh">${esc(label)}</span>`).join('') : '';
       return `<div class="hrow">
-      <span class="hm">${total ? '<span aria-hidden="true">↕️</span>' : logoImg(r.pick)}<span>${esc(choice)}<br><span class="mu2">${esc(canon(r.away))} @ ${esc(canon(r.home))}</span>${cohorts ? `<br><span class="hcohs">${cohorts}</span>` : ''}</span></span>
+      <span class="hm">${total ? '<span class="msr" aria-hidden="true">swap_vert</span>' : logoImg(r.pick)}<span>${esc(choice)}<br><span class="mu2">${esc(canon(r.away))} @ ${esc(canon(r.home))}</span>${cohorts ? `<br><span class="hcohs">${cohorts}</span>` : ''}</span></span>
       <span class="hp num">${r.prob != null ? Math.round(r.prob * 1000) / 10 + '%' : ''}</span>
       <span class="hr ${r.result === 'win' ? 'w' : 'l'}">${r.result === 'win' ? '✓ ' + t('h_won') : '✗ ' + t('h_lost')}</span>
     </div>`;
@@ -3100,7 +3132,7 @@ function simCard(){
   const selRows = sel.map(r => { const hasRoi = r.roi != null; return `<tr${r.edge === true ? ' class="simedge"' : ''}>
       <td class="num">≥${r.thr}%</td><td class="num">${r.n}</td><td class="num">${r.rate}%</td>
       <td class="num ${hasRoi ? (r.roi >= 0 ? 'up' : 'dn') : ''}">${hasRoi ? `${r.roi >= 0 ? '+' : ''}${r.roi}%` : '—'}</td>
-      <td>${r.edge ? '✅ ' + t('sim_edge') : r.accuracy_signal ? '📊 ' + t('sim_acc_signal') : '—'}</td></tr>`; }).join('');
+      <td>${r.edge ? t('sim_edge') : r.accuracy_signal ? t('sim_acc_signal') : '—'}</td></tr>`; }).join('');
   const modelAcc = strictProbabilityPct(s.market?.model_acc), marketAcc = strictProbabilityPct(s.market?.market_acc);
   const mkt = modelAcc != null && marketAcc != null ? `<div class="simmkt">${esc(t('sim_mkt').replace('{m}', modelAcc).replace('{k}', marketAcc))}</div>` : '';
   const games = strictCount(s.n_games), oosN = strictCount(s.n_oos), accuracy = strictProbabilityPct(co.acc), ece = strictProbabilityPct(s.ece);
@@ -3112,7 +3144,7 @@ function simCard(){
       <div class="btile"><div class="bl">${t('sim_acc')}</div><div class="bv num">${accuracy ?? '—'}%</div><div class="bs">n=${oosN ?? '—'}</div></div>
       <div class="btile"><div class="bl">${t('sim_ece')}</div><div class="bv num">${ece ?? '—'}%</div><div class="bs">${t('sim_ece_sub')}</div></div>
     </div>
-    <div class="simlearn">${helps ? '✅ ' + t('sim_learns') : t('sim_learns_tie')}</div>
+    <div class="simlearn">${helps ? t('sim_learns') : t('sim_learns_tie')}</div>
     ${selRows ? `<div class="bsect">${t('sim_sel')}</div>
       <table class="simtab"><thead><tr><th>${t('sim_thr')}</th><th>${t('sim_picks')}</th><th>${t('sim_hit')}</th><th>${t('sim_roi')}</th><th></th></tr></thead><tbody>${selRows}</tbody></table>` : ''}
     ${mkt}
@@ -3169,7 +3201,7 @@ function renderBrain(){
     const forwardRecord = Number(f.n) > 0 ? `${fmtN(f.wins)}-${fmtN(f.losses)} · ${fmtN(f.dates)} ${lang === 'en' ? 'dates' : 'fechas'}` : t('brain_no_forward');
     const updated = d.updated_at ? new Date(d.updated_at).toLocaleString(LOCALE(), { dateStyle: 'medium', timeStyle: 'short' }) : '';
     $('list').innerHTML = `<div class="brain sportbrain">
-      <div class="brainhead">🧠 <b>${t('brain_sport_title').replace('{sport}', esc(sportLabel(sport)))}</b></div>
+      <div class="brainhead"><span class="msr" aria-hidden="true">neurology</span><b>${t('brain_sport_title').replace('{sport}', esc(sportLabel(sport)))}</b></div>
       <div class="bsubtle">${t('brain_sport_sub')}</div>
       ${producerStatusCard(sport)}
       <div class="braintiles">
@@ -3178,7 +3210,7 @@ function renderBrain(){
         <div class="btile"><div class="bl">${t('brain_forward_n')}</div><div class="bv num">${fmtN(f.n)}</div><div class="bs">${f.accuracy == null ? t('brain_forward_acc') : `${t('brain_forward_acc')} ${fmtPct(f.accuracy)}`}</div></div>
         <div class="btile"><div class="bl">${t('brain_gate')}</div><div class="bv ${publicGate ? '' : 'wait'}">${publicGate ? t('brain_gate_open') : t('brain_gate_closed')}</div><div class="bs">${publicGate ? t('brain_public') : t('brain_training')}</div></div>
       </div>
-      <div class="bsect">💡 ${t('brain_learning')}</div>
+      <div class="bsect"><span class="msr" aria-hidden="true">lightbulb</span>${t('brain_learning')}</div>
       <div class="blearns">${learns.map(s => `<div class="blearn">${esc(s)}</div>`).join('') || `<div class="bempty">${t('brain_accum')}</div>`}</div>
       <div class="bsubtle num">${esc(forwardRecord)}${updated ? ` · ${esc(updated)}` : ''}</div>
       <div class="bnote">${esc(attribution || '')} · ${t('brain_note')}</div>
@@ -3196,13 +3228,13 @@ function renderBrain(){
     return `<div class="bsig"><span class="bsl">${esc(label)}</span><span class="bsw"><i style="width:${w}%"></i></span><span class="bse num">${edge > 0 ? '+' : ''}${edge} pts</span></div>`; };
   const logRows = (Array.isArray(d.log) ? d.log : []).slice(0, 8).map(e => `<div class="blogr"><span class="bd num">${esc(e?.date)}</span><span>${esc(lang === 'en' ? e?.en : e?.es)}</span></div>`).join('');
   const stale = d.freshness && d.freshness.fresh === false ? `<div class="radarwarn"><b>${t('brain_stale')}</b></div>` : '';
-  const gateRow = (m, s) => `<div class="bgate"><div><b>${m}</b><small>${s}</small></div><span class="glock" aria-hidden="true">🔒</span></div>`;
+  const gateRow = (m, s) => `<div class="bgate"><div><b>${m}</b><small>${s}</small></div><span class="glock msr" aria-hidden="true">lock</span></div>`;
   const graded = strictCount(d.n_graded), calGap = strictProbabilityPct(cal.gap);
   const modelAcc = strictProbabilityPct(d.market?.model_acc), marketAcc = strictProbabilityPct(d.market?.market_acc);
   $('list').innerHTML = `
     <div class="brain">
       <div class="pagehead tight"><h2>${t('brain_page_title')}</h2><p>${t('brain_page_sub')}</p></div>
-      <div class="brainhead">🧠 <b>${t('brain_title')}</b></div>
+      <div class="brainhead"><span class="msr" aria-hidden="true">neurology</span><b>${t('brain_title')}</b></div>
       <div class="bsubtle">${t('brain_sub')}</div>
       ${stale}
       <div class="braintiles">
@@ -3217,7 +3249,7 @@ function renderBrain(){
         ${gateRow(t('brain_mkt_players'), t('brain_mkt_players_s'))}
         ${gateRow(t('brain_mkt_combos'), t('brain_mkt_combos_s'))}
       </div>
-      <div class="bsect">💡 ${t('brain_learning')}</div>
+      <div class="bsect"><span class="msr" aria-hidden="true">lightbulb</span>${t('brain_learning')}</div>
       <div class="blearns">${learns.map(s => `<div class="blearn">${esc(s)}</div>`).join('') || `<div class="bempty">${t('brain_accum')}</div>`}</div>
       ${sigs.length ? `<div class="bsect">${t('brain_signals')}</div><div class="bsigs">${sigs.map(sigBar).join('')}</div>` : ''}
       ${calChart(d.history)}
@@ -3270,7 +3302,7 @@ function boletoHtml(){
     return `<span class="bolrec-i">${esc(name)} <b class="${values.rate < 0.5 ? 'lo' : ''}">${values.wins}-${values.losses}</b></span>`;
   };
   const rec = todayRecord ? [recLine(t('rec_locks'), todayRecord.locks), recLine(t('rec_gems'), todayRecord.gems)].filter(Boolean).join('') : '';
-  const head = `<div class="bolhead"><span class="boltt">🎫 ${t('bol_title')}</span>${legs.length ? `<span class="boln num">${legs.length}</span>` : ''}</div>`;
+  const head = `<div class="bolhead"><span class="boltt">${t('bol_title')}</span>${legs.length ? `<span class="boln num">${legs.length}</span>` : ''}</div>`;
   if (!legs.length) return `<div class="boleto"><div class="boleto-in">${head}<div class="bolempty">${t('bol_none')}</div></div></div>`;
   const tierTxt = tr => tr === 'gema' ? t('tag_gem') : confLabel(tr);
   const rows = legs.map(({ ev, prediction, tier, pct }) => {
@@ -3294,7 +3326,7 @@ function topSignalEvents(){
 function topSignalsHtml(){
   const ranked = topSignalEvents();
   if (!ranked.length) return '';
-  const head = `<div class="bolhead"><span class="boltt">📊 ${t('top_title')}</span><span class="boln num">${ranked.length}</span></div>`;
+  const head = `<div class="bolhead"><span class="boltt">${t('top_title')}</span><span class="boln num">${ranked.length}</span></div>`;
   const rows = ranked.map(ev => {
     const prediction = publicPrediction(ev), pct = predictionProbabilityPercent(prediction);
     const rank = Number.isFinite(Number(ev.top_signal.rank)) ? Number(ev.top_signal.rank) : '—';
@@ -3331,7 +3363,7 @@ function runIndicatorNote(){
 function runIndicatorsHtml(){
   const ranked = runIndicatorEvents();
   if (!ranked.length) return '';
-  const head = `<div class="bolhead"><span class="boltt">📈 ${t('runind_title')}</span><span class="boln num">${ranked.length}</span></div>`;
+  const head = `<div class="bolhead"><span class="boltt">${t('runind_title')}</span><span class="boln num">${ranked.length}</span></div>`;
   const rows = ranked.map(ev => {
     const indicator = ev.run_indicator;
     const line = runIndicatorNumber(indicator.market_line);
@@ -3683,7 +3715,7 @@ function renderHistDash(){
         <div class="dtile"><div class="lb">${t('hd_acc')}</div><div class="vl num" style="color:var(--volt)">${pct}%</div><div class="sub2">${t('hd_acc_sub')}</div></div>
         <div class="dtile"><div class="lb">${t('hd_streak')}</div><div class="vl num">${streak > 0 ? t('abbr_w') + streak : '—'}</div><div class="sub2">${t('hd_streak_sub')}</div></div>
         ${lockPicks.length ? `<div class="dtile"><div class="lb">${t('tr_locks')}</div><div class="vl num"><span style="color:var(--volt)">${lw}</span>–<span style="color:var(--faint)">${ll}</span></div><div class="sub2 num" style="color:${pricedLocks.length ? (finalU < 0 ? 'var(--red)' : 'var(--volt)') : 'var(--dim)'}">${pricedLocks.length ? `${finalU > 0 ? '+' : ''}${finalU}u ${t('tr_actual_odds').replace('{n}', pricedLocks.length)}` : t('tr_units_soon')}</div></div>` : ''}
-        ${gemPicks.length ? `<div class="dtile"><div class="lb">${t('tr_gems')}</div><div class="vl num"><span style="color:var(--volt)">${gw}</span>–<span style="color:var(--faint)">${gl}</span></div><div class="sub2">${gw + gl} 💎 ${t('tr_measured')}</div></div>` : ''}
+        ${gemPicks.length ? `<div class="dtile"><div class="lb">${t('tr_gems')}</div><div class="vl num"><span style="color:var(--volt)">${gw}</span>–<span style="color:var(--faint)">${gl}</span></div><div class="sub2">${gw + gl} · ${t('tr_measured')}</div></div>` : ''}
       </div>
       ${unitsCurve}
       <div class="secttl">${t('hd_byday')}</div>
@@ -3789,9 +3821,10 @@ function soccerLineupCard(lu){
 function soccerEventRow(e){
   const t = String(e.type || '').toLowerCase();
   const side = ['home', 'away', 'neutral'].includes(e.side) ? e.side : '';
-  const icon = (e.scoring || t.includes('goal')) ? '⚽'
-    : t.includes('yellow') ? '🟨' : t.includes('red') ? '🟥'
-    : t.includes('sub') ? '🔁' : t.includes('penalty') ? '🎯' : '•';
+  const iconName = (e.scoring || t.includes('goal')) ? 'sports_soccer'
+    : t.includes('yellow') || t.includes('red') ? 'rectangle'
+    : t.includes('sub') ? 'swap_horiz' : t.includes('penalty') ? 'adjust' : 'fiber_manual_record';
+  const icon = `<span class="msr" aria-hidden="true">${iconName}</span>`;
   return `<div class="evrow ${side}">
     <span class="evmin num">${esc(e.clock || '')}</span>
     <span class="evic">${icon}</span>
@@ -4146,8 +4179,8 @@ function renderDetail(){
             <b class="lvname">${esc(a.name || '')}</b>
             ${a.summary ? `<span class="lvsum num">${esc(a.summary)}</span>` : ''}</div>` : '';
         mid += `<div class="lvmatch">
-          ${duo('⚾', t('d_atbat'), s.batter)}
-          ${duo('🥎', t('d_pitching'), s.pitcher)}
+          ${duo('<span class="msr" aria-hidden="true">sports_baseball</span>', t('d_atbat'), s.batter)}
+          ${duo('<span class="msr" aria-hidden="true">sports_baseball</span>', t('d_pitching'), s.pitcher)}
           ${s.lastPlay ? `<div class="lvplay">${esc(s.lastPlay)}</div>` : ''}</div>`;
       }
     }
@@ -4199,7 +4232,7 @@ function renderDetail(){
 
   const verdictBox = p.pick && snap.verdict_es ? `
     <div class="verdict">
-      <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFC53D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 8.5 22 9.3 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.3 9 8.5z"/></svg></span>
+      <span class="ic msr" aria-hidden="true">stars</span>
       <p><span class="vt">${t('d_verdict')}</span>${esc(publicVerdictView(snap, lang, t('d_note')))}</p>
     </div>` : '';
 
@@ -4415,8 +4448,8 @@ function renderDetail(){
       .map(x => ({ ...x, k9: strictFiniteNumber(x.p?.k9) })).filter(x => x.p && x.k9 != null);
     if (!bats.length && !kPit.length) return '';
     const maxK = kPit.length ? Math.max(...kPit.map(x => x.k9)) : 0;
-    const hrBlk = bats.length ? `<div class="propsub">🏟 ${t('props_hr')}</div><div class="propgrid">${bats.map(b => `<div class="prop"><span class="pnm">${logoImg(b.code)}${esc(b.name)}</span><span class="pval num"><b>${b.hr}</b> HR · ${b.ops != null ? (+b.ops).toFixed(3) : '—'} OPS</span></div>`).join('')}</div>` : '';
-    const kBlk = kPit.length ? `<div class="propsub">🔥 ${t('props_k')}</div><div class="propgrid">${kPit.map(x => `<div class="prop"><span class="pnm">${logoImg(x.code)}${esc(x.p.name || '?')}</span><span class="pval num ${x.k9 === maxK ? 'hot' : ''}"><b>${x.k9}</b> K/9</span></div>`).join('')}</div>` : '';
+    const hrBlk = bats.length ? `<div class="propsub"><span class="msr" aria-hidden="true">stadium</span>${t('props_hr')}</div><div class="propgrid">${bats.map(b => `<div class="prop"><span class="pnm">${logoImg(b.code)}${esc(b.name)}</span><span class="pval num"><b>${b.hr}</b> HR · ${b.ops != null ? (+b.ops).toFixed(3) : '—'} OPS</span></div>`).join('')}</div>` : '';
+    const kBlk = kPit.length ? `<div class="propsub"><span class="msr" aria-hidden="true">local_fire_department</span>${t('props_k')}</div><div class="propgrid">${kPit.map(x => `<div class="prop"><span class="pnm">${logoImg(x.code)}${esc(x.p.name || '?')}</span><span class="pval num ${x.k9 === maxK ? 'hot' : ''}"><b>${x.k9}</b> K/9</span></div>`).join('')}</div>` : '';
     return `<div class="secttl">${t('props_title')}</div>${hrBlk}${kBlk}<div class="propnote">${t('props_note')}</div>`;
   })();
   const equipos = `
@@ -5397,7 +5430,7 @@ function top2Banner(){
   const doc = sportModelDocs.get(sport);
   if (qaMode && doc?.qa){
     const n = Number(doc.row_count || 0);
-    return `<div class="recentnote"><b>🧪 QA</b> · <span class="num">${n}</span> ${t('qa_signal_count')}</div>`;
+    return `<div class="recentnote"><b>QA</b> · <span class="num">${n}</span> ${t('qa_signal_count')}</div>`;
   }
   const documentAllowed = publicationAuthorityAllows(doc, true, false);
   const picks = documentAllowed && Array.isArray(doc?.top2) ? doc.top2.filter(item => predictionIsPublic(item)).slice(0, 2) : [];
@@ -5408,16 +5441,16 @@ function top2Banner(){
   const fmt4 = (value) => value != null && Number.isFinite(Number(value)) ? Number(value).toFixed(4) : '—';
   const fmtN = (value) => value != null && Number.isFinite(Number(value)) ? Number(value).toLocaleString(LOCALE()) : '—';
   const evidence = historical.n != null ? `<div class="model-evidence" role="status">
-    <div class="model-evidence-head"><b>🧠 ${t('sport_model_evidence')}</b><span>${t('sport_training_gate')}</span></div>
+    <div class="model-evidence-head"><b><span class="msr" aria-hidden="true">neurology</span>${t('sport_model_evidence')}</b><span>${t('sport_training_gate')}</span></div>
     <div class="model-evidence-grid">
       <div class="model-evidence-cell"><b class="num">${fmtPct(historical.accuracy)}</b><span>${t('sport_hist_accuracy')}</span></div>
       <div class="model-evidence-cell"><b class="num">${fmtN(historical.n)}</b><span>${t('sport_hist_sample')}</span></div>
       <div class="model-evidence-cell"><b class="num">${fmt4(historical.brier)}</b><span>${t('sport_hist_brier')}</span></div>
     </div>
     <div class="model-evidence-note">${t('sport_forward_progress')}: <span class="num">${fmtN(forward.n)} / ${fmtN(learning.gate?.min_forward)}</span> · ${t('sport_no_game_pct')}</div>
-  </div>` : `<div class="recentnote">🧪 ${t('sport_training_gate')}</div>`;
+  </div>` : `<div class="recentnote">${t('sport_training_gate')}</div>`;
   if (!picks.length) return evidence;
-  return `<div class="recentnote"><b>🎯 ${t('sport_top2')}</b> · ${picks.map(p => `${esc(p.pick)}${p.line != null ? ` ${esc(p.line)}` : ''} <span class="num">${esc(predictionProbabilityPercent(p))}%</span>`).join(' · ')}</div>`;
+  return `<div class="recentnote"><b>${t('sport_top2')}</b> · ${picks.map(p => `${esc(p.pick)}${p.line != null ? ` ${esc(p.line)}` : ''} <span class="num">${esc(predictionProbabilityPercent(p))}%</span>`).join(' · ')}</div>`;
 }
 
 // ⚽ Predicciones AA de soccer. Solo loadOther instala el documento completo,
@@ -5453,7 +5486,7 @@ function soccerHonestyHtml(){
   const recTxt = validRecord ? `<b class="num ${recWr != null && recWr < 0.5 ? 'lo' : ''}">${recW}-${recL}</b>${recWr != null ? ` · <span class="num">${Math.round(recWr * 100)}%</span>` : ''}` : t('sc_rec_none');
   const testN = strictCount(s.n_test);
   return `<div class="scho glass-in">
-      <div class="schh">🔬 ${t('sc_val_title')}</div>
+      <div class="schh"><span class="msr" aria-hidden="true">science</span>${t('sc_val_title')}</div>
       <div class="schsub">${esc(t('sc_val_sub').replace('{n}', testN == null ? '—' : testN.toLocaleString(LOCALE())))}</div>
       ${bt ? `<div class="scbts">${bt}</div>` : ''}
       <div class="schrec"><span class="l">${t('sc_live')} <span class="scsince">(${t('sc_since')} ${esc(s.since || '')})</span></span>${recTxt}</div>
@@ -5555,7 +5588,7 @@ function polyToast(msg){
   el.textContent = msg; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 1900);
 }
 // Compartir un partido (tarjeta con OpenGraph vía /share/<kind>/<id>).
-const SHARE_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>';
+const SHARE_SVG = '<span class="msr" aria-hidden="true">share</span>';
 async function shareGame(kind, id){
   const url = `${location.origin}/share/${kind}/${encodeURIComponent(id)}`;
   try { if (navigator.share){ await navigator.share({ title: 'AA Sports', text: t('share_txt'), url }); return; } } catch (e) { return; }
@@ -6263,7 +6296,7 @@ function renderOtherDetail(){
         <div class="formside"><div class="fh">${oLogo(g.away)}${esc(oName(g.away))}</div>${injuryRows('nba', g.away.code)}</div>
         <div class="formside"><div class="fh">${oLogo(g.home)}${esc(oName(g.home))}</div>${injuryRows('nba', g.home.code)}</div>
       </div>` : ''}
-      ${((sport === 'soccer' && predFor(g)) || usPr || FACTUAL_MARKET_SPORTS.has(sport) || (qaMode && ['ncaaf', 'nhl', 'ncaam'].includes(sport))) ? '' : `<div class="verdict"><span class="ic">🧪</span>
+      ${((sport === 'soccer' && predFor(g)) || usPr || FACTUAL_MARKET_SPORTS.has(sport) || (qaMode && ['ncaaf', 'nhl', 'ncaam'].includes(sport))) ? '' : `<div class="verdict"><span class="ic msr" aria-hidden="true">science</span>
         <p><span class="vt">${t('w_train')}</span>${t('sc_train_p').replace('{sport}', esc(sportLabel(sport)))}</p>
       </div>`}
       ${standingsHtml()}
@@ -6454,7 +6487,7 @@ function notifyFavGames(){
       const lv = lvOf(ev);
       const nm = `${ev.away?.code || '?'} @ ${ev.home?.code || '?'}`;
       const sc = (lv && lv.away && lv.home && lv.away.score != null && lv.home.score != null) ? ` ${lv.away.score}-${lv.home.score}` : '';
-      const title = st === 'live' ? `⚾ ${nm} — ${t('notif_live')}` : `⚾ ${nm} — ${t('notif_final')}${sc}`;
+      const title = st === 'live' ? `${nm} — ${t('notif_live')}` : `${nm} — ${t('notif_final')}${sc}`;
       try { new Notification(title, { tag: 'aa-mlb-' + id, body: st === 'live' ? t('notif_live_b') : t('notif_final_b') }); } catch (e) {}
     }
   }

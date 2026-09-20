@@ -97,6 +97,7 @@ try {
   await run.page.locator('.object-profile[data-object-kind="player"]').waitFor();
   assert.equal(new URL(await run.page.url()).searchParams.get('p'), '605400', 'player route was not written');
   assert.equal(await run.page.locator('#objectProfileTitle').innerText(), 'Logan Allen');
+  await run.page.locator('#faceCaption-605400').waitFor({ state: 'visible' });
   assert.equal(await run.page.locator('#faceCaption-605400').isVisible(), true, 'official-photo caption did not appear after a real load');
   assert.equal(await run.page.locator('.player-profile').getByText('FIP').isVisible(), true, 'event stats are missing from player page');
   assert.equal(await run.page.locator('#objectProfileTitle').evaluate(el => el === document.activeElement), true, 'player page heading did not receive focus');
