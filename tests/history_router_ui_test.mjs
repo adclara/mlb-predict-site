@@ -713,8 +713,12 @@ try {
     const page = await context.newPage();
     let releaseSoccer;
     let signalSoccerRequested;
+    let releaseNba;
+    let signalNbaRequested;
     const soccerGate = new Promise(resolveGate => { releaseSoccer = resolveGate; });
     const soccerRequested = new Promise(resolveRequest => { signalSoccerRequested = resolveRequest; });
+    const nbaGate = new Promise(resolveGate => { releaseNba = resolveGate; });
+    const nbaRequested = new Promise(resolveRequest => { signalNbaRequested = resolveRequest; });
     await page.route('**/v1/**', async route => {
       const path = new URL(route.request().url()).pathname;
       if (path === '/v1/mlb/today') return json(route, { sport: 'mlb', date: today, events, record: null });
@@ -725,13 +729,19 @@ try {
         await soccerGate;
         return json(route, { sport: 'soccer', marker: 'stale-soccer-model', by_id: {} });
       }
-      if (path === '/v1/nba/live') return json(route, { sport: 'nba', games: [nbaGame] });
+      if (path === '/v1/nba/live') {
+        signalNbaRequested();
+        await nbaGate;
+        return json(route, { sport: 'nba', games: [nbaGame] });
+      }
       if (path === '/v1/nba/recent') return json(route, { sport: 'nba', games: [] });
       return json(route, {});
     });
     await page.goto(`${base}/?s=soccer`, { waitUntil: 'domcontentloaded' });
     await soccerRequested;
     await page.locator('.sp[data-sport="nba"]').click();
+    await nbaRequested;
+    releaseNba();
     await page.locator('.mrow[data-oid="n1"]').waitFor();
     releaseSoccer();
     await page.waitForTimeout(80);
