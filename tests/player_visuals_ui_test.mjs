@@ -100,6 +100,7 @@ try {
   await run.page.locator('#faceCaption-605400').waitFor({ state: 'visible' });
   assert.equal(await run.page.locator('#faceCaption-605400').isVisible(), true, 'official-photo caption did not appear after a real load');
   assert.equal(await run.page.locator('.player-profile').getByText('FIP').isVisible(), true, 'event stats are missing from player page');
+  await run.page.waitForFunction(() => document.activeElement?.id === 'objectProfileTitle');
   assert.equal(await run.page.locator('#objectProfileTitle').evaluate(el => el === document.activeElement), true, 'player page heading did not receive focus');
 
   await run.page.locator('#dback').click();
