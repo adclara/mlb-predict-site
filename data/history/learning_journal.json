@@ -1,31 +1,31 @@
 {
-  "updated_at": "2026-09-21T15:59:54.326Z",
+  "updated_at": "2026-09-22T14:09:00.294Z",
   "cohort_version": "causal_ledger_v2",
-  "n_graded": 2062,
-  "n_total": 2343,
+  "n_graded": 2065,
+  "n_total": 2358,
   "first_date": "2026-03-25",
-  "last_date": "2026-09-20",
+  "last_date": "2026-09-21",
   "formula_version": "v2",
   "cal": {
     "gap": 10.5,
     "ece": 10.5,
     "says": 65.2,
-    "hits": 54.7,
+    "hits": 54.6,
     "curve": [
       {
         "conf": 52.4,
-        "emp": 49.6,
-        "n": 228
+        "emp": 49.8,
+        "n": 229
       },
       {
         "conf": 57.6,
-        "emp": 56.1,
-        "n": 296
+        "emp": 55.9,
+        "n": 297
       },
       {
         "conf": 62.5,
-        "emp": 50.7,
-        "n": 428
+        "emp": 50.6,
+        "n": 429
       },
       {
         "conf": 67.4,
@@ -65,11 +65,11 @@
     ]
   },
   "market": {
-    "model_acc": 56.3,
+    "model_acc": 56.2,
     "market_acc": 57.4,
     "verdict": "mercado mejor",
     "auditable": true,
-    "n": 730,
+    "n": 733,
     "min_n": 40
   },
   "lock_gate": {
@@ -89,23 +89,36 @@
       "edge_pp": 7.6,
       "verdict": "robusto",
       "fav_rate": 60.3
+    },
+    {
+      "id": "aux_haf",
+      "label": "Mejor forma casa/ruta específica",
+      "label_en": "Better venue-specific form",
+      "edge_pp": 6.1,
+      "verdict": "robusto",
+      "fav_rate": 57.9
     }
   ],
   "state_es": [
-    "Ya llevo 2062 predicciones medidas (desde 2026-03-25). Todo lo que aprendo sale de mis propios aciertos y errores.",
-    "Sé que soy algo sobre-confiado: cuando digo ~65% en promedio, ocurre ~54.7% (hueco de 10.5 pts). Por eso el número que muestro ya viene calibrado hacia abajo.",
-    "Estas hipótesis pasaron el filtro histórico: 5+ factores de acuerdo con el pick (+7.6 pts). Son diferencias medidas en el replay y siguen en validación forward; todavía no prueban una ventaja futura.",
-    "En la cohorte de aperturas auditables, el acierto medido de la apertura es 57.4% y el del modelo 56.3%; no afirmo ventaja sobre el mercado.",
-    "De mi último error (NYY @ AZ 4-8): me fié de bateo y momento reciente y no funcionó. Lo peso en la próxima re-calibración."
+    "Ya llevo 2065 predicciones medidas (desde 2026-03-25). Todo lo que aprendo sale de mis propios aciertos y errores.",
+    "Sé que soy algo sobre-confiado: cuando digo ~65% en promedio, ocurre ~54.6% (hueco de 10.5 pts). Por eso el número que muestro ya viene calibrado hacia abajo.",
+    "Estas hipótesis pasaron el filtro histórico: 5+ factores de acuerdo con el pick (+7.6 pts), Mejor forma casa/ruta específica (+6.1 pts). Son diferencias medidas en el replay y siguen en validación forward; todavía no prueban una ventaja futura.",
+    "En la cohorte de aperturas auditables, el acierto medido de la apertura es 57.4% y el del modelo 56.2%; no afirmo ventaja sobre el mercado.",
+    "De mi último error (MIN @ SF 2-5): me fié de momento reciente y primeras cinco entradas y no funcionó. Lo peso en la próxima re-calibración."
   ],
   "state_en": [
-    "I've now measured 2062 predictions (since 2026-03-25). Everything I learn comes from my own hits and misses.",
-    "I know I run a bit overconfident: when I say ~65% on average, it happens ~54.7% (a 10.5-pt gap). That's why the number I show is already calibrated downward.",
-    "These hypotheses passed the historical screen: 5+ factors agree with the pick (+7.6 pts). They are measured replay differences and remain under forward validation; they do not yet prove a future edge.",
-    "In the auditable-opening cohort, measured opener accuracy is 57.4% versus 56.3% for the model; I do not claim an edge over the market.",
-    "From my latest miss (NYY @ AZ 4-8): I leaned on offense and recent form and it didn't pan out. I weigh that into the next re-calibration."
+    "I've now measured 2065 predictions (since 2026-03-25). Everything I learn comes from my own hits and misses.",
+    "I know I run a bit overconfident: when I say ~65% on average, it happens ~54.6% (a 10.5-pt gap). That's why the number I show is already calibrated downward.",
+    "These hypotheses passed the historical screen: 5+ factors agree with the pick (+7.6 pts), Better venue-specific form (+6.1 pts). They are measured replay differences and remain under forward validation; they do not yet prove a future edge.",
+    "In the auditable-opening cohort, measured opener accuracy is 57.4% versus 56.2% for the model; I do not claim an edge over the market.",
+    "From my latest miss (MIN @ SF 2-5): I leaned on recent form and first-five innings and it didn't pan out. I weigh that into the next re-calibration."
   ],
   "log": [
+    {
+      "date": "2026-09-21",
+      "es": "Sumé 3 predicciones medidas nuevas.",
+      "en": "Added 3 newly measured predictions."
+    },
     {
       "date": "2026-09-20",
       "es": "Sumé 13 predicciones medidas nuevas.",
@@ -198,11 +211,6 @@
     },
     {
       "date": "2026-09-02",
-      "es": "Sumé 13 predicciones medidas nuevas.",
-      "en": "Added 13 newly measured predictions."
-    },
-    {
-      "date": "2026-09-01",
       "es": "Sumé 13 predicciones medidas nuevas.",
       "en": "Added 13 newly measured predictions."
     }
@@ -565,6 +573,15 @@
       "gap": 10.5,
       "ece": 10.5,
       "model_acc": 56.3,
+      "market_acc": 57.4,
+      "cohort_version": "causal_ledger_v2"
+    },
+    {
+      "date": "2026-09-21",
+      "n": 2065,
+      "gap": 10.5,
+      "ece": 10.5,
+      "model_acc": 56.2,
       "market_acc": 57.4,
       "cohort_version": "causal_ledger_v2"
     }
