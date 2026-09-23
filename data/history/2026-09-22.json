@@ -264,6 +264,21 @@
     "824953": "2026-09-23T01:40:00Z"
   },
   "starter_invalidations": {
+    "823897": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-09-23T00:15:46.311Z",
+      "scheduled_start_utc": "2026-09-23T02:10:00Z",
+      "phase": "pregame",
+      "changes": [
+        {
+          "side": "home",
+          "from_id": null,
+          "to_id": "592779",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (local: TBD → Brock Stewart) — el análisis original ya no aplica"
+    },
     "824222": {
       "reason": "probable_starter_changed",
       "detected_at": "2026-09-22T18:43:59.646Z",
@@ -316,7 +331,59 @@
       "note": "Abridor cambió (local: Chris Bassitt → TBD · visita: Max Scherzer → TBD) — el análisis original ya no aplica"
     }
   },
-  "starter_observations": {},
+  "starter_observations": {
+    "824222": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-09-23T00:15:46.311Z",
+      "scheduled_start_utc": "2026-09-22T22:40:00Z",
+      "phase": "late_or_unknown",
+      "changes": [
+        {
+          "side": "away",
+          "from_id": "800600",
+          "to_id": "683000",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (visita: Jackson Kent → Riley Cornelio) — el análisis original ya no aplica"
+    },
+    "824624": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-09-23T00:15:46.311Z",
+      "scheduled_start_utc": "2026-09-22T23:40:00Z",
+      "phase": "late_or_unknown",
+      "changes": [
+        {
+          "side": "home",
+          "from_id": null,
+          "to_id": "684007",
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (local: TBD → Shota Imanaga) — el análisis original ya no aplica"
+    },
+    "824785": {
+      "reason": "probable_starter_changed",
+      "detected_at": "2026-09-23T00:15:46.311Z",
+      "scheduled_start_utc": "2026-09-22T22:35:00Z",
+      "phase": "late_or_unknown",
+      "changes": [
+        {
+          "side": "home",
+          "from_id": "605135",
+          "to_id": null,
+          "source": "effective"
+        },
+        {
+          "side": "away",
+          "from_id": "453286",
+          "to_id": null,
+          "source": "effective"
+        }
+      ],
+      "note": "Abridor cambió (local: Chris Bassitt → TBD · visita: Max Scherzer → TBD) — el análisis original ya no aplica"
+    }
+  },
   "shadow": {
     "late_plays": [],
     "market_plays": [
@@ -1239,17 +1306,19 @@
           "aa_home_prob": 0.5632,
           "agrees_with_aa": true,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.727,
+            "away_lineup_ops": 0.742,
+            "ops_diff": -0.015,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-09-23T00:15:46.311Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": false,
           "scheduled_start_utc": "2026-09-23T01:40:00Z",
           "feature_as_of": "2026-09-22T11:51:35.448Z",
           "features": {
@@ -1272,7 +1341,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "ef08b22dddd5850c67ceb218fe49fda1969d85cabf473f1d439ce8bdfeb00952"
         },
         {
           "game_pk": 823166,
@@ -1288,17 +1358,19 @@
           "aa_home_prob": 0.483,
           "agrees_with_aa": false,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.608,
+            "away_lineup_ops": 0.701,
+            "ops_diff": -0.093,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-09-23T00:15:46.311Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": false,
           "scheduled_start_utc": "2026-09-23T01:45:00Z",
           "feature_as_of": "2026-09-22T11:51:35.448Z",
           "features": {
@@ -1321,7 +1393,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "04018c4e918164c52ffa12e55442df06b6e59bb92215f23d23e6e30d1ff20599"
         },
         {
           "game_pk": 823897,
@@ -1337,17 +1410,19 @@
           "aa_home_prob": 0.5353,
           "agrees_with_aa": false,
           "player_context": {
-            "both_complete": false,
-            "home_coverage": 0,
-            "away_coverage": 0,
-            "home_lineup_ops": 0,
-            "away_lineup_ops": 0,
-            "ops_diff": 0,
+            "both_complete": true,
+            "home_coverage": 1,
+            "away_coverage": 1,
+            "home_lineup_ops": 0.794,
+            "away_lineup_ops": 0.736,
+            "ops_diff": 0.058,
             "state": "forward_shadow",
             "model_weight": 0,
-            "changes_public_probability": false
+            "changes_public_probability": false,
+            "captured_at": "2026-09-23T00:15:46.311Z",
+            "temporal_scope": "pregame_context"
           },
-          "lineup_agrees_with_lab": null,
+          "lineup_agrees_with_lab": true,
           "scheduled_start_utc": "2026-09-23T02:10:00Z",
           "feature_as_of": "2026-09-22T11:51:35.448Z",
           "features": {
@@ -1370,7 +1445,8 @@
           "record_scope": "shadow_forward_gate",
           "eligible_public_record": false,
           "ledger_version": "v2",
-          "temporal_scope": "public_live"
+          "temporal_scope": "public_live",
+          "player_context_hash": "df8b5d2d38a433ffb5c5082709bec96513e3f23c597b142191c045bae605a86e"
         }
       ]
     }
