@@ -425,8 +425,10 @@ try {
     linkTag: 'A', href: '/?s=mlb&g=g1', linkHeight: mlbMarkup.linkHeight,
     favoriteTag: 'BUTTON', favoriteHeight: mlbMarkup.favoriteHeight, favoriteSibling: true, nestedInteractive: 0,
   }, 'MLB row must have a noninteractive outer row with sibling link/favorite controls');
-  assert.ok(mlbMarkup.linkHeight >= 44, `MLB link target ${mlbMarkup.linkHeight}px`);
-  assert.ok(mlbMarkup.favoriteHeight >= 44, `MLB favorite target ${mlbMarkup.favoriteHeight}px`);
+  // WebKit can report a 44px CSS target as 43.999969px after subpixel layout.
+  const targetTolerance = 0.001;
+  assert.ok(mlbMarkup.linkHeight >= 44 - targetTolerance, `MLB link target ${mlbMarkup.linkHeight}px`);
+  assert.ok(mlbMarkup.favoriteHeight >= 44 - targetTolerance, `MLB favorite target ${mlbMarkup.favoriteHeight}px`);
   const beforeFavorite = mlbRows.page.url();
   await mlbRows.page.locator('.mrow[data-id="g1"] [data-star]').click();
   assert.equal(mlbRows.page.url(), beforeFavorite, 'favorite navigated to object');
