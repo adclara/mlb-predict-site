@@ -2940,11 +2940,9 @@ function rowHtml(ev, idx){
   else timeCol = t('today');
 
   const validPick = p.pick;
-  const liveWpHome = (st === 'live' && lv && typeof lv.win_prob_home === 'number') ? lv.win_prob_home : null;
-  const pickHome = validPick && canon(p.pick) === canon(ev.home.code);
-  const pickPct = validPick
-    ? (liveWpHome == null ? predictionProbabilityPercent(p) : Math.round((pickHome ? liveWpHome : 1 - liveWpHome) * 100))
-    : null;
+  // This cell is explicitly labeled as an AA prediction. Never replace it with
+  // ESPN's in-game win probability, even when live scores are available.
+  const pickPct = validPick ? predictionProbabilityPercent(p) : null;
   const sp2 = ev.snapshot && ev.snapshot.pitchers;
   const pitcher = (side) => {
     const value = sp2 && sp2[side];
