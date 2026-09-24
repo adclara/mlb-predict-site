@@ -164,6 +164,9 @@ try {
   await desktop.page.locator('.dtabs [data-dt="participantes"]').focus();
   await desktop.page.keyboard.press('End');
   assert.equal(await desktop.page.locator('.dtabs [data-dt="evidencia"]').getAttribute('aria-selected'), 'true', 'End did not select Evidence');
+  await desktop.page.locator('.dtabs [data-dt="analisis"]').click();
+  await desktop.page.locator('#langbtn').click();
+  assert.equal(await desktop.page.locator('#dcard .whylist').count(), 0, 'Spanish-only reasons leaked into the English detail');
   assert.deepEqual(desktop.errors, [], 'desktop emitted application errors');
   await desktop.context.close();
 
