@@ -21,6 +21,7 @@ The implementation preserves the selected concept's hierarchy: narrow rail, comp
 - Exactly one element uses `[data-canonical-probability]`.
 - Scope, source, updated time, status and limitation are adjacent to the canonical reading.
 - Markets live inside Summary/Resumen instead of becoming a fourth primary tab.
+- The market selector is functional: Winner exposes source-backed market/price/EV evidence when available; closed markets expose a gate explanation and measured sample state.
 - Left/Right/Home/End keyboard navigation, focus state and ARIA tab semantics were exercised.
 - Browser inspection found no horizontal document overflow and no application console errors or warnings.
 
