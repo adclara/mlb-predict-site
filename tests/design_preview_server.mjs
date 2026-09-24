@@ -25,8 +25,8 @@ const game = (id, away, home, hour, pct, pick, pending = false) => ({
     { key: 'metric_risk', label: 'Riesgo', value: 'bajo', kind: 'risk' },
   ],
   snapshot: {
-    verdict_es: 'La lectura AA favorece al local con una ventaja medida y calibrada.',
-    verdict_en: 'The calibrated AA read favors the home side with a measured edge.',
+    verdict_es: 'La lectura AA favorece al local; sin cuota auditada no se afirma ventaja frente al mercado.',
+    verdict_en: 'The calibrated AA read favors the home side; without an audited price, no market edge is claimed.',
     pitchers: {
       away: { id: 660271, name: 'Pablo López', hand: 'R', era: 3.84, era_recent: 3.7, fip: 3.9, k9: 8.2 },
       home: { id: 605400, name: 'Logan Allen', hand: 'L', era: 3.12, era_recent: 3.2, fip: 3.4, k9: 9.1 },
