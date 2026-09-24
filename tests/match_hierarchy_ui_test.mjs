@@ -137,6 +137,8 @@ try {
   await desktop.page.locator('.mrow').first().waitFor();
   assert.equal(await desktop.page.locator('.schedule-head').isVisible(), true, 'desktop schedule header is hidden');
   assert.equal(await desktop.page.locator('.mrow').count(), 7, 'schedule lost or duplicated a game');
+  assert.match(await desktop.page.locator('.mrow[data-id="g3"] .mpred').textContent(), /AA calibrado[\s\S]*54%/i, 'live ESPN probability was mislabeled as calibrated AA in the schedule');
+  assert.doesNotMatch(await desktop.page.locator('.mrow[data-id="g3"] .mpred').textContent(), /58%/, 'live ESPN probability displaced the AA prediction');
   assert.deepEqual(await desktop.page.locator('.schedule-kpis dd').allTextContents(), ['7', '6', '1', '0'], 'summary counts disagree with rows');
   assert.equal(await desktop.page.locator('.mrow').evaluateAll(rows => rows.slice(0, 3).every(row => row.getBoundingClientRect().bottom <= innerHeight)), true, 'fewer than three complete rows fit at 1440x900');
   assert.equal(await desktop.page.locator('.mrow').evaluateAll(rows => rows.every(row => row.querySelectorAll(':scope > a[data-object-link]').length === 1 && row.querySelectorAll(':scope > button[data-star]').length === 1)), true, 'row link and sibling favorite contract broke');
