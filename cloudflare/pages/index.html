@@ -1269,7 +1269,7 @@ header{background:rgba(var(--page-rgb),.98);backdrop-filter:none;-webkit-backdro
 .search input{height:38px;border-color:var(--hair);border-radius:var(--r-6);background:var(--page);font-size:13px}
 .langbtn,.record{border-radius:var(--r-6);background:transparent}
 nav.sports{background:#08111d}
-.spwrap{max-width:none;padding:0 18px}
+.spwrap{max-width:none;padding:0 18px;scroll-padding-inline:18px}
 .sp{flex-direction:row;min-width:auto;gap:7px;padding:10px 14px 9px;font-size:12px}
 .sp>svg,.sp>.msr{width:18px;height:18px;font-size:18px}
 .sp .cnt{top:4px;right:5px}
@@ -1382,7 +1382,8 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
 .summary-markets{margin-top:22px;border-top:1px solid var(--hair)}
 .summary-markets>h3{font:700 18px/1.2 var(--font-display);padding:16px 0 10px}
 .market-status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--hair)}
-.market-status{min-height:72px;padding:11px 12px;border-left:1px solid var(--hair)}
+.market-status{min-height:72px;padding:11px 12px;border-left:1px solid var(--hair);text-align:left;width:100%;border-radius:0;background:#08111d}
+.market-status[aria-pressed="true"]{box-shadow:inset 0 -2px 0 var(--sky);background:rgba(var(--sky-rgb),.07)}
 .market-status:first-child{border-left:0}
 .market-status small{display:block;color:var(--faint);font-size:8px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
 .market-status b{display:block;margin-top:6px;font-size:11px;color:var(--dim)}
@@ -1408,7 +1409,7 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
 }
 @media (max-width:900px){
   .hwrap{padding:9px 12px}.hwrap>.logo{display:flex}.search{max-width:none}
-  .spwrap{padding:0 8px}.sp{padding-inline:11px}
+  .spwrap{padding:0 8px;scroll-padding-inline:8px}.sp{padding-inline:11px}
   .layout{padding:14px 12px 72px}
   .schedule-titlebar{align-items:flex-start;padding:18px 12px 16px}
   .schedule-titlebar h1{font-size:32px}.schedule-titlebar p{display:none}
@@ -2841,7 +2842,7 @@ function rowHtml(ev, idx){
   const done = st === 'final' && scored;
   let timeCol;
   if (st === 'live') timeCol = esc(shortDetail(lv) || t('f_live'));
-  else if (st === 'final') timeCol = t('f_final');
+  else if (st === 'final') timeCol = t('notif_final');
   else if (lv && /postpon/i.test(lv.status_detail || '')) timeCol = t('postponed');
   else if (ev.start && String(ev.start).includes('T')) timeCol = new Date(ev.start).toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit' });
   else timeCol = t('today');
@@ -2859,7 +2860,7 @@ function rowHtml(ev, idx){
     const meta = value?.era != null ? `ERA ${esc(value.era)}` : (value?.hand ? esc(value.hand) : '');
     return `<span class="mpitcher"><b>${name}</b><small class="num">${meta}</small></span>`;
   };
-  const statusLabel = st === 'live' ? t('f_live') : st === 'final' ? t('f_final') : t('f_pre');
+  const statusLabel = st === 'live' ? t('f_live') : st === 'final' ? t('notif_final') : t('f_pre');
   const sourceLine = rawPrediction.invalidated ? t('pred_invalid_list')
     : ev.pending && !validPick ? pendingPredictionLabel()
     : st === 'live' ? t('live_via_espn') : sp2 ? t('data_verified') : t('source_factual');
@@ -3991,7 +3992,7 @@ function renderDetail(){
   const snap = p.pick ? (ev.snapshot || {}) : {};
   const invalidNotice = rawPrediction.invalidated ? `<div class="pred-invalid-notice" role="alert"><span class="ic msr" aria-hidden="true">warning</span><span>${t('pred_invalid_detail')}</span></div>` : '';
   const canonicalPct = p.pick && !rawPrediction.invalidated ? predictionProbabilityPercent(p) : null;
-  const statusLabel = st === 'live' ? t('f_live') : st === 'final' ? t('f_final') : t('f_pre');
+  const statusLabel = st === 'live' ? t('f_live') : st === 'final' ? t('notif_final') : t('f_pre');
   const updatedLabel = mlbUpdatedAt
     ? new Date(mlbUpdatedAt).toLocaleString(LOCALE(), { dateStyle: 'medium', timeStyle: 'short' })
     : (todayDate || t('no_data'));
@@ -4064,15 +4065,6 @@ function renderDetail(){
     players: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'players_forward_validation_pending' } },
     combos: { state: 'closed', gate: { passed: false, approved: false, public: false, reason: 'combos_forward_validation_pending' } },
   };
-  const mlbMarketComparator = marketComparator({
-    activeSport: 'mlb', blocks: mlbMarketBlocks,
-    away: { ...ev.away, name: tNick(ev.away.code) }, home: { ...ev.home, name: tNick(ev.home.code) },
-    awayPct, homePct, logo: (side) => logoImg(side.code), source: liveWpHome != null ? 'espn' : 'aa',
-    pick: p.pick, risk: risk.level ? t('risk_' + risk.level) : null,
-    supplemental: p.confidence
-      ? `<span class="confpill">${t('d_confidence')} ${esc(confLabel(p.confidence))}</span>${tags}` : tags,
-  });
-
   // Resumen: una sola lectura AA canónica; el mercado queda subordinado aquí.
   let analisis = `
     ${invalidNotice}
@@ -4279,9 +4271,7 @@ function renderDetail(){
     ${snap.lineups ? `<div class="secttl">${t('d_lineup')}</div>
     <div class="formgrid">${lineupSide('away', ev.away.code)}${lineupSide('home', ev.home.code)}</div>` : `<div class="wempty">${t('lineup_pending')}</div>`}`;
 
-  const o = ev.odds || {};
   const mkt = snap.market;
-  const tot = snap.total;
   const candidateValue = snap.value;
   const valuePickSide = p.pick === ev.home.code ? 'home' : 'away';
   const valueMatches = candidateValue?.schema === 'aa-value-v1'
@@ -4299,7 +4289,6 @@ function renderDetail(){
     const best = val.best_side === side && s.ev_pct > 0;
     return `<tr class="${best ? 'best' : ''}">
       <td>${esc(tNick(code))}${best ? ` <span class="warnchip" style="color:var(--volt);border-color:rgba(var(--mint-rgb),.35);background:rgba(var(--mint-rgb),.08)">${t('d_value_badge')}</span>` : ''}</td>
-      <td class="num">${fmtPct(s.model_pct)}</td>
       <td class="num">${fmtPct(s.market_pct)}</td>
       <td class="num">${fmtMl(s.price)}</td>
       <td class="num ${s.ev_pct > 0 ? 'pos' : s.ev_pct < 0 ? 'neg' : ''}">${fmtPct(s.ev_pct, true)}</td>
@@ -4308,15 +4297,15 @@ function renderDetail(){
   const valueTbl = val ? `
     <div class="secttl">${t('d_value')}</div>
     <table class="valtbl">
-      <thead><tr><th>${t('d_team')}</th><th>AA</th><th>${t('d_market')}</th><th>${t('d_price')}</th><th>EV</th></tr></thead>
+      <thead><tr><th>${t('d_team')}</th><th>${t('d_market')}</th><th>${t('d_price')}</th><th>EV</th></tr></thead>
       <tbody>${valRow('away', ev.away.code)}${valRow('home', ev.home.code)}</tbody>
     </table>
     <p class="value-provenance" style="font-size:12px;color:var(--dim);padding-top:8px;overflow-wrap:anywhere">${t('d_value_source')} ${esc(val.probability_source)} · ${t('d_value_provider')} ${esc(val.provider || '—')}<br>${t('d_value_time')} ${esc(val.quote_as_of || '—')}</p>
     <p class="value-threshold" style="font-size:12px;color:var(--dim);padding-top:8px">${t('d_value_threshold')} ${esc(ev.away.code)} ${fmtNumber(val.away?.break_even_decimal)} · ${esc(ev.home.code)} ${fmtNumber(val.home?.break_even_decimal)}</p>
     <p style="font-size:11.5px;color:var(--faint);padding-top:8px">${t('d_ev_note')}</p>` : (mkt && homePct != null && strictProbabilityPct(mkt.p_home_pct) != null && strictProbabilityPct(mkt.p_away_pct) != null ? `
     <div class="secttl">${t('d_vs_market')}</div>
-    <div class="mktrow num"><span class="k">${esc(tNick(ev.home.code))}</span><span style="font-size:13px;color:var(--dim)">AA <b>${homePct}%</b> · ${t('d_market_lc')} <b>${mkt.p_home_pct}%</b></span></div>
-    <div class="mktrow num"><span class="k">${esc(tNick(ev.away.code))}</span><span style="font-size:13px;color:var(--dim)">AA <b>${awayPct}%</b> · ${t('d_market_lc')} <b>${mkt.p_away_pct}%</b></span></div>` : '');
+    <div class="mktrow num"><span class="k">${esc(tNick(ev.home.code))}</span><span style="font-size:13px;color:var(--dim)">${t('d_market_lc')} <b>${mkt.p_home_pct}%</b></span></div>
+    <div class="mktrow num"><span class="k">${esc(tNick(ev.away.code))}</span><span style="font-size:13px;color:var(--dim)">${t('d_market_lc')} <b>${mkt.p_away_pct}%</b></span></div>` : '');
   const booksRows = snap.books?.rows?.length ? `
     <div class="secttl" style="display:flex;align-items:center;gap:8px">${t('d_lines_by_book')} ${snap.books.disagree ? `<span class="warnchip">${t('d_books_disagree')}</span>` : ''}</div>
     ${snap.books.rows.map(b => `<div class="bookrow num">
@@ -4338,31 +4327,23 @@ function renderDetail(){
   })() : '';
   const marketSpread = strictFiniteNumber(mkt?.spread);
   const spreadRow = marketSpread != null ? `<div class="mktrow num"><span class="k">Run line</span><b>${marketSpread > 0 ? '+' : ''}${marketSpread}</b></div>` : '';
-  const totalLine = strictFiniteNumber(o.over_under) ?? strictFiniteNumber(tot?.line);
-  const totalAa = strictFiniteNumber(tot?.aa_total);
-  const totalProbability = strictProbabilityPct(tot?.prob_pct);
-  const totalLean = ['over', 'under'].includes(tot?.lean) ? tot.lean : null;
-  const mercado = `
-    ${valueTbl}
-    <div class="secttl" style="margin-top:16px">${t('d_total_runs')}</div>
-    <div class="mktrow num"><span class="k">${t('d_ou')}</span><b>${totalLine ?? '—'}</b>
-      ${totalAa != null ? `<span style="font-size:12.5px;color:var(--dim)">· ${t('d_aa_projects')} <b style="color:var(--sky)">${totalAa}</b> ${t('d_runs')}</span>` : ''}
-      ${totalLean ? `<span style="font-size:12.5px;color:var(--dim)">→ ${t('d_leans')} <b style="color:var(--sky)">${totalLean === 'over' ? 'Over' : 'Under'}</b>${totalProbability != null ? ` (${totalProbability}%)` : ''}</span>` : ''}</div>
-    ${spreadRow}
-    ${moveRow ? `<div class="secttl" style="margin-top:16px">${t('d_market')}</div>` + moveRow : ''}
-    ${booksRows}`;
-
   const marketLabels = { winner: 'market_winner', total: 'market_total', players: 'market_players', combos: 'market_combos' };
+  const selectedMlbMarket = MARKET_KEYS.includes(marketTab) ? marketTab : 'winner';
+  const normalizedMlbMarkets = Object.fromEntries(MARKET_KEYS.map(kind => [kind, measuredMarketBlock(mlbMarketBlocks[kind], kind)]));
   const marketStatusGrid = MARKET_KEYS.map(kind => {
-    const block = mlbMarketBlocks[kind];
+    const block = normalizedMlbMarkets[kind];
     const isPublic = block && block.state === 'public';
-    return `<div class="market-status ${isPublic ? 'public' : 'closed'}"><small>${t(marketLabels[kind])}</small><b>${isPublic ? t('market_public_short') : t('market_closed_short')}</b></div>`;
+    return `<button type="button" class="market-status ${isPublic ? 'public' : 'closed'}" data-market-kind="${kind}" aria-pressed="${selectedMlbMarket === kind}"><small>${t(marketLabels[kind])}</small><b>${isPublic ? t('market_public_short') : t('market_closed_short')}</b></button>`;
   }).join('');
   const factualMarketRows = `${spreadRow}${moveRow}${booksRows}`;
+  const selectedMlbBlock = normalizedMlbMarkets[selectedMlbMarket];
+  const summaryMarketDetail = selectedMlbMarket === 'winner' && selectedMlbBlock.state === 'public'
+    ? `${valueTbl}${factualMarketRows}`
+    : gatePanel(selectedMlbBlock, selectedMlbMarket, 'mlb');
   analisis += `<section class="summary-markets" aria-labelledby="summaryMarketsTitle">
     <h3 id="summaryMarketsTitle">${t('markets_in_summary')}</h3>
     <div class="market-status-grid">${marketStatusGrid}</div>
-    ${factualMarketRows ? `<div class="summary-market-detail">${factualMarketRows}</div>` : ''}
+    ${summaryMarketDetail ? `<div class="summary-market-detail">${summaryMarketDetail}</div>` : ''}
   </section>`;
 
   /* ── pestaña Simulación: 10,000 juegos Monte Carlo ── */
@@ -4466,7 +4447,7 @@ function renderSide(){
 /* ── interacción ─────────────────────────────────────────── */
 const AA_SPORTS = ['home','radar','mlb','soccer','nba','wnba','tennis','nfl','ncaaf','nhl','ncaam'];
 const AA_LIST_TABS = ['all','favs','pos','hist','brain','edu','tools','cfg'];
-const AA_DETAIL_TABS = ['analisis','equipos','pitchers','bateadores','sim','mercado'];
+const AA_DETAIL_TABS = ['analisis','participantes','evidencia'];
 const AA_MARKETS = ['winner','total','players','combos'];
 const aaRouteId = value => {
   const text = typeof value === 'string' ? value : '';
