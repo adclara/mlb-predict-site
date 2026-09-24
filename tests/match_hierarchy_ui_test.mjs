@@ -148,6 +148,8 @@ try {
   const href = await desktop.page.locator('.mrow[data-id="g1"] a[data-object-link]').getAttribute('href');
   assert.match(href, /[?&]g=g1(?:&|$)/, 'game row is not a real object URL');
   await desktop.page.locator('.mrow[data-id="g1"] a[data-object-link]').click();
+  assert.equal(await desktop.page.locator('#aaReadingTitle').textContent(), 'Gana Guardians', 'canonical reading heading has an ambiguous or concatenated label');
+  assert.match(await desktop.page.locator('#dcard').textContent(), /Razones de la lectura/, 'AA reading reasons use betting-oriented wording');
   await desktop.page.locator('[data-canonical-probability]').waitFor();
   assert.equal(await desktop.page.locator('.dtabs [role="tab"]').count(), 3, 'detail must expose exactly three primary tabs');
   assert.equal(await desktop.page.locator('[data-canonical-probability]').count(), 1, 'canonical AA probability is not unique');
@@ -168,6 +170,8 @@ try {
   assert.equal(await desktop.page.locator('.dtabs [data-dt="evidencia"]').getAttribute('aria-selected'), 'true', 'End did not select Evidence');
   await desktop.page.locator('.dtabs [data-dt="analisis"]').click();
   await desktop.page.locator('#langbtn').click();
+  assert.equal(await desktop.page.locator('#aaReadingTitle').textContent(), 'Guardians wins', 'English reading heading is unclear');
+  assert.equal(await desktop.page.evaluate(() => t('d_why')), 'Reasons for this reading', 'English reasons heading uses betting-oriented wording');
   assert.equal(await desktop.page.locator('#dcard .whylist').count(), 0, 'Spanish-only reasons leaked into the English detail');
   assert.deepEqual(desktop.errors, [], 'desktop emitted application errors');
   await desktop.context.close();
