@@ -245,14 +245,19 @@ async function installApiMocks(page) {
 
 function collectErrors(page) {
   const errors = [];
-  const networkNoise = /ERR_TUNNEL_CONNECTION_FAILED|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED|Failed to load resource|net::/i;
+  const knownExternalNoise = /Failed to load resource|ERR_TUNNEL_CONNECTION_FAILED|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED|Load request cancelled|NS_BINDING_ABORTED|Cross-Origin Request Blocked|blocked by CORS policy|CORS request did not succeed/i;
+  const isFirstParty = (url) => {
+    try { return new URL(url || page.url()).origin === new URL(base).origin; }
+    catch { return true; }
+  };
+  const shouldCollect = (url, message) => isFirstParty(url) || !knownExternalNoise.test(message);
   page.on('console', (msg) => {
-    if (msg.type() === 'error' && !networkNoise.test(msg.text())) errors.push(`console: ${msg.text()}`);
+    if (msg.type() === 'error' && shouldCollect(msg.location().url, msg.text())) errors.push(`console: ${msg.text()}`);
   });
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
   page.on('requestfailed', (request) => {
     const message = request.failure()?.errorText || '';
-    if (!networkNoise.test(message)) errors.push(`requestfailed: ${request.url()} ${message}`);
+    if (shouldCollect(request.url(), message)) errors.push(`requestfailed: ${request.url()} ${message}`);
   });
   return errors;
 }
@@ -361,11 +366,11 @@ try {
     await page.locator('#dcard .dhero').waitFor({ state: 'visible' });
     await snap('mlb-detail');
 
-    // 4b) Gate cerrado diseñado: pestaña Total del comparador de mercados MLB.
-    await page.locator('#dcard .market-tab[data-market-kind="total"]').click();
-    await page.waitForFunction(() => /sigue en validación|under validation/i.test(document.querySelector('#dcard .market-panel')?.textContent || ''));
-    await snap('mlb-gate-total');
-    await page.locator('#dcard .market-tab[data-market-kind="winner"]').click();
+    // 4b) Los cuatro estados de mercado viven dentro de Resumen, no como pestaña primaria.
+    await page.locator('#dcard .summary-markets').waitFor({ state: 'visible' });
+    await snap('mlb-summary-markets');
+    await page.locator('#dcard .dtab[data-dt="participantes"]').click();
+    await snap('mlb-participants');
     await closeMobileDetail();
 
     // 5) Filtro "En vivo" (el overlay de /v1/mlb/live marca g3 en vivo).
@@ -373,9 +378,9 @@ try {
     await page.locator('.mrow[data-id="g3"]').waitFor({ state: 'visible' });
     await snap('mlb-live');
 
-    // 5b) Detalle en vivo: marcador + WP en vivo mandan (curva + comparador ESPN).
+    // 5b) Detalle en vivo: marcador + WP factual mandan; la lectura AA sigue canónica.
     await page.locator('.mrow[data-id="g3"]').click();
-    await page.waitForFunction(() => /ESPN/.test(document.querySelector('#dcard')?.textContent || ''));
+    await page.locator('#dcard [data-canonical-probability]').waitFor({ state: 'visible' });
     await snap('mlb-live-detail');
     await closeMobileDetail();
     await page.locator('.pill[data-f="all"]').click();

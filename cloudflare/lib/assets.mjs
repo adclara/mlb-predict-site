@@ -33,12 +33,56 @@ export const ASSETS = {
     clubLogo: (espnTeamId) => `https://a.espncdn.com/i/teamlogos/soccer/500/${espnTeamId}.png`,
     // Banderas de selecciones/países (código ISO-2: mx, es, ar, br...).
     countryFlag: (iso2) => `https://a.espncdn.com/i/teamlogos/countries/500/${iso2}.png`,
+    headshot: (espnId) => `https://a.espncdn.com/i/headshots/soccer/players/full/${espnId}.png`,
   },
   tennis: {
     // Caras de tenistas por id de ESPN.
     headshot: (espnId) => `https://a.espncdn.com/i/headshots/tennis/players/full/${espnId}.png`,
   },
 };
+
+export const FACE_HOSTS = Object.freeze({
+  mlb: Object.freeze(['img.mlbstatic.com', 'midfield.mlbstatic.com']),
+  nba: Object.freeze(['cdn.nba.com']),
+  nfl: Object.freeze(['a.espncdn.com']),
+  tennis: Object.freeze(['a.espncdn.com']),
+  wnba: Object.freeze(['a.espncdn.com']),
+  nhl: Object.freeze(['a.espncdn.com']),
+  ncaaf: Object.freeze(['a.espncdn.com']),
+  ncaam: Object.freeze(['a.espncdn.com']),
+  soccer: Object.freeze(['a.espncdn.com']),
+});
+
+const numericId = (value) => /^\d{1,18}$/.test(String(value || '')) && Number(value) > 0
+  ? String(Number(value)) : null;
+
+/**
+ * Resolve a keyless official face asset. This pure helper is mirrored in the
+ * single-file frontend and is the testable authority for allowed hosts.
+ */
+export function aaFaceAsset({ sport, id, href } = {}) {
+  const key = String(sport || '').toLowerCase();
+  const allowed = FACE_HOSTS[key];
+  if (!allowed) return null;
+
+  if (typeof href === 'string' && href) {
+    try {
+      const url = new URL(href);
+      if (url.protocol === 'https:' && allowed.includes(url.hostname.toLowerCase())) return url.href;
+    } catch {}
+  }
+
+  const personId = numericId(id);
+  if (!personId) return null;
+  if (key === 'mlb') return ASSETS.mlb.headshot(personId, 240);
+  if (key === 'nba') return ASSETS.nba.headshot(personId);
+  if (key === 'soccer') return ASSETS.soccer.headshot(personId);
+  const espnSport = {
+    nfl: 'nfl', tennis: 'tennis', wnba: 'wnba', nhl: 'nhl',
+    ncaaf: 'college-football', ncaam: 'mens-college-basketball',
+  }[key];
+  return espnSport ? `https://a.espncdn.com/i/headshots/${espnSport}/players/full/${personId}.png` : null;
+}
 
 // Nota de uso: siempre acompañar con onerror → fallback (monograma con
 // iniciales), porque ids retirados/nuevos pueden devolver 404.

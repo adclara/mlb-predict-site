@@ -28,6 +28,7 @@ const row={game_pk:99881,date,game_date:date,game_datetime:date+'T23:50:00Z',fir
   odds:{provider:'Test book',ml_home:-110,ml_away:-110,captured_at:date+'T11:59:00Z'},
   value:{home:{model:.75,market:.5,price:-110,ev:.432},away:{model:.25,market:.5,price:-110,ev:-.523},best_side:'home'}};
 const doc=normalizeDay(date,{games:[row]},null,null,[],null);
+doc.publication={state:'published'};
 const underdog=normalizeDay(date,{games:[{...row,p_final:.55,odds:{...row.odds,ml_home:-150,ml_away:140}}]},null,null,[],null).events[0];
 let checks=0;
 try{
@@ -52,20 +53,26 @@ try{
   try{
     await page.goto(`http://127.0.0.1:${server.address().port}/?sport=mlb`,{waitUntil:'domcontentloaded'});
     await page.locator('.sp[data-sport="mlb"]').click();await page.locator('.mrow[data-id="99881"]').click();
-    await page.locator('.dtab[data-dt="mercado"]').click();
+    await page.locator('.summary-markets').waitFor();
+    assert.equal(await page.locator('[data-market-kind="winner"]').getAttribute('aria-pressed'), 'true');
     for(const lang of ['es','en']){
       if(lang==='en')await page.locator('#langbtn').evaluate(el=>el.click());
-      assert.match(await page.locator('.valtbl').innerText(),/51%/);
+      assert.equal(await page.locator('[data-canonical-probability]').innerText(),'51%');
+      assert.match(await page.locator('.valtbl').innerText(),/50%/);
       assert.match(await page.locator('.valtbl').innerText(),/-2\.6%/);
-      assert.doesNotMatch(await page.locator('.valtbl').innerText(),/75%|43\.2%/);
+      assert.doesNotMatch(await page.locator('.valtbl').innerText(),/51%|75%|43\.2%/);
       assert.equal(await page.locator('.valtbl tr.best').count(),0);
       assert.match(await page.locator('.value-provenance').innerText(),/p_final/);
       assert.match(await page.locator('.value-threshold').innerText(),/1\.9608/);
-      checks+=6;
+      checks+=7;
     }
-    await page.evaluate(e=>{events[events.findIndex(x=>x.event_id==='99881')]=e;renderDetail();},underdog);
+    await page.evaluate(e=>{
+      e.prediction=withPredictionContract(e.prediction,'mlb_public_today');
+      events[events.findIndex(x=>x.event_id==='99881')]=e;
+      renderDetail();
+    },underdog);
     assert.equal(await page.locator('.valtbl tr.best').count(),1);
-    assert.match(await page.locator('.valtbl tr.best').innerText(),/45%[\s\S]*\+140[\s\S]*\+8%/);
+    assert.match(await page.locator('.valtbl tr.best').innerText(),/\+140[\s\S]*\+8%/);
     const dims=await page.evaluate(()=>({s:document.documentElement.scrollWidth,c:document.documentElement.clientWidth}));
     assert.ok(dims.s<=dims.c+1,`${engine}/${width}: overflow ${JSON.stringify(dims)}`);
     await page.screenshot({path:resolve(OUT,`${width}.png`),fullPage:true});checks+=3;

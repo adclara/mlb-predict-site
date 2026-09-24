@@ -6,7 +6,9 @@ import { createRequire } from 'node:module';
 import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const { chromium } = createRequire(import.meta.url)('playwright');
+const playwright = createRequire(import.meta.url)('playwright');
+const engine = process.env.AA_TEST_BROWSER || 'chromium';
+assert.ok(['chromium', 'firefox', 'webkit'].includes(engine));
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../cloudflare/pages');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const now = new Date(), date = now.toISOString().slice(0, 10);
@@ -53,11 +55,18 @@ const server = createServer(async (req, res) => {
 await new Promise((ok, bad) => { server.once('error', bad); server.listen(0, '127.0.0.1', ok); });
 const base = `http://127.0.0.1:${server.address().port}`;
 const executablePath = [process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, '/opt/pw-browsers/chromium/chrome-linux/chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].filter(Boolean).find(existsSync);
-const browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : {}) });
+const browser = await playwright[engine].launch({ headless: true, ...(engine === 'chromium' && executablePath ? { executablePath } : {}) });
+const knownExternalNoise = /Failed to load resource|ERR_TUNNEL_CONNECTION_FAILED|Load request cancelled|NS_BINDING_ABORTED|Cross-Origin Request Blocked|blocked by CORS policy|CORS request did not succeed/i;
+const shouldCollectConsole = (page, message) => {
+  try {
+    const firstParty = new URL(message.location().url || page.url()).origin === new URL(base).origin;
+    return firstParty || !knownExternalNoise.test(message.text());
+  } catch { return true; }
+};
 try {
   for (const viewport of [{ n: 'desktop', width: 1280, height: 900 }, { n: '390', width: 390, height: 844 }, { n: '360', width: 360, height: 800 }]) {
     const context = await browser.newContext({ viewport, serviceWorkers: 'block', locale: 'es-ES' }); const page = await context.newPage(); const errors = [];
-    page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
+    page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && shouldCollectConsole(page, m)) errors.push(m.text()); });
     await page.route('**/v1/**', (route) => new URL(route.request().url()).pathname === '/v1/intelligence/today' ? json(route, intelligence) : json(route, {}));
     await page.route('https://fonts.googleapis.com/**', (route) => route.fulfill({ status: 200, contentType: 'text/css', body: '' })); await page.route('https://fonts.gstatic.com/**', (route) => route.fulfill({ status: 200, contentType: 'font/woff2', body: '' }));
     await page.goto(base, { waitUntil: 'domcontentloaded' });
@@ -94,12 +103,12 @@ try {
     assert.equal(await page.locator('.intelrow').count(), 12, `${viewport.n}: expected full 12-play slate`);
     const listEs = await page.locator('#list').textContent(); assert.match(listEs, /Central de Jugadas AA/); assert.match(listEs, /WNBA[\s\S]*Favorito del mercado/); assert.match(listEs, /Combinaciones multideporte/);
     assert.match(await page.locator('#dcard').textContent(), /Polymarket[\s\S]*61[,.]0%/); assert.match(await page.locator('#dcard').textContent(), /Pitcheo[\s\S]*A\. Ace/);
-    await page.locator('.intelrow[data-rw="wnba:2"]').click(); const wnbaEs = await page.locator('#dcard').textContent();
+    await page.locator('.intelrow[data-rw="wnba:2"] [data-object-link]').click(); const wnbaEs = await page.locator('#dcard').textContent();
     assert.match(wnbaEs, /Probabilidad del mercado des-vigada[\s\S]*76[,.]0%/); assert.match(wnbaEs, /Polymarket[\s\S]*78[,.]5%/); assert.match(wnbaEs, /23-16 vs 15-24/);
     assert.match(wnbaEs, /12 \/ 100/); await page.locator('#langbtn').evaluate((el) => el.click()); assert.match(await page.locator('#dcard').textContent(), /AA Play Central/); assert.match(await page.locator('#dcard').textContent(), /De-vigged market probability/);
     if (viewport.n !== 'desktop') assert.match(await hint.textContent(), /Swipe left or right to explore sports/i, `${viewport.n}: falta hint EN`);
     assert.match(await page.locator('.lghead .sub').textContent(), /multi-source intelligence/i); assert.doesNotMatch(await page.locator('.lghead .sub').textContent(), /Season/i);
-    await page.locator('.intelrow[data-rw="mlb:1"]').evaluate((el) => el.click()); assert.match(await page.locator('#dcard').textContent(), /Starters:[\s\S]*A\. Ace/); assert.doesNotMatch(await page.locator('#dcard').textContent(), /Abridores|riesgo bajo/i);
+    await page.locator('.intelrow[data-rw="mlb:1"] [data-object-link]').evaluate((el) => el.click()); assert.match(await page.locator('#dcard').textContent(), /Starters:[\s\S]*A\. Ace/); assert.doesNotMatch(await page.locator('#dcard').textContent(), /Abridores|riesgo bajo/i);
     if (viewport.n === 'desktop') {
       intelligence.state = 'stale'; intelligence.freshness = { age_minutes: 120, stale: true, hard_stale: false };
       await page.evaluate(async () => { radarDoc = null; radarAt = 0; await loadRadar(); });
@@ -111,5 +120,5 @@ try {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth); assert.ok(overflow <= 1, `${viewport.n}: overflow ${overflow}`);
     assert.deepEqual(errors, [], `${viewport.n}: console errors`); await context.close();
   }
-  console.log('✅ Intelligence UI: desktop + 390 + 360, ES/EN, 0 errors, no overflow');
+  console.log(`✅ Intelligence UI (${engine}): desktop + 390 + 360, ES/EN, 0 errors, no overflow`);
 } finally { await browser.close(); await new Promise((ok) => server.close(ok)); }
