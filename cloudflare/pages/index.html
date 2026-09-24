@@ -1410,8 +1410,7 @@ body.aa-page .dtop{padding:0 0 12px;border-bottom:0}
 .summary-markets{margin-top:22px;border-top:1px solid var(--hair)}
 .summary-markets>h3{font:700 18px/1.2 var(--font-display);padding:16px 0 10px}
 .market-status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--hair)}
-.market-status{min-height:72px;padding:11px 12px;border-left:1px solid var(--hair)}
-.market-status{text-align:left;width:100%;border-radius:0;background:#08111d}
+.market-status{min-height:72px;padding:11px 12px;border-left:1px solid var(--hair);text-align:left;width:100%;border-radius:0;background:#08111d}
 .market-status[aria-pressed="true"]{box-shadow:inset 0 -2px 0 var(--sky);background:rgba(var(--sky-rgb),.07)}
 .market-status:first-child{border-left:0}
 .market-status small{display:block;color:var(--faint);font-size:8px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
@@ -4521,8 +4520,8 @@ function renderDetail(){
     <p class="value-threshold" style="font-size:12px;color:var(--dim);padding-top:8px">${t('d_value_threshold')} ${esc(ev.away.code)} ${fmtNumber(val.away?.break_even_decimal)} · ${esc(ev.home.code)} ${fmtNumber(val.home?.break_even_decimal)}</p>
     <p style="font-size:11.5px;color:var(--faint);padding-top:8px">${t('d_ev_note')}</p>` : (mkt && homePct != null && strictProbabilityPct(mkt.p_home_pct) != null && strictProbabilityPct(mkt.p_away_pct) != null ? `
     <div class="secttl">${t('d_vs_market')}</div>
-    <div class="mktrow num"><span class="k">${esc(tNick(ev.home.code))}</span><span style="font-size:13px;color:var(--dim)">AA <b>${homePct}%</b> · ${t('d_market_lc')} <b>${mkt.p_home_pct}%</b></span></div>
-    <div class="mktrow num"><span class="k">${esc(tNick(ev.away.code))}</span><span style="font-size:13px;color:var(--dim)">AA <b>${awayPct}%</b> · ${t('d_market_lc')} <b>${mkt.p_away_pct}%</b></span></div>` : '');
+    <div class="mktrow num"><span class="k">${esc(tNick(ev.home.code))}</span><span style="font-size:13px;color:var(--dim)">${t('d_market_lc')} <b>${mkt.p_home_pct}%</b></span></div>
+    <div class="mktrow num"><span class="k">${esc(tNick(ev.away.code))}</span><span style="font-size:13px;color:var(--dim)">${t('d_market_lc')} <b>${mkt.p_away_pct}%</b></span></div>` : '');
   const booksRows = snap.books?.rows?.length ? `
     <div class="secttl" style="display:flex;align-items:center;gap:8px">${t('d_lines_by_book')} ${snap.books.disagree ? `<span class="warnchip">${t('d_books_disagree')}</span>` : ''}</div>
     ${snap.books.rows.map(b => `<div class="bookrow num">
@@ -4664,7 +4663,7 @@ function renderSide(){
 /* ── interacción ─────────────────────────────────────────── */
 const AA_SPORTS = ['home','radar','mlb','soccer','nba','wnba','tennis','nfl','ncaaf','nhl','ncaam'];
 const AA_LIST_TABS = ['all','favs','pos','hist','brain','edu','tools','cfg'];
-const AA_DETAIL_TABS = ['analisis','participantes','evidencia','equipos','pitchers','bateadores','sim','mercado'];
+const AA_DETAIL_TABS = ['analisis','participantes','evidencia'];
 const AA_MARKETS = ['winner','total','players','combos'];
 const aaRouteId = value => {
   const text = typeof value === 'string' ? value : '';

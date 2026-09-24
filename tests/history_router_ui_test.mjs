@@ -163,10 +163,10 @@ try {
   const parserRun = await mockPage(desktop);
   await parserRun.page.goto(`${base}/?s=mlb`, { waitUntil: 'domcontentloaded' });
   await waitForMlb(parserRun.page);
-  const parsed = await parserRun.page.evaluate(() => aaReadRoute('?tab=mlb&g=g1&date=2026-09-19&lt=hist&dt=pitchers&m=total&p=p_1'));
+  const parsed = await parserRun.page.evaluate(() => aaReadRoute('?tab=mlb&g=g1&date=2026-09-19&lt=hist&dt=participantes&m=total&p=p_1'));
   assert.deepEqual(parsed, {
     s: 'mlb', g: 'g1', sc: '', date: '2026-09-19', lt: 'hist',
-    dt: 'pitchers', m: 'total', p: 'p_1', team: '', w: '',
+    dt: 'participantes', m: 'total', p: 'p_1', team: '', w: '',
   });
   const parsedOther = await parserRun.page.evaluate(() => aaReadRoute('?s=nba&sc=n1&team=BOS&m=players'));
   assert.deepEqual(parsedOther, {
@@ -180,10 +180,10 @@ try {
     s: 'nba', g: '', sc: 'n1', date: '', lt: '', dt: '', m: '', p: 'p1', team: '', w: '',
   });
   const built = await parserRun.page.evaluate(() => {
-    const route = Object.freeze({ s: 'mlb', g: 'g1', date: '2026-09-19', lt: 'hist', dt: 'pitchers', m: 'total', p: 'p_1' });
+    const route = Object.freeze({ s: 'mlb', g: 'g1', date: '2026-09-19', lt: 'hist', dt: 'participantes', m: 'total', p: 'p_1' });
     return aaBuildSearch(route);
   });
-  assert.equal(built, '?s=mlb&g=g1&date=2026-09-19&lt=hist&dt=pitchers&m=total&p=p_1');
+  assert.equal(built, '?s=mlb&g=g1&date=2026-09-19&lt=hist&dt=participantes&m=total&p=p_1');
   const incompatible = await parserRun.page.evaluate(() => ({
     parsed: aaReadRoute('?s=nba&g=g1&sc=n1&dt=pitchers'),
     built: aaBuildSearch({ s: 'nba', g: 'g1', sc: 'n1', dt: 'pitchers' }),

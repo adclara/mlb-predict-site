@@ -153,6 +153,11 @@ try {
   assert.equal(await desktop.page.locator('.summary-markets').count(), 1, 'market status is not nested in Summary');
   assert.equal(await desktop.page.locator('.aa-fact').count(), 5, 'scope/source/time/status/limit metadata is incomplete');
   assert.equal(await desktop.page.locator('.dtabs [data-dt="mercado"]').count(), 0, 'market returned as a primary tab');
+  await desktop.page.locator('.summary-markets [data-market-kind="total"]').click();
+  assert.equal(new URL(desktop.page.url()).searchParams.get('m'), 'total', 'market selection is not shareable');
+  assert.equal(await desktop.page.locator('.summary-markets [data-market-kind="total"]').getAttribute('aria-pressed'), 'true', 'closed market is not announced as selected');
+  assert.equal(await desktop.page.locator('.summary-markets .gate-card').count(), 1, 'closed market lacks its gate explanation');
+  assert.equal(await desktop.page.locator('[data-canonical-probability]').count(), 1, 'market switching duplicated the canonical AA reading');
   await desktop.page.locator('.dtabs [data-dt="analisis"]').focus();
   await desktop.page.keyboard.press('ArrowRight');
   assert.equal(await desktop.page.locator('.dtabs [data-dt="participantes"]').getAttribute('aria-selected'), 'true', 'arrow-key tab navigation failed');
