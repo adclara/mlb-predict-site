@@ -7,7 +7,9 @@ import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+const playwright = require('playwright');
+const engine = process.env.AA_TEST_BROWSER || 'chromium';
+assert.ok(['chromium', 'firefox', 'webkit'].includes(engine));
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../cloudflare/pages');
 const MIME = {
@@ -88,6 +90,7 @@ async function installApiMocks(page, date, events, games) {
     if (path === '/v1/mlb/today') {
       return json(route, {
         sport: 'mlb', date, record: null,
+        publication: { state: events.some(event => event?.prediction?.pick) ? 'published' : 'waiting' },
         run_indicator_meta: { status: 'observation', verified: false, gate_passes: false, record: { wins: 2, losses: 0, pushes: 0, sample_n: 2 } },
         events,
       });
@@ -256,14 +259,19 @@ async function installApiMocks(page, date, events, games) {
 
 function collectErrors(page) {
   const errors = [];
-  const networkNoise = /ERR_TUNNEL_CONNECTION_FAILED|Failed to load resource/i;
+  const knownExternalNoise = /Failed to load resource|ERR_TUNNEL_CONNECTION_FAILED|Load request cancelled|NS_BINDING_ABORTED|Cross-Origin Request Blocked|blocked by CORS policy|CORS request did not succeed/i;
+  const isFirstParty = (url) => {
+    try { return new URL(url || page.url()).origin === new URL(base).origin; }
+    catch { return true; }
+  };
+  const shouldCollect = (url, message) => isFirstParty(url) || !knownExternalNoise.test(message);
   page.on('console', (msg) => {
-    if (msg.type() === 'error' && !networkNoise.test(msg.text())) errors.push(`console: ${msg.text()}`);
+    if (msg.type() === 'error' && shouldCollect(msg.location().url, msg.text())) errors.push(`console: ${msg.text()}`);
   });
   page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
   page.on('requestfailed', (request) => {
     const message = request.failure()?.errorText || '';
-    if (!networkNoise.test(message)) errors.push(`requestfailed: ${request.url()} ${message}`);
+    if (shouldCollect(request.url(), message)) errors.push(`requestfailed: ${request.url()} ${message}`);
   });
   return errors;
 }
@@ -273,7 +281,7 @@ async function rowState(page, id) {
   await row.waitFor({ state: 'visible' });
   return row.evaluate(el => ({
     time: el.querySelector('.mtime')?.textContent.trim() || '',
-    scores: [...el.querySelectorAll('.mscore .ms')].map(x => x.textContent.trim()),
+    scores: [...el.querySelectorAll('.mclub .clubscore')].map(x => x.textContent.trim()),
   }));
 }
 
@@ -322,7 +330,7 @@ const candidates = [
 const executablePath = candidates.find(existsSync);
 if (executablePath) launch.executablePath = executablePath;
 
-const browser = await chromium.launch(launch);
+const browser = await playwright[engine].launch(engine === 'chromium' ? launch : { headless: true });
 const today = etToday();
 const yesterday = shiftDate(today, -1);
 
@@ -352,28 +360,19 @@ try {
     const state = await rowState(page, 'today-game');
     assert.notEqual(state.time, 'Final', `${viewport.name}: el final de ayer contaminó hoy`);
     assert.deepEqual(state.scores, ['', ''], `${viewport.name}: aparecen marcadores de ayer`);
-    const topEs = await page.locator('.topsignals').textContent();
-    assert.match(topEs, /Top señales AA/i, `${viewport.name}: falta Top señales ES`);
-    assert.match(topEs, /probabilidades calibradas más altas/i, `${viewport.name}: falta explicación calibrada ES`);
-    assert.match(topEs, /no son jugadas verificadas ni afirman valor contra la cuota/i, `${viewport.name}: falta deslinde ES`);
-    assert.match(topEs, /AA 57%/, `${viewport.name}: falta probabilidad AA ES`);
-    assert.equal(await page.locator('.topsignals .bleg').count(), 1, `${viewport.name}: pending/scratch entraron a Top señales`);
-    const runEs = await page.locator('.runindicators').textContent();
-    assert.match(runEs, /Indicadores AA de Altas/i, `${viewport.name}: faltan indicadores de Altas ES`);
-    assert.match(runEs, /Alta 8[,.]5/i, `${viewport.name}: falta línea de Alta ES`);
-    assert.match(runEs, /Proyección AA 9[,.]4/i, `${viewport.name}: falta proyección total ES`);
-    assert.match(runEs, /gate de Altas cerrado/i, `${viewport.name}: falta estado del gate ES`);
-    assert.match(runEs, /récord forward 2-0 \(n=2\)/i, `${viewport.name}: falta muestra forward ES`);
-    assert.match(runEs, /no es una jugada verificada ni recomendación/i, `${viewport.name}: falta deslinde de Altas ES`);
-    assert.equal(await page.locator('.runindicators .bleg').count(), 1, `${viewport.name}: pending/scratch entraron a indicadores de Altas`);
+    assert.equal(await page.locator('#list .mrow').count(), 3, `${viewport.name}: la jornada no conserva sus tres eventos`);
+    assert.equal(await page.locator('#list .mrow .mpred b.num').count(), 1, `${viewport.name}: pending/scratch publicaron una lectura AA exacta`);
+    assert.match(await page.locator('.mrow[data-id="today-game"] .mpred').textContent(), /AA[\s\S]*57%/i, `${viewport.name}: falta la lectura AA pública en la fila válida`);
+    assert.equal(await page.locator('.colside').isVisible(), false, `${viewport.name}: la jornada operativa volvió a depender del sidebar retirado`);
     await page.locator('.mrow[data-id="today-game"]').click();
     const detailEs = await page.locator('#dcard').textContent();
     assert.match(detailEs, /defensa floja: 9 errores en 10 juegos/i, `${viewport.name}: falta fielding ES`);
     assert.match(detailEs, /necesita ganar para evitar la barrida/i, `${viewport.name}: falta barrida ES`);
-    assert.match(detailEs, /Confianza Media/i, `${viewport.name}: falta confianza ES`);
-    assert.match(detailEs, /Prob\. AA calibrada\s*57%/i, `${viewport.name}: falta métrica calibrada ES`);
+    assert.equal(await page.locator('#dcard [data-canonical-probability]').count(), 1, `${viewport.name}: la probabilidad canónica no es única`);
+    assert.equal(await page.locator('#dcard [data-canonical-probability]').textContent(), '57%', `${viewport.name}: falta la probabilidad calibrada canónica ES`);
+    assert.match(detailEs, /Alcance[\s\S]*Predicción AA pública[\s\S]*Fuente[\s\S]*prob_v2/i, `${viewport.name}: faltan metadatos de alcance y fuente ES`);
     if (viewport.name === 'mobile-390' && process.env.AA_MARKET_QA_SCREENSHOT) {
-      await page.locator('#dcard .market-first').screenshot({ path: process.env.AA_MARKET_QA_SCREENSHOT });
+      await page.locator('#dcard .summary-markets').screenshot({ path: process.env.AA_MARKET_QA_SCREENSHOT });
     }
     await page.locator('#dback').evaluate(el => el.click());
     await page.evaluate(() => { mlbPublication = { state: 'overdue' }; renderList(); });
@@ -493,25 +492,18 @@ try {
     await assertNoOverflow(page, `${viewport.name}-wnba-es`);
     await page.locator('.sp[data-sport="mlb"]').click();
     await page.locator('#langbtn').click();
-    const topEn = await page.locator('.topsignals').textContent();
-    assert.match(topEn, /AA Top signals/i, `${viewport.name}: missing Top signals EN`);
-    assert.match(topEn, /highest calibrated probabilities/i, `${viewport.name}: missing calibrated explanation EN`);
-    assert.match(topEn, /not verified plays and make no price\/value claim/i, `${viewport.name}: missing Top signals disclaimer EN`);
-    assert.doesNotMatch(topEn, /señales|jugadas|cuota|tú decides/i, `${viewport.name}: Spanish leaked into Top signals EN`);
-    const runEn = await page.locator('.runindicators').textContent();
-    assert.match(runEn, /AA Over indicators/i, `${viewport.name}: missing Over indicators EN`);
-    assert.match(runEn, /Over 8\.5/i, `${viewport.name}: missing Over line EN`);
-    assert.match(runEn, /AA projection 9\.4/i, `${viewport.name}: missing total projection EN`);
-    assert.match(runEn, /Over gate closed/i, `${viewport.name}: missing Over gate status EN`);
-    assert.match(runEn, /forward record 2-0 \(n=2\)/i, `${viewport.name}: missing forward sample EN`);
-    assert.match(runEn, /not a verified play or recommendation/i, `${viewport.name}: missing Over disclaimer EN`);
-    assert.doesNotMatch(runEn, /Altas|línea|proyección|jugada|récord/i, `${viewport.name}: Spanish leaked into Over indicators EN`);
+    assert.equal(await page.locator('#list .mrow').count(), 3, `${viewport.name}: dense schedule lost events after switching to EN`);
+    assert.equal(await page.locator('#list .mrow .mpred b.num').count(), 1, `${viewport.name}: pending/scratch exposed an exact AA reading in EN`);
+    const validRowEn = await page.locator('.mrow[data-id="today-game"]').textContent();
+    assert.match(validRowEn, /AA[\s\S]*57%/i, `${viewport.name}: missing public AA reading in the valid row EN`);
+    assert.doesNotMatch(validRowEn, /señales|jugadas|cuota|tú decides/i, `${viewport.name}: Spanish leaked into the valid row EN`);
     await page.locator('.mrow[data-id="today-game"]').click();
     const detailEn = await page.locator('#dcard').textContent();
     assert.match(detailEn, /sloppy fielding: 9 errors in 10 games/i, `${viewport.name}: missing fielding EN`);
     assert.match(detailEn, /needs a win to avoid the sweep/i, `${viewport.name}: missing sweep EN`);
-    assert.match(detailEn, /Confidence Medium/i, `${viewport.name}: confidence code was not translated in detail EN`);
-    assert.match(detailEn, /Calibrated AA prob\.\s*57%/i, `${viewport.name}: calibrated metric was not translated EN`);
+    assert.equal(await page.locator('#dcard [data-canonical-probability]').count(), 1, `${viewport.name}: canonical probability is not unique in EN`);
+    assert.equal(await page.locator('#dcard [data-canonical-probability]').textContent(), '57%', `${viewport.name}: canonical calibrated probability is missing in EN`);
+    assert.match(detailEn, /Scope[\s\S]*Public AA prediction[\s\S]*Source[\s\S]*prob_v2/i, `${viewport.name}: scope/source metadata is missing in EN`);
     assert.doesNotMatch(detailEn, /Prob\. AA calibrada/i, `${viewport.name}: Spanish metric label leaked into detail EN`);
     assert.doesNotMatch(detailEn, /\bmedia\b|\boro\b|\bfijo\b/i, `${viewport.name}: Spanish confidence or badge leaked into detail EN`);
     await page.locator('#dback').evaluate(el => el.click());
@@ -625,7 +617,7 @@ try {
     assert.equal(await page.locator('.aa-railbtn.on').getAttribute('data-rail'), 'home', `${viewport.name}: Inicio no abrió por defecto`);
     assert.equal(await page.locator('.spwrap .sp').first().getAttribute('data-sport'), 'radar', `${viewport.name}: Central no es primera`);
     await page.locator('.sp[data-sport="radar"]').click();
-    await page.waitForFunction(() => /AA Play Central/i.test(document.querySelector('#list')?.textContent || ''));
+    await page.waitForFunction(() => /AA Play Central/i.test(document.querySelector('#list')?.textContent || '') && !radarLoading);
     assert.equal(await page.locator('.sp.on').getAttribute('data-sport'), 'radar', `${viewport.name}: Central no abrió desde el chip`);
     const radarEn = await page.locator('#list').textContent();
     assert.match(radarEn, /AA Play Central/i, `${viewport.name}: missing intelligence central EN`);
@@ -667,7 +659,7 @@ try {
   assert.deepEqual(errors, [], 'doubleheader-desktop: errores de consola/red de la app');
   await context.close();
 
-  console.log('✅ MLB live/date UI: desktop + 390 + 360, doble jornada, 0 errores, sin overflow');
+  console.log(`✅ MLB live/date UI (${engine}): desktop + 390 + 360, doble jornada, 0 errores, sin overflow`);
 } finally {
   await browser.close();
   await new Promise(resolveClose => server.close(resolveClose));

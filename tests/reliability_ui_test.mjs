@@ -44,7 +44,7 @@ try {
     // Each browser context has independent mock state. Never carry the prior
     // viewport's final 'unavailable' response into a fresh navigation.
     let healthState='idle_no_games';
-    const context=await browser.newContext({viewport:{width,height:900},locale:'es-ES',timezoneId:'America/New_York',serviceWorkers:'block'});
+    const context=await browser.newContext({viewport:{width,height:900},locale:'es-ES',timezoneId:'America/New_York',serviceWorkers:'block',reducedMotion:'reduce'});
     const page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
@@ -52,7 +52,7 @@ try {
     await page.route('**/v1/**',route=>{
       const path=new URL(route.request().url()).pathname;
       if(path==='/v1/me')return json(route,{enabled:false,user:null});
-      if(path==='/v1/mlb/today')return json(route,{sport:'mlb',date,events:[sample],record:null});
+      if(path==='/v1/mlb/today')return json(route,{sport:'mlb',date,events:[sample],record:null,publication:{state:'published'}});
       if(path==='/v1/mlb/live')return json(route,{sport:'mlb',date,games:[]});
       if(/\/(nba|wnba)\/learning$/.test(path))return json(route,{sport:path.split('/')[2],updated_at:new Date().toISOString(),historical:{n:100,brier:.24},forward:{n:0},gate:{public:false,passed:false,approved:false},learning_es:['Solo validación.'],learning_en:['Validation only.']});
       if(/\/(nba|wnba)\/pipeline-health$/.test(path))return json(route,{schema:'aa-basketball-producer-health-v1',sport:path.split('/')[2],state:healthState,last_success_at:date+'T18:00:00Z',prediction_updated_at:'2026-08-01T12:00:00Z'});
@@ -72,9 +72,19 @@ try {
       await page.locator('.sp[data-sport="mlb"]').click();
       await page.locator('.mrow[data-id="reliability-1"]').waitFor();
       assert.ok(await page.locator('#q').isVisible(),`${width}: visible search`);
-      await page.locator('#q').fill('AA_NO_SUCH_TEAM');
-      await page.waitForFunction(()=>document.querySelectorAll('#list .mrow').length===0);
-      await page.locator('#q').fill('');
+      await page.locator('#q').evaluate((input, value) => {
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }, 'AA_NO_SUCH_TEAM');
+      await page.waitForFunction(expected=>query===expected && document.querySelector('#q')?.value===expected
+        && document.querySelectorAll('#list .mrow').length===0,'AA_NO_SUCH_TEAM');
+      await page.locator('#q').evaluate((input) => {
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await page.waitForFunction(()=>query==='' && document.querySelector('#q')?.value===''
+        && !!document.querySelector('.mrow[data-id="reliability-1"]'));
+      await page.locator('.mrow[data-id="reliability-1"]').waitFor();
       await page.locator('.mrow[data-id="reliability-1"]').click();
       assert.match(await page.locator('#dcard').innerText(),/insuficientes|evaluar/i);
       assert.doesNotMatch(await page.locator('#dcard').innerText(),/Ventaja moderada|Riesgo bajo/);

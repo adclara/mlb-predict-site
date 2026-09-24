@@ -7,7 +7,9 @@ import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+const playwright = require('playwright');
+const engine = process.env.AA_TEST_BROWSER || 'chromium';
+assert.ok(['chromium', 'firefox', 'webkit'].includes(engine));
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../cloudflare/pages');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json; charset=utf-8' };
 const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -27,10 +29,15 @@ const qaMarkets = {
 
 function errorsFor(page) {
   const errors = [];
-  const noise = /ERR_TUNNEL_CONNECTION_FAILED|Failed to load resource/i;
-  page.on('console', (msg) => { if (msg.type() === 'error' && !noise.test(msg.text())) errors.push(`console: ${msg.text()}`); });
+  const knownExternalNoise = /Failed to load resource|ERR_TUNNEL_CONNECTION_FAILED|Load request cancelled|NS_BINDING_ABORTED|Cross-Origin Request Blocked|blocked by CORS policy|CORS request did not succeed/i;
+  const isFirstParty = (url) => {
+    try { return new URL(url || page.url()).origin === new URL(base).origin; }
+    catch { return true; }
+  };
+  const shouldCollect = (url, message) => isFirstParty(url) || !knownExternalNoise.test(message);
+  page.on('console', (msg) => { if (msg.type() === 'error' && shouldCollect(msg.location().url, msg.text())) errors.push(`console: ${msg.text()}`); });
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
-  page.on('requestfailed', (request) => { const message = request.failure()?.errorText || ''; if (!noise.test(message)) errors.push(`requestfailed: ${request.url()} ${message}`); });
+  page.on('requestfailed', (request) => { const message = request.failure()?.errorText || ''; if (shouldCollect(request.url(), message)) errors.push(`requestfailed: ${request.url()} ${message}`); });
   return errors;
 }
 
@@ -80,7 +87,7 @@ await new Promise((resolveListen, reject) => { server.once('error', reject); ser
 const base = `http://127.0.0.1:${server.address().port}`;
 const candidates = [process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, '/opt/pw-browsers/chromium/chrome-linux/chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].filter(Boolean);
 const executablePath = candidates.find(existsSync);
-const browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : {}) });
+const browser = await playwright[engine].launch({ headless: true, ...(engine === 'chromium' && executablePath ? { executablePath } : {}) });
 
 try {
   for (const viewport of [{ name: 'desktop', width: 1280, height: 900 }, { name: 'mobile-390', width: 390, height: 844 }, { name: 'mobile-360', width: 360, height: 800 }]) {
@@ -107,7 +114,7 @@ try {
     assert.deepEqual(errors, [], `${viewport.name}: app errors`);
     await context.close();
   }
-  console.log('✅ QA shadow UI: desktop + 390 + 360, ES/EN, 0 errors, no overflow');
+  console.log(`✅ QA shadow UI (${engine}): desktop + 390 + 360, ES/EN, 0 errors, no overflow`);
 } finally {
   await browser.close();
   await new Promise((resolveClose) => server.close(resolveClose));

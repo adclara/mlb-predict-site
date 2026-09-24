@@ -1,77 +1,85 @@
-# Design QA — AA Sports (cierre Fase 6)
+# Design QA — AA Sports Ops final technical pass
 
-**Direction:** Matchday Studio on a Monitor surface. Professional, fresh, not loud.
+## Scope and evidence
 
-**Before (Fases 0–5 shipped):** Studio tokens + leftover neon aliases (honey/coral/mint/steel/cyan) + `saturate(140%)` glass + sky/mint body aurora. Honest, but visually busy.
+- Selected source: `docs/redesign/b2-visual/source-concept-1.png`
+- Browser implementation capture: `docs/redesign/b2-visual/implementation-list-1536x1080.png`
+- Side-by-side browser artifact: `docs/redesign/b2-visual/compare.html`
+- Source and implementation image dimensions: 1536 × 1080 px
+- Browser viewport under test: 1536 × 1080 CSS px, device scale factor 1
+- State: MLB schedule, dark theme, deterministic game fixtures; ES reference and equivalent EN browser state inspected
+- Browser evidence: the comparison page and the implementation were rendered in the Codex in-app Browser; focused regions were also inspected at original resolution
 
-**After (Fase 6):** same composition (shell, market-first card, Central AA). Quieter glass, quieter home CTA, unified aliases, WP curves via CSS classes, wallet-radar CSS/JS gone. Honesty box and legal copy unchanged.
+## Full-view comparison
 
-**Slop audit (post-change):** 1/10 — Inter-not-used (Manrope/Barlow chosen). No feature-tile grid, no indigo default, no monument stats, no center-stack hero. Surface = Monitor.
+The implementation preserves the selected concept's hierarchy: narrow rail, compact global header, page title/date, four day KPIs, horizontal sports switcher, compact filters and a single dense schedule surface. Rows align time, matchup, probable participants, factual status/data, AA prediction and the favorite action. The implementation intentionally keeps existing product controls that remain part of the route contract while matching the reference's density and scan path.
 
-**Not in this PR:** poke-deploy. Merge first; deploy is a separate poke.
+## Inspect verification
 
----
+- Factual matchup is separated from the model reading.
+- Exactly three primary tabs are present: Summary/Resumen, Participants/Participantes and Evidence/Evidencia.
+- Exactly one element uses `[data-canonical-probability]`.
+- Scope, source, updated time, status and limitation are adjacent to the canonical reading.
+- Markets live inside Summary/Resumen instead of becoming a fourth primary tab.
+- The market selector is functional: Winner exposes source-backed market/price/EV evidence when available; closed markets expose a gate explanation and measured sample state.
+- Left/Right/Home/End keyboard navigation, focus state and ARIA tab semantics were exercised.
+- Browser inspection found no horizontal document overflow and no application console errors or warnings.
 
-**Comparison Target**
+## Responsive and interaction coverage
 
-- Source visual truth: `/Users/adrianclara/.codex/generated_images/019f84e0-2d27-7511-9722-cb9ea33ecb4b/exec-fd47b091-5cc0-438f-9810-7ce90029dce0.png`
-- Browser-rendered implementation: `/tmp/aa-market-component.png`
-- Side-by-side normalized comparison: `/tmp/aa-market-component-compare.png`
-- Viewport: Chrome via Playwright, `390 × 844` CSS px, device scale factor `1`, dark theme, Spanish, `Ganador` active.
-- Source pixels: `853 × 1844`; focused market crop: `853 × 1400`. Implementation component pixels: `327 × 655`. Both focused regions were normalized to `600px` width and padded without stretching in the side-by-side comparison.
-- State note: the source is a final SEA–NYY art-direction mock and the implementation uses a pregame MIN–CLE regression fixture. Dynamic teams/status differ intentionally; the compared state is the same four-market selector with public Winner and three closed gates.
+- Desktop: 1536 × 1080 and automated 1440 × 900.
+- Compact: 390 × 844 and 360 × 800.
+- Reflow: 320 CSS px and effective 200% zoom width.
+- Game rows use canonical links; Favorite is a separate sibling button.
+- At least three complete schedule rows remain visible at 1440 × 900.
+- Reduced motion resolves the redesigned route transitions to 0ms.
 
-**Full-view Comparison Evidence**
+## Participant and team objects
 
-- The implementation preserves the selected direction: markets lead the analysis, the four tabs share one surface, the active state uses the AA blue token, winner percentages and real team logos remain visible, two vertical bars share a baseline, and the 50% reference crosses the measured plot area.
-- AA Sports keeps its existing game header and analysis navigation around the component. This is intentional integration with the production design system, not a replacement of the app shell.
+- Official images are admitted only through per-sport HTTPS host allowlists and degrade to a monogram without a request loop.
+- A caption is exposed only after the official image actually loads; it disappears on error.
+- `p=` and `team=` open contextual object pages with canonical URLs, document titles, focusable headings and a Back action that restores the originating match tab.
+- Player and team object pages were inspected in the in-app Browser and exercised in Chromium, Firefox and WebKit at desktop and compact widths.
 
-**Focused Region Comparison Evidence**
+## Density, contrast and bilingual copy
 
-- The focused side-by-side comparison clearly resolves typography, market-tab hierarchy, percentage colors, logo quality, bar proportions, 50% reference, verdict callout, confidence tags, borders, radii, and honesty footer; no additional crop was needed.
+- Critical schedule, evidence and object metadata is at least 12 CSS px; compact uppercase labels remain secondary to independently named values.
+- Primary controls expose at least a 44 × 44 CSS px target, including 320, 360, 390 and 720 CSS px viewports.
+- Token contrast is measured in-browser: text/dim/faint/on-sky meet 4.5:1 and sky component boundaries meet 3:1.
+- Jornada and Inspect use opaque operational surfaces with no `backdrop-filter` blur.
+- Visible navigation and headings use the bundled Material Symbols font; emoji and hand-drawn interface SVGs were removed from those roles.
+- ES/EN switching persists across reload and neither language introduces horizontal overflow.
 
-**Findings**
+## Motion and continuity
 
-- No actionable P0, P1, or P2 differences remain.
-- [P3] The production component is denser than the art-direction mock.
-  Location: `.market-panel`, `.prob-viz`.
-  Evidence: the reference dedicates more vertical space to the bars; production retains the existing AA Sports mobile detail density.
-  Impact: none on hierarchy or legibility; it keeps the remaining MLB detail reachable with less scrolling.
-  Fix: optional only—raise the mobile plot above `320px` if future usability testing prefers a more editorial presentation.
-- [P3] The reference callout contains edge and risk fields that are absent in the fixture.
-  Location: `.market-callout`.
-  Evidence: the source shows `+1.2%` and risk; the fixture has no auditable odds/edge or risk value.
-  Impact: none. Omitting unavailable evidence is required by AA Sports honesty rules.
-  Fix: none; these fields render only when measured data exists.
+- Core page continuity is opacity plus `translateY(8px)` at 200ms; no route uses `translateX` or `rotateY`.
+- Toast centering is the only remaining `translateX`, and is not page motion.
+- Route changes write History immediately; motion does not delay navigation.
+- Back restores focus to the originating schedule row.
+- Both `prefers-reduced-motion: reduce` and the in-app setting set effective animation and transition duration to `0ms`; the app preference persists across reload.
+- `motion_views_ui_test.mjs` passes in Chromium, Firefox and WebKit, including the 360px Inspect surface.
+- The complete 9-suite product matrix passes in Chromium, Firefox and WebKit; the unit suite passes 271/271.
 
-**Required Fidelity Surfaces**
+## Findings resolved
 
-- Fonts and typography: existing Inter stack, weight hierarchy, line height, wrapping, and small gate labels are consistent and readable at 390/360/desktop.
-- Spacing and layout rhythm: tabs, plot, callout, and honesty footer have stable grouping; no collision, clipping, or horizontal overflow at the required breakpoints.
-- Colors and tokens: AA blue active state, orange away side, green home side, dark surfaces, hairlines, and disabled text map cleanly to the source direction with adequate contrast.
-- Image quality and assets: production uses real ESPN team-logo assets with existing text fallback only on network failure; no new fake illustration, inline SVG logo, or CSS-drawn team asset was introduced.
-- Copy and content: ES/EN market labels, closed-gate explanations, measured sample progress, AA/ESPN attribution, and the honesty footer are coherent and complete.
-- Accessibility and behavior: semantic tab buttons, selected state, focus-visible outline, `role="img"` probability label, practical tap targets, and active interaction for all four markets were verified.
+| Priority | Finding | Resolution |
+|---|---|---|
+| P1 | Icon font failure exposed raw icon names | Material Symbols Rounded was vendored locally. |
+| P2 | Early capture sampled row-entry opacity | Deterministic capture waits for settled motion. |
+| P2 | Primary rail was visually crowded | Five primary destinations remain; the rest use the Más disclosure. |
+| P2 | Title/KPI/navigation order did not match the selected concept | Title and KPIs now precede sports navigation; the ticker is hidden on Jornada. |
+| P2 | Matchups and pitchers stacked vertically; prediction lacked team identity | Desktop rows now compare opponents and starters horizontally and include the predicted team's mark. |
+| P1 | Sports navigation compressed and overlapped at compact widths | Items are non-shrinking and the rail scrolls horizontally without overlap. |
+| P1 | App reduced-motion setting persisted but did not disable CSS motion | The state now reaches `body.aa-reduce-motion`, cancels running animations and resolves durations to 0ms. |
+| P2 | Detail animation selectors targeted a class absent from the real container | The canonical detail container now owns `.dcard`, so the verified vertical transition actually runs. |
+| P2 | WebKit image-caption assertion raced a successful load | The test now waits for the real visible caption state before asserting. |
+| P1 | Moving markets into Summary left their buttons without the audited value/gate panel | Winner now renders its source-backed price/EV table; Total, Players and Combos render fail-closed gate evidence. |
+| P1 | The legacy value table repeated the canonical AA percentage | The table now references the canonical source and shows market/price/EV only; the exact AA probability appears once. |
 
-**Comparison History**
+## Remaining human gate
 
-- Iteration 1 evidence: `/tmp/aa-market-qa.png` and `/tmp/aa-market-qa-v2.png`.
-  Earlier findings: the MLB confidence/tier metadata had disappeared after replacing the legacy bar, and the 50% reference was calculated against the whole component rather than the bar plot (P2).
-  Fixes: restored confidence/tier metadata below the Winner callout; recalculated the neutral line against the actual plot region; increased mobile/desktop plot height; aligned the away percentage with the orange bar token.
-- Iteration 2 evidence: `/tmp/aa-market-component.png` and `/tmp/aa-market-component-compare.png`.
-  Post-fix result: confidence/tier metadata is present, the 57% bar crosses the 50% reference while the 43% bar remains below it, real logos render, and no P0/P1/P2 issue remains.
+The automated and browser design QA is complete. The separate plan requirement for a comprehension exercise with three independent people remains a human research activity and is not represented as simulated evidence here.
 
-**Implementation Checklist**
+## Final result
 
-- [x] Market-first selector and active states.
-- [x] Vertical comparison with shared baseline and 50% reference.
-- [x] Public and closed gate states with measured sample progress.
-- [x] Real team assets and bilingual copy.
-- [x] Desktop, 390, and 360 Playwright regression with zero app console errors and zero overflow.
-- [x] Winner/Total/Players/Combos interactions verified for MLB, WNBA, and NFL.
-
-**Follow-up Polish**
-
-- Revisit plot height only if production behavior data shows users prefer the larger editorial ratio from the mock.
-
-final result: passed
+passed
