@@ -25,26 +25,27 @@ const game = (id, away, home, hour, pct, pick, pending = false) => ({
     { key: 'metric_risk', label: 'Riesgo', value: 'bajo', kind: 'risk' },
   ],
   snapshot: {
-    verdict_es: 'La lectura AA favorece al local; sin cuota auditada no se afirma ventaja frente al mercado.',
-    verdict_en: 'The calibrated AA read favors the home side; without an audited price, no market edge is claimed.',
+    verdict_es: 'Lectura AA calibrada para este partido; sin cuota auditada no se afirma ventaja frente al mercado.',
+    verdict_en: 'Calibrated AA read for this game; without an audited price, no market edge is claimed.',
     pitchers: {
       away: { id: 660271, name: 'Pablo López', hand: 'R', era: 3.84, era_recent: 3.7, fip: 3.9, k9: 8.2 },
       home: { id: 605400, name: 'Logan Allen', hand: 'L', era: 3.12, era_recent: 3.2, fip: 3.4, k9: 9.1 },
     },
     context: { day_night: 'night', park_factor: 1.01, series: { game: 2, len: 3 } },
     form: { away: [], home: [] }, reasons: ['Probabilidad calibrada con el corte público.'],
+    reasons_en: ['Calibrated probability from the public snapshot.'],
   },
   risk: { level: 'bajo', score: 18, coverage: 1 }, odds: null, badges: [], result: null, final: null,
 });
 const events = [
   game('g1', club('MIN', 'Minnesota Twins'), club('CLE', 'Cleveland Guardians'), '22:40', 57, 'CLE'),
   game('g2', club('NYY', 'New York Yankees'), club('BOS', 'Boston Red Sox'), '23:10', 61, 'BOS'),
-  game('g3', club('LAD', 'Los Angeles Dodgers'), club('SF', 'San Francisco Giants'), '01:15', 54, 'LAD'),
+  game('g3', club('LAD', 'Los Angeles Dodgers'), club('SF', 'San Francisco Giants'), '15:15', 54, 'LAD'),
   game('g4', club('SEA', 'Seattle Mariners'), club('HOU', 'Houston Astros'), '00:10', 0, '', true),
   game('g5', club('CHC', 'Chicago Cubs'), club('STL', 'St. Louis Cardinals'), '00:45', 55, 'CHC'),
 ];
 const live = [{
-  espn_id: 'g3', event_id: 'g3', date: today, start: `${today}T01:15:00Z`, status: 'live', status_detail: 'Bot 5th',
+  espn_id: 'g3', event_id: 'g3', date: today, start: `${today}T15:15:00Z`, status: 'live', status_detail: 'Bot 5th',
   away: { code: 'LAD', score: 3 }, home: { code: 'SF', score: 2 }, win_prob_home: .42,
 }];
 const docs = {

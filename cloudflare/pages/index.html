@@ -4053,9 +4053,11 @@ function renderDetail(){
     </div>`;
   })();
 
-  const whyList = p.pick && snap.reasons?.length ? `
+  const localizedReasons = lang === 'en' ? snap.reasons_en : snap.reasons;
+  const whyList = p.pick && Array.isArray(localizedReasons) && localizedReasons.length ? `
     <div class="secttl">${t('d_why')}</div>
-    <ul class="whylist">${snap.reasons.map(r2 => `<li>${esc(r2)}</li>`).join('')}</ul>` : '';
+    <ul class="whylist">${localizedReasons.map(r2 => `<li>${esc(r2)}</li>`).join('')}</ul>` : '';
+  const localizedSummary = lang === 'en' ? ev.summary_en : ev.summary_es;
 
   const mlbMarketBlocks = {
     winner: homePct != null && p.pick
@@ -4074,7 +4076,7 @@ function renderDetail(){
     ${p.pick && ev.metrics?.some(m => m.key !== 'metric_prob_cal') ? `<div class="secttl">${t('d_metrics')}</div>
       <div class="mgrid">${ev.metrics.filter(m => m.key !== 'metric_prob_cal').map(m => `<div class="mcard"><div class="lb">${esc(metricLabel(m))}</div><div class="vl num ${metricCls(m)}">${esc(metricValue(m))}</div></div>`).join('')}</div>` : ''}
     ${keysBlock(ev, lv)}
-    ${p.pick ? (whyList || (ev.summary_es ? `<div class="secttl">${t('d_based')}</div><div class="summary">${esc(ev.summary_es)}</div>` : '')) : ''}
+    ${p.pick ? (whyList || (localizedSummary ? `<div class="secttl">${t('d_based')}</div><div class="summary">${esc(localizedSummary)}</div>` : '')) : ''}
     ${risk.level === 'desconocido' ? `<div class="bnote">${t('risk_unknown_help')}</div>` : ''}
     ${riskPct != null ? `<div class="secttl">${t('d_risk')}</div>
       <div class="riskbar"><i style="width:${riskPct}%;background:${riskColor}"></i></div>
