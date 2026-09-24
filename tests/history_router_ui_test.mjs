@@ -163,10 +163,10 @@ try {
   const parserRun = await mockPage(desktop);
   await parserRun.page.goto(`${base}/?s=mlb`, { waitUntil: 'domcontentloaded' });
   await waitForMlb(parserRun.page);
-  const parsed = await parserRun.page.evaluate(() => aaReadRoute('?tab=mlb&g=g1&date=2026-09-19&lt=hist&dt=pitchers&m=total&p=p_1'));
+  const parsed = await parserRun.page.evaluate(() => aaReadRoute('?tab=mlb&g=g1&date=2026-09-19&lt=hist&dt=participantes&m=total&p=p_1'));
   assert.deepEqual(parsed, {
     s: 'mlb', g: 'g1', sc: '', date: '2026-09-19', lt: 'hist',
-    dt: 'pitchers', m: 'total', p: 'p_1', team: '', w: '',
+    dt: 'participantes', m: 'total', p: 'p_1', team: '', w: '',
   });
   const parsedOther = await parserRun.page.evaluate(() => aaReadRoute('?s=nba&sc=n1&team=BOS&m=players'));
   assert.deepEqual(parsedOther, {
@@ -180,10 +180,10 @@ try {
     s: 'nba', g: '', sc: 'n1', date: '', lt: '', dt: '', m: '', p: 'p1', team: '', w: '',
   });
   const built = await parserRun.page.evaluate(() => {
-    const route = Object.freeze({ s: 'mlb', g: 'g1', date: '2026-09-19', lt: 'hist', dt: 'pitchers', m: 'total', p: 'p_1' });
+    const route = Object.freeze({ s: 'mlb', g: 'g1', date: '2026-09-19', lt: 'hist', dt: 'participantes', m: 'total', p: 'p_1' });
     return aaBuildSearch(route);
   });
-  assert.equal(built, '?s=mlb&g=g1&date=2026-09-19&lt=hist&dt=pitchers&m=total&p=p_1');
+  assert.equal(built, '?s=mlb&g=g1&date=2026-09-19&lt=hist&dt=participantes&m=total&p=p_1');
   const incompatible = await parserRun.page.evaluate(() => ({
     parsed: aaReadRoute('?s=nba&g=g1&sc=n1&dt=pitchers'),
     built: aaBuildSearch({ s: 'nba', g: 'g1', sc: 'n1', dt: 'pitchers' }),
@@ -713,8 +713,12 @@ try {
     const page = await context.newPage();
     let releaseSoccer;
     let signalSoccerRequested;
+    let releaseNba;
+    let signalNbaRequested;
     const soccerGate = new Promise(resolveGate => { releaseSoccer = resolveGate; });
     const soccerRequested = new Promise(resolveRequest => { signalSoccerRequested = resolveRequest; });
+    const nbaGate = new Promise(resolveGate => { releaseNba = resolveGate; });
+    const nbaRequested = new Promise(resolveRequest => { signalNbaRequested = resolveRequest; });
     await page.route('**/v1/**', async route => {
       const path = new URL(route.request().url()).pathname;
       if (path === '/v1/mlb/today') return json(route, { sport: 'mlb', date: today, events, record: null });
@@ -725,13 +729,19 @@ try {
         await soccerGate;
         return json(route, { sport: 'soccer', marker: 'stale-soccer-model', by_id: {} });
       }
-      if (path === '/v1/nba/live') return json(route, { sport: 'nba', games: [nbaGame] });
+      if (path === '/v1/nba/live') {
+        signalNbaRequested();
+        await nbaGate;
+        return json(route, { sport: 'nba', games: [nbaGame] });
+      }
       if (path === '/v1/nba/recent') return json(route, { sport: 'nba', games: [] });
       return json(route, {});
     });
     await page.goto(`${base}/?s=soccer`, { waitUntil: 'domcontentloaded' });
     await soccerRequested;
     await page.locator('.sp[data-sport="nba"]').click();
+    await nbaRequested;
+    releaseNba();
     await page.locator('.mrow[data-oid="n1"]').waitFor();
     releaseSoccer();
     await page.waitForTimeout(80);
@@ -1014,12 +1024,15 @@ try {
     });
     await page.goto(`${base}/?s=mlb`, { waitUntil: 'domcontentloaded' });
     await waitForMlb(page);
+    await page.waitForTimeout(120);
     await page.evaluate(() => {
-      const spacer = document.createElement('div');
-      spacer.style.height = '800px';
-      document.body.appendChild(spacer);
+      document.body.style.minHeight = '1600px';
       document.documentElement.style.scrollBehavior = 'auto';
-      window.scrollTo(0, 220);
+    });
+    await page.waitForFunction(() => document.documentElement.scrollHeight - innerHeight >= 220);
+    await page.evaluate(() => window.scrollTo(0, 220));
+    await page.waitForFunction(() => Math.abs(scrollY - 220) <= 2);
+    await page.evaluate(() => {
       history.replaceState({ ...history.state, scrollY: 220, focusKey: 'id:g1' }, '', location.href);
     });
     await page.locator('#dPrev').evaluate(button => button.click());
@@ -1039,7 +1052,7 @@ try {
     releaseToday();
     await page.locator('.mrow[data-id="g1"]').waitFor();
     await page.evaluate(() => new Promise(resolveFrame => requestAnimationFrame(() => requestAnimationFrame(resolveFrame))));
-    await page.waitForFunction(() => Math.abs(scrollY - 220) <= 2);
+    await page.waitForFunction(() => Math.abs(scrollY - 220) <= 2, null, { timeout: 5000 });
     const restoredToday = await page.evaluate(() => ({ active: document.activeElement?.dataset?.id || document.activeElement?.id || '', y: scrollY, state: history.state }));
     assert.equal(restoredToday.active, 'g1', 'hoy renderizado no restauró foco');
     assert.ok(Math.abs(restoredToday.y - 220) <= 2, `hoy renderizado restauró ${JSON.stringify(restoredToday)}, esperaba scroll 220`);
