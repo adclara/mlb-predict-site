@@ -1,21 +1,21 @@
 {
-  "updated_at": "2026-09-24T14:23:04.921Z",
+  "updated_at": "2026-09-25T14:43:07.207Z",
   "cohort_version": "causal_ledger_v2",
-  "n_graded": 2090,
-  "n_total": 2385,
+  "n_graded": 2101,
+  "n_total": 2402,
   "first_date": "2026-03-25",
-  "last_date": "2026-09-23",
+  "last_date": "2026-09-24",
   "formula_version": "v2",
   "cal": {
-    "gap": 10.6,
-    "ece": 10.6,
+    "gap": 10.5,
+    "ece": 10.5,
     "says": 65.2,
     "hits": 54.6,
     "curve": [
       {
         "conf": 52.4,
-        "emp": 49.6,
-        "n": 230
+        "emp": 49.8,
+        "n": 231
       },
       {
         "conf": 57.6,
@@ -25,22 +25,22 @@
       {
         "conf": 62.5,
         "emp": 50.7,
-        "n": 438
+        "n": 442
       },
       {
         "conf": 67.4,
-        "emp": 52.5,
-        "n": 522
+        "emp": 52.6,
+        "n": 523
       },
       {
         "conf": 72.3,
-        "emp": 58.2,
-        "n": 438
+        "emp": 58.4,
+        "n": 442
       },
       {
         "conf": 77.1,
-        "emp": 66.2,
-        "n": 139
+        "emp": 65.7,
+        "n": 140
       },
       {
         "conf": 81.9,
@@ -65,21 +65,21 @@
     ]
   },
   "market": {
-    "model_acc": 56.1,
-    "market_acc": 57.4,
+    "model_acc": 56.2,
+    "market_acc": 57.5,
     "verdict": "mercado mejor",
     "auditable": true,
-    "n": 758,
+    "n": 769,
     "min_n": 40
   },
   "lock_gate": {
     "rule": "market_agree5_starter_v1",
     "passes": false,
     "cut": "2026-08-04",
-    "n": 86,
-    "wins": 56,
-    "losses": 30,
-    "rate": 65.1
+    "n": 88,
+    "wins": 57,
+    "losses": 31,
+    "rate": 64.8
   },
   "signals": [
     {
@@ -88,24 +88,29 @@
       "label_en": "5+ factors agree with the pick",
       "edge_pp": 7.5,
       "verdict": "robusto",
-      "fav_rate": 60.1
+      "fav_rate": 60.2
     }
   ],
   "state_es": [
-    "Ya llevo 2090 predicciones medidas (desde 2026-03-25). Todo lo que aprendo sale de mis propios aciertos y errores.",
-    "Sé que soy algo sobre-confiado: cuando digo ~65% en promedio, ocurre ~54.6% (hueco de 10.6 pts). Por eso el número que muestro ya viene calibrado hacia abajo.",
+    "Ya llevo 2101 predicciones medidas (desde 2026-03-25). Todo lo que aprendo sale de mis propios aciertos y errores.",
+    "Sé que soy algo sobre-confiado: cuando digo ~65% en promedio, ocurre ~54.6% (hueco de 10.5 pts). Por eso el número que muestro ya viene calibrado hacia abajo.",
     "Estas hipótesis pasaron el filtro histórico: 5+ factores de acuerdo con el pick (+7.5 pts). Son diferencias medidas en el replay y siguen en validación forward; todavía no prueban una ventaja futura.",
-    "En la cohorte de aperturas auditables, el acierto medido de la apertura es 57.4% y el del modelo 56.1%; no afirmo ventaja sobre el mercado.",
-    "De mi último error (SD @ LAD 5-1): me fié de pitcheo y primeras cinco entradas y no funcionó. Lo peso en la próxima re-calibración."
+    "En la cohorte de aperturas auditables, el acierto medido de la apertura es 57.5% y el del modelo 56.2%; no afirmo ventaja sobre el mercado.",
+    "De mi último error (LAA @ SEA 6-4): me fié de pitcheo y bateo y no funcionó. Lo peso en la próxima re-calibración."
   ],
   "state_en": [
-    "I've now measured 2090 predictions (since 2026-03-25). Everything I learn comes from my own hits and misses.",
-    "I know I run a bit overconfident: when I say ~65% on average, it happens ~54.6% (a 10.6-pt gap). That's why the number I show is already calibrated downward.",
+    "I've now measured 2101 predictions (since 2026-03-25). Everything I learn comes from my own hits and misses.",
+    "I know I run a bit overconfident: when I say ~65% on average, it happens ~54.6% (a 10.5-pt gap). That's why the number I show is already calibrated downward.",
     "These hypotheses passed the historical screen: 5+ factors agree with the pick (+7.5 pts). They are measured replay differences and remain under forward validation; they do not yet prove a future edge.",
-    "In the auditable-opening cohort, measured opener accuracy is 57.4% versus 56.1% for the model; I do not claim an edge over the market.",
-    "From my latest miss (SD @ LAD 5-1): I leaned on pitching and first-five innings and it didn't pan out. I weigh that into the next re-calibration."
+    "In the auditable-opening cohort, measured opener accuracy is 57.5% versus 56.2% for the model; I do not claim an edge over the market.",
+    "From my latest miss (LAA @ SEA 6-4): I leaned on pitching and offense and it didn't pan out. I weigh that into the next re-calibration."
   ],
   "log": [
+    {
+      "date": "2026-09-24",
+      "es": "Sumé 11 predicciones medidas nuevas.",
+      "en": "Added 11 newly measured predictions."
+    },
     {
       "date": "2026-09-23",
       "es": "Sumé 13 predicciones medidas nuevas.",
@@ -200,11 +205,6 @@
       "date": "2026-09-05",
       "es": "Sumé 15 predicciones medidas nuevas.",
       "en": "Added 15 newly measured predictions."
-    },
-    {
-      "date": "2026-09-04",
-      "es": "Sumé 16 predicciones medidas nuevas.",
-      "en": "Added 16 newly measured predictions."
     }
   ],
   "history": [
@@ -593,6 +593,15 @@
       "ece": 10.6,
       "model_acc": 56.1,
       "market_acc": 57.4,
+      "cohort_version": "causal_ledger_v2"
+    },
+    {
+      "date": "2026-09-24",
+      "n": 2101,
+      "gap": 10.5,
+      "ece": 10.5,
+      "model_acc": 56.2,
+      "market_acc": 57.5,
       "cohort_version": "causal_ledger_v2"
     }
   ],
