@@ -158,6 +158,21 @@ const historyCounts = (page) => page.evaluate(() => ({ push: window.__aaPushes, 
 const waitForMlb = (page, id = 'g1') => page.locator(`.mrow[data-id="${id}"]`).waitFor({ state: 'attached' });
 const assertClean = (errors, label) => assert.deepEqual(errors, [], `${label}: console ${errors.join(' | ')}`);
 
+// Fixture preparation, not a relaxation of Back/Forward assertions. The router
+// finishes list restoration on two frames plus an 80ms WebKit reassertion.
+// Do not inject a synthetic user scroll while that initial work is in flight.
+async function settleRouteBeforeScrollFixture(page) {
+  await page.waitForFunction(() => !_aaFromPop);
+  const state = await page.evaluate(async () => {
+    const key = history.state?.key;
+    await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(done, 120))));
+    return { key, currentKey: history.state?.key, applying: _aaFromPop };
+  });
+  assert.equal(state.applying, false, 'fixture route is still applying');
+  assert.equal(state.currentKey, state.key, 'fixture preparation crossed a navigation');
+}
+
+
 try {
   const desktop = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', locale: 'es-ES' });
   const parserRun = await mockPage(desktop);
@@ -377,6 +392,7 @@ try {
     const run = await mockPage(context);
     await run.page.goto(`${base}/?s=mlb`, { waitUntil: 'domcontentloaded' });
     await waitForMlb(run.page);
+    await settleRouteBeforeScrollFixture(run.page);
     await run.page.evaluate(() => {
       const spacer = document.createElement('div');
       spacer.style.height = '900px';
@@ -402,6 +418,7 @@ try {
     assert.equal(archiveEntry.state.query, '');
     assert.equal(archiveEntry.state.scrollY, 0);
 
+    await settleRouteBeforeScrollFixture(run.page);
     await run.page.locator('.pill[data-f="pre"]').click();
     await run.page.locator('#q').fill('MIN');
     const archiveScroll = await run.page.evaluate(async () => {
