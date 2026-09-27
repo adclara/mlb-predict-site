@@ -4,8 +4,15 @@
 name: wnba-shadow
 on:
   schedule:
-    - cron: '31 * * * *'
+    # Wake every 20 minutes; the heartbeat preflight preserves an hourly producer.
+    - cron: '11,31,51 * * * *'
   workflow_dispatch: {}
+  # Independent sources only: market-intelligence/adrian-daily already listen
+  # to WNBA, so subscribing to them would form completion loops.
+  workflow_run:
+    workflows: [mlb-live-observer, soccer-shadow, US sports freshness QA, nba-shadow]
+    branches: [main]
+    types: [completed]
   push:
     branches: [main]
     paths: ['.github/poke-wnba']
@@ -16,6 +23,14 @@ concurrency:
   cancel-in-progress: false
 jobs:
   run:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name != 'workflow_run' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.repository.id == github.event.repository.id &&
+        github.event.workflow_run.head_repository.id == github.event.repository.id &&
+        contains(fromJSON('["schedule","push","workflow_dispatch"]'), github.event.workflow_run.event)))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -23,22 +38,32 @@ jobs:
       AA_PRODUCER_EVIDENCE: /tmp/aa-wnba-producer-evidence-${{ github.run_id }}-${{ github.run_attempt }}.json
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+      - name: Check independent WNBA heartbeat before recovery
+        id: recovery
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/wnba_watchdog.mjs preflight
       - name: Begin independent producer attempt
+        if: steps.recovery.outputs.run == 'true'
         id: producer_attempt
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: node robot/basketball_heartbeat.mjs begin wnba
       - name: Restaurar histórico y box scores incrementales WNBA
+        if: steps.recovery.outputs.run == 'true'
         uses: actions/cache/restore@v6
         with:
           path: data/fase2/wnba
           key: wnba-shadow-${{ github.run_id }}
           restore-keys: wnba-history-
       - name: Verificar histórico y backtest WNBA
-        if: github.event_name != 'schedule'
+        if: steps.recovery.outputs.run == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: |
           test -f data/fase2/wnba/wnba_backtest.json
           node robot/wnba_model.mjs backtest 2
@@ -46,24 +71,42 @@ jobs:
           node robot/wnba_market_model.mjs --no-write
           node robot/wnba_player_winner.mjs --no-write
       - name: Capturar y gradear WNBA en sombra
+        if: steps.recovery.outputs.run == 'true'
         env:
           AA_BASKETBALL_SPORT: wnba
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: node robot/nba_shadow.mjs
       - name: Publicar Cerebro WNBA medido (sin picks públicos)
+        if: steps.recovery.outputs.run == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: node robot/sport_brain.mjs wnba
       - name: Publicar contratos de mercados y simulación (gates cerrados)
+        if: steps.recovery.outputs.run == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: node robot/wnba_publish_simulation.mjs
       - name: Record successful producer completion with capture evidence
+        id: producer_completed
+        if: steps.recovery.outputs.run == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: node robot/basketball_heartbeat.mjs success wnba
       - name: Record failed producer attempt without refreshing last success
-        if: failure() && steps.producer_attempt.outcome == 'success'
+        if: failure() && steps.producer_attempt.outcome == 'success' && steps.producer_completed.outcome != 'success'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
         run: node robot/basketball_heartbeat.mjs failure wnba
+      - name: Verify current producer completion through D1 and public API
+        if: steps.producer_completed.outcome == 'success'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLAREAPITOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+        run: node robot/wnba_watchdog.mjs verify
+      - name: Preserve recovery evidence (no secrets or model internals)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wnba-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: wnba-recovery-results/
+          retention-days: 7
+          if-no-files-found: ignore
